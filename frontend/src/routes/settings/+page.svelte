@@ -47,7 +47,7 @@
 	<!-- Current profile -->
 	{#if bp}
 	<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
-		<h2 class="text-sm font-medium text-stone-400 uppercase tracking-wider mb-3">Aktuelles Profil</h2>
+		<h2 class="text-sm font-medium text-stone-400 uppercase tracking-wider mb-3">{$t('settings.current_profile')}</h2>
 		<div class="flex items-center justify-between">
 			<div>
 				<p class="text-lg font-semibold text-stone-900 dark:text-white">{bp.conditionLabel || bp.conditionId}</p>
@@ -64,15 +64,15 @@
 			on:click={goToSetup}
 			class="mt-4 w-full py-2.5 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 rounded-xl text-sm font-medium hover:bg-stone-200 dark:hover:bg-stone-700 min-h-[44px] transition-colors"
 		>
-			Profil anpassen (Setup-Assistent)
+			{$t('settings.customize_profile')}
 		</button>
 	</section>
 	{/if}
 
 	<!-- Quick switch -->
 	<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
-		<h2 class="text-sm font-medium text-stone-400 uppercase tracking-wider mb-3">Vorlage wechseln</h2>
-		<p class="text-sm text-stone-500 dark:text-stone-400 mb-4">Wechseln Sie zu einer anderen Vorlage. Ihre bisherigen Daten bleiben erhalten.</p>
+		<h2 class="text-sm font-medium text-stone-400 uppercase tracking-wider mb-3">{$t('settings.switch_template')}</h2>
+		<p class="text-sm text-stone-500 dark:text-stone-400 mb-4">{$t('settings.switch_description')}</p>
 		<div class="grid gap-2">
 			{#each presets as preset}
 				<button
@@ -89,7 +89,7 @@
 					<div class="flex-1">
 						<span class="text-sm font-medium text-stone-900 dark:text-white">{preset.label}</span>
 						{#if bp?.conditionId === preset.id}
-							<span class="text-xs text-indigo-500 ml-2">(aktiv)</span>
+							<span class="text-xs text-indigo-500 ml-2">{$t('settings.active')}</span>
 						{/if}
 					</div>
 				</button>
@@ -99,14 +99,14 @@
 
 	<!-- Account -->
 	<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
-		<h2 class="text-sm font-medium text-stone-400 uppercase tracking-wider mb-3">Konto</h2>
+		<h2 class="text-sm font-medium text-stone-400 uppercase tracking-wider mb-3">{$t('settings.account')}</h2>
 		<div class="space-y-2">
 			<div class="flex items-center justify-between py-2">
-				<span class="text-sm text-stone-700 dark:text-stone-300">Angemeldet als</span>
+				<span class="text-sm text-stone-700 dark:text-stone-300">{$t('settings.logged_in_as')}</span>
 				<span class="text-sm font-medium text-stone-900 dark:text-white">{$auth.username}</span>
 			</div>
 			<div class="flex items-center justify-between py-2">
-				<span class="text-sm text-stone-700 dark:text-stone-300">Verschlüsselung</span>
+				<span class="text-sm text-stone-700 dark:text-stone-300">{$t('settings.encryption')}</span>
 				<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">AES-256-GCM + Argon2id</span>
 			</div>
 		</div>
@@ -129,22 +129,22 @@
 {#if showConfirmSwitch && selectedPreset}
 <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" on:click|self={() => { showConfirmSwitch = false; }}>
 	<div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 p-6 max-w-sm w-full shadow-xl">
-		<h3 class="text-lg font-semibold text-stone-900 dark:text-white mb-2">Vorlage wechseln?</h3>
+		<h3 class="text-lg font-semibold text-stone-900 dark:text-white mb-2">{$t('settings.switch_confirm_title')}</h3>
 		<p class="text-sm text-stone-500 dark:text-stone-400 mb-4">
-			Wechsel zu <strong>{selectedPreset.label}</strong>. Ihre bisherigen Daten bleiben erhalten, aber das Tagesprotokoll zeigt die neuen Felder.
+			{$t('settings.switch_confirm_text', { name: selectedPreset.label })}
 		</p>
 		<div class="flex gap-3">
 			<button
 				on:click={() => { showConfirmSwitch = false; }}
 				class="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 rounded-xl text-sm font-medium min-h-[44px]"
 			>
-				Abbrechen
+				{$t('common.cancel')}
 			</button>
 			<button
 				on:click={confirmSwitch}
 				class="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 min-h-[44px]"
 			>
-				Wechseln
+				{$t('settings.switch_button')}
 			</button>
 		</div>
 	</div>

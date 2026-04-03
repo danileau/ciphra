@@ -281,7 +281,7 @@
 			<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
 				<h2 class="text-base font-semibold text-stone-900 dark:text-white mb-4 flex items-center gap-2">
 					<svg class="w-5 h-5" style="color: {bp.episodeTypes[0]?.color || '#DC2626'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					{bp.episodeTypes.length === 1 ? bp.episodeTypes[0].label : 'Episoden'}
+					{bp.episodeTypes.length === 1 ? bp.episodeTypes[0].label : $t('protocol.episodes')}
 				</h2>
 				<div class="space-y-3">
 					{#each bp.episodeTypes as ep}
@@ -335,7 +335,7 @@
 				<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
 					<h2 class="text-base font-semibold text-stone-900 dark:text-white mb-4 flex items-center gap-2">
 						<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						Medikamente
+						{$t('protocol.medications')}
 					</h2>
 					{#if standardMeds.length > 0}
 						<div class="flex flex-wrap gap-2">
@@ -354,7 +354,7 @@
 						</div>
 					{/if}
 					{#if asNeededMeds.length > 0}
-						<p class="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mt-4 mb-2">Bedarfsmedikation</p>
+						<p class="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mt-4 mb-2">{$t('protocol.as_needed')}</p>
 						<div class="flex flex-wrap gap-2">
 							{#each asNeededMeds as med}
 								<button
@@ -375,10 +375,10 @@
 				<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
 					<h2 class="text-base font-semibold text-stone-900 dark:text-white mb-2 flex items-center gap-2">
 						<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						Medikamente
+						{$t('protocol.medications')}
 					</h2>
-					<p class="text-sm text-stone-400 dark:text-stone-500">Keine Medikamente konfiguriert.
-						<a href="/settings" class="text-indigo-500 hover:text-indigo-600 underline">In den Einstellungen hinzufügen</a>
+					<p class="text-sm text-stone-400 dark:text-stone-500">{$t('protocol.no_meds')}
+						<a href="/settings" class="text-indigo-500 hover:text-indigo-600 underline">{$t('protocol.add_in_settings')}</a>
 					</p>
 				</section>
 			{/if}

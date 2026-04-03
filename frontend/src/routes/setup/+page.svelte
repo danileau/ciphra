@@ -185,7 +185,7 @@
 	<!-- Header -->
 	<div class="bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800">
 		<div class="max-w-2xl mx-auto px-4 py-6">
-			<h1 class="text-2xl font-bold text-stone-900 dark:text-white">ciphra einrichten</h1>
+			<h1 class="text-2xl font-bold text-stone-900 dark:text-white">{$t('setup.title')}</h1>
 			{#if step > 1}
 				<div class="flex items-center gap-2 mt-3">
 					{#each Array(totalSteps) as _, i}
@@ -203,8 +203,8 @@
 		{#if step === 1}
 			<div class="space-y-4">
 				<div class="text-center mb-6">
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">Was möchten Sie dokumentieren?</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Wählen Sie eine Vorlage oder erstellen Sie ein eigenes Profil</p>
+					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.choose_title')}</h2>
+					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.choose_subtitle')}</p>
 				</div>
 
 				<div class="grid gap-3">
@@ -243,15 +243,15 @@
 		{:else if step === 2 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">Symptome & Anzeichen</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Entfernen oder ergänzen Sie Symptome nach Bedarf</p>
+					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.symptoms_title')}</h2>
+					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.symptoms_subtitle')}</p>
 				</div>
 
 				{#each working.symptomGroups as group, gi}
 					<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
 						<div class="flex items-center justify-between mb-3">
 							<h3 class="text-sm font-semibold text-stone-700 dark:text-stone-300">{group.label}</h3>
-							<button on:click={() => removeGroup(gi)} class="text-xs text-stone-400 hover:text-red-500 min-h-[44px] px-2">Gruppe löschen</button>
+							<button on:click={() => removeGroup(gi)} class="text-xs text-stone-400 hover:text-red-500 min-h-[44px] px-2">{$t('setup.group_delete')}</button>
 						</div>
 						<div class="flex flex-wrap gap-2">
 							{#each group.items as item}
@@ -265,7 +265,7 @@
 						</div>
 						<!-- Add to this group -->
 						<div class="flex gap-2 mt-3">
-							<input type="text" bind:value={groupInputs[gi]} placeholder="Neues Symptom..."
+							<input type="text" bind:value={groupInputs[gi]} placeholder={$t('setup.symptoms_add')}
 								on:keydown={(e) => { if (e.key === 'Enter') addSymptomToGroup(gi); }}
 								class="flex-1 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
 							<button on:click={() => addSymptomToGroup(gi)}
@@ -276,11 +276,11 @@
 
 				<!-- Add new group -->
 				<div class="flex gap-2">
-					<input type="text" bind:value={newGroupLabel} placeholder="Neue Kategorie..."
+					<input type="text" bind:value={newGroupLabel} placeholder={$t('setup.group_add')}
 						on:keydown={(e) => { if (e.key === 'Enter') addGroup(); }}
 						class="flex-1 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
 					<button on:click={addGroup}
-						class="px-4 py-2 bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-medium hover:bg-stone-300 dark:hover:bg-stone-700 min-h-[44px]">Kategorie hinzufügen</button>
+						class="px-4 py-2 bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-medium hover:bg-stone-300 dark:hover:bg-stone-700 min-h-[44px]">{$t('setup.group_add_button')}</button>
 				</div>
 			</div>
 
@@ -288,8 +288,8 @@
 		{:else if step === 3 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">Episoden / Anfälle</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Welche Episoden-Typen möchten Sie zählen?</p>
+					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.episodes_title')}</h2>
+					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.episodes_subtitle')}</p>
 				</div>
 
 				<div class="space-y-2">
@@ -299,21 +299,21 @@
 								<div class="w-4 h-4 rounded-full" style="background: {ep.color}"></div>
 								<span class="text-sm font-medium text-stone-900 dark:text-white">{ep.label}</span>
 							</div>
-							<button on:click={() => removeEpisode(i)} class="text-stone-400 hover:text-red-500 min-h-[44px] px-2 text-sm">Entfernen</button>
+							<button on:click={() => removeEpisode(i)} class="text-stone-400 hover:text-red-500 min-h-[44px] px-2 text-sm">{$t('setup.remove')}</button>
 						</div>
 					{/each}
 				</div>
 
 				<div class="flex gap-2">
-					<input type="text" bind:value={newEpisodeLabel} placeholder="Neuer Episoden-Typ..."
+					<input type="text" bind:value={newEpisodeLabel} placeholder={$t('setup.episodes_add')}
 						on:keydown={(e) => { if (e.key === 'Enter') addEpisodeType(); }}
 						class="flex-1 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
 					<button on:click={addEpisodeType}
-						class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">Hinzufügen</button>
+						class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">{$t('setup.add')}</button>
 				</div>
 
 				{#if working.episodeTypes.length === 0}
-					<p class="text-sm text-stone-400 dark:text-stone-500 text-center py-4">Keine Episoden-Typen. Sie können diesen Schritt überspringen, wenn Sie keine Episoden zählen möchten.</p>
+					<p class="text-sm text-stone-400 dark:text-stone-500 text-center py-4">{$t('setup.episodes_empty')}</p>
 				{/if}
 			</div>
 
@@ -321,8 +321,8 @@
 		{:else if step === 4 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">Auslöser</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Welche Auslöser möchten Sie tracken?</p>
+					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.triggers_title')}</h2>
+					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.triggers_subtitle')}</p>
 				</div>
 
 				<div class="flex flex-wrap gap-2">
@@ -337,11 +337,11 @@
 				</div>
 
 				<div class="flex gap-2">
-					<input type="text" bind:value={newTriggerLabel} placeholder="Neuer Auslöser..."
+					<input type="text" bind:value={newTriggerLabel} placeholder={$t('setup.triggers_add')}
 						on:keydown={(e) => { if (e.key === 'Enter') addTrigger(); }}
 						class="flex-1 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
 					<button on:click={addTrigger}
-						class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">Hinzufügen</button>
+						class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">{$t('setup.add')}</button>
 				</div>
 			</div>
 
@@ -349,8 +349,8 @@
 		{:else if step === 5 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">Vitalwerte</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Welche Messwerte möchten Sie erfassen?</p>
+					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.vitals_title')}</h2>
+					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.vitals_subtitle')}</p>
 				</div>
 
 				<div class="space-y-2">
@@ -362,16 +362,16 @@
 									<span class="text-xs text-stone-400 ml-1">({vital.unit})</span>
 								{/if}
 							</div>
-							<button on:click={() => removeVital(i)} class="text-stone-400 hover:text-red-500 min-h-[44px] px-2 text-sm">Entfernen</button>
+							<button on:click={() => removeVital(i)} class="text-stone-400 hover:text-red-500 min-h-[44px] px-2 text-sm">{$t('setup.remove')}</button>
 						</div>
 					{/each}
 				</div>
 
 				<div class="flex gap-2">
-					<input type="text" bind:value={newVitalLabel} placeholder="Name (z.B. Blutzucker)"
+					<input type="text" bind:value={newVitalLabel} placeholder={$t('setup.vitals_name')}
 						on:keydown={(e) => { if (e.key === 'Enter') addVital(); }}
 						class="flex-1 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
-					<input type="text" bind:value={newVitalUnit} placeholder="Einheit"
+					<input type="text" bind:value={newVitalUnit} placeholder={$t('setup.vitals_unit')}
 						on:keydown={(e) => { if (e.key === 'Enter') addVital(); }}
 						class="w-24 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
 					<button on:click={addVital}
@@ -383,8 +383,8 @@
 		{:else if step === 6 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">Medikamente</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Welche Medikamente nehmen Sie ein?</p>
+					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.meds_title')}</h2>
+					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.meds_subtitle')}</p>
 				</div>
 
 				<div class="space-y-2">
@@ -399,38 +399,38 @@
 									<span class="text-xs text-stone-400 ml-1">({med.schedule})</span>
 								{/if}
 								{#if med.asNeeded}
-									<span class="ml-2 text-xs bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">Bedarf</span>
+									<span class="ml-2 text-xs bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">{$t('setup.as_needed_badge')}</span>
 								{/if}
 							</div>
-							<button on:click={() => removeMedication(i)} class="text-stone-400 hover:text-red-500 min-h-[44px] px-2 text-sm">Entfernen</button>
+							<button on:click={() => removeMedication(i)} class="text-stone-400 hover:text-red-500 min-h-[44px] px-2 text-sm">{$t('setup.remove')}</button>
 						</div>
 					{/each}
 				</div>
 
 				<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4 space-y-3">
 					<div class="flex gap-2">
-						<input type="text" bind:value={newMedName} placeholder="Name (z.B. Levetiracetam)"
+						<input type="text" bind:value={newMedName} placeholder={$t('setup.meds_name')}
 							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
 							class="flex-1 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
-						<input type="text" bind:value={newMedDose} placeholder="Dosis (z.B. 500mg)"
+						<input type="text" bind:value={newMedDose} placeholder={$t('setup.meds_dose')}
 							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
 							class="w-28 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
 					</div>
 					<div class="flex gap-2 items-center">
-						<input type="text" bind:value={newMedSchedule} placeholder="Einnahme (z.B. morgens, abends)"
+						<input type="text" bind:value={newMedSchedule} placeholder={$t('setup.meds_schedule')}
 							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
 							class="flex-1 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
 						<label class="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-400 whitespace-nowrap min-h-[44px] cursor-pointer">
 							<input type="checkbox" bind:checked={newMedAsNeeded} class="rounded border-stone-300 text-indigo-600 focus:ring-indigo-500" />
-							Bedarfsmedikation
+							{$t('setup.meds_as_needed')}
 						</label>
 					</div>
 					<button on:click={addMedication}
-						class="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">Hinzufügen</button>
+						class="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">{$t('setup.add')}</button>
 				</div>
 
 				{#if working.medications.length === 0}
-					<p class="text-sm text-stone-400 dark:text-stone-500 text-center py-4">Keine Medikamente. Sie können diesen Schritt überspringen.</p>
+					<p class="text-sm text-stone-400 dark:text-stone-500 text-center py-4">{$t('setup.meds_empty')}</p>
 				{/if}
 			</div>
 
@@ -438,29 +438,29 @@
 		{:else if step === 7 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">Zusammenfassung</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Überprüfen Sie Ihr Profil. Sie können es jederzeit später anpassen.</p>
+					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.confirm_title')}</h2>
+					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.confirm_subtitle')}</p>
 				</div>
 
 				<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5 space-y-4">
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Profil</h3>
+						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_profile')}</h3>
 						<p class="text-sm font-semibold text-stone-900 dark:text-white">{working.conditionLabel || working.conditionId}</p>
 					</div>
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Symptome</h3>
-						<p class="text-sm text-stone-700 dark:text-stone-300">{allSymptoms.length} in {working.symptomGroups.length} Kategorien</p>
+						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_symptoms')}</h3>
+						<p class="text-sm text-stone-700 dark:text-stone-300">{$t('setup.confirm_symptoms_count', { count: allSymptoms.length, groups: working.symptomGroups.length })}</p>
 						<div class="flex flex-wrap gap-1 mt-1">
 							{#each allSymptoms.slice(0, 10) as s}
 								<span class="text-xs bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-full text-stone-600 dark:text-stone-400">{s.label}</span>
 							{/each}
 							{#if allSymptoms.length > 10}
-								<span class="text-xs text-stone-400">+{allSymptoms.length - 10} weitere</span>
+								<span class="text-xs text-stone-400">{$t('setup.confirm_more', { count: allSymptoms.length - 10 })}</span>
 							{/if}
 						</div>
 					</div>
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Episoden</h3>
+						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_episodes')}</h3>
 						{#if working.episodeTypes.length > 0}
 							<div class="flex flex-wrap gap-2">
 								{#each working.episodeTypes as ep}
@@ -468,29 +468,29 @@
 								{/each}
 							</div>
 						{:else}
-							<p class="text-sm text-stone-400">Keine</p>
+							<p class="text-sm text-stone-400">{$t('setup.confirm_none')}</p>
 						{/if}
 					</div>
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Auslöser</h3>
-						<p class="text-sm text-stone-700 dark:text-stone-300">{working.triggers.length} konfiguriert</p>
+						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_triggers')}</h3>
+						<p class="text-sm text-stone-700 dark:text-stone-300">{working.triggers.length} {$t('setup.configured')}</p>
 					</div>
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Vitalwerte</h3>
-						<p class="text-sm text-stone-700 dark:text-stone-300">{working.vitals.length} konfiguriert</p>
+						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_vitals')}</h3>
+						<p class="text-sm text-stone-700 dark:text-stone-300">{working.vitals.length} {$t('setup.configured')}</p>
 					</div>
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Medikamente</h3>
+						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_meds')}</h3>
 						{#if working.medications.length > 0}
 							<div class="flex flex-wrap gap-1">
 								{#each working.medications as med}
 									<span class="text-xs bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full text-emerald-700 dark:text-emerald-300">
-										{med.name} {med.dose}{#if med.asNeeded} (Bedarf){/if}
+										{med.name} {med.dose}{#if med.asNeeded} ({$t('setup.as_needed_badge')}){/if}
 									</span>
 								{/each}
 							</div>
 						{:else}
-							<p class="text-sm text-stone-400">Keine</p>
+							<p class="text-sm text-stone-400">{$t('setup.confirm_none')}</p>
 						{/if}
 					</div>
 				</div>
@@ -502,17 +502,17 @@
 			<div class="flex gap-3 mt-8">
 				<button on:click={prevStep}
 					class="flex-1 py-3 bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 rounded-xl font-medium hover:bg-stone-300 dark:hover:bg-stone-700 min-h-[48px]">
-					Zurück
+					{$t('setup.back')}
 				</button>
 				{#if step < totalSteps}
 					<button on:click={nextStep}
 						class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 min-h-[48px]">
-						Weiter
+						{$t('setup.next')}
 					</button>
 				{:else}
 					<button on:click={finalize} disabled={saving}
 						class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-stone-300 min-h-[48px]">
-						{saving ? 'Speichern...' : 'Profil speichern & starten'}
+						{saving ? $t('setup.saving') : $t('setup.save')}
 					</button>
 				{/if}
 			</div>
