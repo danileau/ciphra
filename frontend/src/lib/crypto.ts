@@ -113,6 +113,7 @@ function loadArgon2(): Promise<any> {
 
 	argon2Promise = new Promise((resolve, reject) => {
 		if (typeof window === 'undefined') {
+			argon2Promise = null;
 			reject(new Error('Argon2 requires browser environment'));
 			return;
 		}
@@ -123,16 +124,26 @@ function loadArgon2(): Promise<any> {
 			return;
 		}
 
+		// Prevent duplicate script tags if a previous attempt left one behind
+		const existing = document.querySelector('script[src="/argon2-bundled.min.js"]');
+		if (existing) existing.remove();
+
 		const script = document.createElement('script');
 		script.src = '/argon2-bundled.min.js';
 		script.onload = () => {
 			if ((window as any).argon2) {
 				resolve((window as any).argon2);
 			} else {
+				// Reset so next call can retry
+				argon2Promise = null;
 				reject(new Error('argon2 not found on window after script load'));
 			}
 		};
-		script.onerror = () => reject(new Error('Failed to load argon2 script'));
+		script.onerror = () => {
+			// Reset so next call can retry instead of caching the rejection
+			argon2Promise = null;
+			reject(new Error('Failed to load argon2 script'));
+		};
 		document.head.appendChild(script);
 	});
 

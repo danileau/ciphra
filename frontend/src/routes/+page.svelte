@@ -10,7 +10,7 @@
 <svelte:head>
 	{#if !$isAuthenticated}
 		<title>ciphra — encrypted by design</title>
-		<meta name="description" content="ciphra ist dein privater, Ende-zu-Ende-verschluesselter Gesundheitsbegleiter. Fuer Epilepsie, ADHS, Diabetes, Burnout, Migraene oder jede andere Erkrankung." />
+		<meta name="description" content="ciphra ist dein privater, Ende-zu-Ende-verschlüsselter Gesundheitsbegleiter. Für Epilepsie, ADHS, Diabetes, Burnout, Migräne oder jede andere Erkrankung." />
 	{/if}
 </svelte:head>
 
@@ -65,13 +65,13 @@
 				</div>
 				<h1 class="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] mb-6 text-stone-900 dark:text-white">
 					Deine Gesundheit.<br>
-					<span class="bg-gradient-to-r from-indigo-600 to-teal-500 bg-clip-text text-transparent">Dein Schluessel.</span>
+					<span class="bg-gradient-to-r from-indigo-600 to-teal-500 bg-clip-text text-transparent">Dein Schlüssel.</span>
 				</h1>
 				<p class="text-xl md:text-2xl text-stone-600 dark:text-stone-400 leading-relaxed mb-4 max-w-2xl font-light">
-					ciphra ist der erste Gesundheitsbegleiter, der deine Daten <strong class="font-semibold text-stone-900 dark:text-stone-200">mathematisch nicht lesen kann</strong>. Ende-zu-Ende-verschluesselt. Fuer jede Erkrankung.
+					ciphra ist der erste Gesundheitsbegleiter, der deine Daten <strong class="font-semibold text-stone-900 dark:text-stone-200">mathematisch nicht lesen kann</strong>. Ende-zu-Ende-verschlüsselt. Für jede Erkrankung.
 				</p>
 				<p class="text-base text-stone-500 dark:text-stone-500 leading-relaxed mb-10 max-w-2xl">
-					3 Minuten am Abend. Haekchen setzen, Zaehler antippen, speichern. Am Monatsende ein Raster, das dein Arzt in 30 Sekunden lesen kann.
+					3 Minuten am Abend. Häkchen setzen, Zähler antippen, speichern. Am Monatsende ein Raster, das dein Arzt in 30 Sekunden lesen kann.
 				</p>
 				<div class="flex flex-wrap gap-4">
 					<a href="/login" class="inline-flex items-center justify-center min-h-[52px] px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-base shadow-lg shadow-indigo-500/20">
@@ -108,7 +108,7 @@
 			<div class="max-w-3xl">
 				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-6 text-stone-900 dark:text-white">Warum bestehende Gesundheits-Apps scheitern</h2>
 				<p class="text-stone-600 dark:text-stone-400 text-lg leading-relaxed mb-10">
-					Gesundheitsdaten sind die privatesten Daten, die es gibt. Die meisten Apps speichern sie im Klartext auf fremden Servern. Und selbst wenn die Verschluesselung stimmt — sie scheitern an der Alltagstauglichkeit.
+					Gesundheitsdaten sind die privatesten Daten, die es gibt. Die meisten Apps speichern sie im Klartext auf fremden Servern. Und selbst wenn die Verschlüsselung stimmt — sie scheitern an der Alltagstauglichkeit.
 				</p>
 
 				<!-- Anonymized caregiver story -->
@@ -119,14 +119,14 @@
 						</div>
 						<div>
 							<p class="font-semibold text-stone-900 dark:text-white text-lg">Aus der Praxis</p>
-							<p class="text-sm text-stone-500 dark:text-stone-400">Erfahrung einer Angehoerigen, die taeglich fuer eine betroffene Person dokumentiert</p>
+							<p class="text-sm text-stone-500 dark:text-stone-400">Erfahrung einer Angehörigen, die täglich für eine betroffene Person dokumentiert</p>
 						</div>
 					</div>
 					<blockquote class="text-stone-700 dark:text-stone-300 italic leading-relaxed mb-5 border-l-3 border-indigo-400 dark:border-indigo-600 pl-5 text-lg">
-						"Es war zu umstaendlich. Fuer jeden Eintrag ein eigenes Formular oeffnen, Felder ausfuellen, speichern. Am Ende habe ich mir ein einfaches Excel gebaut."
+						"Es war zu umständlich. Für jeden Eintrag ein eigenes Formular öffnen, Felder ausfüllen, speichern. Am Ende habe ich mir ein einfaches Excel gebaut."
 					</blockquote>
 					<p class="text-stone-600 dark:text-stone-400 leading-relaxed">
-						20 Symptome taeglich abhaken, Anfaelle zaehlen, Medikamente kontrollieren, Ausloeser dokumentieren — das muss in 3 Minuten gehen, nicht in 15. Ihr Excel hat Zeilen fuer Tage und Spalten fuer Symptome. <strong class="text-stone-900 dark:text-stone-200">ciphra macht genau das</strong> — digital, verschluesselt, mit einem Monatsraster, das der Arzt in Sekunden lesen kann.
+						20 Symptome täglich abhaken, Anfälle zählen, Medikamente kontrollieren, Auslöser dokumentieren — das muss in 3 Minuten gehen, nicht in 15. Ihr Excel hat Zeilen für Tage und Spalten für Symptome. <strong class="text-stone-900 dark:text-stone-200">ciphra macht genau das</strong> — digital, verschlüsselt, mit einem Monatsraster, das der Arzt in Sekunden lesen kann.
 					</p>
 				</div>
 
@@ -151,7 +151,7 @@
 							<svg class="w-6 h-6 text-stone-600 dark:text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><polyline points="12,6 12,12 16,14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 						</div>
 						<h3 class="font-bold text-stone-900 dark:text-white mb-2">Zu langsam</h3>
-						<p class="text-sm text-stone-500 dark:text-stone-400 leading-relaxed">15 Minuten Formulare ausfuellen statt 3 Minuten Haekchen setzen.</p>
+						<p class="text-sm text-stone-500 dark:text-stone-400 leading-relaxed">15 Minuten Formulare ausfüllen statt 3 Minuten Häkchen setzen.</p>
 					</div>
 				</div>
 			</div>
@@ -173,7 +173,7 @@
 						<svg class="w-7 h-7 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-width="2"/></svg>
 					</div>
 					<h3 class="text-xl font-bold text-stone-900 dark:text-white mb-3">Profil einrichten</h3>
-					<p class="text-stone-500 dark:text-stone-400 leading-relaxed">Vorlage waehlen oder eigenes Profil erstellen. Symptome, Ausloeser und Vitalwerte definieren — alles anpassbar.</p>
+					<p class="text-stone-500 dark:text-stone-400 leading-relaxed">Vorlage wählen oder eigenes Profil erstellen. Symptome, Auslöser und Vitalwerte definieren — alles anpassbar.</p>
 				</div>
 
 				<div class="relative rounded-2xl border border-stone-200 dark:border-stone-800 p-8 bg-white dark:bg-stone-900">
@@ -182,7 +182,7 @@
 						<svg class="w-7 h-7 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" stroke-width="2" stroke-linecap="round"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1" stroke-width="2"/><path d="M9 12l2 2 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</div>
 					<h3 class="text-xl font-bold text-stone-900 dark:text-white mb-3">Tag protokollieren</h3>
-					<p class="text-stone-500 dark:text-stone-400 leading-relaxed">Jeden Abend in 3 Minuten: Symptom-Chips antippen, Zaehler setzen, Medikamente abhaken. Keine Formulare.</p>
+					<p class="text-stone-500 dark:text-stone-400 leading-relaxed">Jeden Abend in 3 Minuten: Symptom-Chips antippen, Zähler setzen, Medikamente abhaken. Keine Formulare.</p>
 				</div>
 
 				<div class="relative rounded-2xl border border-stone-200 dark:border-stone-800 p-8 bg-white dark:bg-stone-900">
@@ -202,16 +202,16 @@
 		<div class="max-w-6xl mx-auto px-6">
 			<div class="text-center mb-14">
 				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-stone-900 dark:text-white">Eine App. <span class="bg-gradient-to-r from-indigo-600 to-teal-500 bg-clip-text text-transparent">Jede Erkrankung.</span></h2>
-				<p class="text-stone-500 dark:text-stone-400 text-lg max-w-xl mx-auto">Waehle eine Vorlage als Startpunkt oder erstelle dein eigenes Profil.</p>
+				<p class="text-stone-500 dark:text-stone-400 text-lg max-w-xl mx-auto">Wähle eine Vorlage als Startpunkt oder erstelle dein eigenes Profil.</p>
 			</div>
 
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 				{#each [
 					{ name: 'Epilepsie', desc: 'Anfallstypen, Auren, Medikamente, anfallsfreie Tage', color: '#DC2626', bg: 'from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/10', icon: 'activity' },
 					{ name: 'ADHS', desc: 'Fokus, Impulskontrolle, Emotionen, Energie, Medikamenten-Wirkung', color: '#F59E0B', bg: 'from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/10', icon: 'brain' },
-					{ name: 'Diabetes', desc: 'Blutzucker, Insulin, HbA1c, Kohlenhydrate, Hypo-/Hyperglykamie', color: '#0D9488', bg: 'from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/10', icon: 'droplet' },
+					{ name: 'Diabetes', desc: 'Blutzucker, Insulin, HbA1c, Kohlenhydrate, Hypo-/Hyperglykämie', color: '#0D9488', bg: 'from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/10', icon: 'droplet' },
 					{ name: 'Burnout', desc: 'Energie-Level, Stimmung, Schlaf, Belastung, Erholung', color: '#8B5CF6', bg: 'from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/10', icon: 'battery' },
-					{ name: 'Migraene', desc: 'Attacken, Aura, Schmerzlevel, Licht-/Laermempfindlichkeit, Trigger', color: '#EC4899', bg: 'from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/10', icon: 'cloud' }
+					{ name: 'Migräne', desc: 'Attacken, Aura, Schmerzlevel, Licht-/Lärmempfindlichkeit, Trigger', color: '#EC4899', bg: 'from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/10', icon: 'cloud' }
 				] as tmpl}
 					<div class="rounded-2xl border border-stone-200 dark:border-stone-800 p-6 bg-gradient-to-br {tmpl.bg} hover:shadow-lg hover:shadow-stone-200/50 dark:hover:shadow-stone-900/50">
 						<div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background: {tmpl.color}15">
@@ -242,25 +242,25 @@
 				</div>
 				<div>
 					<h2 class="text-3xl md:text-4xl font-bold tracking-tight text-stone-900 dark:text-white">Zero-Knowledge Architektur</h2>
-					<p class="text-stone-500 dark:text-stone-400 text-lg mt-2 max-w-2xl">Der Server speichert nur verschluesselte Blobs. Kein Datentyp, kein Datum, keine Struktur — nichts, was Rueckschluesse erlaubt.</p>
+					<p class="text-stone-500 dark:text-stone-400 text-lg mt-2 max-w-2xl">Der Server speichert nur verschlüsselte Blobs. Kein Datentyp, kein Datum, keine Struktur — nichts, was Rückschlüsse erlaubt.</p>
 				</div>
 			</div>
 
 			<!-- Key hierarchy -->
 			<div class="rounded-2xl border border-stone-200 dark:border-stone-800 p-6 md:p-8 bg-white dark:bg-stone-900 mb-8">
-				<h3 class="font-bold text-stone-900 dark:text-white mb-6 text-lg">Schluessel-Hierarchie</h3>
+				<h3 class="font-bold text-stone-900 dark:text-white mb-6 text-lg">Schlüssel-Hierarchie</h3>
 				<div class="font-mono text-sm text-stone-700 dark:text-stone-300 leading-relaxed overflow-x-auto">
 					<pre class="whitespace-pre">Dein Passwort
   |
   +-- Argon2id (":AUTH")  --> auth_hash (Server speichert nur diesen Hash)
   |
-  +-- Argon2id (":VAULT") --> vault_key (verschluesselt Master Key lokal)
+  +-- Argon2id (":VAULT") --> vault_key (verschlüsselt Master Key lokal)
 
-Master Key (zufaellige 256 Bit, bei Registrierung erzeugt)
-  +-- AES-256-GCM --> verschluesselt ALLE Gesundheitsdaten
-  |     Verlaesst NIEMALS dein Geraet.
+Master Key (zufällige 256 Bit, bei Registrierung erzeugt)
+  +-- AES-256-GCM --> verschlüsselt ALLE Gesundheitsdaten
+  |     Verlässt NIEMALS dein Gerät.
   |
-  +-- Recovery Code (12-Woerter-Mnemonic) sichert Master Key als Backup</pre>
+  +-- Recovery Code (12-Wörter-Mnemonic) sichert Master Key als Backup</pre>
 				</div>
 			</div>
 
@@ -274,7 +274,7 @@ Master Key (zufaellige 256 Bit, bei Registrierung erzeugt)
 					<ul class="space-y-2.5 text-sm text-stone-600 dark:text-stone-400">
 						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Benutzername</li>
 						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Auth-Hash (nicht dein Passwort)</li>
-						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Verschluesselte Blobs</li>
+						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Verschlüsselte Blobs</li>
 						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Upload-Zeitstempel</li>
 					</ul>
 				</div>
@@ -285,7 +285,7 @@ Master Key (zufaellige 256 Bit, bei Registrierung erzeugt)
 					</div>
 					<ul class="space-y-2.5 text-sm text-stone-600 dark:text-stone-400">
 						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> Welche Erkrankung du hast</li>
-						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> Symptome, Anfaelle, Medikamente</li>
+						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> Symptome, Anfälle, Medikamente</li>
 						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> An welchen Tagen etwas passiert ist</li>
 						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> Notizen, Vitalwerte, Trigger</li>
 					</ul>
@@ -303,12 +303,12 @@ Master Key (zufaellige 256 Bit, bei Registrierung erzeugt)
 
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 				{#each [
-					{ title: 'Tagesprotokoll', desc: 'Toggle-Chips, Zaehler, Checklisten. 3 Minuten, fertig.', color: 'indigo', icon: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' },
+					{ title: 'Tagesprotokoll', desc: 'Toggle-Chips, Zähler, Checklisten. 3 Minuten, fertig.', color: 'indigo', icon: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' },
 					{ title: 'Monatsraster', desc: 'Tage als Zeilen, Symptome als Spalten. Summen und Prozente.', color: 'teal', icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18' },
 					{ title: 'Kalender', desc: 'Monatsansicht mit farbcodierten Punkten. Muster erkennen.', color: 'blue', icon: 'M3 4h18v18H3zM16 2v4M8 2v4M3 10h18' },
 					{ title: 'PDF-Export', desc: 'Monatsberichte im Browser generieren. Kein Server-Kontakt.', color: 'rose', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' },
-					{ title: 'Offline-Modus', desc: 'PWA mit verschluesseltem Cache. Funktioniert ohne Internet.', color: 'emerald', icon: 'M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01' },
-					{ title: 'Mehrsprachig', desc: 'Deutsch, Englisch, Italienisch, Franzoesisch.', color: 'violet', icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z' },
+					{ title: 'Offline-Modus', desc: 'PWA mit verschlüsseltem Cache. Funktioniert ohne Internet.', color: 'emerald', icon: 'M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01' },
+					{ title: 'Mehrsprachig', desc: 'Deutsch, Englisch, Italienisch, Französisch.', color: 'violet', icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z' },
 					{ title: 'Dunkelmodus', desc: 'Erkennt Systemeinstellung oder manuell umschaltbar.', color: 'stone', icon: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' },
 					{ title: 'Eigene Felder', desc: 'Symptome, Trigger, Vitalwerte individuell definierbar.', color: 'amber', icon: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' }
 				] as feat}
@@ -330,7 +330,7 @@ Master Key (zufaellige 256 Bit, bei Registrierung erzeugt)
 		<div class="relative max-w-6xl mx-auto px-6 text-center">
 			<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-white">Keine Wellness-App.</h2>
 			<p class="text-indigo-100 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
-				ciphra ist ein ernsthaftes Werkzeug fuer Menschen, die taeglich mit einer echten Erkrankung leben. Gebaut von jemandem, der das Problem seit 7 Jahren kennt.
+				ciphra ist ein ernsthaftes Werkzeug für Menschen, die täglich mit einer echten Erkrankung leben. Gebaut von jemandem, der das Problem seit 7 Jahren kennt.
 			</p>
 			<a href="/login" class="inline-flex items-center justify-center min-h-[52px] px-8 bg-white hover:bg-stone-100 text-indigo-700 font-semibold rounded-xl text-base shadow-lg">
 				Kostenlos starten
@@ -347,7 +347,7 @@ Master Key (zufaellige 256 Bit, bei Registrierung erzeugt)
 			<div>
 				<span class="text-lg font-bold tracking-tight text-stone-900 dark:text-white">ciphra</span>
 				<p class="text-xs font-semibold tracking-widest uppercase text-indigo-600 dark:text-indigo-400 mt-1">encrypted by design</p>
-				<p class="text-sm text-stone-500 dark:text-stone-400 mt-3 leading-relaxed">Dein privater Gesundheitsbegleiter.<br>Ende-zu-Ende-verschluesselt.</p>
+				<p class="text-sm text-stone-500 dark:text-stone-400 mt-3 leading-relaxed">Dein privater Gesundheitsbegleiter.<br>Ende-zu-Ende-verschlüsselt.</p>
 			</div>
 			<div>
 				<h3 class="text-sm font-semibold mb-3 text-stone-900 dark:text-white">Produkt</h3>

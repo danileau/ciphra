@@ -3,13 +3,13 @@
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents } from '$lib/stores/documents';
 	import { blueprint, presets } from '$lib/blueprint';
-	import type { Blueprint, BlueprintItem, BlueprintGroup, EpisodeType, VitalField } from '$lib/blueprint';
+	import type { Blueprint, BlueprintItem, BlueprintGroup, EpisodeType, VitalField, MedicationSlot } from '$lib/blueprint';
 	import type { PresetInfo } from '$lib/blueprint';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
-	let step = 1; // 1=pick preset, 2=symptoms, 3=episodes, 4=triggers, 5=vitals, 6=confirm
-	const totalSteps = 6;
+	let step = 1; // 1=pick preset, 2=symptoms, 3=episodes, 4=triggers, 5=vitals, 6=medications, 7=confirm
+	const totalSteps = 7;
 	let working: Blueprint | null = null;
 	let saving = false;
 
@@ -20,6 +20,10 @@
 	let newTriggerLabel = '';
 	let newVitalLabel = '';
 	let newVitalUnit = '';
+	let newMedName = '';
+	let newMedDose = '';
+	let newMedSchedule = '';
+	let newMedAsNeeded = false;
 
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
@@ -118,6 +122,29 @@
 	function removeVital(idx: number) {
 		if (!working) return;
 		working.vitals.splice(idx, 1);
+		working = working;
+	}
+
+	function addMedication() {
+		if (!working || !newMedName.trim()) return;
+		const id = 'med_' + Date.now();
+		working.medications.push({
+			id,
+			name: newMedName.trim(),
+			dose: newMedDose.trim(),
+			schedule: newMedSchedule.trim(),
+			asNeeded: newMedAsNeeded,
+		});
+		newMedName = '';
+		newMedDose = '';
+		newMedSchedule = '';
+		newMedAsNeeded = false;
+		working = working;
+	}
+
+	function removeMedication(idx: number) {
+		if (!working) return;
+		working.medications.splice(idx, 1);
 		working = working;
 	}
 
@@ -352,8 +379,63 @@
 				</div>
 			</div>
 
-		<!-- STEP 6: Confirm -->
+		<!-- STEP 6: Medications -->
 		{:else if step === 6 && working}
+			<div class="space-y-5">
+				<div>
+					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">Medikamente</h2>
+					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">Welche Medikamente nehmen Sie ein?</p>
+				</div>
+
+				<div class="space-y-2">
+					{#each working.medications as med, i}
+						<div class="flex items-center justify-between bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
+							<div>
+								<span class="text-sm font-medium text-stone-900 dark:text-white">{med.name}</span>
+								{#if med.dose}
+									<span class="text-xs text-stone-400 ml-1">{med.dose}</span>
+								{/if}
+								{#if med.schedule}
+									<span class="text-xs text-stone-400 ml-1">({med.schedule})</span>
+								{/if}
+								{#if med.asNeeded}
+									<span class="ml-2 text-xs bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">Bedarf</span>
+								{/if}
+							</div>
+							<button on:click={() => removeMedication(i)} class="text-stone-400 hover:text-red-500 min-h-[44px] px-2 text-sm">Entfernen</button>
+						</div>
+					{/each}
+				</div>
+
+				<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4 space-y-3">
+					<div class="flex gap-2">
+						<input type="text" bind:value={newMedName} placeholder="Name (z.B. Levetiracetam)"
+							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
+							class="flex-1 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+						<input type="text" bind:value={newMedDose} placeholder="Dosis (z.B. 500mg)"
+							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
+							class="w-28 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+					<div class="flex gap-2 items-center">
+						<input type="text" bind:value={newMedSchedule} placeholder="Einnahme (z.B. morgens, abends)"
+							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
+							class="flex-1 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+						<label class="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-400 whitespace-nowrap min-h-[44px] cursor-pointer">
+							<input type="checkbox" bind:checked={newMedAsNeeded} class="rounded border-stone-300 text-indigo-600 focus:ring-indigo-500" />
+							Bedarfsmedikation
+						</label>
+					</div>
+					<button on:click={addMedication}
+						class="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">Hinzufügen</button>
+				</div>
+
+				{#if working.medications.length === 0}
+					<p class="text-sm text-stone-400 dark:text-stone-500 text-center py-4">Keine Medikamente. Sie können diesen Schritt überspringen.</p>
+				{/if}
+			</div>
+
+		<!-- STEP 7: Confirm -->
+		{:else if step === 7 && working}
 			<div class="space-y-5">
 				<div>
 					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">Zusammenfassung</h2>
@@ -396,6 +478,20 @@
 					<div>
 						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Vitalwerte</h3>
 						<p class="text-sm text-stone-700 dark:text-stone-300">{working.vitals.length} konfiguriert</p>
+					</div>
+					<div>
+						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Medikamente</h3>
+						{#if working.medications.length > 0}
+							<div class="flex flex-wrap gap-1">
+								{#each working.medications as med}
+									<span class="text-xs bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full text-emerald-700 dark:text-emerald-300">
+										{med.name} {med.dose}{#if med.asNeeded} (Bedarf){/if}
+									</span>
+								{/each}
+							</div>
+						{:else}
+							<p class="text-sm text-stone-400">Keine</p>
+						{/if}
 					</div>
 				</div>
 			</div>

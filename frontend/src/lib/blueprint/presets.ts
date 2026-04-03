@@ -56,7 +56,10 @@ export const epilepsy: Blueprint = {
 		{ id: 'weight', label: 'Gewicht', unit: 'kg', placeholder: '70' },
 		{ id: 'temp', label: 'Temperatur', unit: '°C', placeholder: '36.5' },
 	],
-	medications: [],
+	medications: [
+		{ id: 'med_1', name: 'Levetiracetam', dose: '500mg', schedule: 'morgens, abends', asNeeded: false },
+		{ id: 'med_2', name: 'Midazolam nasal', dose: '5mg', schedule: 'bei Anfall', asNeeded: true },
+	],
 	gridSymptomColumns: ['tired', 'aggressive', 'restless', 'nausea', 'dizzy', 'headache', 'aura'],
 	gridEpisodeColumns: ['focal', 'generalized'],
 	quickActions: [

@@ -38,30 +38,33 @@
 	async function handleLogin() {
 		error = '';
 		loading = true;
-		const res = await api.login(loginUser, loginPass);
-		loading = false;
-		if (res.ok) {
-			const vault = res.data.vault as { vault_params: string; encrypted_master: string };
-			try {
-				// Decrypt master key using Argon2id-WASM + AES-256-GCM (epi-2 key hierarchy)
-				const masterKey = await decryptMasterKey(
-					loginPass,
-					vault.vault_params,
-					vault.encrypted_master
-				);
-				auth.login(
-					res.data.token as string,
-					res.data.username as string,
-					masterKey,
-					vault
-				);
-				goto('/');
-			} catch (e) {
-				console.error('Master key decryption failed:', e);
-				error = 'Vault decryption failed';
+		try {
+			const res = await api.login(loginUser, loginPass);
+			if (res.ok) {
+				const vault = res.data.vault as { vault_params: string; encrypted_master: string };
+				try {
+					// Decrypt master key using Argon2id-WASM + AES-256-GCM (epi-2 key hierarchy)
+					const masterKey = await decryptMasterKey(
+						loginPass,
+						vault.vault_params,
+						vault.encrypted_master
+					);
+					auth.login(
+						res.data.token as string,
+						res.data.username as string,
+						masterKey,
+						vault
+					);
+					goto('/');
+				} catch (e) {
+					console.error('Master key decryption failed:', e);
+					error = 'Vault decryption failed';
+				}
+			} else {
+				error = (res.data.error as string) || $t('auth.error_credentials');
 			}
-		} else {
-			error = (res.data.error as string) || $t('auth.error_credentials');
+		} finally {
+			loading = false;
 		}
 	}
 

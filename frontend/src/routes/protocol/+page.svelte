@@ -18,6 +18,7 @@
 	let episodes: Record<string, number> = {};
 	let triggers: Record<string, boolean> = {};
 	let vitals: Record<string, string> = {};
+	let medications: Record<string, boolean> = {};
 	let notes = '';
 
 	$: bp = $blueprint;
@@ -43,6 +44,9 @@
 		if (Object.keys(vitals).length === 0) {
 			for (const v of b.vitals) vitals[v.id] = '';
 		}
+		if (Object.keys(medications).length === 0) {
+			for (const med of b.medications) medications[med.id] = false;
+		}
 	}
 
 	onMount(() => {
@@ -60,6 +64,7 @@
 			if (d.seizures && !d.episodes) episodes = { ...episodes, ...d.seizures };
 			if (d.triggers) triggers = { ...triggers, ...d.triggers };
 			if (d.vitals) vitals = { ...vitals, ...d.vitals };
+			if (d.medications) medications = { ...medications, ...d.medications };
 			if (d.notes) notes = d.notes;
 		}
 	}
@@ -73,6 +78,7 @@
 			episodes,
 			triggers,
 			vitals,
+			medications,
 			notes,
 		};
 
@@ -97,6 +103,7 @@
 			episodes = {};
 			triggers = {};
 			vitals = {};
+			medications = {};
 			notes = '';
 			initFromBlueprint(bp);
 		}
@@ -274,6 +281,61 @@
 					{/each}
 				</div>
 			</section>
+			{/if}
+
+			<!-- Medications (from blueprint) -->
+			{#if bp.medications.length > 0}
+				{@const standardMeds = bp.medications.filter(m => !m.asNeeded)}
+				{@const asNeededMeds = bp.medications.filter(m => m.asNeeded)}
+				<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
+					<h2 class="text-base font-semibold text-stone-900 dark:text-white mb-4 flex items-center gap-2">
+						<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+						Medikamente
+					</h2>
+					{#if standardMeds.length > 0}
+						<div class="flex flex-wrap gap-2">
+							{#each standardMeds as med}
+								<button
+									type="button"
+									on:click={() => { medications[med.id] = !medications[med.id]; }}
+									class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors min-h-[36px]
+										{medications[med.id]
+											? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-300 dark:ring-emerald-500/40'
+											: 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400'}"
+								>
+									{med.name} {med.dose} <span class="text-xs opacity-60">({med.schedule})</span>
+								</button>
+							{/each}
+						</div>
+					{/if}
+					{#if asNeededMeds.length > 0}
+						<p class="text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-wider mt-4 mb-2">Bedarfsmedikation</p>
+						<div class="flex flex-wrap gap-2">
+							{#each asNeededMeds as med}
+								<button
+									type="button"
+									on:click={() => { medications[med.id] = !medications[med.id]; }}
+									class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors min-h-[36px]
+										{medications[med.id]
+											? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-300 dark:ring-emerald-500/40'
+											: 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400'}"
+								>
+									{med.name} {med.dose} <span class="text-xs opacity-60">({med.schedule})</span>
+								</button>
+							{/each}
+						</div>
+					{/if}
+				</section>
+			{:else}
+				<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
+					<h2 class="text-base font-semibold text-stone-900 dark:text-white mb-2 flex items-center gap-2">
+						<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+						Medikamente
+					</h2>
+					<p class="text-sm text-stone-400 dark:text-stone-500">Keine Medikamente konfiguriert.
+						<a href="/settings" class="text-indigo-500 hover:text-indigo-600 underline">In den Einstellungen hinzufügen</a>
+					</p>
+				</section>
 			{/if}
 
 			<!-- Vitals (from blueprint) -->
