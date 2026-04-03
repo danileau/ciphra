@@ -63,10 +63,10 @@ export const epilepsy: Blueprint = {
 	gridSymptomColumns: ['tired', 'aggressive', 'restless', 'nausea', 'dizzy', 'headache', 'aura'],
 	gridEpisodeColumns: ['focal', 'generalized'],
 	quickActions: [
-		{ id: 'log_episode', label: 'Anfall erfassen', icon: 'zap', color: 'bg-red-500/10 text-red-600 dark:bg-red-500/15 dark:text-red-400', href: '/protocol' },
-		{ id: 'write_diary', label: 'Tagebuch schreiben', icon: 'book', color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400', href: '/protocol' },
-		{ id: 'record_event', label: 'Ereignis erfassen', icon: 'flag', color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400', href: '/protocol' },
-		{ id: 'generate_report', label: 'Bericht erstellen', icon: 'file', color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', href: '/protocol' },
+		{ id: 'log_day', label: 'Tag protokollieren', icon: 'zap', color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400', href: '/protocol' },
+		{ id: 'generate_report', label: 'Monatsbericht', icon: 'file', color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', href: '/protocol?view=month' },
+		{ id: 'view_calendar', label: 'Kalender', icon: 'calendar', color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400', href: '/calendar' },
+		{ id: 'view_stream', label: 'Verlauf', icon: 'activity', color: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400', href: '/stream' },
 	],
 	streamFilters: [
 		{ key: 'all', label: 'Alle' },
@@ -144,10 +144,10 @@ export const adhd: Blueprint = {
 	gridSymptomColumns: ['distracted', 'hyperfocus', 'forgetful', 'restless', 'overwhelmed', 'tired'],
 	gridEpisodeColumns: ['meltdown', 'shutdown'],
 	quickActions: [
-		{ id: 'log_episode', label: 'Episode erfassen', icon: 'zap', color: 'bg-red-500/10 text-red-600 dark:bg-red-500/15 dark:text-red-400', href: '/protocol' },
-		{ id: 'write_diary', label: 'Tagebuch', icon: 'book', color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400', href: '/protocol' },
-		{ id: 'record_event', label: 'Ereignis', icon: 'flag', color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400', href: '/protocol' },
-		{ id: 'generate_report', label: 'Bericht', icon: 'file', color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', href: '/protocol' },
+		{ id: 'log_day', label: 'Tag protokollieren', icon: 'zap', color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400', href: '/protocol' },
+		{ id: 'generate_report', label: 'Monatsbericht', icon: 'file', color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', href: '/protocol?view=month' },
+		{ id: 'view_calendar', label: 'Kalender', icon: 'calendar', color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400', href: '/calendar' },
+		{ id: 'view_stream', label: 'Verlauf', icon: 'activity', color: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400', href: '/stream' },
 	],
 	streamFilters: [
 		{ key: 'all', label: 'Alle' },
@@ -217,10 +217,10 @@ export const diabetes: Blueprint = {
 	gridSymptomColumns: ['shaking', 'sweating', 'dizzy', 'thirsty', 'tired'],
 	gridEpisodeColumns: ['hypoglycemia', 'hyperglycemia'],
 	quickActions: [
-		{ id: 'log_episode', label: 'Episode erfassen', icon: 'zap', color: 'bg-red-500/10 text-red-600 dark:bg-red-500/15 dark:text-red-400', href: '/protocol' },
-		{ id: 'log_blood_sugar', label: 'Blutzucker messen', icon: 'droplet', color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400', href: '/protocol' },
-		{ id: 'write_diary', label: 'Tagebuch', icon: 'book', color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400', href: '/protocol' },
-		{ id: 'generate_report', label: 'Bericht', icon: 'file', color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', href: '/protocol' },
+		{ id: 'log_day', label: 'Tag protokollieren', icon: 'zap', color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400', href: '/protocol' },
+		{ id: 'generate_report', label: 'Monatsbericht', icon: 'file', color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', href: '/protocol?view=month' },
+		{ id: 'view_calendar', label: 'Kalender', icon: 'calendar', color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400', href: '/calendar' },
+		{ id: 'view_stream', label: 'Verlauf', icon: 'activity', color: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400', href: '/stream' },
 	],
 	streamFilters: [
 		{ key: 'all', label: 'Alle' },
@@ -297,10 +297,10 @@ export const burnout: Blueprint = {
 	gridSymptomColumns: ['exhausted', 'overwhelmed', 'brain_fog', 'tired', 'insomnia', 'isolated'],
 	gridEpisodeColumns: ['breakdown', 'panic_attack'],
 	quickActions: [
-		{ id: 'log_episode', label: 'Episode erfassen', icon: 'zap', color: 'bg-red-500/10 text-red-600 dark:bg-red-500/15 dark:text-red-400', href: '/protocol' },
-		{ id: 'write_diary', label: 'Tagebuch', icon: 'book', color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400', href: '/protocol' },
-		{ id: 'record_event', label: 'Ereignis', icon: 'flag', color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400', href: '/protocol' },
-		{ id: 'generate_report', label: 'Bericht', icon: 'file', color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', href: '/protocol' },
+		{ id: 'log_day', label: 'Tag protokollieren', icon: 'zap', color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400', href: '/protocol' },
+		{ id: 'generate_report', label: 'Monatsbericht', icon: 'file', color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', href: '/protocol?view=month' },
+		{ id: 'view_calendar', label: 'Kalender', icon: 'calendar', color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400', href: '/calendar' },
+		{ id: 'view_stream', label: 'Verlauf', icon: 'activity', color: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400', href: '/stream' },
 	],
 	streamFilters: [
 		{ key: 'all', label: 'Alle' },
@@ -377,10 +377,10 @@ export const migraine: Blueprint = {
 	gridSymptomColumns: ['headache', 'nausea', 'light_sensitive', 'visual_aura', 'tired'],
 	gridEpisodeColumns: ['migraine_with_aura', 'migraine_without_aura', 'tension_headache'],
 	quickActions: [
-		{ id: 'log_episode', label: 'Attacke erfassen', icon: 'zap', color: 'bg-pink-500/10 text-pink-600 dark:bg-pink-500/15 dark:text-pink-400', href: '/protocol' },
-		{ id: 'write_diary', label: 'Tagebuch', icon: 'book', color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400', href: '/protocol' },
-		{ id: 'record_event', label: 'Ereignis', icon: 'flag', color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400', href: '/protocol' },
-		{ id: 'generate_report', label: 'Bericht', icon: 'file', color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', href: '/protocol' },
+		{ id: 'log_day', label: 'Tag protokollieren', icon: 'zap', color: 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400', href: '/protocol' },
+		{ id: 'generate_report', label: 'Monatsbericht', icon: 'file', color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', href: '/protocol?view=month' },
+		{ id: 'view_calendar', label: 'Kalender', icon: 'calendar', color: 'bg-teal-500/10 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400', href: '/calendar' },
+		{ id: 'view_stream', label: 'Verlauf', icon: 'activity', color: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400', href: '/stream' },
 	],
 	streamFilters: [
 		{ key: 'all', label: 'Alle' },

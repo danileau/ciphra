@@ -6,8 +6,10 @@
 	import type { Blueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { generateMonthlyPdf } from '$lib/pdf';
 
+	// Read initial view from URL query param (?view=month)
 	let view: 'day' | 'month' = 'day';
 	let currentDate = new Date().toISOString().slice(0, 10);
 	let saving = false;
@@ -51,6 +53,9 @@
 
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
+		// Read view from URL: /protocol?view=month
+		const urlView = $page.url.searchParams.get('view');
+		if (urlView === 'month') view = 'month';
 		documents.load().then(loadExistingLog);
 	});
 
