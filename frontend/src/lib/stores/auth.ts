@@ -7,6 +7,7 @@ interface AuthState {
 	masterKey: Uint8Array | null;
 	vaultParams: string | null;
 	encryptedMaster: string | null;
+	isAdmin: boolean;
 	ready: boolean;
 }
 
@@ -24,10 +25,10 @@ function b64ToUint8(b64: string): Uint8Array {
 }
 
 function loadFromStorage(): AuthState {
-	if (!browser) return { token: null, username: null, masterKey: null, vaultParams: null, encryptedMaster: null, ready: false };
+	if (!browser) return { token: null, username: null, masterKey: null, vaultParams: null, encryptedMaster: null, isAdmin: false, ready: false };
 	try {
 		const raw = localStorage.getItem('ciphra_auth');
-		if (!raw) return { token: null, username: null, masterKey: null, vaultParams: null, encryptedMaster: null, ready: true };
+		if (!raw) return { token: null, username: null, masterKey: null, vaultParams: null, encryptedMaster: null, isAdmin: false, ready: true };
 		const parsed = JSON.parse(raw);
 		return {
 			token: parsed.token || null,
@@ -35,10 +36,11 @@ function loadFromStorage(): AuthState {
 			masterKey: parsed.masterKeyB64 ? b64ToUint8(parsed.masterKeyB64) : null,
 			vaultParams: parsed.vaultParams || null,
 			encryptedMaster: parsed.encryptedMaster || null,
+			isAdmin: parsed.isAdmin || false,
 			ready: true,
 		};
 	} catch {
-		return { token: null, username: null, masterKey: null, vaultParams: null, encryptedMaster: null, ready: true };
+		return { token: null, username: null, masterKey: null, vaultParams: null, encryptedMaster: null, isAdmin: false, ready: true };
 	}
 }
 
@@ -54,6 +56,7 @@ function saveToStorage(state: AuthState) {
 		masterKeyB64: state.masterKey ? uint8ToB64(state.masterKey) : null,
 		vaultParams: state.vaultParams,
 		encryptedMaster: state.encryptedMaster,
+		isAdmin: state.isAdmin,
 	}));
 }
 
@@ -70,13 +73,14 @@ function createAuthStore() {
 
 	return {
 		subscribe,
-		login(token: string, username: string, masterKey: Uint8Array, vault: { vault_params: string; encrypted_master: string }) {
+		login(token: string, username: string, masterKey: Uint8Array, vault: { vault_params: string; encrypted_master: string }, isAdmin: boolean = false) {
 			const state: AuthState = {
 				token,
 				username,
 				masterKey,
 				vaultParams: vault.vault_params,
 				encryptedMaster: vault.encrypted_master,
+				isAdmin,
 				ready: true,
 			};
 			saveToStorage(state);
@@ -84,7 +88,7 @@ function createAuthStore() {
 		},
 		logout() {
 			if (browser) localStorage.removeItem('ciphra_auth');
-			set({ token: null, username: null, masterKey: null, vaultParams: null, encryptedMaster: null, ready: true });
+			set({ token: null, username: null, masterKey: null, vaultParams: null, encryptedMaster: null, isAdmin: false, ready: true });
 		},
 		setMasterKey(key: Uint8Array) {
 			update((s) => {

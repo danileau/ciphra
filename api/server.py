@@ -60,6 +60,7 @@ def init_db():
                     encrypted_master TEXT NOT NULL,
                     recovery_vault TEXT,
                     recovery_params TEXT,
+                    is_admin BOOLEAN DEFAULT FALSE,
                     last_login TIMESTAMP WITH TIME ZONE,
                     login_attempts INTEGER DEFAULT 0,
                     locked_until TIMESTAMP WITH TIME ZONE,
@@ -90,14 +91,22 @@ def init_db():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_docs_user ON encrypted_documents(user_id)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id)")
+            # Migration: add is_admin column for existing databases
+            cur.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$
+            """)
     logger.info("Database initialized")
 
 
 # --- JWT ---
-def generate_token(user_id: int, username: str) -> str:
+def generate_token(user_id: int, username: str, is_admin: bool = False) -> str:
     return jwt.encode({
         'user_id': user_id,
         'username': username,
+        'is_admin': is_admin,
         'exp': datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS),
         'iat': datetime.now(timezone.utc),
     }, SECRET_KEY, algorithm=JWT_ALGORITHM)
@@ -115,6 +124,24 @@ def token_required(f):
             return jsonify({'error': 'Token invalid or expired'}), 401
         request.user_id = payload['user_id']
         request.username = payload['username']
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get('Authorization', '')
+        if not auth.startswith('Bearer '):
+            return jsonify({'error': 'Token missing'}), 401
+        try:
+            payload = jwt.decode(auth[7:], SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            return jsonify({'error': 'Token invalid or expired'}), 401
+        request.user_id = payload['user_id']
+        request.username = payload['username']
+        if not payload.get('is_admin', False):
+            return jsonify({'error': 'Admin access required'}), 403
         return f(*args, **kwargs)
     return decorated
 
@@ -208,7 +235,7 @@ def login():
             with conn.cursor() as cur:
                 cur.execute("""
                     SELECT id, auth_hash, vault_params, encrypted_master,
-                           login_attempts, locked_until
+                           login_attempts, locked_until, is_admin
                     FROM users WHERE username = %s
                 """, (username,))
                 user = cur.fetchone()
@@ -235,11 +262,13 @@ def login():
                         (user['id'],),
                     )
                     audit(conn, user['id'], 'LOGIN_SUCCESS')
-                    token = generate_token(user['id'], username)
+                    is_admin = bool(user.get('is_admin', False))
+                    token = generate_token(user['id'], username, is_admin)
                     return jsonify({
                         'success': True,
                         'token': token,
                         'username': username,
+                        'is_admin': is_admin,
                         'vault': {
                             'vault_params': user['vault_params'],
                             'encrypted_master': user['encrypted_master'],
@@ -434,6 +463,204 @@ def recover():
 def validate_recovery():
     code = (request.get_json() or {}).get('recovery_code', '')
     return jsonify({'valid': RecoveryCode.validate(code)}), 200
+
+
+# --- Admin Routes ---
+
+@app.route('/api/admin/stats', methods=['GET'])
+@admin_required
+def admin_stats():
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) AS total FROM users")
+                total_users = cur.fetchone()['total']
+
+                cur.execute("""
+                    SELECT COUNT(*) AS active FROM users
+                    WHERE last_login >= NOW() - INTERVAL '30 days'
+                """)
+                active_30d = cur.fetchone()['active']
+
+                cur.execute("""
+                    SELECT COUNT(*) AS active FROM users
+                    WHERE last_login >= NOW() - INTERVAL '7 days'
+                """)
+                active_7d = cur.fetchone()['active']
+
+                cur.execute("SELECT COUNT(*) AS total FROM encrypted_documents")
+                total_docs = cur.fetchone()['total']
+
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM audit_log
+                    WHERE action = 'ACCOUNT_LOCKED'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                """)
+                lockouts_30d = cur.fetchone()['cnt']
+
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM audit_log
+                    WHERE action = 'LOGIN_SUCCESS'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                """)
+                logins_success = cur.fetchone()['cnt']
+
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM audit_log
+                    WHERE action = 'LOGIN_FAILED'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                """)
+                logins_failed = cur.fetchone()['cnt']
+
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM users
+                    WHERE created_at >= NOW() - INTERVAL '7 days'
+                """)
+                new_users_7d = cur.fetchone()['cnt']
+
+        return jsonify({
+            'total_users': total_users,
+            'active_users_30d': active_30d,
+            'active_users_7d': active_7d,
+            'total_documents': total_docs,
+            'avg_docs_per_user': round(total_docs / total_users, 1) if total_users > 0 else 0,
+            'lockouts_30d': lockouts_30d,
+            'logins_success_30d': logins_success,
+            'logins_failed_30d': logins_failed,
+            'new_users_7d': new_users_7d,
+        }), 200
+    except Exception:
+        logger.exception("Admin stats failed")
+        return jsonify({'error': 'Failed to retrieve stats'}), 500
+
+
+@app.route('/api/admin/users', methods=['GET'])
+@admin_required
+def admin_users():
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT u.id, u.username, u.created_at, u.last_login,
+                           u.login_attempts, u.locked_until, u.is_admin,
+                           COUNT(d.id) AS doc_count
+                    FROM users u
+                    LEFT JOIN encrypted_documents d ON d.user_id = u.id
+                    GROUP BY u.id
+                    ORDER BY u.created_at DESC
+                """)
+                users = cur.fetchall()
+        return jsonify({
+            'users': [{
+                'id': u['id'],
+                'username': u['username'],
+                'created_at': u['created_at'].isoformat() if u['created_at'] else None,
+                'last_login': u['last_login'].isoformat() if u['last_login'] else None,
+                'login_attempts': u['login_attempts'],
+                'locked_until': u['locked_until'].isoformat() if u['locked_until'] else None,
+                'is_admin': bool(u['is_admin']),
+                'doc_count': u['doc_count'],
+            } for u in users]
+        }), 200
+    except Exception:
+        logger.exception("Admin users failed")
+        return jsonify({'error': 'Failed to retrieve users'}), 500
+
+
+@app.route('/api/admin/users/<int:user_id>/lock', methods=['POST'])
+@admin_required
+def admin_lock_user(user_id):
+    if user_id == request.user_id:
+        return jsonify({'error': 'Cannot lock your own account'}), 400
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+                if not cur.fetchone():
+                    return jsonify({'error': 'User not found'}), 404
+                # Lock indefinitely (far future) — admin must manually unlock
+                locked_until = datetime.now(timezone.utc) + timedelta(days=36500)
+                cur.execute(
+                    "UPDATE users SET locked_until = %s WHERE id = %s",
+                    (locked_until, user_id),
+                )
+                audit(conn, request.user_id, f'ADMIN_LOCK_USER:{user_id}')
+        return jsonify({'success': True}), 200
+    except Exception:
+        logger.exception("Admin lock user failed")
+        return jsonify({'error': 'Failed to lock user'}), 500
+
+
+@app.route('/api/admin/users/<int:user_id>/unlock', methods=['POST'])
+@admin_required
+def admin_unlock_user(user_id):
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+                if not cur.fetchone():
+                    return jsonify({'error': 'User not found'}), 404
+                cur.execute(
+                    "UPDATE users SET locked_until = NULL, login_attempts = 0 WHERE id = %s",
+                    (user_id,),
+                )
+                audit(conn, request.user_id, f'ADMIN_UNLOCK_USER:{user_id}')
+        return jsonify({'success': True}), 200
+    except Exception:
+        logger.exception("Admin unlock user failed")
+        return jsonify({'error': 'Failed to unlock user'}), 500
+
+
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def admin_delete_user(user_id):
+    if user_id == request.user_id:
+        return jsonify({'error': 'Cannot delete your own account'}), 400
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, username FROM users WHERE id = %s", (user_id,))
+                user = cur.fetchone()
+                if not user:
+                    return jsonify({'error': 'User not found'}), 404
+                # Nullify audit_log references (FK has no ON DELETE action)
+                cur.execute("UPDATE audit_log SET user_id = NULL WHERE user_id = %s", (user_id,))
+                # CASCADE on encrypted_documents will delete all docs
+                cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+                audit(conn, request.user_id, f'ADMIN_DELETE_USER:{user["username"]}')
+        return jsonify({'success': True}), 200
+    except Exception:
+        logger.exception("Admin delete user failed")
+        return jsonify({'error': 'Failed to delete user'}), 500
+
+
+@app.route('/api/admin/audit', methods=['GET'])
+@admin_required
+def admin_audit():
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT a.id, a.user_id, u.username, a.action, a.ip_address, a.created_at
+                    FROM audit_log a
+                    LEFT JOIN users u ON u.id = a.user_id
+                    ORDER BY a.created_at DESC
+                    LIMIT 100
+                """)
+                entries = cur.fetchall()
+        return jsonify({
+            'entries': [{
+                'id': e['id'],
+                'user_id': e['user_id'],
+                'username': e['username'],
+                'action': e['action'],
+                'ip_address': e['ip_address'],
+                'created_at': e['created_at'].isoformat() if e['created_at'] else None,
+            } for e in entries]
+        }), 200
+    except Exception:
+        logger.exception("Admin audit failed")
+        return jsonify({'error': 'Failed to retrieve audit log'}), 500
 
 
 if __name__ == '__main__':

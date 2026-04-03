@@ -76,3 +76,29 @@ export async function validateRecovery(code: string) {
 		body: JSON.stringify({ recovery_code: code })
 	});
 }
+
+// --- Admin API ---
+
+export async function adminGetStats() {
+	return request('/admin/stats');
+}
+
+export async function adminGetUsers() {
+	return request('/admin/users');
+}
+
+export async function adminLockUser(userId: number) {
+	return request(`/admin/users/${userId}/lock`, { method: 'POST' });
+}
+
+export async function adminUnlockUser(userId: number) {
+	return request(`/admin/users/${userId}/unlock`, { method: 'POST' });
+}
+
+export async function adminDeleteUser(userId: number) {
+	return request(`/admin/users/${userId}`, { method: 'DELETE' });
+}
+
+export async function adminGetAudit() {
+	return request('/admin/audit');
+}

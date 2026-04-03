@@ -25,9 +25,9 @@
 		});
 	}
 
-	// Redirect to setup when authenticated but no blueprint (and not already on /setup or /login)
+	// Redirect to setup when authenticated but no blueprint (and not already on /setup or /login or /admin)
 	$: if (browser && $authReady && $isAuthenticated && docsLoaded && !$hasBlueprint
-		&& currentPath !== '/setup' && currentPath !== '/login' && currentPath !== '/settings') {
+		&& currentPath !== '/setup' && currentPath !== '/login' && currentPath !== '/settings' && currentPath !== '/admin') {
 		goto('/setup');
 	}
 
@@ -75,6 +75,19 @@
 		<div class="max-w-6xl mx-auto px-4 flex items-center justify-between h-14">
 			<a href="/" class="text-xl font-bold tracking-tight text-stone-900 dark:text-white">ciphra</a>
 			<div class="flex items-center gap-1">
+				<!-- Admin link -->
+				{#if $auth.isAdmin}
+					<a
+						href="/admin"
+						class="p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center
+							{currentPath === '/admin'
+								? 'text-indigo-600 dark:text-indigo-400 bg-stone-100 dark:bg-stone-800'
+								: 'text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800'}"
+						aria-label={$t('admin.title')}
+					>
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 1 1 0 5.292M15 21H3v-1a6 6 0 0 1 12 0v1zm0 0h6v-1a6 6 0 0 0-9-5.197" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</a>
+				{/if}
 				<!-- Locale switcher -->
 				<select
 					class="text-xs bg-stone-100 dark:bg-stone-800 border-0 rounded-lg px-2 py-1.5 text-stone-600 dark:text-stone-300 min-h-[44px] cursor-pointer"

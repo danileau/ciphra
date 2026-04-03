@@ -53,7 +53,8 @@
 						res.data.token as string,
 						res.data.username as string,
 						masterKey,
-						vault
+						vault,
+						(res.data.is_admin as boolean) || false
 					);
 					goto('/');
 				} catch (e) {
