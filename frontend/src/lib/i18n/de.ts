@@ -40,6 +40,10 @@ export default {
 	'auth.proceed': 'Weiter zur Anwendung',
 	'auth.enable_recovery': 'Recovery-Code aktivieren (empfohlen)',
 	'auth.new_password': 'Neues Passwort',
+	'auth.recover_button': 'Passwort zurücksetzen',
+	'auth.recovery_success': 'Passwort erfolgreich zurückgesetzt. Sie können sich jetzt anmelden.',
+	'auth.error_recovery': 'Wiederherstellung fehlgeschlagen',
+	'auth.error_password_short': 'Passwort muss mindestens 8 Zeichen lang sein',
 
 	// Companion
 	'companion.greeting': 'Hallo {name}',
@@ -56,6 +60,9 @@ export default {
 	'companion.no_entries': 'Noch keine Einträge heute',
 	'companion.medications': 'Medikamente',
 	'companion.insights': 'Muster & Erkenntnisse',
+	'companion.episodes_7days': 'Episoden — Letzte 7 Tage',
+	'companion.top_symptoms': 'Top Symptome — 30 Tage',
+	'companion.symptoms': 'Symptome',
 
 	// Protocol
 	'protocol.title': 'Tagesprotokoll',

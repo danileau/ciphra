@@ -37,6 +37,10 @@ export default {
 	'auth.proceed': 'Continue to app',
 	'auth.enable_recovery': 'Enable recovery code (recommended)',
 	'auth.new_password': 'New password',
+	'auth.recover_button': 'Reset password',
+	'auth.recovery_success': 'Password reset successful. You can now log in.',
+	'auth.error_recovery': 'Recovery failed',
+	'auth.error_password_short': 'Password must be at least 8 characters',
 
 	'companion.greeting': 'Hello {name}',
 	'companion.streak': '{count} days since last seizure',
@@ -52,6 +56,9 @@ export default {
 	'companion.no_entries': 'No entries yet today',
 	'companion.medications': 'Medications',
 	'companion.insights': 'Patterns & Insights',
+	'companion.episodes_7days': 'Episodes — Last 7 days',
+	'companion.top_symptoms': 'Top symptoms — 30 days',
+	'companion.symptoms': 'Symptoms',
 
 	'protocol.title': 'Daily Log',
 	'protocol.symptoms': 'Symptoms & Warning Signs',

@@ -1,7 +1,9 @@
 import { writable, get } from 'svelte/store';
+import { browser } from '$app/environment';
 import { auth } from './auth';
 import * as api from '$lib/api';
 import { encryptDocument, decryptDocument } from '$lib/crypto';
+import { getAllDocs, putDocs, clearDocs, type CachedDoc } from '$lib/idb';
 
 export interface CiphraDocument {
 	id: number;
@@ -13,28 +15,77 @@ function createDocStore() {
 	const { subscribe, set, update } = writable<CiphraDocument[]>([]);
 	let loading = false;
 
+	/** Decrypt raw server docs into CiphraDocument[] */
+	async function decryptDocs(
+		rawDocs: Array<{ id: number; encrypted_data: string; created_at: string }>,
+		masterKey: Uint8Array
+	): Promise<CiphraDocument[]> {
+		const docs: CiphraDocument[] = [];
+		for (const d of rawDocs) {
+			try {
+				const data = await decryptDocument(d.encrypted_data, masterKey);
+				docs.push({ id: d.id, serverCreatedAt: d.created_at, data });
+			} catch {
+				// skip corrupted documents
+			}
+		}
+		return docs;
+	}
+
+	/** Persist raw server docs to IndexedDB cache */
+	async function cacheRawDocs(
+		rawDocs: Array<{ id: number; encrypted_data: string; created_at: string }>
+	): Promise<void> {
+		const { username } = get(auth);
+		if (!browser || !username) return;
+		try {
+			const cached: CachedDoc[] = rawDocs.map((d) => ({
+				id: d.id,
+				user_id: username,
+				encrypted_data: d.encrypted_data,
+				created_at: d.created_at,
+				updated_at: d.created_at
+			}));
+			await putDocs(username, cached);
+		} catch {
+			// IndexedDB errors should not break the app
+		}
+	}
+
 	return {
 		subscribe,
 		async load() {
 			if (loading) return;
 			loading = true;
-			const { masterKey } = get(auth);
-			if (!masterKey) return;
+			const { masterKey, username } = get(auth);
+			if (!masterKey) { loading = false; return; }
 
-			const res = await api.getDocuments();
-			if (!res.ok) { loading = false; return; }
-
-			const docs: CiphraDocument[] = [];
-			const rawDocs = (res.data.documents as Array<{ id: number; encrypted_data: string; created_at: string }>) || [];
-			for (const d of rawDocs) {
+			// 1. Try IndexedDB cache first for instant load
+			if (browser && username) {
 				try {
-					const data = await decryptDocument(d.encrypted_data, masterKey);
-					docs.push({ id: d.id, serverCreatedAt: d.created_at, data });
+					const cached = await getAllDocs(username);
+					if (cached.length > 0) {
+						const docs = await decryptDocs(cached, masterKey);
+						set(docs);
+					}
 				} catch {
-					// skip corrupted documents
+					// cache miss is fine, continue to API
 				}
 			}
-			set(docs);
+
+			// 2. Fetch from API in background, update store + cache
+			try {
+				const res = await api.getDocuments();
+				if (res.ok) {
+					const rawDocs = (res.data.documents as Array<{ id: number; encrypted_data: string; created_at: string }>) || [];
+					const docs = await decryptDocs(rawDocs, masterKey);
+					set(docs);
+					await cacheRawDocs(rawDocs);
+				}
+			} catch {
+				// If API fails, we already have cached data (if available)
+			}
+
 			loading = false;
 		},
 		async save(data: any): Promise<boolean> {
@@ -59,11 +110,28 @@ function createDocStore() {
 			const res = await api.deleteDocument(id);
 			if (res.ok) {
 				update((docs) => docs.filter((d) => d.id !== id));
+				// Refresh cache after removal
+				const { username } = get(auth);
+				if (browser && username) {
+					try {
+						const apiRes = await api.getDocuments();
+						if (apiRes.ok) {
+							const rawDocs = (apiRes.data.documents as Array<{ id: number; encrypted_data: string; created_at: string }>) || [];
+							await cacheRawDocs(rawDocs);
+						}
+					} catch {
+						// non-critical
+					}
+				}
 			}
 			return res.ok;
 		},
 		clear() {
 			set([]);
+			const { username } = get(auth);
+			if (browser && username) {
+				clearDocs(username).catch(() => {});
+			}
 		}
 	};
 }

@@ -37,6 +37,10 @@ export default {
 	'auth.proceed': "Continuer vers l'application",
 	'auth.enable_recovery': 'Activer le code de récupération (recommandé)',
 	'auth.new_password': 'Nouveau mot de passe',
+	'auth.recover_button': 'Réinitialiser le mot de passe',
+	'auth.recovery_success': 'Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter.',
+	'auth.error_recovery': 'La récupération a échoué',
+	'auth.error_password_short': 'Le mot de passe doit contenir au moins 8 caractères',
 
 	'companion.greeting': 'Bonjour {name}',
 	'companion.streak': '{count} jours depuis la dernière crise',
@@ -52,6 +56,9 @@ export default {
 	'companion.no_entries': "Pas encore d'entrées aujourd'hui",
 	'companion.medications': 'Médicaments',
 	'companion.insights': 'Tendances & observations',
+	'companion.episodes_7days': 'Episodes — 7 derniers jours',
+	'companion.top_symptoms': 'Top symptomes — 30 jours',
+	'companion.symptoms': 'Symptomes',
 
 	'protocol.title': 'Protocole journalier',
 	'protocol.symptoms': 'Symptômes & signes avant-coureurs',

@@ -63,6 +63,13 @@ export async function deleteDocument(id: number) {
 	return request(`/documents/${id}`, { method: 'DELETE' });
 }
 
+export async function recover(username: string, recoveryCode: string, newPassword: string) {
+	return request('/recover', {
+		method: 'POST',
+		body: JSON.stringify({ username, recovery_code: recoveryCode, new_password: newPassword })
+	});
+}
+
 export async function validateRecovery(code: string) {
 	return request('/validate-recovery', {
 		method: 'POST',

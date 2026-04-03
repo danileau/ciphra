@@ -5,6 +5,7 @@
 	import { blueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 
 	let selectedDate: string | null = null;
 	let currentYear = new Date().getFullYear();
@@ -61,6 +62,42 @@
 		return sum;
 	}, 0);
 	$: daysWithLogs = new Set(monthDocs.map(d => String(d.data.date || ''))).size;
+
+	// --- Monthly episode line chart ---
+	$: monthlyLineData = (() => {
+		if (!bp?.episodeTypes?.length) return null;
+		const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+		const counts = days.map(day => {
+			const dayStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+			return $documents
+				.filter(d => String(d.data.date || '') === dayStr)
+				.reduce((sum, d) => {
+					const eps = d.data.episodes || d.data.seizures || {};
+					return sum + Object.values(eps).reduce((a: number, b: number) => a + b, 0);
+				}, 0);
+		});
+		return {
+			labels: days.map(String),
+			datasets: [{
+				label: bp.episodeTypes[0]?.label || 'Episoden',
+				data: counts,
+				borderColor: '#ef4444',
+				backgroundColor: 'rgba(239,68,68,0.1)',
+				fill: true,
+				tension: 0.3,
+				pointRadius: 3,
+				pointBackgroundColor: '#ef4444'
+			}]
+		};
+	})();
+
+	$: monthlyLineOptions = {
+		scales: {
+			x: { ticks: { maxTicksLimit: 15 } },
+			y: { beginAtZero: true, ticks: { stepSize: 1 } }
+		},
+		plugins: { legend: { display: false } }
+	};
 </script>
 
 <div class="max-w-6xl mx-auto px-4 pt-4 pb-32">
@@ -128,6 +165,16 @@
 					<p class="text-xs text-stone-500">{$t('common.days')} logged</p>
 				</div>
 			</div>
+
+			<!-- Monthly Episode Trend -->
+			{#if monthlyLineData}
+			<div class="mt-4 bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
+				<h3 class="text-sm font-semibold text-stone-900 dark:text-white mb-3">{bp?.episodeTypes?.[0]?.label || 'Episoden'} — {monthName}</h3>
+				<div class="h-48">
+					<ChartWrapper type="line" data={monthlyLineData} options={monthlyLineOptions} />
+				</div>
+			</div>
+			{/if}
 		</div>
 
 		<!-- Day detail panel -->

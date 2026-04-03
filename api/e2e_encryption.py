@@ -197,3 +197,41 @@ class E2EEncryption:
 
     def verify_login(self, password: str, vault: UserVault) -> bool:
         return self.argon2.verify_password(password, vault.auth_hash)
+
+    def recover_account(self, username: str, recovery_code: str,
+                        new_password: str, vault: UserVault) -> UserVault:
+        """
+        Recover an account using the 12-word recovery code.
+        Decrypts the master key from the recovery vault, then re-encrypts
+        it with a new password-derived vault key.
+        """
+        if not vault.recovery_vault or not vault.recovery_params:
+            raise ValueError("Recovery not enabled for this account")
+
+        # 1. Derive recovery key from code + salt
+        recovery_salt, _ = self.argon2.decode_params(vault.recovery_params)
+        recovery_key = self.argon2.derive_key(
+            recovery_code, recovery_salt, f":{username}:RECOVERY"
+        )
+
+        # 2. Decrypt master key using recovery key
+        encrypted_master_bytes = base64.b64decode(vault.recovery_vault)
+        master_key = self.cipher.decrypt(encrypted_master_bytes, recovery_key)
+
+        # 3. Generate new auth hash + vault key from new password
+        auth_hash = self.argon2.hash_password(new_password)
+        vault_salt = self.argon2.generate_salt()
+        vault_key = self.argon2.derive_key(new_password, vault_salt, ":VAULT")
+        vault_params = self.argon2.encode_params(vault_salt)
+        encrypted_master = base64.b64encode(
+            self.cipher.encrypt(master_key, vault_key)
+        ).decode('ascii')
+
+        return UserVault(
+            username=username,
+            auth_hash=auth_hash,
+            vault_params=vault_params,
+            encrypted_master=encrypted_master,
+            recovery_vault=vault.recovery_vault,
+            recovery_params=vault.recovery_params,
+        )

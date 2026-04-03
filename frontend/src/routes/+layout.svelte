@@ -48,7 +48,10 @@
 
 	// Redirect to login when auth is ready but user is not authenticated
 	// (except if already on /login)
-	$: if (browser && $authReady && !$isAuthenticated && currentPath !== '/login') {
+	// Only force redirect to /login for app pages (not / which shows landing for guests)
+	$: if (browser && $authReady && !$isAuthenticated
+		&& currentPath !== '/login' && currentPath !== '/'
+		&& currentPath !== '/setup') {
 		goto('/login');
 	}
 

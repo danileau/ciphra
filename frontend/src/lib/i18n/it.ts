@@ -37,6 +37,10 @@ export default {
 	'auth.proceed': "Continua all'app",
 	'auth.enable_recovery': 'Attiva codice di recupero (consigliato)',
 	'auth.new_password': 'Nuova password',
+	'auth.recover_button': 'Reimposta password',
+	'auth.recovery_success': 'Password reimpostata con successo. Ora puoi accedere.',
+	'auth.error_recovery': 'Recupero non riuscito',
+	'auth.error_password_short': 'La password deve contenere almeno 8 caratteri',
 
 	'companion.greeting': 'Ciao {name}',
 	'companion.streak': "{count} giorni dall'ultima crisi",
@@ -52,6 +56,9 @@ export default {
 	'companion.no_entries': 'Nessuna voce oggi',
 	'companion.medications': 'Farmaci',
 	'companion.insights': 'Tendenze & osservazioni',
+	'companion.episodes_7days': 'Episodi — Ultimi 7 giorni',
+	'companion.top_symptoms': 'Top sintomi — 30 giorni',
+	'companion.symptoms': 'Sintomi',
 
 	'protocol.title': 'Protocollo giornaliero',
 	'protocol.symptoms': 'Sintomi & segnali premonitori',

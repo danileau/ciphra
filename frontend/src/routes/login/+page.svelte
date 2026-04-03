@@ -87,6 +87,37 @@
 		}
 	}
 
+	let recSuccess = '';
+
+	async function handleRecover() {
+		error = '';
+		recSuccess = '';
+		if (recNewPass !== recNewPassConfirm) {
+			error = $t('auth.error_password_match');
+			return;
+		}
+		if (recNewPass.length < 8) {
+			error = $t('auth.error_password_short');
+			return;
+		}
+		loading = true;
+		const res = await api.recover(recUser, recCode, recNewPass);
+		loading = false;
+		if (res.ok) {
+			recSuccess = $t('auth.recovery_success');
+			recUser = '';
+			recCode = '';
+			recNewPass = '';
+			recNewPassConfirm = '';
+			setTimeout(() => {
+				recSuccess = '';
+				tab = 'login';
+			}, 2000);
+		} else {
+			error = (res.data.error as string) || $t('auth.error_recovery');
+		}
+	}
+
 	function proceedAfterRecovery() {
 		showRecovery = false;
 		tab = 'login';
@@ -137,12 +168,23 @@
 							{tab === 'register' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400' : 'text-stone-500'}"
 						on:click={() => { tab = 'register'; error = ''; }}
 					>{$t('auth.register')}</button>
+						<button
+						class="flex-1 py-3 text-sm font-medium transition-colors min-h-[48px]
+							{tab === 'recovery' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400' : 'text-stone-500'}"
+						on:click={() => { tab = 'recovery'; error = ''; recSuccess = ''; }}
+					>{$t('auth.recovery')}</button>
 				</div>
 
 				<div class="p-6">
 					{#if error}
 						<div class="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 mb-4">
 							<p class="text-sm text-red-700 dark:text-red-300">{error}</p>
+						</div>
+					{/if}
+
+					{#if recSuccess}
+						<div class="bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded-xl p-3 mb-4">
+							<p class="text-sm text-green-700 dark:text-green-300">{recSuccess}</p>
 						</div>
 					{/if}
 
@@ -187,6 +229,34 @@
 							<button type="submit" disabled={loading}
 								class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white rounded-xl font-medium transition-colors min-h-[48px]">
 								{loading ? $t('common.loading') : $t('auth.register')}
+							</button>
+						</form>
+					{:else if tab === 'recovery'}
+						<form on:submit|preventDefault={handleRecover} class="space-y-4">
+							<div>
+								<label for="rec-user" class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1.5">{$t('auth.username')}</label>
+								<input id="rec-user" type="text" bind:value={recUser} required minlength="3"
+									class="w-full px-3 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none min-h-[44px]" />
+							</div>
+							<div>
+								<label for="rec-code" class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1.5">{$t('auth.recovery_code')}</label>
+								<input id="rec-code" type="text" bind:value={recCode} required
+									placeholder="able acid aged also area army away baby back ball born boss"
+									class="w-full px-3 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none min-h-[44px] font-mono text-sm" />
+							</div>
+							<div>
+								<label for="rec-new-pass" class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1.5">{$t('auth.new_password')}</label>
+								<input id="rec-new-pass" type="password" bind:value={recNewPass} required minlength="8"
+									class="w-full px-3 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none min-h-[44px]" />
+							</div>
+							<div>
+								<label for="rec-new-pass2" class="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1.5">{$t('auth.password_confirm')}</label>
+								<input id="rec-new-pass2" type="password" bind:value={recNewPassConfirm} required minlength="8"
+									class="w-full px-3 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none min-h-[44px]" />
+							</div>
+							<button type="submit" disabled={loading}
+								class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white rounded-xl font-medium transition-colors min-h-[48px]">
+								{loading ? $t('common.loading') : $t('auth.recover_button')}
 							</button>
 						</form>
 					{/if}

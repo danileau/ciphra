@@ -365,6 +365,71 @@ def delete_document(doc_id):
         return jsonify({'error': 'Failed to delete document'}), 500
 
 
+@app.route('/api/recover', methods=['POST'])
+def recover():
+    data = request.get_json() or {}
+    username = (data.get('username') or '').strip().lower()
+    recovery_code = (data.get('recovery_code') or '').strip()
+    new_password = data.get('new_password')
+
+    if not username or not recovery_code or not new_password:
+        return jsonify({'error': 'Username, recovery code, and new password required'}), 400
+    if len(new_password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters'}), 400
+    if not RecoveryCode.validate(recovery_code):
+        return jsonify({'error': 'Invalid recovery code format'}), 400
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, auth_hash, vault_params, encrypted_master,
+                           recovery_vault, recovery_params
+                    FROM users WHERE username = %s
+                """, (username,))
+                user = cur.fetchone()
+                if not user:
+                    return jsonify({'error': 'Invalid credentials'}), 401
+
+                if not user['recovery_vault'] or not user['recovery_params']:
+                    return jsonify({'error': 'Recovery not enabled for this account'}), 400
+
+                vault = UserVault(
+                    username=username,
+                    auth_hash=user['auth_hash'],
+                    vault_params=user['vault_params'],
+                    encrypted_master=user['encrypted_master'],
+                    recovery_vault=user['recovery_vault'],
+                    recovery_params=user['recovery_params'],
+                )
+
+                try:
+                    new_vault = e2e.recover_account(
+                        username, recovery_code, new_password, vault
+                    )
+                except Exception:
+                    audit(conn, user['id'], 'RECOVERY_FAILED')
+                    return jsonify({'error': 'Invalid recovery code'}), 401
+
+                cur.execute("""
+                    UPDATE users
+                    SET auth_hash = %s, vault_params = %s, encrypted_master = %s,
+                        login_attempts = 0, locked_until = NULL, updated_at = NOW()
+                    WHERE id = %s
+                """, (
+                    new_vault.auth_hash,
+                    safe_json(new_vault.vault_params),
+                    safe_json(new_vault.encrypted_master),
+                    user['id'],
+                ))
+                audit(conn, user['id'], 'RECOVERY_SUCCESS')
+
+        return jsonify({'success': True}), 200
+    except Exception:
+        logger.exception("Recovery failed")
+        return jsonify({'error': 'Recovery failed'}), 500
+
+
 @app.route('/api/validate-recovery', methods=['POST'])
 def validate_recovery():
     code = (request.get_json() or {}).get('recovery_code', '')
