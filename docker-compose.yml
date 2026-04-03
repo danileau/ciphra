@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ciphra-postgres
+    environment:
+      POSTGRES_USER: ciphra
+      POSTGRES_PASSWORD: ciphra
+      POSTGRES_DB: ciphra
+    ports:
+      - "5433:5432"
+    volumes:
+      - ciphra_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ciphra"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ciphra
+
+  api:
+    build:
+      context: ./api
+    container_name: ciphra-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://ciphra:ciphra@postgres/ciphra
+      SECRET_KEY: ${SECRET_KEY:-ciphra-dev-secret-change-in-production}
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./api:/app
+    command: python server.py
+    networks:
+      - ciphra
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: ciphra-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    networks:
+      - ciphra
+
+  nginx:
+    image: nginx:alpine
+    container_name: ciphra-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - ciphra
+
+networks:
+  ciphra:
+    driver: bridge
+
+volumes:
+  ciphra_pgdata:

@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* Monthly grid sticky columns */
+.grid-table th:first-child,
+.grid-table td:first-child {
+	position: sticky;
+	left: 0;
+	z-index: 10;
+}
+.grid-table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 20;
+}
+.grid-table thead th:first-child {
+	z-index: 30;
+}
