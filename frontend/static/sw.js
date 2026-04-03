@@ -17,8 +17,11 @@ self.addEventListener('fetch', (event) => {
 	const { request } = event;
 	const url = new URL(request.url);
 
+	// Only handle http/https — ignore chrome-extension://, etc.
+	if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
 	// API requests: network only (encrypted data handled by IndexedDB)
-	if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/api')) {
+	if (url.pathname.startsWith('/api') || url.pathname === '/health') {
 		event.respondWith(fetch(request));
 		return;
 	}
