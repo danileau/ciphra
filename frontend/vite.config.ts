@@ -8,6 +8,10 @@ export default defineConfig({
 	server: {
 		host: '0.0.0.0',
 		port: 5173,
+		hmr: {
+			// When accessed through nginx (:8080), HMR WebSocket must connect to the right place
+			clientPort: parseInt(process.env.VITE_HMR_PORT || '5173'),
+		},
 		proxy: {
 			'/api': apiTarget,
 			'/health': apiTarget
