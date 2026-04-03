@@ -96,6 +96,16 @@
 		if (res.ok) await loadData();
 	}
 
+	async function handlePromote(user: AdminUser) {
+		const res = await api.adminPromoteUser(user.id);
+		if (res.ok) await loadData();
+	}
+
+	async function handleDemote(user: AdminUser) {
+		const res = await api.adminDemoteUser(user.id);
+		if (res.ok) await loadData();
+	}
+
 	function confirmDelete(user: AdminUser) {
 		deleteTarget = user;
 		showDeleteModal = true;
@@ -251,23 +261,38 @@
 										{/if}
 									</td>
 									<td class="px-4 py-3 text-right">
-										{#if user.username !== $auth.username && !user.is_admin}
-											<div class="flex items-center justify-end gap-1">
-												{#if isLocked(user)}
+										{#if user.username !== $auth.username}
+											<div class="flex items-center justify-end gap-1 flex-wrap">
+												<!-- Promote / Demote -->
+												{#if user.is_admin}
 													<button
-														on:click={() => handleUnlock(user)}
-														class="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors min-h-[32px]"
-													>{$t('admin.unlock')}</button>
+														on:click={() => handleDemote(user)}
+														class="text-xs px-2.5 py-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors min-h-[32px]"
+													>{$t('admin.demote')}</button>
 												{:else}
 													<button
-														on:click={() => handleLock(user)}
-														class="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors min-h-[32px]"
-													>{$t('admin.lock')}</button>
+														on:click={() => handlePromote(user)}
+														class="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors min-h-[32px]"
+													>{$t('admin.promote')}</button>
 												{/if}
-												<button
-													on:click={() => confirmDelete(user)}
-													class="text-xs px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors min-h-[32px]"
-												>{$t('common.delete')}</button>
+												<!-- Lock / Unlock -->
+												{#if !user.is_admin}
+													{#if isLocked(user)}
+														<button
+															on:click={() => handleUnlock(user)}
+															class="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors min-h-[32px]"
+														>{$t('admin.unlock')}</button>
+													{:else}
+														<button
+															on:click={() => handleLock(user)}
+															class="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors min-h-[32px]"
+														>{$t('admin.lock')}</button>
+													{/if}
+													<button
+														on:click={() => confirmDelete(user)}
+														class="text-xs px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors min-h-[32px]"
+													>{$t('common.delete')}</button>
+												{/if}
 											</div>
 										{/if}
 									</td>

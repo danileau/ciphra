@@ -65,10 +65,8 @@
 </script>
 
 {#if !$authReady}
-	<!-- Loading state while auth hydrates -->
-	<div class="min-h-screen flex items-center justify-center bg-stone-50 dark:bg-stone-950">
-		<p class="text-stone-400 text-sm">Loading...</p>
-	</div>
+	<!-- Stable background while auth hydrates — no content to prevent flashing -->
+	<div class="min-h-screen bg-stone-50 dark:bg-stone-950"></div>
 {:else if $isAuthenticated}
 	<!-- Top Bar -->
 	<header class="sticky top-0 z-40 bg-white/95 dark:bg-stone-950/95 backdrop-blur border-b border-stone-200 dark:border-stone-800">

@@ -1,8 +1,6 @@
-const CACHE_VERSION = 'ciphra-v1';
+const CACHE_VERSION = 'ciphra-v2';
 
-self.addEventListener('install', (event) => {
-	self.skipWaiting();
-});
+self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', (event) => {
 	event.waitUntil(
@@ -17,39 +15,46 @@ self.addEventListener('fetch', (event) => {
 	const { request } = event;
 	const url = new URL(request.url);
 
-	// Only handle http/https — ignore chrome-extension://, etc.
+	// Only handle http/https
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-	// API requests: network only (encrypted data handled by IndexedDB)
+	// API: network only
 	if (url.pathname.startsWith('/api') || url.pathname === '/health') {
-		event.respondWith(fetch(request));
+		event.respondWith(fetch(request).catch(() => new Response('{"error":"offline"}', {
+			status: 503, headers: { 'Content-Type': 'application/json' }
+		})));
 		return;
 	}
 
-	// Navigation requests: network first, cache fallback
+	// Navigation: network first, cache fallback
 	if (request.mode === 'navigate') {
 		event.respondWith(
 			fetch(request)
 				.then((response) => {
-					const clone = response.clone();
-					caches.open(CACHE_VERSION).then((cache) => cache.put(request, clone));
+					if (response.ok) {
+						const clone = response.clone();
+						caches.open(CACHE_VERSION).then((cache) => cache.put(request, clone)).catch(() => {});
+					}
 					return response;
 				})
-				.catch(() => caches.match(request))
+				.catch(() => caches.match(request).then((r) => r || new Response('Offline', { status: 503 })))
 		);
 		return;
 	}
 
 	// Static assets: cache first, network fallback
 	event.respondWith(
-		caches.match(request).then(
-			(cached) =>
-				cached ||
-				fetch(request).then((response) => {
-					const clone = response.clone();
-					caches.open(CACHE_VERSION).then((cache) => cache.put(request, clone));
+		caches.match(request).then((cached) => {
+			if (cached) return cached;
+			return fetch(request)
+				.then((response) => {
+					if (response.ok) {
+						const clone = response.clone();
+						caches.open(CACHE_VERSION).then((cache) => cache.put(request, clone)).catch(() => {});
+					}
 					return response;
 				})
-		)
+				.catch(() => new Response('', { status: 503 }));
+		})
 	);
 });

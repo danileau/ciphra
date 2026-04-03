@@ -355,5 +355,7 @@ export default {
 	'admin.time': 'Time',
 	'admin.action': 'Action',
 	'admin.ip': 'IP Address',
+	'admin.promote': 'Make admin',
+	'admin.demote': 'Revoke admin',
 	'admin.zero_knowledge': 'Zero-knowledge — Admin cannot view any health data',
 } as Record<string, string>;

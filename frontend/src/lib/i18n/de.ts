@@ -368,5 +368,7 @@ export default {
 	'admin.time': 'Zeitpunkt',
 	'admin.action': 'Aktion',
 	'admin.ip': 'IP-Adresse',
+	'admin.promote': 'Zum Admin',
+	'admin.demote': 'Admin entziehen',
 	'admin.zero_knowledge': 'Zero-Knowledge — Der Admin kann keine Gesundheitsdaten einsehen',
 } as Record<string, string>;

@@ -355,5 +355,7 @@ export default {
 	'admin.time': 'Ora',
 	'admin.action': 'Azione',
 	'admin.ip': 'Indirizzo IP',
+	'admin.promote': 'Promuovi admin',
+	'admin.demote': 'Revoca admin',
 	'admin.zero_knowledge': 'Zero-knowledge — L\'amministratore non può visualizzare alcun dato sanitario',
 } as Record<string, string>;

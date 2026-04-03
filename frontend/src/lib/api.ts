@@ -102,3 +102,11 @@ export async function adminDeleteUser(userId: number) {
 export async function adminGetAudit() {
 	return request('/admin/audit');
 }
+
+export async function adminPromoteUser(userId: number) {
+	return request(`/admin/users/${userId}/promote`, { method: 'POST' });
+}
+
+export async function adminDemoteUser(userId: number) {
+	return request(`/admin/users/${userId}/demote`, { method: 'POST' });
+}

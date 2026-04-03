@@ -634,6 +634,44 @@ def admin_delete_user(user_id):
         return jsonify({'error': 'Failed to delete user'}), 500
 
 
+@app.route('/api/admin/users/<int:user_id>/promote', methods=['POST'])
+@admin_required
+def admin_promote_user(user_id):
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, username FROM users WHERE id = %s", (user_id,))
+                user = cur.fetchone()
+                if not user:
+                    return jsonify({'error': 'User not found'}), 404
+                cur.execute("UPDATE users SET is_admin = TRUE WHERE id = %s", (user_id,))
+                audit(conn, request.user_id, f'ADMIN_PROMOTE:{user["username"]}')
+        return jsonify({'success': True}), 200
+    except Exception:
+        logger.exception("Admin promote failed")
+        return jsonify({'error': 'Failed to promote user'}), 500
+
+
+@app.route('/api/admin/users/<int:user_id>/demote', methods=['POST'])
+@admin_required
+def admin_demote_user(user_id):
+    if user_id == request.user_id:
+        return jsonify({'error': 'Cannot demote yourself'}), 400
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, username FROM users WHERE id = %s", (user_id,))
+                user = cur.fetchone()
+                if not user:
+                    return jsonify({'error': 'User not found'}), 404
+                cur.execute("UPDATE users SET is_admin = FALSE WHERE id = %s", (user_id,))
+                audit(conn, request.user_id, f'ADMIN_DEMOTE:{user["username"]}')
+        return jsonify({'success': True}), 200
+    except Exception:
+        logger.exception("Admin demote failed")
+        return jsonify({'error': 'Failed to demote user'}), 500
+
+
 @app.route('/api/admin/audit', methods=['GET'])
 @admin_required
 def admin_audit():
