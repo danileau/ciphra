@@ -95,23 +95,50 @@
 
 	function changeDate(delta: number) {
 		const d = new Date(currentDate);
-		d.setDate(d.getDate() + delta);
-		currentDate = d.toISOString().slice(0, 10);
-		// Reset and reload
-		if (bp) {
-			symptoms = {};
-			episodes = {};
-			triggers = {};
-			vitals = {};
-			medications = {};
-			notes = '';
-			initFromBlueprint(bp);
+		if (view === 'month') {
+			d.setMonth(d.getMonth() + delta);
+			d.setDate(1);
+		} else {
+			d.setDate(d.getDate() + delta);
 		}
-		loadExistingLog();
+		currentDate = d.toISOString().slice(0, 10);
+		if (view === 'day') {
+			// Reset and reload day form
+			if (bp) {
+				symptoms = {};
+				episodes = {};
+				triggers = {};
+				vitals = {};
+				medications = {};
+				notes = '';
+				initFromBlueprint(bp);
+			}
+			loadExistingLog();
+		}
+	}
+
+	function goToToday() {
+		currentDate = new Date().toISOString().slice(0, 10);
+		if (view === 'day') {
+			if (bp) {
+				symptoms = {};
+				episodes = {};
+				triggers = {};
+				vitals = {};
+				medications = {};
+				notes = '';
+				initFromBlueprint(bp);
+			}
+			loadExistingLog();
+		}
 	}
 
 	function formatDisplayDate(dateStr: string): string {
-		return new Date(dateStr + 'T12:00:00').toLocaleDateString(undefined, {
+		const d = new Date(dateStr + 'T12:00:00');
+		if (view === 'month') {
+			return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+		}
+		return d.toLocaleDateString(undefined, {
 			weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
 		});
 	}
@@ -183,22 +210,35 @@
 			<button on:click={() => changeDate(1)} class="p-2 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 min-w-[44px] min-h-[44px] flex items-center justify-center text-stone-500">
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 			</button>
-			<button on:click={() => { currentDate = new Date().toISOString().slice(0, 10); }} class="ml-1 text-xs font-medium px-2.5 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 min-h-[44px] flex items-center">
+			<button on:click={goToToday} class="ml-1 text-xs font-medium px-2.5 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 min-h-[44px] flex items-center">
 				{$t('common.today')}
 			</button>
 		</div>
 
-		<div class="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5">
-			<button on:click={() => { view = 'day'; }}
-				class="px-3 py-1.5 text-sm font-medium rounded-md min-h-[44px] flex items-center transition-colors
-					{view === 'day' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-sm' : 'text-stone-500'}">
-				{$t('common.day')}
+		<div class="flex items-center gap-2">
+			<!-- PDF Export -->
+			<button
+				on:click={exportPdf}
+				class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium min-h-[44px]"
+				title="PDF exportieren"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="7,10 12,15 17,10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke-width="2" stroke-linecap="round"/></svg>
+				<span class="hidden sm:inline">PDF</span>
 			</button>
-			<button on:click={() => { view = 'month'; }}
-				class="px-3 py-1.5 text-sm font-medium rounded-md min-h-[44px] flex items-center transition-colors
-					{view === 'month' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-sm' : 'text-stone-500'}">
-				{$t('common.month')}
-			</button>
+
+			<!-- View toggle -->
+			<div class="flex bg-stone-100 dark:bg-stone-800 rounded-lg p-0.5">
+				<button on:click={() => { view = 'day'; }}
+					class="px-3 py-1.5 text-sm font-medium rounded-md min-h-[44px] flex items-center transition-colors
+						{view === 'day' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-sm' : 'text-stone-500'}">
+					{$t('common.day')}
+				</button>
+				<button on:click={() => { view = 'month'; }}
+					class="px-3 py-1.5 text-sm font-medium rounded-md min-h-[44px] flex items-center transition-colors
+						{view === 'month' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-sm' : 'text-stone-500'}">
+					{$t('common.month')}
+				</button>
+			</div>
 		</div>
 	</div>
 
@@ -236,7 +276,7 @@
 			<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
 				<h2 class="text-base font-semibold text-stone-900 dark:text-white mb-4 flex items-center gap-2">
 					<svg class="w-5 h-5" style="color: {bp.episodeTypes[0]?.color || '#DC2626'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					{$t('protocol.seizures')}
+					{bp.episodeTypes.length === 1 ? bp.episodeTypes[0].label : 'Episoden'}
 				</h2>
 				<div class="space-y-3">
 					{#each bp.episodeTypes as ep}
@@ -389,15 +429,6 @@
 		</div>
 	{:else}
 		<!-- MONTHLY GRID (columns from blueprint) -->
-		<div class="flex justify-end mb-3">
-			<button
-				on:click={exportPdf}
-				class="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium transition-colors min-h-[44px]"
-			>
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="7,10 12,15 17,10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke-width="2" stroke-linecap="round"/></svg>
-				PDF exportieren
-			</button>
-		</div>
 		<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 overflow-hidden">
 			<div class="overflow-x-auto">
 				<table class="grid-table w-full text-xs">

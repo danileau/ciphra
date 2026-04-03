@@ -158,7 +158,7 @@
 			<div class="mt-6 grid grid-cols-2 gap-3">
 				<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
 					<p class="text-2xl font-bold text-red-500">{totalEpisodes}</p>
-					<p class="text-xs text-stone-500">{bp?.episodeTypes?.[0]?.label || $t('protocol.seizures')}</p>
+					<p class="text-xs text-stone-500">{bp?.episodeTypes?.[0]?.label || 'Episoden'}</p>
 				</div>
 				<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
 					<p class="text-2xl font-bold text-indigo-500">{daysWithLogs}</p>
