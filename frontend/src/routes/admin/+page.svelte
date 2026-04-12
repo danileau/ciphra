@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 	import { auth, isAuthenticated } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import * as api from '$lib/api';
+	import Asterisk from '$lib/components/Asterisk.svelte';
 
 	// Redirect non-admins
 	$: if ($auth.ready && (!$isAuthenticated || !$auth.isAdmin)) {
@@ -145,13 +146,13 @@
 	function formatDate(iso: string | null): string {
 		if (!iso) return '-';
 		const d = new Date(iso);
-		return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+		return d.toLocaleDateString($locale, { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 
 	function formatDateTime(iso: string | null): string {
 		if (!iso) return '-';
 		const d = new Date(iso);
-		return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+		return d.toLocaleDateString($locale, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 	}
 
 	function sortIcon(col: keyof AdminUser): string {
@@ -161,103 +162,103 @@
 </script>
 
 <div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
-	<h1 class="text-2xl font-bold text-stone-900 dark:text-white">{$t('admin.title')}</h1>
+	<h1 class="text-2xl font-bold" style="color: var(--text-primary);">{$t('admin.title')}</h1>
 
 	{#if loading}
 		<div class="flex items-center justify-center py-20">
-			<p class="text-stone-400 text-sm">{$t('common.loading')}</p>
+			<Asterisk size={32} spin color="muted" />
 		</div>
 	{:else if error}
-		<div class="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-4">
-			<p class="text-sm text-red-700 dark:text-red-300">{error}</p>
+		<div class="rounded-xl p-4" style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.15);">
+			<p class="text-sm" style="color: var(--danger);">{error}</p>
 		</div>
 	{:else}
 		<!-- Stats Cards -->
 		{#if stats}
 			<section>
-				<h2 class="text-sm font-medium text-stone-400 uppercase tracking-wider mb-3">{$t('admin.stats')}</h2>
+				<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted); letter-spacing: 0.04em;">{$t('admin.stats')}</h2>
 				<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-					<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
-						<p class="text-2xl font-bold text-stone-900 dark:text-white">{stats.total_users}</p>
-						<p class="text-xs text-stone-500 dark:text-stone-400 mt-1">{$t('admin.total_users')}</p>
+					<div class="card rounded-xl p-4">
+						<p class="text-2xl font-bold num-data">{stats.total_users}</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.total_users')}</p>
 					</div>
-					<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
-						<p class="text-2xl font-bold text-stone-900 dark:text-white">{stats.active_users_30d}</p>
-						<p class="text-xs text-stone-500 dark:text-stone-400 mt-1">{$t('admin.active_users')} (30d)</p>
+					<div class="card rounded-xl p-4">
+						<p class="text-2xl font-bold num-data">{stats.active_users_30d}</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.active_users')} (30d)</p>
 					</div>
-					<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
-						<p class="text-2xl font-bold text-stone-900 dark:text-white">{stats.total_documents}</p>
-						<p class="text-xs text-stone-500 dark:text-stone-400 mt-1">{$t('admin.total_docs')}</p>
+					<div class="card rounded-xl p-4">
+						<p class="text-2xl font-bold num-data">{stats.total_documents}</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.total_docs')}</p>
 					</div>
-					<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
-						<p class="text-2xl font-bold text-stone-900 dark:text-white">{stats.lockouts_30d}</p>
-						<p class="text-xs text-stone-500 dark:text-stone-400 mt-1">{$t('admin.lockouts')} (30d)</p>
+					<div class="card rounded-xl p-4">
+						<p class="text-2xl font-bold num-danger">{stats.lockouts_30d}</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.lockouts')} (30d)</p>
 					</div>
 				</div>
 				<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
-					<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
-						<p class="text-2xl font-bold text-stone-900 dark:text-white">{stats.active_users_7d}</p>
-						<p class="text-xs text-stone-500 dark:text-stone-400 mt-1">{$t('admin.active_users')} (7d)</p>
+					<div class="card rounded-xl p-4">
+						<p class="text-2xl font-bold num-data">{stats.active_users_7d}</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.active_users')} (7d)</p>
 					</div>
-					<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
-						<p class="text-2xl font-bold text-stone-900 dark:text-white">{stats.new_users_7d}</p>
-						<p class="text-xs text-stone-500 dark:text-stone-400 mt-1">{$t('admin.new_users')} (7d)</p>
+					<div class="card rounded-xl p-4">
+						<p class="text-2xl font-bold num-data">{stats.new_users_7d}</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.new_users')} (7d)</p>
 					</div>
-					<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
-						<p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.logins_success_30d}</p>
-						<p class="text-xs text-stone-500 dark:text-stone-400 mt-1">{$t('admin.logins_success')}</p>
+					<div class="card rounded-xl p-4">
+						<p class="text-2xl font-bold" style="color: var(--success); font-variant-numeric: tabular-nums;">{stats.logins_success_30d}</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.logins_success')}</p>
 					</div>
-					<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
-						<p class="text-2xl font-bold text-red-600 dark:text-red-400">{stats.logins_failed_30d}</p>
-						<p class="text-xs text-stone-500 dark:text-stone-400 mt-1">{$t('admin.logins_failed')}</p>
+					<div class="card rounded-xl p-4">
+						<p class="text-2xl font-bold num-danger">{stats.logins_failed_30d}</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.logins_failed')}</p>
 					</div>
 				</div>
 			</section>
 		{/if}
 
 		<!-- User Table -->
-		<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 overflow-hidden">
-			<div class="p-4 border-b border-stone-200 dark:border-stone-800">
-				<h2 class="text-sm font-medium text-stone-400 uppercase tracking-wider">{$t('admin.users')} ({users.length})</h2>
+		<section class="card rounded-xl overflow-hidden">
+			<div class="p-4" style="border-bottom: 1px solid var(--border);">
+				<h2 class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted); letter-spacing: 0.04em;">{$t('admin.users')} ({users.length})</h2>
 			</div>
 			{#if users.length === 0}
 				<div class="p-8 text-center">
-					<p class="text-sm text-stone-400">{$t('admin.no_users')}</p>
+					<p class="text-sm" style="color: var(--text-muted);">{$t('admin.no_users')}</p>
 				</div>
 			{:else}
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead>
-							<tr class="border-b border-stone-200 dark:border-stone-800">
-								<th class="text-left px-4 py-3 font-medium text-stone-500 dark:text-stone-400 cursor-pointer hover:text-stone-700 dark:hover:text-stone-200 select-none"
+							<tr style="border-bottom: 1px solid var(--border);">
+								<th class="text-left px-4 py-3 font-medium cursor-pointer select-none" style="color: var(--text-muted);"
 									on:click={() => toggleSort('username')}>{$t('admin.username')}{sortIcon('username')}</th>
-								<th class="text-left px-4 py-3 font-medium text-stone-500 dark:text-stone-400 cursor-pointer hover:text-stone-700 dark:hover:text-stone-200 select-none hidden sm:table-cell"
+								<th class="text-left px-4 py-3 font-medium cursor-pointer select-none hidden sm:table-cell" style="color: var(--text-muted);"
 									on:click={() => toggleSort('created_at')}>{$t('admin.created')}{sortIcon('created_at')}</th>
-								<th class="text-left px-4 py-3 font-medium text-stone-500 dark:text-stone-400 cursor-pointer hover:text-stone-700 dark:hover:text-stone-200 select-none hidden md:table-cell"
+								<th class="text-left px-4 py-3 font-medium cursor-pointer select-none hidden md:table-cell" style="color: var(--text-muted);"
 									on:click={() => toggleSort('last_login')}>{$t('admin.last_login')}{sortIcon('last_login')}</th>
-								<th class="text-right px-4 py-3 font-medium text-stone-500 dark:text-stone-400 cursor-pointer hover:text-stone-700 dark:hover:text-stone-200 select-none"
+								<th class="text-right px-4 py-3 font-medium cursor-pointer select-none" style="color: var(--text-muted);"
 									on:click={() => toggleSort('doc_count')}>{$t('admin.documents')}{sortIcon('doc_count')}</th>
-								<th class="text-center px-4 py-3 font-medium text-stone-500 dark:text-stone-400">{$t('admin.status')}</th>
-								<th class="text-right px-4 py-3 font-medium text-stone-500 dark:text-stone-400">{$t('admin.actions')}</th>
+								<th class="text-center px-4 py-3 font-medium" style="color: var(--text-muted);">{$t('admin.status')}</th>
+								<th class="text-right px-4 py-3 font-medium" style="color: var(--text-muted);">{$t('admin.actions')}</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#each sortedUsers as user (user.id)}
-								<tr class="border-b border-stone-100 dark:border-stone-800/50 last:border-0 hover:bg-stone-50 dark:hover:bg-stone-800/30">
+								<tr class="transition-colors" style="border-bottom: 1px solid var(--border-subtle);" class:last:border-0={true}>
 									<td class="px-4 py-3">
-										<span class="font-medium text-stone-900 dark:text-white">{user.username}</span>
+										<span class="font-medium" style="color: var(--text-primary);">{user.username}</span>
 										{#if user.is_admin}
-											<span class="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-medium">admin</span>
+											<span class="ml-1.5 badge-olive" style="font-size: 10px; padding: 2px 6px;">{$t('admin.admin_badge')}</span>
 										{/if}
 									</td>
-									<td class="px-4 py-3 text-stone-500 dark:text-stone-400 hidden sm:table-cell">{formatDate(user.created_at)}</td>
-									<td class="px-4 py-3 text-stone-500 dark:text-stone-400 hidden md:table-cell">{formatDate(user.last_login)}</td>
-									<td class="px-4 py-3 text-right text-stone-900 dark:text-white">{user.doc_count}</td>
+									<td class="px-4 py-3 hidden sm:table-cell" style="color: var(--text-muted);">{formatDate(user.created_at)}</td>
+									<td class="px-4 py-3 hidden md:table-cell" style="color: var(--text-muted);">{formatDate(user.last_login)}</td>
+									<td class="px-4 py-3 text-right" style="color: var(--text-primary);">{user.doc_count}</td>
 									<td class="px-4 py-3 text-center">
 										{#if isLocked(user)}
-											<span class="text-xs px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400">{$t('admin.locked')}</span>
+											<span class="badge-danger">{$t('admin.locked')}</span>
 										{:else}
-											<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">{$t('admin.active')}</span>
+											<span class="badge-olive">{$t('admin.active')}</span>
 										{/if}
 									</td>
 									<td class="px-4 py-3 text-right">
@@ -267,12 +268,14 @@
 												{#if user.is_admin}
 													<button
 														on:click={() => handleDemote(user)}
-														class="text-xs px-2.5 py-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors min-h-[32px]"
+														class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
+														style="background: var(--surface-muted); color: var(--text-secondary);"
 													>{$t('admin.demote')}</button>
 												{:else}
 													<button
 														on:click={() => handlePromote(user)}
-														class="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors min-h-[32px]"
+														class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
+														style="background: var(--olive-light); color: var(--olive);"
 													>{$t('admin.promote')}</button>
 												{/if}
 												<!-- Lock / Unlock -->
@@ -280,17 +283,20 @@
 													{#if isLocked(user)}
 														<button
 															on:click={() => handleUnlock(user)}
-															class="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors min-h-[32px]"
+															class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
+															style="background: rgba(5,150,105,0.08); color: var(--success);"
 														>{$t('admin.unlock')}</button>
 													{:else}
 														<button
 															on:click={() => handleLock(user)}
-															class="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors min-h-[32px]"
+															class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
+															style="background: var(--ochre-light); color: var(--ochre);"
 														>{$t('admin.lock')}</button>
 													{/if}
 													<button
 														on:click={() => confirmDelete(user)}
-														class="text-xs px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors min-h-[32px]"
+														class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
+														style="background: rgba(220,38,38,0.06); color: var(--danger);"
 													>{$t('common.delete')}</button>
 												{/if}
 											</div>
@@ -305,42 +311,42 @@
 		</section>
 
 		<!-- Audit Log -->
-		<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 overflow-hidden">
-			<div class="p-4 border-b border-stone-200 dark:border-stone-800">
-				<h2 class="text-sm font-medium text-stone-400 uppercase tracking-wider">{$t('admin.audit')}</h2>
+		<section class="card rounded-xl overflow-hidden">
+			<div class="p-4" style="border-bottom: 1px solid var(--border);">
+				<h2 class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted); letter-spacing: 0.04em;">{$t('admin.audit')}</h2>
 			</div>
 			{#if auditLog.length === 0}
 				<div class="p-8 text-center">
-					<p class="text-sm text-stone-400">{$t('admin.no_audit')}</p>
+					<p class="text-sm" style="color: var(--text-muted);">{$t('admin.no_audit')}</p>
 				</div>
 			{:else}
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead>
-							<tr class="border-b border-stone-200 dark:border-stone-800">
-								<th class="text-left px-4 py-3 font-medium text-stone-500 dark:text-stone-400">{$t('admin.time')}</th>
-								<th class="text-left px-4 py-3 font-medium text-stone-500 dark:text-stone-400">{$t('admin.username')}</th>
-								<th class="text-left px-4 py-3 font-medium text-stone-500 dark:text-stone-400">{$t('admin.action')}</th>
-								<th class="text-left px-4 py-3 font-medium text-stone-500 dark:text-stone-400 hidden sm:table-cell">{$t('admin.ip')}</th>
+							<tr style="border-bottom: 1px solid var(--border);">
+								<th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted);">{$t('admin.time')}</th>
+								<th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted);">{$t('admin.username')}</th>
+								<th class="text-left px-4 py-3 font-medium" style="color: var(--text-muted);">{$t('admin.action')}</th>
+								<th class="text-left px-4 py-3 font-medium hidden sm:table-cell" style="color: var(--text-muted);">{$t('admin.ip')}</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#each auditLog as entry (entry.id)}
-								<tr class="border-b border-stone-100 dark:border-stone-800/50 last:border-0">
-									<td class="px-4 py-2.5 text-stone-500 dark:text-stone-400 whitespace-nowrap">{formatDateTime(entry.created_at)}</td>
-									<td class="px-4 py-2.5 text-stone-900 dark:text-white">{entry.username || '-'}</td>
+								<tr style="border-bottom: 1px solid var(--border-subtle);">
+									<td class="px-4 py-2.5 whitespace-nowrap" style="color: var(--text-muted);">{formatDateTime(entry.created_at)}</td>
+									<td class="px-4 py-2.5" style="color: var(--text-primary);">{entry.username || '-'}</td>
 									<td class="px-4 py-2.5">
-										<span class="text-xs px-2 py-0.5 rounded-full font-medium
-											{entry.action.includes('FAILED') || entry.action.includes('LOCKED')
-												? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400'
-												: entry.action.includes('SUCCESS') || entry.action === 'REGISTER'
-													? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
-													: entry.action.startsWith('ADMIN_')
-														? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400'
-														: 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300'}"
-										>{entry.action}</span>
+										{#if entry.action.includes('FAILED') || entry.action.includes('LOCKED')}
+											<span class="badge-danger">{entry.action}</span>
+										{:else if entry.action.includes('SUCCESS') || entry.action === 'REGISTER'}
+											<span class="badge-olive">{entry.action}</span>
+										{:else if entry.action.startsWith('ADMIN_')}
+											<span class="badge-ochre">{entry.action}</span>
+										{:else}
+											<span class="badge" style="background: var(--surface-muted); color: var(--text-secondary);">{entry.action}</span>
+										{/if}
 									</td>
-									<td class="px-4 py-2.5 text-stone-400 dark:text-stone-500 font-mono text-xs hidden sm:table-cell">{entry.ip_address || '-'}</td>
+									<td class="px-4 py-2.5 font-mono text-xs hidden sm:table-cell" style="color: var(--text-muted);">{entry.ip_address || '-'}</td>
 								</tr>
 							{/each}
 						</tbody>
@@ -351,31 +357,32 @@
 
 		<!-- Zero-knowledge reminder -->
 		<div class="flex items-center justify-center gap-2 py-4">
-			<svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-width="2"/></svg>
-			<span class="text-xs text-stone-400 dark:text-stone-500">{$t('admin.zero_knowledge')}</span>
+			<Asterisk size={14} color="olive" />
+			<span class="text-xs" style="color: var(--text-muted);">{$t('admin.zero_knowledge')}</span>
 		</div>
 	{/if}
 </div>
 
 <!-- Delete confirmation modal -->
 {#if showDeleteModal && deleteTarget}
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" on:click|self={() => { showDeleteModal = false; }}>
-	<div class="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 p-6 max-w-sm w-full shadow-xl">
-		<h3 class="text-lg font-semibold text-stone-900 dark:text-white mb-2">{$t('admin.delete_user')}</h3>
-		<p class="text-sm text-stone-500 dark:text-stone-400 mb-4">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);" on:click|self={() => { showDeleteModal = false; }}>
+	<div class="card rounded-2xl p-6 max-w-sm w-full" style="box-shadow: 0 20px 60px rgba(44,37,32,0.15);">
+		<h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">{$t('admin.delete_user')}</h3>
+		<p class="text-sm mb-4" style="color: var(--text-muted);">
 			{$t('admin.delete_confirm', { username: deleteTarget.username, count: String(deleteTarget.doc_count) })}
 		</p>
 		<div class="flex gap-3">
 			<button
 				on:click={() => { showDeleteModal = false; }}
-				class="flex-1 py-2.5 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 rounded-xl text-sm font-medium min-h-[44px]"
+				class="btn-secondary flex-1 py-2.5 rounded-xl text-sm font-medium min-h-[44px]"
 			>
 				{$t('common.cancel')}
 			</button>
 			<button
 				on:click={handleDelete}
 				disabled={deleteLoading}
-				class="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 disabled:bg-stone-300 min-h-[44px]"
+				class="flex-1 py-2.5 rounded-xl text-sm font-medium min-h-[44px] transition-colors"
+				style="background: var(--danger); color: white;"
 			>
 				{deleteLoading ? $t('common.loading') : $t('common.delete')}
 			</button>

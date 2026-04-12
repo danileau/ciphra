@@ -2,6 +2,283 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════
+   ciphra Design System
+
+   Brand: "Confident. Warm. Precise."
+   Metaphor: A private annotation on your health.
+   The asterisk * is the soul — password mask, wildcard, footnote.
+   ═══════════════════════════════════════════════════════════ */
+
+@layer base {
+	:root {
+		/* ── Brand ── */
+		--brand: #b23c2c;
+		--brand-hover: #9a3326;
+		--brand-light: #f5e8e6;
+		--ochre: #9f630b;
+		--ochre-light: #fdf3e5;
+		--olive: #7f821b;
+		--olive-light: #f4f4e3;
+
+		/* ── Surfaces ── */
+		--surface: #faf8f6;
+		--surface-card: #ffffff;
+		--surface-muted: #f3f0ed;
+		--surface-inset: #ede8e3;
+
+		/* ── Text ── */
+		--text-primary: #2c2520;
+		--text-secondary: #64594e;
+		--text-muted: #97918a;
+
+		/* ── Borders ── */
+		--border: #e8e3dd;
+		--border-subtle: #f0ece7;
+
+		/* ── Semantic ── */
+		--danger: #DC2626;
+		--success: #059669;
+	}
+
+	/* Warm overrides for Tailwind's cold slate palette */
+	.border-slate-200 { border-color: var(--border) !important; }
+	.border-slate-100 { border-color: var(--border-subtle) !important; }
+	.text-slate-900 { color: var(--text-primary) !important; }
+	.text-slate-700 { color: var(--text-primary) !important; }
+	.text-slate-500 { color: var(--text-secondary) !important; }
+	.text-slate-400 { color: var(--text-muted) !important; }
+	.bg-slate-50 { background-color: var(--surface-muted) !important; }
+	.bg-slate-100 { background-color: var(--surface-muted) !important; }
+	.bg-slate-200 { background-color: var(--surface-inset) !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THE ASTERISK SYSTEM
+   The * is ciphra's visual fingerprint.
+   It rotates 8°, has asymmetric arms, is never perfectly round.
+   ═══════════════════════════════════════════════════════════ */
+
+@layer components {
+	/* ── Asterisk: Loading spinner ── */
+	.asterisk-spin {
+		display: inline-block;
+		width: 24px;
+		height: 24px;
+	}
+	.asterisk-spin svg {
+		animation: asteriskRotate 2s ease-in-out infinite;
+	}
+	@keyframes asteriskRotate {
+		0% { transform: rotate(8deg); }
+		50% { transform: rotate(368deg); }
+		100% { transform: rotate(728deg); }
+	}
+
+	/* ── Asterisk: Section divider ── */
+	.asterisk-divider {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		color: var(--text-muted);
+		padding: 8px 0;
+	}
+	.asterisk-divider::before,
+	.asterisk-divider::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--border);
+	}
+
+	/* ── Asterisk: Empty state ── */
+	.asterisk-empty {
+		opacity: 0.08;
+	}
+
+	/* ── Asterisk: Watermark ── */
+	.asterisk-watermark {
+		position: absolute;
+		opacity: 0.03;
+		pointer-events: none;
+	}
+
+	/* ═══ CARDS ═══ */
+
+	/* Primary card — white on warm surface */
+	.card {
+		background: var(--surface-card);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		transition: all 0.2s ease-out;
+	}
+
+	/* Card with hover lift */
+	.card-interactive {
+		background: var(--surface-card);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		transition: all 0.2s ease-out;
+		cursor: pointer;
+	}
+	.card-interactive:hover {
+		border-color: var(--border);
+		transform: translateY(-1px);
+		box-shadow: 0 4px 16px rgba(44, 37, 32, 0.06);
+	}
+
+	/* Tinted card — for emphasis sections */
+	.card-ochre {
+		background: var(--ochre-light);
+		border: 1px solid rgba(159, 99, 11, 0.15);
+		border-radius: 12px;
+	}
+	.card-olive {
+		background: var(--olive-light);
+		border: 1px solid rgba(127, 130, 27, 0.15);
+		border-radius: 12px;
+	}
+	.card-brand {
+		background: var(--brand-light);
+		border: 1px solid rgba(178, 60, 44, 0.15);
+		border-radius: 12px;
+	}
+
+	/* ═══ BADGES ═══ */
+
+	.badge {
+		@apply text-xs px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1;
+	}
+	.badge-ochre {
+		background: var(--ochre-light);
+		color: var(--ochre);
+	}
+	.badge-olive {
+		background: var(--olive-light);
+		color: var(--olive);
+	}
+	.badge-brand {
+		background: var(--brand-light);
+		color: var(--brand);
+	}
+	.badge-danger {
+		@apply bg-red-50 text-red-700;
+	}
+
+	/* ═══ BUTTONS ═══ */
+
+	.btn-primary {
+		@apply inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 rounded-xl min-h-[44px];
+		background: var(--brand);
+		color: white;
+	}
+	.btn-primary:hover { background: var(--brand-hover); }
+	.btn-primary:active { transform: scale(0.97); }
+	.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+	.btn-secondary {
+		@apply inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 rounded-xl min-h-[44px];
+		background: var(--surface-muted);
+		color: var(--text-secondary);
+	}
+	.btn-secondary:hover { background: var(--surface-inset); }
+
+	/* ═══ INPUTS ═══ */
+
+	.input {
+		@apply w-full px-3 py-2.5 text-sm outline-none min-h-[44px];
+		background: var(--surface-muted);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		color: var(--text-primary);
+		transition: all 0.2s ease-out;
+	}
+	.input:focus {
+		border-color: var(--brand);
+		box-shadow: 0 0 0 3px rgba(178, 60, 44, 0.08);
+	}
+	.input::placeholder {
+		color: var(--text-muted);
+	}
+
+	/* ═══ NUMBER DISPLAY ═══ */
+	/* Data numbers use ochre — "information is ochre" */
+	.num-data {
+		font-weight: 700;
+		color: var(--ochre);
+		font-variant-numeric: tabular-nums;
+	}
+	.num-danger {
+		font-weight: 700;
+		color: var(--danger);
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* ═══ FAB ═══ */
+
+	.fab {
+		@apply fixed z-[45] w-14 h-14 rounded-full flex items-center justify-center text-white;
+		background: var(--brand);
+		transition: all 0.2s ease-out;
+		box-shadow: 0 4px 14px rgba(178, 60, 44, 0.3);
+	}
+	.fab:hover {
+		background: var(--brand-hover);
+		box-shadow: 0 6px 20px rgba(178, 60, 44, 0.4);
+		transform: scale(1.05);
+	}
+	.fab:active {
+		transform: scale(0.95);
+	}
+
+	/* Focus visible for all interactive components */
+	.btn-primary:focus-visible,
+	.btn-secondary:focus-visible,
+	.card-interactive:focus-visible,
+	.fab:focus-visible {
+		outline: 3px solid var(--brand);
+		outline-offset: 2px;
+	}
+
+	/* Fix badge-danger to use design tokens */
+	.badge-danger {
+		background: rgba(220, 38, 38, 0.05);
+		color: var(--danger);
+	}
+}
+
+@layer utilities {
+	/* Stagger animation for list items */
+	.stagger-in {
+		animation: staggerIn 0.3s ease-out both;
+	}
+	@keyframes staggerIn {
+		from { opacity: 0; transform: translateY(8px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	/* Warm skeleton shimmer */
+	.skeleton {
+		background: linear-gradient(90deg, var(--surface-muted) 0%, var(--surface-inset) 50%, var(--surface-muted) 100%);
+		background-size: 200% 100%;
+		animation: shimmer 1.5s ease-in-out infinite;
+		border-radius: 8px;
+	}
+	@keyframes shimmer {
+		0% { background-position: 200% 0; }
+		100% { background-position: -200% 0; }
+	}
+
+	/* Fade in */
+	.fade-in {
+		animation: fadeIn 0.3s ease-out;
+	}
+	@keyframes fadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*, *::before, *::after {
 		animation-duration: 0.01ms !important;

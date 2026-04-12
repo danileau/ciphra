@@ -39,7 +39,7 @@ export function bytesToB64(bytes: Uint8Array): string {
 // --- AES-256-GCM (WebCrypto, server-compatible wire format) ---
 
 async function aesImportKey(rawKey: Uint8Array): Promise<CryptoKey> {
-	return crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, [
+	return crypto.subtle.importKey('raw', rawKey as BufferSource, { name: 'AES-GCM' }, false, [
 		'encrypt',
 		'decrypt'
 	]);
@@ -54,7 +54,7 @@ async function aesEncrypt(plaintext: Uint8Array, keyBytes: Uint8Array): Promise<
 	const nonce = crypto.getRandomValues(new Uint8Array(12));
 
 	// WebCrypto returns ciphertext+tag(16) concatenated
-	const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, plaintext);
+	const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, plaintext as BufferSource);
 	const encArr = new Uint8Array(encrypted);
 
 	// WebCrypto: ciphertext | tag(16)

@@ -1,0 +1,692 @@
+<script lang="ts">
+	import { t, locale } from '$lib/i18n';
+	import { isAuthenticated } from '$lib/stores/auth';
+	import { documents, type CiphraDocument } from '$lib/stores/documents';
+	import { blueprint } from '$lib/blueprint';
+	import type { Blueprint } from '$lib/blueprint';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { generateGridPdf, generateAnalyticsPdf, exportCsv } from '$lib/pdf';
+
+	let currentDate = new Date().toISOString().slice(0, 10);
+	let viewMode: 'month' | 'year' = 'month';
+	let currentYear = new Date().getFullYear();
+
+	$: bp = $blueprint;
+
+	onMount(() => {
+		if (!$isAuthenticated) { goto('/login'); return; }
+		documents.load();
+	});
+
+	// Monthly grid helpers
+	$: monthDocs = getMonthDocs($documents, currentDate);
+
+	function getMonthDocs(docs: CiphraDocument[], refDate: string) {
+		const d = new Date(refDate + 'T12:00:00');
+		const year = d.getFullYear();
+		const month = d.getMonth();
+		const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+		return docs.filter(doc =>
+			doc.data.type === 'daily_log' && String(doc.data.date || '').startsWith(prefix)
+		);
+	}
+
+	function getDaysInMonth(dateStr: string): number {
+		const d = new Date(dateStr + 'T12:00:00');
+		return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+	}
+
+	function getSymptom(doc: any, col: string): boolean {
+		return doc?.data?.symptoms?.[col] || false;
+	}
+	function getEpisodeCount(doc: any, col: string): number {
+		return doc?.data?.episodes?.[col] || doc?.data?.seizures?.[col] || 0;
+	}
+	function symptomSum(col: string): number {
+		return monthDocs.filter(d => d.data.symptoms?.[col]).length;
+	}
+	function episodeSum(col: string): number {
+		return monthDocs.reduce((sum: number, d: any) => sum + (d.data.episodes?.[col] || d.data.seizures?.[col] || 0), 0);
+	}
+
+	function itemLabel(id: string): string {
+		if (!bp) return id;
+		for (const g of bp.symptomGroups) {
+			const item = g.items.find(i => i.id === id);
+			if (item) return $t(item.label);
+		}
+		const ep = bp.episodeTypes.find(e => e.id === id);
+		if (ep) return $t(ep.label);
+		return id;
+	}
+
+	function changeMonth(delta: number) {
+		const d = new Date(currentDate + 'T12:00:00');
+		d.setMonth(d.getMonth() + delta);
+		d.setDate(1);
+		currentDate = d.toISOString().slice(0, 10);
+	}
+
+	function formatMonth(dateStr: string): string {
+		const d = new Date(dateStr + 'T12:00:00');
+		return d.toLocaleDateString($locale, { month: 'long', year: 'numeric' });
+	}
+
+	function exportGridPdf() {
+		if (!bp) return;
+		const d = new Date(currentDate + 'T12:00:00');
+		generateGridPdf(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale);
+	}
+
+	function exportAnalyticsPdf() {
+		if (!bp) return;
+		const d = new Date(currentDate + 'T12:00:00');
+		generateAnalyticsPdf(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale);
+	}
+
+	function exportCsvFile() {
+		if (!bp) return;
+		const d = new Date(currentDate + 'T12:00:00');
+		exportCsv(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale);
+	}
+
+	// Stats
+	$: totalEpisodes = bp ? bp.episodeTypes.reduce((sum, ep) => sum + episodeSum(ep.id), 0) : 0;
+	$: daysLogged = monthDocs.length;
+	$: daysInMonth = getDaysInMonth(currentDate);
+
+	// ─── Year view helpers ─────────────────────────────────
+	function getYearDocs(docs: CiphraDocument[], year: number) {
+		const prefix = `${year}-`;
+		return docs.filter(doc =>
+			doc.data.type === 'daily_log' && String(doc.data.date || '').startsWith(prefix)
+		);
+	}
+
+	$: yearDocs = getYearDocs($documents, currentYear);
+
+	function getYearMonthDays(year: number, month: number): number {
+		return new Date(year, month + 1, 0).getDate();
+	}
+
+	function getDayDoc(docs: CiphraDocument[], dateStr: string): CiphraDocument | undefined {
+		return docs.find(d => d.data.date === dateStr);
+	}
+
+	function dayHasEpisodes(doc: CiphraDocument | undefined, bp: Blueprint): boolean {
+		if (!doc || !bp) return false;
+		for (const ep of bp.episodeTypes) {
+			if ((doc.data.episodes?.[ep.id] || doc.data.seizures?.[ep.id] || 0) > 0) return true;
+		}
+		return false;
+	}
+
+	function dayTooltip(doc: CiphraDocument | undefined, bp: Blueprint): string {
+		if (!doc) return '';
+		const parts: string[] = [];
+		if (bp) {
+			// Count active symptoms
+			const symCount = bp.symptomGroups.reduce((sum, g) =>
+				sum + g.items.filter(i => doc.data.symptoms?.[i.id]).length, 0);
+			if (symCount > 0) parts.push(`${symCount} ${$t('protocol.symptoms').toLowerCase()}`);
+			// Count episodes
+			const epCount = bp.episodeTypes.reduce((sum, ep) =>
+				sum + (doc.data.episodes?.[ep.id] || doc.data.seizures?.[ep.id] || 0), 0);
+			if (epCount > 0) parts.push(`${epCount} ${$t('protocol.episodes').toLowerCase()}`);
+		}
+		if (doc.data.notes) parts.push($t('common.notes'));
+		return parts.join(', ') || $t('pdf.days_logged');
+	}
+
+	$: yearTotalEpisodes = bp ? bp.episodeTypes.reduce((sum, ep) =>
+		sum + yearDocs.reduce((s: number, d: any) => s + (d.data.episodes?.[ep.id] || d.data.seizures?.[ep.id] || 0), 0), 0) : 0;
+
+	$: yearDaysLogged = yearDocs.length;
+
+	$: yearMostFrequentSymptom = (() => {
+		if (!bp || yearDocs.length === 0) return '';
+		let maxCount = 0;
+		let maxLabel = '';
+		for (const g of bp.symptomGroups) {
+			for (const item of g.items) {
+				const count = yearDocs.filter(d => d.data.symptoms?.[item.id]).length;
+				if (count > maxCount) {
+					maxCount = count;
+					maxLabel = $t(item.label);
+				}
+			}
+		}
+		return maxLabel;
+	})();
+
+	function getMonthShortName(month: number): string {
+		const d = new Date(2024, month, 1);
+		return d.toLocaleDateString($locale, { month: 'short' });
+	}
+
+	async function toggleGridSymptom(dayStr: string, symptomId: string) {
+		const existing = $documents.find(d => d.data.type === 'daily_log' && d.data.date === dayStr);
+		if (existing) {
+			const symptoms = { ...existing.data.symptoms, [symptomId]: !existing.data.symptoms?.[symptomId] };
+			await documents.updateDoc(existing.id, { ...existing.data, symptoms });
+		} else {
+			const data: any = { type: 'daily_log', date: dayStr, symptoms: { [symptomId]: true }, episodes: {}, triggers: {}, vitals: {}, medications: {}, notes: '' };
+			await documents.save(data);
+		}
+	}
+
+	async function incrementGridEpisode(dayStr: string, episodeId: string) {
+		const existing = $documents.find(d => d.data.type === 'daily_log' && d.data.date === dayStr);
+		if (existing) {
+			const episodes = { ...existing.data.episodes, [episodeId]: (existing.data.episodes?.[episodeId] || 0) + 1 };
+			await documents.updateDoc(existing.id, { ...existing.data, episodes });
+		} else {
+			const data: any = { type: 'daily_log', date: dayStr, symptoms: {}, episodes: { [episodeId]: 1 }, triggers: {}, vitals: {}, medications: {}, notes: '' };
+			await documents.save(data);
+		}
+	}
+
+	function getFirstDayOfWeek(year: number, month: number): number {
+		// 0=Sun, 1=Mon... We want Mon=0
+		const day = new Date(year, month, 1).getDay();
+		return day === 0 ? 6 : day - 1;
+	}
+</script>
+
+{#if !bp}
+	<div class="max-w-6xl mx-auto px-4 py-12 text-center">
+		<p class="text-slate-400">{$t('common.loading')}</p>
+	</div>
+{:else}
+<div class="rpt-page">
+	<!-- Header -->
+	<div class="rpt-header">
+		<h1 class="rpt-title">{$t('reports.title')}</h1>
+		<div class="rpt-view-toggle">
+			<button
+				class="rpt-toggle-btn {viewMode === 'month' ? 'rpt-toggle-btn--active' : ''}"
+				on:click={() => { viewMode = 'month'; }}
+			>{$t('reports.month_view')}</button>
+			<button
+				class="rpt-toggle-btn {viewMode === 'year' ? 'rpt-toggle-btn--active' : ''}"
+				on:click={() => { viewMode = 'year'; }}
+			>{$t('reports.year_view')}</button>
+		</div>
+	</div>
+
+	{#if viewMode === 'month'}
+	<!-- ═══ MONTH VIEW ═══ -->
+
+	<!-- Month nav -->
+	<div class="flex items-center justify-center gap-3 mb-6">
+		<button on:click={() => changeMonth(-1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
+			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		</button>
+		<span class="text-base font-semibold text-slate-900 min-w-[180px] text-center">{formatMonth(currentDate)}</span>
+		<button on:click={() => changeMonth(1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
+			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		</button>
+	</div>
+
+	<!-- Summary stats -->
+	<div class="grid grid-cols-3 gap-3 mb-6">
+		<div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
+			<p class="text-2xl font-bold text-slate-900">{daysLogged}</p>
+			<p class="text-xs text-slate-500 mt-1">{$t('pdf.days_logged')}</p>
+		</div>
+		<div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
+			<p class="text-2xl font-bold text-red-500">{totalEpisodes}</p>
+			<p class="text-xs text-slate-500 mt-1">{$t('pdf.total_episodes')}</p>
+		</div>
+		<div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
+			<p class="text-2xl font-bold text-brand">{daysInMonth > 0 ? Math.round(daysLogged / daysInMonth * 100) : 0}%</p>
+			<p class="text-xs text-slate-500 mt-1">{$t('reports.coverage')}</p>
+		</div>
+	</div>
+
+	<!-- Export buttons -->
+	<div class="grid grid-cols-3 gap-3 mb-6">
+		<button
+			on:click={exportAnalyticsPdf}
+			class="bg-white rounded-xl border border-slate-200 p-4 hover:border-brand/50 transition-colors text-left"
+		>
+			<div class="flex items-center gap-2 mb-2">
+				<svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				<span class="text-sm font-semibold text-slate-900">{$t('reports.analytics')}</span>
+			</div>
+			<p class="text-xs text-slate-500">{$t('reports.analytics_desc')}</p>
+		</button>
+		<button
+			on:click={exportGridPdf}
+			class="bg-white rounded-xl border border-slate-200 p-4 hover:border-brand/50 transition-colors text-left"
+		>
+			<div class="flex items-center gap-2 mb-2">
+				<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><line x1="3" y1="9" x2="21" y2="9" stroke-width="2"/><line x1="3" y1="15" x2="21" y2="15" stroke-width="2"/><line x1="9" y1="3" x2="9" y2="21" stroke-width="2"/></svg>
+				<span class="text-sm font-semibold text-slate-900">{$t('reports.grid')}</span>
+			</div>
+			<p class="text-xs text-slate-500">{$t('reports.grid_desc')}</p>
+		</button>
+		<button
+			on:click={exportCsvFile}
+			class="bg-white rounded-xl border border-slate-200 p-4 hover:border-brand/50 transition-colors text-left"
+		>
+			<div class="flex items-center gap-2 mb-2">
+				<svg class="w-5 h-5" style="color: var(--ochre)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="13" x2="16" y2="13" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="17" x2="16" y2="17" stroke-width="2" stroke-linecap="round"/></svg>
+				<span class="text-sm font-semibold text-slate-900">{$t('reports.csv')}</span>
+			</div>
+			<p class="text-xs text-slate-500">{$t('reports.csv_desc')}</p>
+		</button>
+	</div>
+
+	<!-- Monthly grid table -->
+	{#if monthDocs.length > 0}
+	<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+		<div class="overflow-x-auto">
+			<table class="grid-table w-full text-xs">
+				<thead>
+					<tr class="bg-slate-50">
+						<th class="bg-slate-50 px-3 py-2 text-left font-medium text-slate-500 border-b border-slate-200">{$t('common.day')}</th>
+						{#each bp.gridSymptomColumns as col}
+							<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200 whitespace-nowrap">{itemLabel(col)}</th>
+						{/each}
+						{#each bp.gridEpisodeColumns as col}
+							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || '#DC2626'}">{itemLabel(col)}</th>
+						{/each}
+						<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200">{$t('common.notes')}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each Array.from({ length: daysInMonth }, (_, i) => i + 1) as day}
+						{@const dayStr = `${currentDate.slice(0, 8)}${String(day).padStart(2, '0')}`}
+						{@const dayDoc = monthDocs.find(d => d.data.date === dayStr)}
+						<tr class="border-b border-slate-100">
+							<td class="bg-white px-3 py-1.5 font-medium whitespace-nowrap">
+								<a href="/log/{dayStr}" class="grid-day-link">{day}</a>
+							</td>
+							{#each bp.gridSymptomColumns as col}
+								<td
+									class="px-2 py-1.5 text-center grid-symptom-cell"
+									on:click|stopPropagation={() => toggleGridSymptom(dayStr, col)}
+									role="button"
+									tabindex="0"
+									on:keydown={(e) => { if (e.key === 'Enter') toggleGridSymptom(dayStr, col); }}
+								>
+									{#if getSymptom(dayDoc, col)}
+										<span class="inline-block w-4 h-4 rounded-sm" style="background: var(--olive)"></span>
+									{:else}
+										<span class="inline-block w-4 h-4 rounded-sm" style="background: var(--surface-inset)"></span>
+									{/if}
+								</td>
+							{/each}
+							{#each bp.gridEpisodeColumns as col}
+								<td
+									class="px-2 py-1.5 text-center font-mono grid-episode-cell"
+									on:click|stopPropagation={() => incrementGridEpisode(dayStr, col)}
+									role="button"
+									tabindex="0"
+									on:keydown={(e) => { if (e.key === 'Enter') incrementGridEpisode(dayStr, col); }}
+								>
+									{#if getEpisodeCount(dayDoc, col) > 0}
+										<span class="font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || '#DC2626'}">{getEpisodeCount(dayDoc, col)}</span>
+									{:else}
+										<span class="grid-episode-zero">-</span>
+									{/if}
+								</td>
+							{/each}
+							<td class="px-2 py-1.5 max-w-[120px] truncate" style="color: var(--text-secondary)">
+								{dayDoc?.data?.notes || ''}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+				<tfoot>
+					<tr class="bg-slate-50 font-medium">
+						<td class="bg-slate-50 px-3 py-2 text-slate-700">{$t('protocol.sum')}</td>
+						{#each bp.gridSymptomColumns as col}
+							<td class="px-2 py-2 text-center text-slate-700">{symptomSum(col)}</td>
+						{/each}
+						{#each bp.gridEpisodeColumns as col}
+							<td class="px-2 py-2 text-center font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || '#DC2626'}">{episodeSum(col)}</td>
+						{/each}
+						<td></td>
+					</tr>
+					<tr class="bg-slate-50 text-slate-500">
+						<td class="bg-slate-50 px-3 py-2">{$t('protocol.percent')}</td>
+						{#each bp.gridSymptomColumns as col}
+							{@const total = daysInMonth}
+							{@const count = symptomSum(col)}
+							<td class="px-2 py-2 text-center text-xs">{total > 0 ? Math.round(count / total * 100) : 0}%</td>
+						{/each}
+						{#each bp.gridEpisodeColumns as _}
+							<td></td>
+						{/each}
+						<td></td>
+					</tr>
+				</tfoot>
+			</table>
+		</div>
+	</div>
+	{:else}
+		<div class="bg-white rounded-xl border border-slate-200 p-8 text-center">
+			<svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><line x1="3" y1="9" x2="21" y2="9" stroke-width="2"/><line x1="9" y1="3" x2="9" y2="21" stroke-width="2"/></svg>
+			<p class="text-sm text-slate-500">{$t('reports.no_data')}</p>
+			<a href="/log/today" class="inline-block mt-3 text-sm text-brand hover:text-brand-hover font-medium">{$t('companion.fill_today')}</a>
+		</div>
+	{/if}
+
+	{:else}
+	<!-- ═══ YEAR VIEW ═══ -->
+
+	<!-- Year nav -->
+	<div class="rpt-year-nav">
+		<button on:click={() => { currentYear--; }} class="rpt-nav-btn" aria-label="Previous year">
+			<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		</button>
+		<span class="rpt-year-label">{currentYear}</span>
+		<button on:click={() => { currentYear++; }} class="rpt-nav-btn" aria-label="Next year">
+			<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		</button>
+	</div>
+
+	<!-- Year summary stats -->
+	<div class="rpt-year-stats">
+		<div class="rpt-stat-card">
+			<p class="rpt-stat-num">{yearDaysLogged}</p>
+			<p class="rpt-stat-label">{$t('reports.days_tracked')}</p>
+		</div>
+		<div class="rpt-stat-card">
+			<p class="rpt-stat-num rpt-stat-num--danger">{yearTotalEpisodes}</p>
+			<p class="rpt-stat-label">{$t('reports.total_year_episodes')}</p>
+		</div>
+		<div class="rpt-stat-card">
+			<p class="rpt-stat-num rpt-stat-num--ochre">{yearMostFrequentSymptom || '-'}</p>
+			<p class="rpt-stat-label">{$t('protocol.symptoms')}</p>
+		</div>
+	</div>
+
+	<!-- Year grid (12 months) -->
+	<div class="rpt-year-grid">
+		{#each Array.from({ length: 12 }, (_, i) => i) as month}
+			{@const daysInMo = getYearMonthDays(currentYear, month)}
+			{@const firstDay = getFirstDayOfWeek(currentYear, month)}
+			<div class="rpt-month-card">
+				<p class="rpt-month-name">{getMonthShortName(month)}</p>
+				<div class="rpt-month-grid">
+					<!-- Day-of-week headers -->
+					{#each ['M','T','W','T','F','S','S'] as dw}
+						<span class="rpt-dow">{dw}</span>
+					{/each}
+					<!-- Empty cells before first day -->
+					{#each Array(firstDay) as _}
+						<span class="rpt-day-cell rpt-day-cell--empty"></span>
+					{/each}
+					<!-- Day cells -->
+					{#each Array.from({ length: daysInMo }, (_, i) => i + 1) as day}
+						{@const dateStr = `${currentYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
+						{@const doc = getDayDoc(yearDocs, dateStr)}
+						{@const hasEp = dayHasEpisodes(doc, bp)}
+						<span
+							class="rpt-day-cell {doc ? (hasEp ? 'rpt-day-cell--episode' : 'rpt-day-cell--logged') : ''}"
+							title={doc ? `${dateStr}: ${dayTooltip(doc, bp)}` : dateStr}
+							on:click={() => goto(`/log/${dateStr}`)}
+							role="button"
+							tabindex="0"
+							on:keydown={(e) => { if (e.key === 'Enter') goto(`/log/${dateStr}`); }}
+						></span>
+					{/each}
+				</div>
+			</div>
+		{/each}
+	</div>
+	{/if}
+</div>
+{/if}
+
+<style>
+	.rpt-page {
+		max-width: 1152px;
+		margin: 0 auto;
+		padding: 16px 16px 128px;
+	}
+	@media (min-width: 640px) {
+		.rpt-page {
+			padding: 20px 24px 128px;
+		}
+	}
+
+	/* ─── Header with toggle ─── */
+	.rpt-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 24px;
+		gap: 12px;
+		flex-wrap: wrap;
+	}
+	.rpt-title {
+		font-size: 18px;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin: 0;
+	}
+	.rpt-view-toggle {
+		display: flex;
+		background: var(--surface-muted);
+		border-radius: 10px;
+		padding: 3px;
+		border: 1px solid var(--border);
+	}
+	.rpt-toggle-btn {
+		padding: 6px 16px;
+		font-size: 13px;
+		font-weight: 500;
+		border: none;
+		border-radius: 8px;
+		background: transparent;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s ease-out;
+		min-height: 36px;
+	}
+	.rpt-toggle-btn--active {
+		background: var(--surface-card);
+		color: var(--text-primary);
+		box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+	}
+	.rpt-toggle-btn:hover:not(.rpt-toggle-btn--active) {
+		color: var(--text-primary);
+	}
+
+	/* ─── Year nav ─── */
+	.rpt-year-nav {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		margin-bottom: 24px;
+	}
+	.rpt-nav-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 44px;
+		min-height: 44px;
+		border-radius: 12px;
+		color: var(--text-secondary);
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		transition: background 0.15s ease-out;
+	}
+	.rpt-nav-btn:hover {
+		background: var(--surface-muted);
+	}
+	.rpt-year-label {
+		font-size: 18px;
+		font-weight: 600;
+		color: var(--text-primary);
+		min-width: 80px;
+		text-align: center;
+	}
+
+	/* ─── Year stats ─── */
+	.rpt-year-stats {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 12px;
+		margin-bottom: 24px;
+	}
+	.rpt-stat-card {
+		background: var(--surface-card);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		padding: 16px;
+		text-align: center;
+	}
+	.rpt-stat-num {
+		font-size: 24px;
+		font-weight: 700;
+		color: var(--text-primary);
+		font-variant-numeric: tabular-nums;
+	}
+	.rpt-stat-num--danger {
+		color: var(--danger);
+	}
+	.rpt-stat-num--ochre {
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--ochre);
+	}
+	.rpt-stat-label {
+		font-size: 12px;
+		color: var(--text-muted);
+		margin-top: 4px;
+	}
+
+	/* ─── Year grid ─── */
+	.rpt-year-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 16px;
+	}
+	@media (max-width: 767px) {
+		.rpt-year-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+	@media (max-width: 479px) {
+		.rpt-year-grid {
+			grid-template-columns: repeat(2, 1fr);
+			gap: 12px;
+		}
+	}
+	@media (min-width: 1024px) {
+		.rpt-year-grid {
+			grid-template-columns: repeat(4, 1fr);
+		}
+	}
+
+	.rpt-month-card {
+		background: var(--surface-card);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		padding: 12px;
+	}
+	.rpt-month-name {
+		font-size: 12px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--text-secondary);
+		margin: 0 0 8px;
+	}
+	.rpt-month-grid {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 2px;
+	}
+	.rpt-dow {
+		font-size: 9px;
+		font-weight: 500;
+		color: var(--text-muted);
+		text-align: center;
+		padding-bottom: 2px;
+	}
+	.rpt-day-cell {
+		width: 100%;
+		aspect-ratio: 1;
+		max-width: 18px;
+		max-height: 18px;
+		border-radius: 3px;
+		background: var(--surface-inset);
+		cursor: pointer;
+		transition: transform 0.15s ease-out;
+		margin: 0 auto;
+	}
+	.rpt-day-cell:hover {
+		transform: scale(1.3);
+	}
+	.rpt-day-cell:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 1px;
+	}
+	.rpt-day-cell--empty {
+		background: transparent;
+		cursor: default;
+	}
+	.rpt-day-cell--empty:hover {
+		transform: none;
+	}
+	.rpt-day-cell--logged {
+		background: var(--olive);
+	}
+	.rpt-day-cell--episode {
+		background: var(--danger);
+	}
+
+	/* ─── Interactive grid cells ─── */
+	.grid-day-link {
+		color: var(--text-primary);
+		text-decoration: none;
+		font-weight: 500;
+	}
+	.grid-day-link:hover {
+		color: var(--brand);
+		text-decoration: underline;
+	}
+
+	.grid-symptom-cell {
+		cursor: pointer;
+		transition: transform 0.15s ease-out;
+	}
+	.grid-symptom-cell:hover {
+		transform: scale(1.15);
+	}
+	.grid-symptom-cell:hover span {
+		box-shadow: 0 0 0 2px var(--olive);
+	}
+
+	.grid-episode-cell {
+		cursor: pointer;
+		position: relative;
+		transition: background 0.15s ease-out;
+	}
+	.grid-episode-cell:hover {
+		background: var(--surface-muted);
+	}
+	.grid-episode-cell:hover::after {
+		content: '+';
+		position: absolute;
+		top: 1px;
+		right: 3px;
+		font-size: 10px;
+		font-weight: 700;
+		color: var(--text-muted);
+		line-height: 1;
+	}
+	.grid-episode-zero {
+		color: var(--text-muted);
+		opacity: 0.4;
+	}
+</style>

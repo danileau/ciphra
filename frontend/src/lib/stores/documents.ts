@@ -5,6 +5,8 @@ import * as api from '$lib/api';
 import { encryptDocument, decryptDocument } from '$lib/crypto';
 import { getAllDocs, putDocs, clearDocs, type CachedDoc } from '$lib/idb';
 
+export const documentsError = writable<string | null>(null);
+
 export interface CiphraDocument {
 	id: number;
 	serverCreatedAt: string;
@@ -15,21 +17,20 @@ function createDocStore() {
 	const { subscribe, set, update } = writable<CiphraDocument[]>([]);
 	let loading = false;
 
-	/** Decrypt raw server docs into CiphraDocument[] */
+	/** Decrypt raw server docs into CiphraDocument[] (parallel for performance) */
 	async function decryptDocs(
 		rawDocs: Array<{ id: number; encrypted_data: string; created_at: string }>,
 		masterKey: Uint8Array
 	): Promise<CiphraDocument[]> {
-		const docs: CiphraDocument[] = [];
-		for (const d of rawDocs) {
-			try {
+		const results = await Promise.allSettled(
+			rawDocs.map(async (d) => {
 				const data = await decryptDocument(d.encrypted_data, masterKey);
-				docs.push({ id: d.id, serverCreatedAt: d.created_at, data });
-			} catch {
-				// skip corrupted documents
-			}
-		}
-		return docs;
+				return { id: d.id, serverCreatedAt: d.created_at, data } as CiphraDocument;
+			})
+		);
+		return results
+			.filter((r): r is PromiseFulfilledResult<CiphraDocument> => r.status === 'fulfilled')
+			.map(r => r.value);
 	}
 
 	/** Persist raw server docs to IndexedDB cache */
@@ -81,9 +82,12 @@ function createDocStore() {
 					const docs = await decryptDocs(rawDocs, masterKey);
 					set(docs);
 					await cacheRawDocs(rawDocs);
+					documentsError.set(null);
+				} else {
+					documentsError.set('Failed to load documents');
 				}
 			} catch {
-				// If API fails, we already have cached data (if available)
+				documentsError.set('Failed to load documents');
 			}
 
 			loading = false;
@@ -91,20 +95,38 @@ function createDocStore() {
 		async save(data: any): Promise<boolean> {
 			const { masterKey } = get(auth);
 			if (!masterKey) return false;
-			const encrypted = await encryptDocument(data, masterKey);
-			const res = await api.storeDocument(encrypted);
-			if (res.ok) {
-				await this.load();
+			try {
+				const encrypted = await encryptDocument(data, masterKey);
+				const res = await api.storeDocument(encrypted);
+				if (res.ok) {
+					documentsError.set(null);
+					await this.load();
+				} else {
+					documentsError.set('Failed to save document');
+				}
+				return res.ok;
+			} catch {
+				documentsError.set('Failed to save document');
+				return false;
 			}
-			return res.ok;
 		},
 		async updateDoc(id: number, data: any): Promise<boolean> {
 			const { masterKey } = get(auth);
 			if (!masterKey) return false;
-			const encrypted = await encryptDocument(data, masterKey);
-			const res = await api.updateDocument(id, encrypted);
-			if (res.ok) await this.load();
-			return res.ok;
+			try {
+				const encrypted = await encryptDocument(data, masterKey);
+				const res = await api.updateDocument(id, encrypted);
+				if (res.ok) {
+					documentsError.set(null);
+					await this.load();
+				} else {
+					documentsError.set('Failed to update document');
+				}
+				return res.ok;
+			} catch {
+				documentsError.set('Failed to update document');
+				return false;
+			}
 		},
 		async remove(id: number): Promise<boolean> {
 			const res = await api.deleteDocument(id);

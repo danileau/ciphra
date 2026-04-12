@@ -1,6 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
+declare const process: { env: Record<string, string | undefined> };
 const apiTarget = process.env.VITE_API_URL || 'http://localhost:5000';
 
 export default defineConfig({

@@ -16,6 +16,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from e2e_encryption import E2EEncryption, UserVault, RecoveryCode
 
@@ -29,6 +31,7 @@ JWT_EXPIRATION_HOURS = 24
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
 CORS(app, supports_credentials=True)
+limiter = Limiter(get_remote_address, app=app, default_limits=["5000 per hour"])
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -182,6 +185,7 @@ def health():
 
 
 @app.route('/api/register', methods=['POST'])
+@limiter.limit("5 per minute")
 def register():
     data = request.get_json() or {}
     username = (data.get('username') or '').strip().lower()
@@ -223,6 +227,7 @@ def register():
 
 
 @app.route('/api/login', methods=['POST'])
+@limiter.limit("10 per minute")
 def login():
     data = request.get_json() or {}
     username = (data.get('username') or '').strip().lower()
@@ -395,6 +400,7 @@ def delete_document(doc_id):
 
 
 @app.route('/api/recover', methods=['POST'])
+@limiter.limit("5 per minute")
 def recover():
     data = request.get_json() or {}
     username = (data.get('username') or '').strip().lower()
@@ -463,6 +469,114 @@ def recover():
 def validate_recovery():
     code = (request.get_json() or {}).get('recovery_code', '')
     return jsonify({'valid': RecoveryCode.validate(code)}), 200
+
+
+@app.route('/api/change-password', methods=['POST'])
+@limiter.limit("5 per minute")
+@token_required
+def change_password():
+    data = request.get_json() or {}
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+
+    if not current_password or not new_password:
+        return jsonify({'error': 'Current password and new password required'}), 400
+    if len(new_password) < 8:
+        return jsonify({'error': 'New password must be at least 8 characters'}), 400
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, auth_hash, vault_params, encrypted_master,
+                           recovery_vault, recovery_params
+                    FROM users WHERE id = %s
+                """, (request.user_id,))
+                user = cur.fetchone()
+                if not user:
+                    return jsonify({'error': 'User not found'}), 404
+
+                vault = UserVault(
+                    username=request.username,
+                    auth_hash=user['auth_hash'],
+                    vault_params=user['vault_params'],
+                    encrypted_master=user['encrypted_master'],
+                    recovery_vault=user['recovery_vault'],
+                    recovery_params=user['recovery_params'],
+                )
+
+                if not e2e.verify_login(current_password, vault):
+                    return jsonify({'error': 'Current password is incorrect'}), 401
+
+                try:
+                    new_vault = e2e.change_password(current_password, new_password, vault)
+                except Exception:
+                    return jsonify({'error': 'Password change failed'}), 500
+
+                cur.execute("""
+                    UPDATE users
+                    SET auth_hash = %s, vault_params = %s, encrypted_master = %s,
+                        updated_at = NOW()
+                    WHERE id = %s
+                """, (
+                    new_vault.auth_hash,
+                    safe_json(new_vault.vault_params),
+                    safe_json(new_vault.encrypted_master),
+                    request.user_id,
+                ))
+                audit(conn, request.user_id, 'PASSWORD_CHANGED')
+
+        return jsonify({
+            'success': True,
+            'vault': {
+                'vault_params': new_vault.vault_params,
+                'encrypted_master': new_vault.encrypted_master,
+            },
+        }), 200
+    except Exception:
+        logger.exception("Change password failed")
+        return jsonify({'error': 'Password change failed'}), 500
+
+
+@app.route('/api/delete-account', methods=['POST'])
+@limiter.limit("3 per minute")
+@token_required
+def delete_account():
+    data = request.get_json() or {}
+    password = data.get('password')
+
+    if not password:
+        return jsonify({'error': 'Password required'}), 400
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, auth_hash, vault_params, encrypted_master
+                    FROM users WHERE id = %s
+                """, (request.user_id,))
+                user = cur.fetchone()
+                if not user:
+                    return jsonify({'error': 'User not found'}), 404
+
+                vault = UserVault(
+                    username=request.username,
+                    auth_hash=user['auth_hash'],
+                    vault_params=user['vault_params'],
+                    encrypted_master=user['encrypted_master'],
+                )
+
+                if not e2e.verify_login(password, vault):
+                    return jsonify({'error': 'Invalid password'}), 401
+
+                audit(conn, request.user_id, 'ACCOUNT_DELETED')
+                cur.execute("UPDATE audit_log SET user_id = NULL WHERE user_id = %s", (request.user_id,))
+                cur.execute("DELETE FROM users WHERE id = %s", (request.user_id,))
+
+        return jsonify({'success': True}), 200
+    except Exception:
+        logger.exception("Delete account failed")
+        return jsonify({'error': 'Account deletion failed'}), 500
 
 
 # --- Admin Routes ---

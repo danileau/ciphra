@@ -235,3 +235,45 @@ class E2EEncryption:
             recovery_vault=vault.recovery_vault,
             recovery_params=vault.recovery_params,
         )
+
+    def change_password(self, old_password: str, new_password: str,
+                        vault: UserVault) -> UserVault:
+        """
+        Change account password.  Decrypts master key with the old
+        password-derived vault key, then re-encrypts it with a new one.
+        Recovery vault/params are kept unchanged.
+        """
+        # 1. Verify old password matches stored auth_hash
+        if not self.argon2.verify_password(old_password, vault.auth_hash):
+            raise ValueError("Current password is incorrect")
+
+        # 2. Decode existing vault_params to get salt
+        old_salt, _ = self.argon2.decode_params(vault.vault_params)
+
+        # 3. Derive old vault key
+        old_vault_key = self.argon2.derive_key(old_password, old_salt, ":VAULT")
+
+        # 4. Decrypt master key from encrypted_master using old vault key
+        encrypted_master_bytes = base64.b64decode(vault.encrypted_master)
+        master_key = self.cipher.decrypt(encrypted_master_bytes, old_vault_key)
+
+        # 5. Generate new auth_hash, new vault salt, new vault key
+        auth_hash = self.argon2.hash_password(new_password)
+        vault_salt = self.argon2.generate_salt()
+        vault_key = self.argon2.derive_key(new_password, vault_salt, ":VAULT")
+        vault_params = self.argon2.encode_params(vault_salt)
+
+        # 6. Re-encrypt master key with new vault key
+        encrypted_master = base64.b64encode(
+            self.cipher.encrypt(master_key, vault_key)
+        ).decode('ascii')
+
+        # 7. Return updated vault (recovery unchanged)
+        return UserVault(
+            username=vault.username,
+            auth_hash=auth_hash,
+            vault_params=vault_params,
+            encrypted_master=encrypted_master,
+            recovery_vault=vault.recovery_vault,
+            recovery_params=vault.recovery_params,
+        )

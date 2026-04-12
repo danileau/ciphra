@@ -30,6 +30,10 @@ export interface EpisodeType {
 	label: string;
 	color: string;       // hex color for UI
 	icon?: string;
+	/** Track duration per episode (e.g., <1min, 1-5min, >5min) */
+	trackDuration?: boolean;
+	/** Track time of day per episode */
+	trackTimeOfDay?: boolean;
 }
 
 /** A vital sign to track */
@@ -38,6 +42,7 @@ export interface VitalField {
 	label: string;
 	unit: string;
 	placeholder: string;
+	multiEntry?: boolean;  // allows multiple time+value entries per day
 }
 
 /** Medication template */
@@ -82,18 +87,12 @@ export interface Blueprint {
 	/** Which episode columns appear in the monthly grid */
 	gridEpisodeColumns: string[];  // episode type IDs
 
-	/** Quick actions on the companion page */
-	quickActions: {
-		id: string;
-		label: string;
-		icon: string;
-		color: string;
-		href: string;
-	}[];
-
 	/** Stream filter tabs */
 	streamFilters: {
 		key: string;
 		label: string;
 	}[];
+
+	/** Preferred report type */
+	reportPreference: 'analytics' | 'grid' | 'both';
 }

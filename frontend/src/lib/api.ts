@@ -110,3 +110,17 @@ export async function adminPromoteUser(userId: number) {
 export async function adminDemoteUser(userId: number) {
 	return request(`/admin/users/${userId}/demote`, { method: 'POST' });
 }
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+	return request('/change-password', {
+		method: 'POST',
+		body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+	});
+}
+
+export async function deleteAccount(password: string) {
+	return request('/delete-account', {
+		method: 'POST',
+		body: JSON.stringify({ password })
+	});
+}

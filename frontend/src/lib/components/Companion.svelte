@@ -1,12 +1,15 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import { auth, isAuthenticated } from '$lib/stores/auth';
+	import { t, locale } from '$lib/i18n';
+	import { auth } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { blueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
+	import Asterisk from '$lib/components/Asterisk.svelte';
 
 	let loaded = false;
+	let confirmDeleteId: number | null = null;
 
 	onMount(() => {
 		documents.load().then(() => { loaded = true; });
@@ -18,49 +21,42 @@
 	$: todayEntries = allDocs.filter(d => String(d.data.date || '').startsWith(todayStr));
 	$: streak = computeStreak(allDocs);
 
+	// Today's status
+	$: todayLog = todayEntries.find(d => d.data.type === 'daily_log');
+	$: todaySymptomCount = todayEntries.reduce((sum, d) => {
+		const syms = d.data.symptoms || {};
+		return sum + Object.values(syms).filter(v => v).length;
+	}, 0);
+	$: todayEpisodeCount = todayEntries.reduce((sum, d) => {
+		const eps = d.data.episodes || d.data.seizures || {};
+		return sum + (Object.values(eps) as number[]).reduce((s, v) => s + (Number(v) || 0), 0);
+	}, 0);
+
 	function computeStreak(docs: CiphraDocument[]): number {
 		const episodeDates = new Set<string>();
 		for (const d of docs) {
-			const hasEpisodes = d.data.episodes && Object.values(d.data.episodes).some((v: number) => v > 0);
-			const hasSeizures = d.data.seizures && Object.values(d.data.seizures).some((v: number) => v > 0);
-			if (d.data.type === 'episode' || hasEpisodes || hasSeizures) {
-				const dt = String(d.data.date || '').slice(0, 10);
-				if (dt) episodeDates.add(dt);
-			}
+			const eps = d.data.episodes || d.data.seizures || {};
+			const total = (Object.values(eps) as number[]).reduce((s, v) => s + (Number(v) || 0), 0);
+			if (total > 0) episodeDates.add(String(d.data.date || '').slice(0, 10));
 		}
 		let count = 0;
-		const now = new Date();
+		const today = new Date();
 		for (let i = 0; i < 365; i++) {
-			const d = new Date(now);
+			const d = new Date(today);
 			d.setDate(d.getDate() - i);
-			const ds = d.toISOString().slice(0, 10);
-			if (episodeDates.has(ds)) break;
+			if (episodeDates.has(d.toISOString().slice(0, 10))) break;
 			count++;
 		}
 		return count;
 	}
 
-	function typeColor(type: string): string {
-		if (type === 'daily_log') return 'border-indigo-400';
-		if (type === 'episode') return 'border-red-400';
-		if (type === 'event') return 'border-teal-400';
-		return 'border-stone-300';
-	}
-
-	function formatDate(dateStr: string): string {
-		try {
-			return new Date(dateStr).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-		} catch { return dateStr; }
-	}
-
-	// Streak label depends on blueprint
 	$: streakLabel = bp?.episodeTypes?.length
 		? (bp.episodeTypes.length === 1
-			? `Tage ohne ${bp.episodeTypes[0].label}`
-			: `Tage ohne Episoden`)
-		: 'Tage ohne Episoden';
+			? $t('companion.streak_no_type', { type: $t(bp.episodeTypes[0].label) })
+			: $t('companion.streak_no_episodes'))
+		: $t('companion.streak_no_episodes');
 
-	// --- 7-day episode bar chart ---
+	// 7-day episode chart
 	$: last7Days = Array.from({ length: 7 }, (_, i) => {
 		const d = new Date();
 		d.setDate(d.getDate() - (6 - i));
@@ -69,197 +65,242 @@
 
 	$: episodeChartData = (() => {
 		if (!bp?.episodeTypes?.length) return null;
-		const datasets = bp.episodeTypes.map(et => {
-			const counts = last7Days.map(day => {
-				return allDocs
-					.filter(d => String(d.data.date || '').startsWith(day))
-					.reduce((sum, d) => {
-						const eps = d.data.episodes || d.data.seizures || {};
-						return sum + (Number(eps[et.id]) || 0);
-					}, 0);
-			});
-			return {
-				label: et.label,
-				data: counts,
-				backgroundColor: et.color,
-				borderRadius: 4
-			};
-		});
+		const datasets = bp.episodeTypes.map(et => ({
+			label: $t(et.label),
+			data: last7Days.map(day =>
+				allDocs.filter(d => String(d.data.date || '').startsWith(day))
+					.reduce((sum, d) => sum + (Number((d.data.episodes || d.data.seizures || {})[et.id]) || 0), 0)
+			),
+			backgroundColor: et.color,
+			borderRadius: 4
+		}));
 		return {
-			labels: last7Days.map(d => new Date(d + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })),
+			labels: last7Days.map(d => new Date(d + 'T12:00:00').toLocaleDateString($locale, { weekday: 'short' })),
 			datasets
 		};
 	})();
 
 	$: episodeChartOptions = {
-		scales: {
-			x: { stacked: true },
-			y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } }
-		},
+		scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } },
 		plugins: { legend: { display: (bp?.episodeTypes?.length || 0) > 1 } }
 	};
 
-	// --- Top 5 symptoms (30 days) ---
+	// Top symptoms (30 days) — ochre for data
 	$: symptomChartData = (() => {
 		if (!bp?.symptomGroups?.length) return null;
-		const now = new Date();
-		const cutoff = new Date(now);
+		const cutoff = new Date();
 		cutoff.setDate(cutoff.getDate() - 30);
 		const cutoffStr = cutoff.toISOString().slice(0, 10);
-
 		const counts: Record<string, number> = {};
 		for (const d of allDocs) {
-			const date = String(d.data.date || '').slice(0, 10);
-			if (date < cutoffStr) continue;
-			const syms = d.data.symptoms || {};
-			for (const [key, val] of Object.entries(syms)) {
+			if (String(d.data.date || '').slice(0, 10) < cutoffStr) continue;
+			for (const [key, val] of Object.entries(d.data.symptoms || {})) {
 				if (val) counts[key] = (counts[key] || 0) + 1;
 			}
 		}
-
 		const labelMap: Record<string, string> = {};
-		for (const g of bp.symptomGroups) {
-			for (const item of g.items) {
-				labelMap[item.id] = item.label;
-			}
-		}
-
-		const sorted = Object.entries(counts)
-			.sort(([, a], [, b]) => b - a)
-			.slice(0, 5);
-
-		if (sorted.length === 0) return null;
-
+		for (const g of bp.symptomGroups) for (const item of g.items) labelMap[item.id] = $t(item.label);
+		const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a).slice(0, 5);
+		if (!sorted.length) return null;
 		return {
-			labels: sorted.map(([k]) => labelMap[k] || k),
-			datasets: [{
-				label: $t('companion.symptoms'),
-				data: sorted.map(([, v]) => v),
-				backgroundColor: '#6366f1',
-				borderRadius: 4
-			}]
+			labels: sorted.map(([id]) => labelMap[id] || id),
+			datasets: [{ data: sorted.map(([, c]) => c), backgroundColor: '#9f630b', borderRadius: 4 }]
 		};
 	})();
 
 	$: symptomChartOptions = {
 		indexAxis: 'y' as const,
-		scales: {
-			x: { beginAtZero: true, ticks: { stepSize: 1 } },
-			y: {}
-		},
+		scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
 		plugins: { legend: { display: false } }
 	};
+
+	function handleEditEntry(entry: CiphraDocument) {
+		goto(entry.data.type === 'daily_log' ? `/log/${entry.data.date}` : '/journal');
+	}
+
+	async function handleDeleteEntry(id: number) {
+		await documents.remove(id);
+		confirmDeleteId = null;
+	}
 </script>
 
-{#if !bp}
-	<div class="max-w-3xl mx-auto px-4 py-12 text-center">
-		<p class="text-stone-400">{$t('common.loading')}</p>
+{#if !loaded}
+	<!-- ── Loading skeleton ── -->
+	<div class="max-w-3xl mx-auto px-4 py-6 space-y-5">
+		<div class="h-8 w-48 skeleton"></div>
+		<div class="h-32 skeleton" style="animation-delay: 0.05s"></div>
+		<div class="h-20 skeleton" style="animation-delay: 0.1s"></div>
+		<div class="h-48 skeleton" style="animation-delay: 0.15s"></div>
+	</div>
+{:else if !bp}
+	<div class="max-w-3xl mx-auto px-4 py-20 text-center">
+		<Asterisk size={48} spin color="muted" />
 	</div>
 {:else}
-<div class="max-w-3xl mx-auto px-4 py-6 space-y-5">
-	<!-- Greeting -->
+<div class="max-w-3xl mx-auto px-4 py-6 space-y-6 fade-in">
+
+	<!-- ═══ GREETING ═══ -->
 	<section>
-		<h1 class="text-2xl font-bold text-stone-900 dark:text-white">{$t('companion.greeting', { name: $auth.username || '' })}</h1>
-		<div class="flex items-center gap-2 mt-0.5">
-			<p class="text-stone-500 dark:text-stone-400">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
-			<span class="text-xs px-2 py-0.5 rounded-full text-stone-500 dark:text-stone-400" style="background: {bp.accentColor}15; color: {bp.accentColor}">{bp.conditionLabel}</span>
+		<div class="flex items-center justify-between">
+			<div>
+				<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('companion.greeting', { name: $auth.username || '' })}</h1>
+				<p class="text-sm mt-0.5" style="color: var(--text-secondary)">{new Date().toLocaleDateString($locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+			</div>
+			<span class="badge badge-olive">{$t(bp.conditionLabel)}</span>
 		</div>
 	</section>
 
-	<!-- Streak (only if episodeTypes exist) -->
+	<!-- ═══ TODAY'S STATUS ═══ -->
+	{#if !todayLog}
+		<!-- Not yet logged — warm CTA -->
+		<section class="card-brand p-6">
+			<div class="flex items-center gap-4">
+				<div class="w-14 h-14 rounded-2xl bg-white/60 flex items-center justify-center shrink-0">
+					<Asterisk size={28} color="brand" />
+				</div>
+				<div class="flex-1">
+					<p class="font-medium" style="color: var(--brand)">{$t('companion.today_not_filled')}</p>
+					<p class="text-sm mt-0.5" style="color: var(--text-secondary)">~3 min</p>
+				</div>
+				<a href="/log/today" class="btn-primary px-5 py-2.5 text-sm shrink-0">
+					{$t('companion.fill_today')}
+				</a>
+			</div>
+		</section>
+	{:else}
+		<!-- Today logged — summary with olive checkmark -->
+		<section class="card-olive p-5">
+			<div class="flex items-center justify-between mb-3">
+				<div class="flex items-center gap-2">
+					<div class="w-6 h-6 rounded-full flex items-center justify-center" style="background: var(--olive)">
+						<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</div>
+					<span class="text-sm font-medium" style="color: var(--olive)">{$t('companion.today_filled')}</span>
+				</div>
+				<a href="/log/today" class="text-xs font-medium hover:underline" style="color: var(--brand)">{$t('common.edit')}</a>
+			</div>
+			<div class="flex flex-wrap gap-2">
+				{#if todaySymptomCount > 0}
+					<span class="badge badge-ochre">{$t('companion.symptoms_count', { count: todaySymptomCount })}</span>
+				{/if}
+				{#if todayEpisodeCount > 0}
+					<span class="badge badge-danger">{$t('companion.episodes_count', { count: todayEpisodeCount })}</span>
+				{/if}
+			</div>
+		</section>
+	{/if}
+
+	<!-- ═══ STREAK ═══ -->
 	{#if bp.episodeTypes.length > 0}
-	<section class="rounded-xl p-5" style="background: {bp.accentColor}08">
-		<div class="flex items-baseline gap-3">
-			<span class="text-4xl font-bold" style="color: {bp.accentColor}">{streak}</span>
-			<span class="text-base font-medium text-stone-700 dark:text-stone-300">{streakLabel}</span>
-		</div>
-		<div class="mt-3">
-			<div class="w-full rounded-full h-2" style="background: {bp.accentColor}20">
-				<div class="h-2 rounded-full" style="background: {bp.accentColor}; width: {Math.min(streak * 3, 100)}%"></div>
+	<section class="card p-5">
+		<div class="flex items-center gap-4">
+			<div class="text-center">
+				<p class="text-3xl font-bold num-data">{streak}</p>
+				<p class="text-[10px] uppercase tracking-wider font-medium" style="color: var(--text-muted)">{$t('common.days')}</p>
+			</div>
+			<div class="flex-1">
+				<p class="text-sm font-medium" style="color: var(--text-primary)">{streakLabel}</p>
+				<div class="mt-2 w-full rounded-full h-1.5" style="background: var(--surface-inset)">
+					<div class="h-1.5 rounded-full transition-all duration-500" style="background: var(--ochre); width: {Math.min(streak * 3, 100)}%"></div>
+				</div>
 			</div>
 		</div>
 	</section>
 	{/if}
 
-	<!-- 7-Day Episode Chart -->
+	<!-- ═══ REPORTS ═══ -->
+	<a href="/reports" class="card-interactive p-5 block group">
+		<div class="flex items-center gap-3">
+			<div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: var(--ochre-light)">
+				<svg class="w-5 h-5" style="color: var(--ochre)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,2 14,8 20,8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</div>
+			<div class="flex-1">
+				<p class="text-sm font-semibold" style="color: var(--text-primary)">{$t('reports.title')}</p>
+				<p class="text-xs" style="color: var(--text-muted)">{$t('reports.analytics_desc')}</p>
+			</div>
+			<svg class="w-5 h-5 transition-transform group-hover:translate-x-0.5" style="color: var(--text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		</div>
+	</a>
+
+	<!-- ═══ 7-DAY EPISODES ═══ -->
 	{#if episodeChartData}
-	<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
-		<h2 class="text-base font-semibold text-stone-900 dark:text-white mb-3">{$t('companion.episodes_7days')}</h2>
-		<div class="h-52">
+	<section class="card p-5">
+		<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('companion.episodes_7days')}</h2>
+		<div class="h-48">
 			<ChartWrapper type="bar" data={episodeChartData} options={episodeChartOptions} />
 		</div>
 	</section>
 	{/if}
 
-	<!-- Top 5 Symptoms (30 days) -->
+	<!-- ═══ TOP SYMPTOMS (30d) ═══ -->
 	{#if symptomChartData}
-	<section class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5">
-		<h2 class="text-base font-semibold text-stone-900 dark:text-white mb-3">{$t('companion.top_symptoms')}</h2>
-		<div class="h-52">
+	<section class="card p-5">
+		<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('companion.top_symptoms')}</h2>
+		<div class="h-48">
 			<ChartWrapper type="bar" data={symptomChartData} options={symptomChartOptions} />
 		</div>
 	</section>
 	{/if}
 
-	<!-- Quick Actions (from blueprint) -->
+	<!-- ═══ TODAY'S ENTRIES ═══ -->
+	{#if todayEntries.length > 0}
 	<section>
-		<h2 class="text-base font-semibold text-stone-900 dark:text-white mb-3">{$t('companion.quick_actions')}</h2>
-		<div class="grid grid-cols-2 gap-3">
-			{#each bp.quickActions as action}
-				<a href={action.href} class="flex items-center gap-3 p-4 rounded-xl {action.color} transition-colors min-h-[56px]">
-					{#if action.icon === 'zap'}
-						<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					{:else if action.icon === 'book'}
-						<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke-width="2"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke-width="2"/></svg>
-					{:else if action.icon === 'flag'}
-						<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" stroke-width="2"/><line x1="4" y1="22" x2="4" y2="15" stroke-width="2"/></svg>
-					{:else if action.icon === 'droplet'}
-						<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" stroke-width="2"/></svg>
-					{:else if action.icon === 'calendar'}
-						<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
-					{:else if action.icon === 'activity'}
-						<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					{:else}
-						<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2"/><polyline points="14,2 14,8 20,8" stroke-width="2"/></svg>
-					{/if}
-					<span class="text-sm font-medium">{action.label}</span>
-				</a>
+		<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('companion.todays_entries')}</h2>
+		<div class="space-y-2">
+			{#each todayEntries as entry, i}
+				<div
+					class="card p-4 stagger-in"
+					style="animation-delay: {i * 50}ms; border-left: 3px solid {entry.data.type === 'episode' ? 'var(--danger)' : 'var(--olive)'}"
+				>
+					<div class="flex justify-between items-start gap-2">
+						<div class="flex-1 min-w-0">
+							<p class="text-sm font-medium" style="color: var(--text-primary)">{entry.data.type === 'daily_log' ? $t('protocol.title') : entry.data.type === 'episode' ? $t('quickadd.episode') : $t('stream.events')}</p>
+							{#if entry.data.episodeType && bp.episodeTypes}
+								<p class="text-xs mt-0.5" style="color: var(--text-muted)">{$t(bp.episodeTypes.find(e => e.id === entry.data.episodeType)?.label || '') || entry.data.episodeType}</p>
+							{/if}
+							{#if entry.data.notes}
+								<p class="text-xs mt-1 line-clamp-2" style="color: var(--text-muted)">{entry.data.notes}</p>
+							{/if}
+						</div>
+						<div class="flex items-center gap-0.5 shrink-0">
+							<button
+								on:click={() => handleEditEntry(entry)}
+								class="p-1.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-[var(--surface-muted)]"
+								style="color: var(--text-muted)"
+								aria-label={$t('common.edit')}
+							>
+								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							</button>
+							{#if confirmDeleteId === entry.id}
+								<button on:click={() => handleDeleteEntry(entry.id)}
+									class="p-1.5 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-medium"
+								>{$t('common.yes_delete')}</button>
+								<button on:click={() => { confirmDeleteId = null; }}
+									class="p-1.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-medium"
+									style="background: var(--surface-muted); color: var(--text-secondary)"
+								>{$t('common.cancel')}</button>
+							{:else}
+								<button
+									on:click={() => { confirmDeleteId = entry.id; }}
+									class="p-1.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-red-50 hover:text-red-500"
+									style="color: var(--text-muted)"
+									aria-label={$t('common.delete')}
+								>
+									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6" stroke-width="2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2"/></svg>
+								</button>
+							{/if}
+						</div>
+					</div>
+				</div>
 			{/each}
 		</div>
 	</section>
+	{/if}
 
-	<!-- Today's Entries -->
-	<section>
-		<h2 class="text-base font-semibold text-stone-900 dark:text-white mb-3">{$t('companion.todays_entries')}</h2>
-		{#if !loaded}
-			<p class="text-sm text-stone-400">{$t('common.loading')}</p>
-		{:else if todayEntries.length === 0}
-			<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-6 text-center">
-				<p class="text-sm text-stone-500 dark:text-stone-400">{$t('companion.no_entries')}</p>
-			</div>
-		{:else}
-			<div class="space-y-2">
-				{#each todayEntries as entry}
-					<div class="bg-white dark:bg-stone-900 rounded-xl border-l-4 {typeColor(entry.data.type || '')} border border-stone-200 dark:border-stone-800 p-4">
-						<div class="flex justify-between items-start">
-							<div>
-								<p class="text-sm font-medium text-stone-900 dark:text-white capitalize">{entry.data.type || 'Entry'}</p>
-								{#if entry.data.notes}
-									<p class="text-xs text-stone-500 mt-1 line-clamp-2">{entry.data.notes}</p>
-								{/if}
-							</div>
-							<span class="text-xs text-stone-400">{formatDate(entry.serverCreatedAt)}</span>
-						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
-	</section>
-
-	<!-- E2E Badge -->
-	<div class="flex items-center justify-center gap-2 py-4">
-		<svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-width="2"/></svg>
-		<span class="text-xs text-stone-400 dark:text-stone-500">{$t('encryption.badge')}</span>
+	<!-- ═══ ENCRYPTION BADGE ═══ -->
+	<div class="asterisk-divider py-4">
+		<Asterisk size={14} color="muted" />
 	</div>
+	<p class="text-center text-xs" style="color: var(--text-muted)">{$t('encryption.badge')}</p>
 </div>
 {/if}

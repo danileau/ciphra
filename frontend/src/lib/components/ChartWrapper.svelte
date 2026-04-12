@@ -17,7 +17,7 @@
 	function mergeDefaults(opts: any): any {
 		const dark = isDarkMode();
 		const gridColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
-		const textColor = dark ? '#a8a29e' : '#78716c';
+		const textColor = dark ? '#94a3b8' : '#64748b';
 
 		const scales = Object.fromEntries(
 			Object.entries(opts.scales || {}).map(([key, scale]: [string, any]) => [

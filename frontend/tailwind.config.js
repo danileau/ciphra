@@ -1,18 +1,50 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-	darkMode: 'class',
 	content: ['./src/**/*.{html,js,svelte,ts}'],
 	theme: {
 		extend: {
 			fontFamily: {
-				sans: ['Inter', 'system-ui', 'sans-serif']
+				sans: ['Inter', 'DM Sans', 'system-ui', '-apple-system', 'sans-serif']
 			},
 			colors: {
-				seizure: { DEFAULT: '#DC2626', light: '#FEF2F2', dark: 'rgba(220,38,38,0.15)' },
-				event: { DEFAULT: '#0D9488', light: '#F0FDFA', dark: 'rgba(13,148,136,0.15)' },
-				diary: { DEFAULT: '#6366F1', light: '#EEF2FF', dark: 'rgba(99,102,241,0.15)' },
-				medication: { DEFAULT: '#D97706', light: '#FFFBEB', dark: 'rgba(217,119,6,0.15)' },
-			}
+				brand: {
+					DEFAULT: '#b23c2c',
+					primary: '#b23c2c',
+					hover: '#9a3326',
+					light: '#f5e8e6',
+					secondary: '#9f630b',
+					'secondary-light': '#fdf3e5',
+					tertiary: '#7f821b',
+					'tertiary-light': '#f4f4e3',
+					coral: '#e07360',
+				},
+				surface: {
+					DEFAULT: '#faf8f6',
+					warm: '#faf8f6',
+					card: '#ffffff',
+					muted: '#f3f0ed',
+					slate: '#1e293b',
+				},
+				warm: {
+					50: '#faf8f6',
+					100: '#f3f0ed',
+					200: '#e8e3dd',
+					300: '#d4cdc5',
+					400: '#97918a',
+					500: '#64594e',
+					600: '#4a3f35',
+					700: '#352c24',
+					800: '#231d17',
+					900: '#110e0a',
+				},
+				seizure: { DEFAULT: '#DC2626', light: '#FEF2F2' },
+				event: { DEFAULT: '#9f630b', light: '#fdf3e5' },
+				diary: { DEFAULT: '#6366F1', light: '#EEF2FF' },
+				medication: { DEFAULT: '#D97706', light: '#FFFBEB' },
+			},
+			borderColor: {
+				DEFAULT: '#e8e3dd',
+			},
 		}
 	},
 	plugins: []

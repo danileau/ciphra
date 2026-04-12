@@ -1,17 +1,37 @@
 <script lang="ts">
 	import { isAuthenticated, authReady } from '$lib/stores/auth';
-	import { darkMode } from '$lib/stores/darkmode';
 	import { t, locale, locales, localeNames } from '$lib/i18n';
 	import type { Locale } from '$lib/i18n';
 	import Companion from '$lib/components/Companion.svelte';
-	import { onMount } from 'svelte';
+	import Asterisk from '$lib/components/Asterisk.svelte';
+	import { presets } from '$lib/blueprint/presets';
 
-	onMount(() => darkMode.init());
+	let showTechnicalDetails = false;
 
 	function setLocale(e: Event) {
 		const val = /** @type {HTMLSelectElement} */ (e.currentTarget as HTMLSelectElement).value;
 		locale.set(val);
 	}
+
+	// Icon SVG paths keyed by preset icon name
+	const iconPaths: Record<string, string> = {
+		'zap': 'M13 2L3 14h9l-1 10 10-12h-9l1-10z',
+		'cloud-lightning': 'M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9M13 11l-4 6h6l-4 6',
+		'brain': 'M12 2a5 5 0 0 1 5 5c0 1.5-.5 2.5-1.5 3.5S14 12.5 14 14h-4c0-1.5-.5-2.5-1.5-3.5S7 8.5 7 7a5 5 0 0 1 5-5zM9 18h6M10 22h4',
+		'focus': 'M2 12h4m12 0h4M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M19.07 4.93l-2.83 2.83M7.76 16.24l-2.83 2.83',
+		'ear': 'M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6.5-6 10.5a3.5 3.5 0 1 1-7 0',
+		'battery-low': 'M2 6h16v12H2zM22 10v4M6 10v4',
+		'heart': 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z',
+		'droplet': 'M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z',
+		'flame': 'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z',
+		'wind': 'M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2',
+		'heart-pulse': 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78zM3.5 12h3l2-4 3 8 2-4h3.5',
+		'shield': 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+		'shield-plus': 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12h6M12 9v6',
+		'scan': 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2',
+		'flower': 'M12 7.5a4.5 4.5 0 1 1 4.5 4.5M12 7.5A4.5 4.5 0 1 0 7.5 12M12 7.5V2m0 10a4.5 4.5 0 1 0 4.5 4.5M12 12a4.5 4.5 0 1 1-4.5 4.5M12 12v10',
+		'settings': 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
+	};
 </script>
 
 <svelte:head>
@@ -25,25 +45,33 @@
 	<Companion />
 {:else if $authReady}
 
-<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-indigo-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:outline-none">
+<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:outline-none" style="background: var(--brand); color: white;">
 	{$t('landing.skip_to_content')}
 </a>
 
 <!-- Navigation -->
-<nav class="border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-950/80 backdrop-blur-sm sticky top-0 z-40">
-	<div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-		<a href="/" class="text-xl font-bold tracking-tight text-stone-900 dark:text-white">ciphra</a>
+<nav class="sticky top-0 z-40 backdrop-blur-sm" style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.85);">
+	<div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+		<a href="/" class="flex items-center gap-1">
+			<svg viewBox="0 0 150 36" class="h-7" aria-hidden="true">
+				<text x="0" y="27" font-family="Inter, DM Sans, sans-serif" font-size="26" font-weight="500" letter-spacing="0.5" style="fill: var(--text-primary)">ciphra</text>
+				<g transform="translate(98,8) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
+					<path d="M -5 0 L 5 0" stroke-width="1.3"/>
+					<path d="M -2 -3.5 L 2 3.5" stroke-width="1"/>
+					<path d="M 2 -3.3 L -2 3.3" stroke-width="0.9"/>
+				</g>
+			</svg>
+		</a>
 		<div class="flex items-center gap-3">
 			<div class="hidden md:flex items-center gap-1">
-				<a href="#how" class="text-sm font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 min-h-[44px] flex items-center px-3">{$t('landing.nav_how')}</a>
-				<a href="#origin" class="text-sm font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 min-h-[44px] flex items-center px-3">{$t('landing.nav_origin')}</a>
-				<a href="#security" class="text-sm font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 min-h-[44px] flex items-center px-3">{$t('landing.nav_security')}</a>
-				<a href="#features" class="text-sm font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 min-h-[44px] flex items-center px-3">{$t('landing.nav_features')}</a>
+				<a href="#how" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_how')}</a>
+				<a href="#conditions" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_origin')}</a>
+				<a href="#security" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_security')}</a>
 			</div>
-			<div class="w-px h-6 bg-stone-200 dark:bg-stone-700 hidden md:block"></div>
-			<!-- Language switcher -->
+			<div class="w-px h-6 hidden md:block" style="background: var(--border);"></div>
 			<select
-				class="text-xs bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg px-2 py-1.5 text-stone-600 dark:text-stone-300 min-h-[36px]"
+				class="text-xs rounded-lg px-2 py-1.5 min-h-[36px]"
+				style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-secondary);"
 				value={$locale}
 				on:change={setLocale}
 			>
@@ -51,186 +79,70 @@
 					<option value={l}>{localeNames[l]}</option>
 				{/each}
 			</select>
-			<a href="/login" class="min-h-[44px] px-5 flex items-center text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
-				{$t('landing.nav_login')}
+			<a href="/login" class="btn-primary min-h-[44px] px-5 text-sm font-semibold rounded-lg">
+				{$t('landing.hero_cta')}
 			</a>
-			<button type="button" on:click={() => darkMode.toggle()} aria-label={$t('darkmode.toggle')}
-				class="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700">
-				{#if $darkMode}
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke-width="2" stroke-linecap="round"/></svg>
-				{:else}
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				{/if}
-			</button>
 		</div>
 	</div>
 </nav>
 
-<main id="main-content">
+<main id="main-content" style="background: var(--surface);">
 
 	<!-- ===== HERO ===== -->
-	<section class="relative overflow-hidden">
-		<!-- Gradient background -->
-		<div class="absolute inset-0 bg-gradient-to-br from-indigo-50 via-stone-50 to-teal-50 dark:from-indigo-950/40 dark:via-stone-950 dark:to-teal-950/30"></div>
-		<!-- Subtle grid pattern -->
-		<div class="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect width=%2260%22 height=%2260%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%220.5%22/></svg>')"></div>
+	<section class="relative overflow-hidden" style="background: var(--surface);">
+		<div class="relative max-w-5xl mx-auto px-6 py-24 sm:py-32 md:py-40 lg:py-48">
+			<div class="max-w-2xl">
+				<!-- Wordmark -->
+				<svg viewBox="0 0 220 50" class="h-12 sm:h-16 mb-8" aria-hidden="true">
+					<text x="0" y="36" font-family="Inter, DM Sans, sans-serif" font-size="36" font-weight="500" letter-spacing="1" style="fill: var(--text-primary)">ciphra</text>
+					<g transform="translate(134,12) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
+						<path d="M -6.5 0 L 6.5 0" stroke-width="1.5"/>
+						<path d="M -2.7 -4.6 L 2.7 4.6" stroke-width="1.2"/>
+						<path d="M 2.6 -4.4 L -2.6 4.4" stroke-width="1.1"/>
+					</g>
+				</svg>
 
-		<div class="relative max-w-6xl mx-auto px-6 py-24 md:py-36 lg:py-44">
-			<div class="max-w-3xl">
-				<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-500/15 mb-6">
-					<svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg>
-					<span class="text-sm font-semibold text-indigo-700 dark:text-indigo-300 tracking-wide">{$t('landing.hero_badge')}</span>
-				</div>
-				<h1 class="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] mb-6 text-stone-900 dark:text-white">
-					{$t('landing.hero_title_1')}<br>
-					<span class="bg-gradient-to-r from-indigo-600 to-teal-500 bg-clip-text text-transparent">{$t('landing.hero_title_2')}</span>
+				<!-- Tagline -->
+				<h1 class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6" style="color: var(--text-primary);">
+					{$t('landing.tagline')}
 				</h1>
-				<p class="text-xl md:text-2xl text-stone-600 dark:text-stone-400 leading-relaxed mb-4 max-w-2xl font-light">
-					{@html $t('landing.hero_subtitle', { strong_start: '<strong class="font-semibold text-stone-900 dark:text-stone-200">', strong_end: '</strong>' })}
+
+				<p class="text-lg sm:text-xl leading-relaxed mb-4 max-w-xl font-light" style="color: var(--text-secondary);">
+					{@html $t('landing.hero_subtitle', { strong_start: `<strong class="font-semibold" style="color: var(--text-primary)">`, strong_end: '</strong>' })}
 				</p>
-				<p class="text-base text-stone-500 dark:text-stone-500 leading-relaxed mb-10 max-w-2xl">
+				<p class="text-base leading-relaxed mb-10 max-w-xl" style="color: var(--text-muted);">
 					{$t('landing.hero_detail')}
 				</p>
-				<div class="flex flex-wrap gap-4">
-					<a href="/login" class="inline-flex items-center justify-center min-h-[52px] px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-base shadow-lg shadow-indigo-500/20">
+
+				<div class="flex flex-wrap gap-4 mb-14">
+					<a href="/login" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors" style="box-shadow: 0 4px 14px rgba(178,60,44,0.2);">
 						{$t('landing.hero_cta')}
 					</a>
-					<a href="#origin" class="inline-flex items-center justify-center min-h-[52px] px-8 border-2 border-stone-300 dark:border-stone-600 text-stone-700 dark:text-stone-300 hover:bg-white/50 dark:hover:bg-stone-800/50 font-medium rounded-xl text-base gap-2">
+					<a href="#how" class="btn-secondary min-h-[52px] px-8 font-medium rounded-xl text-base gap-2 transition-colors" style="border: 1px solid var(--border);">
 						{$t('landing.hero_learn_more')}
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</a>
 				</div>
 
-				<!-- Trust badges -->
-				<div class="flex flex-wrap items-center gap-6 mt-12 text-sm text-stone-500 dark:text-stone-400">
+				<!-- Encryption badges -->
+				<div class="flex flex-wrap items-center gap-5 text-sm" style="color: var(--text-muted);">
 					<div class="flex items-center gap-2">
-						<svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/><polyline points="22,4 12,14.01 9,11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						<span>{$t('landing.hero_badge_crypto')}</span>
-					</div>
-					<div class="flex items-center gap-2">
-						<svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/><polyline points="22,4 12,14.01 9,11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						<span>{$t('landing.hero_badge_opensource')}</span>
-					</div>
-					<div class="flex items-center gap-2">
-						<svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/><polyline points="22,4 12,14.01 9,11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						<span>{$t('landing.hero_badge_zk')}</span>
-					</div>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<!-- ===== ORIGIN STORY ===== -->
-	<section class="py-20 md:py-28 bg-white dark:bg-stone-900 border-y border-stone-200 dark:border-stone-800" id="origin">
-		<div class="max-w-6xl mx-auto px-6">
-			<div class="max-w-3xl">
-				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-6 text-stone-900 dark:text-white">{$t('landing.origin_title')}</h2>
-				<p class="text-stone-600 dark:text-stone-400 text-lg leading-relaxed mb-10">
-					{$t('landing.origin_intro')}
-				</p>
-
-				<!-- Anonymized caregiver story -->
-				<div class="rounded-2xl border border-indigo-200 dark:border-indigo-800/50 p-6 md:p-8 bg-gradient-to-br from-indigo-50 to-stone-50 dark:from-indigo-950/20 dark:to-stone-950 mb-10">
-					<div class="flex items-start gap-4 mb-4">
-						<div class="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
-							<svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="7" r="4" stroke-width="2"/></svg>
-						</div>
-						<div>
-							<p class="font-semibold text-stone-900 dark:text-white text-lg">{$t('landing.origin_feedback_label')}</p>
-							<p class="text-sm text-stone-500 dark:text-stone-400">{$t('landing.origin_feedback_context')}</p>
+						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style="background: var(--olive-light); color: var(--olive);">
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg>
+							<span class="text-xs font-medium">{$t('landing.hero_badge_crypto')}</span>
 						</div>
 					</div>
-					<blockquote class="text-stone-700 dark:text-stone-300 italic leading-relaxed mb-5 border-l-3 border-indigo-400 dark:border-indigo-600 pl-5 text-lg">
-						{$t('landing.origin_quote')}
-					</blockquote>
-					<p class="text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
-						{$t('landing.origin_story')}
-					</p>
-					<p class="text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
-						{$t('landing.origin_lesson')}
-					</p>
-					<p class="text-stone-700 dark:text-stone-300 leading-relaxed font-medium">
-						{$t('landing.origin_conclusion')}
-					</p>
-				</div>
-
-				<!-- Excel comparison table -->
-				<div class="rounded-2xl border border-stone-200 dark:border-stone-800 overflow-hidden mb-10">
-					<div class="px-6 py-4 bg-stone-50 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800">
-						<h3 class="font-bold text-stone-900 dark:text-white text-lg">{$t('landing.excel_title')}</h3>
+					<div class="flex items-center gap-2">
+						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style="background: var(--olive-light); color: var(--olive);">
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/><polyline points="22,4 12,14.01 9,11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							<span class="text-xs font-medium">{$t('landing.hero_badge_zk')}</span>
+						</div>
 					</div>
-					<div class="overflow-x-auto">
-						<table class="w-full text-sm">
-							<thead>
-								<tr class="border-b border-stone-200 dark:border-stone-800">
-									<th class="text-left px-6 py-3 font-semibold text-stone-500 dark:text-stone-400">{$t('landing.excel_header_excel')}</th>
-									<th class="text-left px-6 py-3 font-semibold text-indigo-600 dark:text-indigo-400">{$t('landing.excel_header_ciphra')}</th>
-								</tr>
-							</thead>
-							<tbody class="text-stone-600 dark:text-stone-400">
-								<tr class="border-b border-stone-100 dark:border-stone-800/50">
-									<td class="px-6 py-3">{$t('landing.excel_row1_excel')}</td>
-									<td class="px-6 py-3 text-stone-900 dark:text-stone-200 font-medium">{$t('landing.excel_row1_ciphra')}</td>
-								</tr>
-								<tr class="border-b border-stone-100 dark:border-stone-800/50">
-									<td class="px-6 py-3">{$t('landing.excel_row2_excel')}</td>
-									<td class="px-6 py-3 text-stone-900 dark:text-stone-200 font-medium">{$t('landing.excel_row2_ciphra')}</td>
-								</tr>
-								<tr class="border-b border-stone-100 dark:border-stone-800/50">
-									<td class="px-6 py-3">{$t('landing.excel_row3_excel')}</td>
-									<td class="px-6 py-3 text-stone-900 dark:text-stone-200 font-medium">{$t('landing.excel_row3_ciphra')}</td>
-								</tr>
-								<tr class="border-b border-stone-100 dark:border-stone-800/50">
-									<td class="px-6 py-3">{$t('landing.excel_row4_excel')}</td>
-									<td class="px-6 py-3 text-stone-900 dark:text-stone-200 font-medium">{$t('landing.excel_row4_ciphra')}</td>
-								</tr>
-								<tr>
-									<td class="px-6 py-3">{$t('landing.excel_row5_excel')}</td>
-									<td class="px-6 py-3 text-stone-900 dark:text-stone-200 font-medium">{$t('landing.excel_row5_ciphra')}</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<!-- ===== NOT A WELLNESS APP ===== -->
-	<section class="py-20 md:py-28 bg-stone-50 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800">
-		<div class="max-w-6xl mx-auto px-6">
-			<div class="max-w-3xl">
-				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-stone-900 dark:text-white">{$t('landing.notapp_title')}</h2>
-				<p class="text-stone-600 dark:text-stone-400 text-lg leading-relaxed mb-10">
-					{$t('landing.notapp_subtitle')}
-				</p>
-
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-					<!-- Who it's for -->
-					<div class="rounded-2xl border border-stone-200 dark:border-stone-800 p-6 bg-white dark:bg-stone-900">
-						<h3 class="font-bold text-stone-900 dark:text-white mb-4">{$t('landing.notapp_who_title')}</h3>
-						<ul class="space-y-3 text-sm text-stone-600 dark:text-stone-400">
-							<li class="flex items-start gap-3">
-								<svg class="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/><polyline points="22,4 12,14.01 9,11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-								<span>{$t('landing.notapp_who_1')}</span>
-							</li>
-							<li class="flex items-start gap-3">
-								<svg class="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/><polyline points="22,4 12,14.01 9,11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-								<span>{$t('landing.notapp_who_2')}</span>
-							</li>
-							<li class="flex items-start gap-3">
-								<svg class="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/><polyline points="22,4 12,14.01 9,11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-								<span>{$t('landing.notapp_who_3')}</span>
-							</li>
-						</ul>
-					</div>
-
-					<!-- Evening routine -->
-					<div class="rounded-2xl border border-indigo-200 dark:border-indigo-800/50 p-6 bg-gradient-to-br from-indigo-50 to-stone-50 dark:from-indigo-950/20 dark:to-stone-950">
-						<h3 class="font-bold text-stone-900 dark:text-white mb-4">{$t('landing.notapp_routine_title')}</h3>
-						<p class="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
-							{$t('landing.notapp_routine_desc')}
-						</p>
+					<div class="flex items-center gap-2">
+						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style="background: var(--olive-light); color: var(--olive);">
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/><polyline points="22,4 12,14.01 9,11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							<span class="text-xs font-medium">{$t('landing.hero_badge_opensource')}</span>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -238,97 +150,100 @@
 	</section>
 
 	<!-- ===== HOW IT WORKS ===== -->
-	<section class="py-20 md:py-28 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800" id="how">
-		<div class="max-w-6xl mx-auto px-6">
-			<div class="text-center mb-14">
-				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-stone-900 dark:text-white">{$t('landing.how_title')}</h2>
-				<p class="text-stone-500 dark:text-stone-400 text-lg max-w-xl mx-auto">{$t('landing.how_subtitle')}</p>
+	<section class="py-20 md:py-28" id="how" style="background: var(--surface-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+		<div class="max-w-5xl mx-auto px-6">
+			<div class="text-center mb-16">
+				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">{$t('landing.how_title')}</h2>
+				<p class="text-lg max-w-xl mx-auto" style="color: var(--text-muted);">{$t('landing.how_subtitle')}</p>
 			</div>
 
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-				<div class="relative rounded-2xl border border-stone-200 dark:border-stone-800 p-8 bg-stone-50 dark:bg-stone-950">
-					<div class="absolute -top-4 left-8 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-500/30">1</div>
-					<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-indigo-900/30 dark:to-indigo-950/20 flex items-center justify-center mb-5 mt-2">
-						<svg class="w-7 h-7 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-width="2"/></svg>
-					</div>
-					<h3 class="text-xl font-bold text-stone-900 dark:text-white mb-3">{$t('landing.how_step1_title')}</h3>
-					<p class="text-stone-500 dark:text-stone-400 leading-relaxed">{$t('landing.how_step1_desc')}</p>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
+				<!-- Step 1 -->
+				<div class="relative">
+					<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-6" style="background: var(--ochre-light); color: var(--ochre);">1</div>
+					<h3 class="text-xl font-bold mb-3" style="color: var(--text-primary);">{$t('landing.how_step1_title')}</h3>
+					<p class="leading-relaxed text-base" style="color: var(--text-muted);">{$t('landing.how_step1_desc')}</p>
 				</div>
 
-				<div class="relative rounded-2xl border border-stone-200 dark:border-stone-800 p-8 bg-stone-50 dark:bg-stone-950">
-					<div class="absolute -top-4 left-8 w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-teal-500/30">2</div>
-					<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-100 to-teal-50 dark:from-teal-900/30 dark:to-teal-950/20 flex items-center justify-center mb-5 mt-2">
-						<svg class="w-7 h-7 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" stroke-width="2" stroke-linecap="round"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1" stroke-width="2"/><path d="M9 12l2 2 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</div>
-					<h3 class="text-xl font-bold text-stone-900 dark:text-white mb-3">{$t('landing.how_step2_title')}</h3>
-					<p class="text-stone-500 dark:text-stone-400 leading-relaxed">{$t('landing.how_step2_desc')}</p>
+				<!-- Step 2 -->
+				<div class="relative">
+					<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-6" style="background: var(--ochre-light); color: var(--ochre);">2</div>
+					<h3 class="text-xl font-bold mb-3" style="color: var(--text-primary);">{$t('landing.how_step2_title')}</h3>
+					<p class="leading-relaxed text-base" style="color: var(--text-muted);">{$t('landing.how_step2_desc')}</p>
 				</div>
 
-				<div class="relative rounded-2xl border border-stone-200 dark:border-stone-800 p-8 bg-stone-50 dark:bg-stone-950">
-					<div class="absolute -top-4 left-8 w-8 h-8 rounded-full bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-rose-500/30">3</div>
-					<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-100 to-rose-50 dark:from-rose-900/30 dark:to-rose-950/20 flex items-center justify-center mb-5 mt-2">
-						<svg class="w-7 h-7 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2"/><polyline points="14,2 14,8 20,8" stroke-width="2"/><line x1="16" y1="13" x2="8" y2="13" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke-width="2" stroke-linecap="round"/></svg>
-					</div>
-					<h3 class="text-xl font-bold text-stone-900 dark:text-white mb-3">{$t('landing.how_step3_title')}</h3>
-					<p class="text-stone-500 dark:text-stone-400 leading-relaxed">{$t('landing.how_step3_desc')}</p>
+				<!-- Step 3 -->
+				<div class="relative">
+					<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-6" style="background: var(--ochre-light); color: var(--ochre);">3</div>
+					<h3 class="text-xl font-bold mb-3" style="color: var(--text-primary);">{$t('landing.how_step3_title')}</h3>
+					<p class="leading-relaxed text-base" style="color: var(--text-muted);">{$t('landing.how_step3_desc')}</p>
 				</div>
 			</div>
 		</div>
 	</section>
 
-	<!-- ===== CONDITION TEMPLATES ===== -->
-	<section class="py-20 md:py-28 bg-stone-50 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800" id="templates">
-		<div class="max-w-6xl mx-auto px-6">
-			<div class="text-center mb-14">
-				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-stone-900 dark:text-white">{$t('landing.templates_title_1')} <span class="bg-gradient-to-r from-indigo-600 to-teal-500 bg-clip-text text-transparent">{$t('landing.templates_title_2')}</span></h2>
-				<p class="text-stone-500 dark:text-stone-400 text-lg max-w-xl mx-auto">{$t('landing.templates_subtitle')}</p>
+	<!-- ===== CONDITIONS GRID ===== -->
+	<section class="py-20 md:py-28" id="conditions" style="background: var(--surface); border-bottom: 1px solid var(--border);">
+		<div class="max-w-5xl mx-auto px-6">
+			<div class="text-center mb-16">
+				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">
+					{$t('landing.templates_title_1')} <span style="color: var(--brand);">{$t('landing.templates_title_2')}</span>
+				</h2>
+				<p class="text-lg max-w-xl mx-auto" style="color: var(--text-muted);">{$t('landing.templates_subtitle')}</p>
 			</div>
 
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-				{#each [
-					{ nameKey: 'landing.template_epilepsy', descKey: 'landing.template_epilepsy_desc', color: '#DC2626', bg: 'from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/10' },
-					{ nameKey: 'landing.template_adhd', descKey: 'landing.template_adhd_desc', color: '#F59E0B', bg: 'from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/10' },
-					{ nameKey: 'landing.template_diabetes', descKey: 'landing.template_diabetes_desc', color: '#0D9488', bg: 'from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/10' },
-					{ nameKey: 'landing.template_burnout', descKey: 'landing.template_burnout_desc', color: '#8B5CF6', bg: 'from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/10' },
-					{ nameKey: 'landing.template_migraine', descKey: 'landing.template_migraine_desc', color: '#EC4899', bg: 'from-pink-50 to-rose-50 dark:from-pink-950/20 dark:to-rose-950/10' }
-				] as tmpl}
-					<div class="rounded-2xl border border-stone-200 dark:border-stone-800 p-6 bg-gradient-to-br {tmpl.bg} hover:shadow-lg hover:shadow-stone-200/50 dark:hover:shadow-stone-900/50">
-						<div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background: {tmpl.color}15">
-							<div class="w-5 h-5 rounded-full" style="background: {tmpl.color}"></div>
+			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+				{#each presets as preset}
+					{#if preset.id === 'custom'}
+						<!-- Custom card -->
+						<div class="rounded-xl p-5 flex flex-col items-center justify-center text-center transition-colors min-h-[140px]" style="border: 2px dashed var(--border); cursor: default;">
+							<div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style="background: var(--surface-muted);">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);"><path d="M12 5v14m-7-7h14"/></svg>
+							</div>
+							<h3 class="font-semibold text-sm mb-1" style="color: var(--text-primary);">{$t(preset.labelKey)}</h3>
+							<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(preset.descriptionKey)}</p>
 						</div>
-						<h3 class="font-bold text-lg text-stone-900 dark:text-white mb-2">{$t(tmpl.nameKey)}</h3>
-						<p class="text-sm text-stone-500 dark:text-stone-400 leading-relaxed">{$t(tmpl.descKey)}</p>
-					</div>
+					{:else}
+						<!-- Condition card -->
+						<a href="/conditions/{preset.id}" class="card-interactive rounded-xl p-5 min-h-[140px] block group">
+							<div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style="background: {preset.color}12">
+								<svg class="w-5 h-5" fill="none" stroke={preset.color} stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+									<path d="{iconPaths[preset.icon] || iconPaths['heart']}"/>
+								</svg>
+							</div>
+							<h3 class="font-semibold text-sm mb-1 transition-colors" style="color: var(--text-primary);">{$t(preset.labelKey)}</h3>
+							<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(preset.descriptionKey)}</p>
+						</a>
+					{/if}
 				{/each}
-				<!-- Custom -->
-				<div class="rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-700 p-6 flex flex-col items-center justify-center text-center hover:border-indigo-400 dark:hover:border-indigo-600">
-					<div class="w-12 h-12 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center mb-4">
-						<svg class="w-6 h-6 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</div>
-					<h3 class="font-bold text-lg text-stone-900 dark:text-white mb-2">{$t('landing.template_custom')}</h3>
-					<p class="text-sm text-stone-500 dark:text-stone-400">{$t('landing.template_custom_desc')}</p>
-				</div>
 			</div>
+
+				<div class="text-center mt-8">
+					<a href="/conditions" class="inline-flex items-center gap-2 text-sm font-medium transition-colors" style="color: var(--brand);">
+						{$t('condition.index_title')}
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</a>
+				</div>
 		</div>
 	</section>
 
 	<!-- ===== SECURITY ===== -->
-	<section class="py-20 md:py-28 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800" id="security">
-		<div class="max-w-6xl mx-auto px-6">
-			<div class="flex items-start gap-5 mb-10">
-				<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-indigo-900/30 dark:to-indigo-950/20 flex items-center justify-center flex-shrink-0">
-					<svg class="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg>
+	<section class="py-20 md:py-28" id="security" style="background: var(--surface-card); border-bottom: 1px solid var(--border);">
+		<div class="max-w-5xl mx-auto px-6">
+			<div class="flex items-start gap-5 mb-12">
+				<div class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0" style="background: var(--ochre-light);">
+					<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--ochre);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg>
 				</div>
 				<div>
-					<h2 class="text-3xl md:text-4xl font-bold tracking-tight text-stone-900 dark:text-white">{$t('landing.security_title')}</h2>
-					<p class="text-stone-500 dark:text-stone-400 text-lg mt-2 max-w-2xl">{$t('landing.security_subtitle')}</p>
+					<h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--text-primary);">{$t('landing.security_title')}</h2>
+					<p class="text-lg mt-2 max-w-2xl" style="color: var(--text-muted);">{$t('landing.security_subtitle')}</p>
 				</div>
 			</div>
 
 			<!-- Key hierarchy -->
-			<div class="rounded-2xl border border-stone-200 dark:border-stone-800 p-6 md:p-8 bg-stone-50 dark:bg-stone-950 mb-8">
-				<h3 class="font-bold text-stone-900 dark:text-white mb-6 text-lg">{$t('landing.security_hierarchy_title')}</h3>
-				<div class="font-mono text-sm text-stone-700 dark:text-stone-300 leading-relaxed overflow-x-auto">
+			<div class="rounded-xl p-6 md:p-8 mb-8" style="background: var(--surface-muted); border: 1px solid var(--border);">
+				<h3 class="font-bold text-lg mb-6" style="color: var(--text-primary);">{$t('landing.security_hierarchy_title')}</h3>
+				<div class="font-mono text-sm leading-relaxed overflow-x-auto" style="color: var(--ochre);">
 					<pre class="whitespace-pre">{$t('landing.security_hierarchy_password')}
   |
   +-- Argon2id (":AUTH")  --> {$t('landing.security_hierarchy_auth')}
@@ -345,73 +260,198 @@
 
 			<!-- What server sees vs can't -->
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-				<div class="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 p-6 bg-emerald-50/50 dark:bg-emerald-950/10">
+				<div class="rounded-xl p-6" style="background: var(--surface-muted); border: 1px solid var(--border);">
 					<div class="flex items-center gap-2 mb-4">
-						<svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
-						<h3 class="font-bold text-stone-900 dark:text-white">{$t('landing.security_server_sees')}</h3>
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--ochre);"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
+						<h3 class="font-bold" style="color: var(--text-primary);">{$t('landing.security_server_sees')}</h3>
 					</div>
-					<ul class="space-y-2.5 text-sm text-stone-600 dark:text-stone-400">
-						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> {$t('landing.security_server_sees_1')}</li>
-						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> {$t('landing.security_server_sees_2')}</li>
-						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> {$t('landing.security_server_sees_3')}</li>
-						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> {$t('landing.security_server_sees_4')}</li>
+					<ul class="space-y-2.5 text-sm" style="color: var(--text-secondary);">
+						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_1')}</li>
+						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_2')}</li>
+						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_3')}</li>
+						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_4')}</li>
 					</ul>
 				</div>
-				<div class="rounded-2xl border border-red-200 dark:border-red-800/50 p-6 bg-red-50/50 dark:bg-red-950/10">
+				<div class="rounded-xl p-6" style="background: var(--surface-muted); border: 1px solid var(--border);">
 					<div class="flex items-center gap-2 mb-4">
-						<svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="1" y1="1" x2="23" y2="23" stroke-width="2" stroke-linecap="round"/></svg>
-						<h3 class="font-bold text-stone-900 dark:text-white">{$t('landing.security_server_not')}</h3>
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="1" y1="1" x2="23" y2="23" stroke-width="2" stroke-linecap="round"/></svg>
+						<h3 class="font-bold" style="color: var(--text-primary);">{$t('landing.security_server_not')}</h3>
 					</div>
-					<ul class="space-y-2.5 text-sm text-stone-600 dark:text-stone-400">
-						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_1')}</li>
-						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_2')}</li>
-						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_3')}</li>
-						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_4')}</li>
+					<ul class="space-y-2.5 text-sm" style="color: var(--text-secondary);">
+						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_1')}</li>
+						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_2')}</li>
+						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_3')}</li>
+						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_4')}</li>
 					</ul>
 				</div>
 			</div>
 		</div>
 	</section>
 
-	<!-- ===== FEATURES ===== -->
-	<section class="py-20 md:py-28 bg-stone-50 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800" id="features">
-		<div class="max-w-6xl mx-auto px-6">
-			<div class="text-center mb-14">
-				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-stone-900 dark:text-white">{$t('landing.features_title')}</h2>
+	<!-- ===== TECHNICAL DETAILS (expandable) ===== -->
+	<section class="py-20 md:py-28" id="technical" style="background: var(--surface); border-bottom: 1px solid var(--border);">
+		<div class="max-w-5xl mx-auto px-6">
+			<!-- Toggle button -->
+			<div class="text-center">
+				<button
+					type="button"
+					on:click={() => showTechnicalDetails = !showTechnicalDetails}
+					class="rounded-full px-6 py-3 font-semibold text-sm transition-all duration-200 inline-flex items-center gap-2"
+					style="border: 1px solid var(--border); color: var(--text-secondary); background: var(--surface-card);"
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					{showTechnicalDetails ? $t('tech.toggle_hide') : $t('tech.toggle_show')}
+					<svg class="w-4 h-4 transition-transform duration-200" class:rotate-180={showTechnicalDetails} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				</button>
 			</div>
 
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-				{#each [
-					{ titleKey: 'landing.feature_protocol', descKey: 'landing.feature_protocol_desc', color: 'indigo', icon: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' },
-					{ titleKey: 'landing.feature_grid', descKey: 'landing.feature_grid_desc', color: 'teal', icon: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18' },
-					{ titleKey: 'landing.feature_calendar', descKey: 'landing.feature_calendar_desc', color: 'blue', icon: 'M3 4h18v18H3zM16 2v4M8 2v4M3 10h18' },
-					{ titleKey: 'landing.feature_pdf', descKey: 'landing.feature_pdf_desc', color: 'rose', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' },
-					{ titleKey: 'landing.feature_offline', descKey: 'landing.feature_offline_desc', color: 'emerald', icon: 'M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01' },
-					{ titleKey: 'landing.feature_multilang', descKey: 'landing.feature_multilang_desc', color: 'violet', icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z' },
-					{ titleKey: 'landing.feature_darkmode', descKey: 'landing.feature_darkmode_desc', color: 'stone', icon: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' },
-					{ titleKey: 'landing.feature_custom', descKey: 'landing.feature_custom_desc', color: 'amber', icon: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' }
-				] as feat}
-					<div class="rounded-2xl border border-stone-200 dark:border-stone-800 p-6 bg-white dark:bg-stone-900 hover:shadow-md">
-						<div class="w-12 h-12 rounded-xl bg-{feat.color}-100 dark:bg-{feat.color}-900/20 flex items-center justify-center mb-4">
-							<svg class="w-5 h-5 text-{feat.color}-600 dark:text-{feat.color}-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="{feat.icon}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			{#if showTechnicalDetails}
+			<div class="mt-12 space-y-16">
+
+				<!-- Section A: Architecture Overview -->
+				<div>
+					<h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-8" style="color: var(--text-primary);">{$t('tech.architecture_title')}</h3>
+					<div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-6 items-center">
+						<!-- Client card -->
+						<div class="card rounded-xl p-6" style="border-left: 4px solid var(--ochre);">
+							<h4 class="font-bold text-lg mb-4" style="color: var(--text-primary);">{$t('tech.client_title')}</h4>
+							<ul class="space-y-2">
+								{#each $t('tech.client_items').split(', ') as item}
+									<li class="flex items-center gap-2">
+										<span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span>
+										<span class="font-mono text-sm px-2 py-0.5 rounded" style="background: var(--surface-muted); color: var(--text-secondary);">{item}</span>
+									</li>
+								{/each}
+							</ul>
+							<div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle);">
+								<div class="flex items-center gap-2 text-sm font-medium" style="color: var(--ochre);">
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									{$t('tech.client_note')}
+								</div>
+							</div>
 						</div>
-						<h3 class="font-bold text-base mb-2 text-stone-900 dark:text-white">{$t(feat.titleKey)}</h3>
-						<p class="text-sm text-stone-500 dark:text-stone-400 leading-relaxed">{$t(feat.descKey)}</p>
+						<!-- Arrow -->
+						<div class="hidden md:flex flex-col items-center gap-2" style="color: var(--text-muted);">
+							<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16l-4-4m0 0l4-4m-4 4h18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							<span class="font-mono text-xs px-2 py-1 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">HTTPS</span>
+							<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+						</div>
+						<!-- Mobile arrow -->
+						<div class="md:hidden flex justify-center" style="color: var(--text-muted);">
+							<div class="flex items-center gap-2">
+								<svg class="w-5 h-5 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16l-4-4m0 0l4-4m-4 4h18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+								<span class="font-mono text-xs px-2 py-1 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">HTTPS</span>
+								<svg class="w-5 h-5 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							</div>
+						</div>
+						<!-- Server card -->
+						<div class="card rounded-xl p-6" style="border-left: 4px solid var(--brand);">
+							<h4 class="font-bold text-lg mb-4" style="color: var(--text-primary);">{$t('tech.server_title')}</h4>
+							<ul class="space-y-2">
+								{#each $t('tech.server_items').split(', ') as item}
+									<li class="flex items-center gap-2">
+										<span class="w-1.5 h-1.5 rounded-full" style="background: var(--brand);"></span>
+										<span class="font-mono text-sm px-2 py-0.5 rounded" style="background: var(--surface-muted); color: var(--text-secondary);">{item}</span>
+									</li>
+								{/each}
+							</ul>
+							<div class="mt-4 pt-4" style="border-top: 1px solid var(--border-subtle);">
+								<div class="flex items-center gap-2 text-sm font-medium" style="color: var(--brand);">
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									{$t('tech.server_note')}
+								</div>
+							</div>
+						</div>
 					</div>
-				{/each}
+				</div>
+
+				<!-- Section B: Encryption Flow -->
+				<div>
+					<h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-8" style="color: var(--text-primary);">{$t('tech.flow_title')}</h3>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+						{#each [
+							{ num: 1, titleKey: 'tech.flow_register_title', descKey: 'tech.flow_register_desc', borderColor: 'var(--ochre)' },
+							{ num: 2, titleKey: 'tech.flow_login_title', descKey: 'tech.flow_login_desc', borderColor: 'var(--brand)' },
+							{ num: 3, titleKey: 'tech.flow_storage_title', descKey: 'tech.flow_storage_desc', borderColor: 'var(--ochre)' },
+							{ num: 4, titleKey: 'tech.flow_recovery_title', descKey: 'tech.flow_recovery_desc', borderColor: 'var(--brand)' }
+						] as step}
+							<div class="card rounded-xl p-6" style="border-left: 4px solid {step.borderColor};">
+								<div class="flex items-center gap-3 mb-3">
+									<div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" style="background: var(--ochre-light); color: var(--ochre);">{step.num}</div>
+									<h4 class="font-bold text-lg" style="color: var(--text-primary);">{$t(step.titleKey)}</h4>
+								</div>
+								<p class="text-sm leading-relaxed" style="color: var(--text-secondary);">{$t(step.descKey)}</p>
+							</div>
+						{/each}
+					</div>
+				</div>
+
+				<!-- Section C: Why these choices? -->
+				<div>
+					<h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-8" style="color: var(--text-primary);">{$t('tech.why_title')}</h3>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+						{#each [
+							{ titleKey: 'tech.why_argon2_title', descKey: 'tech.why_argon2_desc', borderColor: 'var(--ochre)' },
+							{ titleKey: 'tech.why_aes_title', descKey: 'tech.why_aes_desc', borderColor: 'var(--brand)' },
+							{ titleKey: 'tech.why_client_title', descKey: 'tech.why_client_desc', borderColor: 'var(--ochre)' },
+							{ titleKey: 'tech.why_metadata_title', descKey: 'tech.why_metadata_desc', borderColor: 'var(--brand)' }
+						] as choice}
+							<div class="card rounded-xl p-6" style="border-left: 4px solid {choice.borderColor};">
+								<h4 class="font-bold text-base mb-3" style="color: var(--text-primary);">{$t(choice.titleKey)}</h4>
+								<p class="text-sm leading-relaxed" style="color: var(--text-secondary);">{$t(choice.descKey)}</p>
+							</div>
+						{/each}
+					</div>
+				</div>
+
+				<!-- Section D: Open Source Verification -->
+				<div>
+					<div class="card rounded-xl p-6 md:p-8" style="border-left: 4px solid var(--olive);">
+						<h3 class="text-xl md:text-2xl font-bold tracking-tight mb-3" style="color: var(--text-primary);">{$t('tech.verify_title')}</h3>
+						<p class="leading-relaxed mb-6" style="color: var(--text-secondary);">{$t('tech.verify_desc')}</p>
+						<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+							<div class="rounded-lg p-4" style="background: var(--surface-muted); border: 1px solid var(--border);">
+								<div class="flex items-center gap-2 mb-2">
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg>
+									<span class="font-semibold text-sm" style="color: var(--text-primary);">{$t('tech.verify_encryption')}</span>
+								</div>
+								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">backend/crypto.py</code>
+							</div>
+							<div class="rounded-lg p-4" style="background: var(--surface-muted); border: 1px solid var(--border);">
+								<div class="flex items-center gap-2 mb-2">
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--ochre);"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									<span class="font-semibold text-sm" style="color: var(--text-primary);">{$t('tech.verify_api')}</span>
+								</div>
+								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">backend/app.py</code>
+							</div>
+							<div class="rounded-lg p-4" style="background: var(--surface-muted); border: 1px solid var(--border);">
+								<div class="flex items-center gap-2 mb-2">
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--olive);"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									<span class="font-semibold text-sm" style="color: var(--text-primary);">{$t('tech.verify_crypto')}</span>
+								</div>
+								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">frontend/src/lib/crypto.ts</code>
+							</div>
+						</div>
+					</div>
+				</div>
+
 			</div>
+			{/if}
 		</div>
 	</section>
 
-	<!-- ===== CTA ===== -->
-	<section class="py-20 md:py-28 relative overflow-hidden">
-		<div class="absolute inset-0 bg-gradient-to-br from-indigo-600 to-indigo-800 dark:from-indigo-900 dark:to-indigo-950"></div>
-		<div class="relative max-w-6xl mx-auto px-6 text-center">
-			<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-white">{$t('landing.cta_title')}</h2>
-			<p class="text-indigo-100 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
+	<!-- ===== CTA FOOTER ===== -->
+	<section class="py-20 md:py-28 relative overflow-hidden" style="background: var(--surface-card); border-bottom: 1px solid var(--border);">
+		<div class="relative max-w-5xl mx-auto px-6 text-center">
+			<!-- Watermark asterisk -->
+			<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+				<Asterisk size={180} muted color="muted" />
+			</div>
+			<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">{$t('landing.cta_title')}</h2>
+			<p class="text-lg mb-10 max-w-2xl mx-auto leading-relaxed" style="color: var(--text-secondary);">
 				{$t('landing.cta_subtitle')}
 			</p>
-			<a href="/login" class="inline-flex items-center justify-center min-h-[52px] px-8 bg-white hover:bg-stone-100 text-indigo-700 font-semibold rounded-xl text-base shadow-lg">
+			<a href="/login" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors">
 				{$t('landing.cta_button')}
 			</a>
 		</div>
@@ -420,41 +460,64 @@
 </main>
 
 <!-- Footer -->
-<footer class="border-t border-stone-200 dark:border-stone-800 py-12 bg-white dark:bg-stone-900">
-	<div class="max-w-6xl mx-auto px-6">
+<footer class="py-12" style="background: var(--surface-card); border-top: 1px solid var(--border);">
+	<div class="max-w-5xl mx-auto px-6">
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
 			<div>
-				<span class="text-lg font-bold tracking-tight text-stone-900 dark:text-white">ciphra</span>
-				<p class="text-xs font-semibold tracking-widest uppercase text-indigo-600 dark:text-indigo-400 mt-1">{$t('landing.footer_tagline')}</p>
-				<p class="text-sm text-stone-500 dark:text-stone-400 mt-3 leading-relaxed">{@html $t('landing.footer_desc').replace('\n', '<br>')}</p>
+				<a href="/" aria-label="ciphra">
+					<svg viewBox="0 0 220 50" class="h-8" aria-hidden="true">
+						<text x="0" y="36" font-family="Inter, DM Sans, sans-serif" font-size="36" font-weight="500" letter-spacing="1" style="fill: var(--text-primary)">ciphra</text>
+						<g transform="translate(134,12) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
+							<path d="M -6.5 0 L 6.5 0" stroke-width="1.5"/>
+							<path d="M -2.7 -4.6 L 2.7 4.6" stroke-width="1.2"/>
+							<path d="M 2.6 -4.4 L -2.6 4.4" stroke-width="1.1"/>
+						</g>
+					</svg>
+				</a>
+				<p class="text-xs font-semibold tracking-widest uppercase mt-1" style="color: var(--brand);">{$t('landing.footer_tagline')}</p>
+				<p class="text-sm mt-3 leading-relaxed" style="color: var(--text-muted);">{@html $t('landing.footer_desc').replace('\n', '<br>')}</p>
 			</div>
 			<div>
-				<h3 class="text-sm font-semibold mb-3 text-stone-900 dark:text-white">{$t('landing.footer_product')}</h3>
-				<ul class="space-y-2 text-sm text-stone-500 dark:text-stone-400">
-					<li><a href="#how" class="hover:text-stone-900 dark:hover:text-stone-100">{$t('landing.footer_how')}</a></li>
-					<li><a href="#templates" class="hover:text-stone-900 dark:hover:text-stone-100">{$t('landing.footer_templates')}</a></li>
-					<li><a href="#features" class="hover:text-stone-900 dark:hover:text-stone-100">{$t('landing.footer_features')}</a></li>
-					<li><a href="#security" class="hover:text-stone-900 dark:hover:text-stone-100">{$t('landing.footer_security')}</a></li>
+				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">{$t('landing.footer_product')}</h3>
+				<ul class="space-y-2 text-sm" style="color: var(--text-muted);">
+					<li><a href="#how" class="hover:underline" style="color: inherit;">{$t('landing.footer_how')}</a></li>
+					<li><a href="#conditions" class="hover:underline" style="color: inherit;">{$t('landing.footer_templates')}</a></li>
+					<li><a href="#security" class="hover:underline" style="color: inherit;">{$t('landing.footer_security')}</a></li>
 				</ul>
 			</div>
 			<div>
-				<h3 class="text-sm font-semibold mb-3 text-stone-900 dark:text-white">{$t('landing.footer_links')}</h3>
-				<ul class="space-y-2 text-sm text-stone-500 dark:text-stone-400">
-					<li><a href="/login" class="hover:text-stone-900 dark:hover:text-stone-100">{$t('landing.footer_login')}</a></li>
-					<li><a href="/login" class="hover:text-stone-900 dark:hover:text-stone-100">{$t('landing.footer_register')}</a></li>
+				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">{$t('landing.footer_links')}</h3>
+				<ul class="space-y-2 text-sm" style="color: var(--text-muted);">
+					<li><a href="/login" class="hover:underline" style="color: inherit;">{$t('landing.footer_login')}</a></li>
+					<li><a href="/login" class="hover:underline" style="color: inherit;">{$t('landing.footer_register')}</a></li>
 				</ul>
 			</div>
 			<div>
-				<h3 class="text-sm font-semibold mb-3 text-stone-900 dark:text-white">{$t('landing.footer_domains')}</h3>
-				<ul class="space-y-2 text-sm text-stone-500 dark:text-stone-400">
+				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">{$t('landing.footer_domains')}</h3>
+				<ul class="space-y-2 text-sm" style="color: var(--text-muted);">
 					<li>ciphra.ch</li>
 					<li>ciphra.app</li>
 				</ul>
 			</div>
 		</div>
-		<div class="border-t border-stone-200 dark:border-stone-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-stone-400 dark:text-stone-500">
+		<!-- Divider with asterisk -->
+		<div class="asterisk-divider mb-6">
+			<Asterisk size={14} color="muted" />
+		</div>
+		<div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm" style="color: var(--text-muted);">
 			<span>&copy; 2026 ciphra</span>
-			<span class="text-xs tracking-wider uppercase">{$t('landing.footer_tagline')}</span>
+			<div class="flex items-center gap-4">
+				<select
+					class="text-xs rounded-lg px-2 py-1.5 min-h-[36px]"
+					style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-muted);"
+					value={$locale}
+					on:change={setLocale}
+				>
+					{#each locales as l}
+						<option value={l}>{localeNames[l]}</option>
+					{/each}
+				</select>
+			</div>
 		</div>
 	</div>
 </footer>

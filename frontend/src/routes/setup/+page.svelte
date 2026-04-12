@@ -7,6 +7,7 @@
 	import type { PresetInfo } from '$lib/blueprint';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import Asterisk from '$lib/components/Asterisk.svelte';
 
 	let step = 1; // 1=pick preset, 2=symptoms, 3=episodes, 4=triggers, 5=vitals, 6=medications, 7=confirm
 	const totalSteps = 7;
@@ -37,7 +38,7 @@
 
 	function selectPreset(preset: PresetInfo) {
 		working = JSON.parse(JSON.stringify(preset.blueprint));
-		if (preset.id === 'custom') {
+		if (preset.id === 'custom' && working) {
 			working.conditionLabel = '';
 		}
 		step = 2;
@@ -80,7 +81,7 @@
 	function addEpisodeType() {
 		if (!working || !newEpisodeLabel.trim()) return;
 		const id = newEpisodeLabel.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-		const colors = ['#DC2626', '#F59E0B', '#8B5CF6', '#EC4899', '#0D9488', '#6366F1'];
+		const colors = ['#DC2626', '#F59E0B', '#8B5CF6', '#EC4899', '#b23c2c', '#9f630b'];
 		working.episodeTypes.push({
 			id,
 			label: newEpisodeLabel.trim(),
@@ -163,10 +164,10 @@
 		// Auto-populate stream filters
 		if (working.episodeTypes.length > 0 && !working.streamFilters.find(f => f.key === 'episode')) {
 			working.streamFilters = [
-				{ key: 'all', label: 'Alle' },
-				{ key: 'daily_log', label: 'Protokolle' },
-				{ key: 'episode', label: working.episodeTypes.length === 1 ? working.episodeTypes[0].label : 'Episoden' },
-				{ key: 'event', label: 'Ereignisse' },
+				{ key: 'all', label: $t('stream.all') },
+				{ key: 'daily_log', label: $t('protocol.title') },
+				{ key: 'episode', label: working.episodeTypes.length === 1 ? working.episodeTypes[0].label : $t('protocol.episodes') },
+				{ key: 'event', label: $t('stream.events') },
 			];
 		}
 
@@ -181,17 +182,17 @@
 	$: allSymptoms = working ? working.symptomGroups.flatMap(g => g.items) : [];
 </script>
 
-<div class="min-h-screen bg-stone-50 dark:bg-stone-950 pb-12">
+<div class="min-h-screen pb-12" style="background: var(--surface)">
 	<!-- Header -->
-	<div class="bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800">
+	<div style="background: var(--surface-card); border-bottom: 1px solid var(--border)">
 		<div class="max-w-2xl mx-auto px-4 py-6">
-			<h1 class="text-2xl font-bold text-stone-900 dark:text-white">{$t('setup.title')}</h1>
+			<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('setup.title')}</h1>
 			{#if step > 1}
 				<div class="flex items-center gap-2 mt-3">
 					{#each Array(totalSteps) as _, i}
-						<div class="h-1.5 flex-1 rounded-full {i < step ? 'bg-indigo-500' : 'bg-stone-200 dark:bg-stone-700'}"></div>
+						<div class="h-1.5 flex-1 rounded-full" style="background: {i < step ? 'var(--olive)' : 'var(--surface-inset)'}"></div>
 					{/each}
-					<span class="text-xs text-stone-400 ml-2">{step}/{totalSteps}</span>
+					<span class="text-xs ml-2" style="color: var(--text-muted)">{step}/{totalSteps}</span>
 				</div>
 			{/if}
 		</div>
@@ -203,15 +204,16 @@
 		{#if step === 1}
 			<div class="space-y-4">
 				<div class="text-center mb-6">
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.choose_title')}</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.choose_subtitle')}</p>
+					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.choose_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.choose_subtitle')}</p>
 				</div>
 
 				<div class="grid gap-3">
 					{#each presets as preset}
 						<button
 							on:click={() => selectPreset(preset)}
-							class="w-full text-left bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors group"
+							class="w-full text-left rounded-xl p-5 transition-all group"
+							style="background: var(--surface-card); border: 1px solid var(--border)"
 						>
 							<div class="flex items-start gap-4">
 								<div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background: {preset.color}15">
@@ -229,9 +231,12 @@
 										<svg class="w-6 h-6" style="color: {preset.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-width="2"/></svg>
 									{/if}
 								</div>
-								<div>
-									<h3 class="text-base font-semibold text-stone-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{preset.label}</h3>
-									<p class="text-sm text-stone-500 dark:text-stone-400 mt-0.5">{preset.description}</p>
+								<div class="flex-1">
+									<h3 class="text-base font-semibold transition-colors" style="color: var(--text-primary)">{$t(preset.labelKey)}</h3>
+									<p class="text-sm mt-0.5" style="color: var(--text-secondary)">{$t(preset.descriptionKey)}</p>
+									{#if preset.id !== 'custom'}
+										<a href="/conditions/{preset.id}" on:click|stopPropagation class="text-xs hover:underline mt-1 inline-block" style="color: var(--brand)">{$t('condition.cta_learn_more')}</a>
+									{/if}
 								</div>
 							</div>
 						</button>
@@ -243,23 +248,24 @@
 		{:else if step === 2 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.symptoms_title')}</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.symptoms_subtitle')}</p>
+					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.symptoms_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.symptoms_subtitle')}</p>
 				</div>
 
 				{#each working.symptomGroups as group, gi}
-					<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
+					<div class="card p-4">
 						<div class="flex items-center justify-between mb-3">
-							<h3 class="text-sm font-semibold text-stone-700 dark:text-stone-300">{group.label}</h3>
-							<button on:click={() => removeGroup(gi)} class="text-xs text-stone-400 hover:text-red-500 min-h-[44px] px-2">{$t('setup.group_delete')}</button>
+							<h3 class="text-sm font-semibold" style="color: var(--text-secondary)">{$t(group.label)}</h3>
+							<button on:click={() => removeGroup(gi)} class="text-xs min-h-[44px] px-2 transition-colors" style="color: var(--text-muted)" on:mouseenter={(e) => e.currentTarget.style.color = 'var(--danger)'} on:mouseleave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{$t('setup.group_delete')}</button>
 						</div>
 						<div class="flex flex-wrap gap-2">
 							{#each group.items as item}
 								<button
 									on:click={() => toggleSymptom(gi, item.id)}
-									class="px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 dark:hover:text-red-400 transition-colors group min-h-[36px]"
+									class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors group min-h-[36px]"
+									style="background: var(--olive-light); color: var(--olive)"
 								>
-									{item.label} <span class="opacity-0 group-hover:opacity-100 ml-1">×</span>
+									{$t(item.label)} <span class="opacity-0 group-hover:opacity-100 ml-1">x</span>
 								</button>
 							{/each}
 						</div>
@@ -267,9 +273,9 @@
 						<div class="flex gap-2 mt-3">
 							<input type="text" bind:value={groupInputs[gi]} placeholder={$t('setup.symptoms_add')}
 								on:keydown={(e) => { if (e.key === 'Enter') addSymptomToGroup(gi); }}
-								class="flex-1 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+								class="input flex-1" />
 							<button on:click={() => addSymptomToGroup(gi)}
-								class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">+</button>
+								class="btn-primary px-4 rounded-xl text-sm font-medium">+</button>
 						</div>
 					</div>
 				{/each}
@@ -278,9 +284,9 @@
 				<div class="flex gap-2">
 					<input type="text" bind:value={newGroupLabel} placeholder={$t('setup.group_add')}
 						on:keydown={(e) => { if (e.key === 'Enter') addGroup(); }}
-						class="flex-1 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+						class="input flex-1" />
 					<button on:click={addGroup}
-						class="px-4 py-2 bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-medium hover:bg-stone-300 dark:hover:bg-stone-700 min-h-[44px]">{$t('setup.group_add_button')}</button>
+						class="btn-secondary px-4 rounded-xl text-sm font-medium">{$t('setup.group_add_button')}</button>
 				</div>
 			</div>
 
@@ -288,18 +294,18 @@
 		{:else if step === 3 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.episodes_title')}</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.episodes_subtitle')}</p>
+					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.episodes_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.episodes_subtitle')}</p>
 				</div>
 
 				<div class="space-y-2">
 					{#each working.episodeTypes as ep, i}
-						<div class="flex items-center justify-between bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
+						<div class="card flex items-center justify-between p-4">
 							<div class="flex items-center gap-3">
 								<div class="w-4 h-4 rounded-full" style="background: {ep.color}"></div>
-								<span class="text-sm font-medium text-stone-900 dark:text-white">{ep.label}</span>
+								<span class="text-sm font-medium" style="color: var(--text-primary)">{$t(ep.label)}</span>
 							</div>
-							<button on:click={() => removeEpisode(i)} class="text-stone-400 hover:text-red-500 min-h-[44px] px-2 text-sm">{$t('setup.remove')}</button>
+							<button on:click={() => removeEpisode(i)} class="min-h-[44px] px-2 text-sm transition-colors" style="color: var(--text-muted)" on:mouseenter={(e) => e.currentTarget.style.color = 'var(--danger)'} on:mouseleave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{$t('setup.remove')}</button>
 						</div>
 					{/each}
 				</div>
@@ -307,13 +313,13 @@
 				<div class="flex gap-2">
 					<input type="text" bind:value={newEpisodeLabel} placeholder={$t('setup.episodes_add')}
 						on:keydown={(e) => { if (e.key === 'Enter') addEpisodeType(); }}
-						class="flex-1 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+						class="input flex-1" />
 					<button on:click={addEpisodeType}
-						class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">{$t('setup.add')}</button>
+						class="btn-primary px-4 rounded-xl text-sm font-medium">{$t('setup.add')}</button>
 				</div>
 
 				{#if working.episodeTypes.length === 0}
-					<p class="text-sm text-stone-400 dark:text-stone-500 text-center py-4">{$t('setup.episodes_empty')}</p>
+					<p class="text-sm text-center py-4" style="color: var(--text-muted)">{$t('setup.episodes_empty')}</p>
 				{/if}
 			</div>
 
@@ -321,17 +327,18 @@
 		{:else if step === 4 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.triggers_title')}</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.triggers_subtitle')}</p>
+					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.triggers_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.triggers_subtitle')}</p>
 				</div>
 
 				<div class="flex flex-wrap gap-2">
 					{#each working.triggers as trig, i}
 						<button
 							on:click={() => removeTrigger(i)}
-							class="px-3 py-1.5 rounded-full text-sm font-medium bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 dark:hover:text-red-400 transition-colors group min-h-[36px]"
+							class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors group min-h-[36px]"
+							style="background: var(--ochre-light); color: var(--ochre)"
 						>
-							{trig.label} <span class="opacity-0 group-hover:opacity-100 ml-1">×</span>
+							{$t(trig.label)} <span class="opacity-0 group-hover:opacity-100 ml-1">x</span>
 						</button>
 					{/each}
 				</div>
@@ -339,9 +346,9 @@
 				<div class="flex gap-2">
 					<input type="text" bind:value={newTriggerLabel} placeholder={$t('setup.triggers_add')}
 						on:keydown={(e) => { if (e.key === 'Enter') addTrigger(); }}
-						class="flex-1 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+						class="input flex-1" />
 					<button on:click={addTrigger}
-						class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">{$t('setup.add')}</button>
+						class="btn-primary px-4 rounded-xl text-sm font-medium">{$t('setup.add')}</button>
 				</div>
 			</div>
 
@@ -349,20 +356,20 @@
 		{:else if step === 5 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.vitals_title')}</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.vitals_subtitle')}</p>
+					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.vitals_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.vitals_subtitle')}</p>
 				</div>
 
 				<div class="space-y-2">
 					{#each working.vitals as vital, i}
-						<div class="flex items-center justify-between bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
+						<div class="card flex items-center justify-between p-4">
 							<div>
-								<span class="text-sm font-medium text-stone-900 dark:text-white">{vital.label}</span>
+								<span class="text-sm font-medium" style="color: var(--text-primary)">{$t(vital.label)}</span>
 								{#if vital.unit}
-									<span class="text-xs text-stone-400 ml-1">({vital.unit})</span>
+									<span class="text-xs ml-1" style="color: var(--text-muted)">({vital.unit})</span>
 								{/if}
 							</div>
-							<button on:click={() => removeVital(i)} class="text-stone-400 hover:text-red-500 min-h-[44px] px-2 text-sm">{$t('setup.remove')}</button>
+							<button on:click={() => removeVital(i)} class="min-h-[44px] px-2 text-sm transition-colors" style="color: var(--text-muted)" on:mouseenter={(e) => e.currentTarget.style.color = 'var(--danger)'} on:mouseleave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{$t('setup.remove')}</button>
 						</div>
 					{/each}
 				</div>
@@ -370,12 +377,12 @@
 				<div class="flex gap-2">
 					<input type="text" bind:value={newVitalLabel} placeholder={$t('setup.vitals_name')}
 						on:keydown={(e) => { if (e.key === 'Enter') addVital(); }}
-						class="flex-1 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+						class="input flex-1" />
 					<input type="text" bind:value={newVitalUnit} placeholder={$t('setup.vitals_unit')}
 						on:keydown={(e) => { if (e.key === 'Enter') addVital(); }}
-						class="w-24 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+						class="input w-24" />
 					<button on:click={addVital}
-						class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">+</button>
+						class="btn-primary px-4 rounded-xl text-sm font-medium">+</button>
 				</div>
 			</div>
 
@@ -383,54 +390,54 @@
 		{:else if step === 6 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.meds_title')}</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.meds_subtitle')}</p>
+					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.meds_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.meds_subtitle')}</p>
 				</div>
 
 				<div class="space-y-2">
 					{#each working.medications as med, i}
-						<div class="flex items-center justify-between bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4">
+						<div class="card flex items-center justify-between p-4">
 							<div>
-								<span class="text-sm font-medium text-stone-900 dark:text-white">{med.name}</span>
+								<span class="text-sm font-medium" style="color: var(--text-primary)">{med.name}</span>
 								{#if med.dose}
-									<span class="text-xs text-stone-400 ml-1">{med.dose}</span>
+									<span class="text-xs ml-1" style="color: var(--text-muted)">{med.dose}</span>
 								{/if}
 								{#if med.schedule}
-									<span class="text-xs text-stone-400 ml-1">({med.schedule})</span>
+									<span class="text-xs ml-1" style="color: var(--text-muted)">({med.schedule})</span>
 								{/if}
 								{#if med.asNeeded}
-									<span class="ml-2 text-xs bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">{$t('setup.as_needed_badge')}</span>
+									<span class="ml-2 badge-ochre badge">{$t('setup.as_needed_badge')}</span>
 								{/if}
 							</div>
-							<button on:click={() => removeMedication(i)} class="text-stone-400 hover:text-red-500 min-h-[44px] px-2 text-sm">{$t('setup.remove')}</button>
+							<button on:click={() => removeMedication(i)} class="min-h-[44px] px-2 text-sm transition-colors" style="color: var(--text-muted)" on:mouseenter={(e) => e.currentTarget.style.color = 'var(--danger)'} on:mouseleave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{$t('setup.remove')}</button>
 						</div>
 					{/each}
 				</div>
 
-				<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-4 space-y-3">
+				<div class="card p-4 space-y-3">
 					<div class="flex gap-2">
 						<input type="text" bind:value={newMedName} placeholder={$t('setup.meds_name')}
 							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
-							class="flex-1 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+							class="input flex-1" />
 						<input type="text" bind:value={newMedDose} placeholder={$t('setup.meds_dose')}
 							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
-							class="w-28 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
+							class="input w-28" />
 					</div>
 					<div class="flex gap-2 items-center">
 						<input type="text" bind:value={newMedSchedule} placeholder={$t('setup.meds_schedule')}
 							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
-							class="flex-1 px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm min-h-[44px] outline-none focus:ring-2 focus:ring-indigo-500" />
-						<label class="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-400 whitespace-nowrap min-h-[44px] cursor-pointer">
-							<input type="checkbox" bind:checked={newMedAsNeeded} class="rounded border-stone-300 text-indigo-600 focus:ring-indigo-500" />
+							class="input flex-1" />
+						<label class="flex items-center gap-2 text-sm whitespace-nowrap min-h-[44px] cursor-pointer" style="color: var(--text-secondary)">
+							<input type="checkbox" bind:checked={newMedAsNeeded} class="rounded" style="border-color: var(--border); accent-color: var(--brand)" />
 							{$t('setup.meds_as_needed')}
 						</label>
 					</div>
 					<button on:click={addMedication}
-						class="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 min-h-[44px]">{$t('setup.add')}</button>
+						class="btn-primary w-full rounded-xl text-sm font-medium">{$t('setup.add')}</button>
 				</div>
 
 				{#if working.medications.length === 0}
-					<p class="text-sm text-stone-400 dark:text-stone-500 text-center py-4">{$t('setup.meds_empty')}</p>
+					<p class="text-sm text-center py-4" style="color: var(--text-muted)">{$t('setup.meds_empty')}</p>
 				{/if}
 			</div>
 
@@ -438,59 +445,59 @@
 		{:else if step === 7 && working}
 			<div class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold text-stone-900 dark:text-white">{$t('setup.confirm_title')}</h2>
-					<p class="text-sm text-stone-500 dark:text-stone-400 mt-1">{$t('setup.confirm_subtitle')}</p>
+					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.confirm_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.confirm_subtitle')}</p>
 				</div>
 
-				<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-5 space-y-4">
+				<div class="card p-5 space-y-4">
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_profile')}</h3>
-						<p class="text-sm font-semibold text-stone-900 dark:text-white">{working.conditionLabel || working.conditionId}</p>
+						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_profile')}</h3>
+						<p class="text-sm font-semibold" style="color: var(--text-primary)">{working.conditionLabel ? $t(working.conditionLabel) : working.conditionId}</p>
 					</div>
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_symptoms')}</h3>
-						<p class="text-sm text-stone-700 dark:text-stone-300">{$t('setup.confirm_symptoms_count', { count: allSymptoms.length, groups: working.symptomGroups.length })}</p>
+						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_symptoms')}</h3>
+						<p class="text-sm" style="color: var(--text-secondary)">{$t('setup.confirm_symptoms_count', { count: allSymptoms.length, groups: working.symptomGroups.length })}</p>
 						<div class="flex flex-wrap gap-1 mt-1">
 							{#each allSymptoms.slice(0, 10) as s}
-								<span class="text-xs bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-full text-stone-600 dark:text-stone-400">{s.label}</span>
+								<span class="text-xs px-2 py-0.5 rounded-full" style="background: var(--surface-muted); color: var(--text-secondary)">{$t(s.label)}</span>
 							{/each}
 							{#if allSymptoms.length > 10}
-								<span class="text-xs text-stone-400">{$t('setup.confirm_more', { count: allSymptoms.length - 10 })}</span>
+								<span class="text-xs" style="color: var(--text-muted)">{$t('setup.confirm_more', { count: allSymptoms.length - 10 })}</span>
 							{/if}
 						</div>
 					</div>
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_episodes')}</h3>
+						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_episodes')}</h3>
 						{#if working.episodeTypes.length > 0}
 							<div class="flex flex-wrap gap-2">
 								{#each working.episodeTypes as ep}
-									<span class="text-xs px-2 py-1 rounded-full text-white" style="background: {ep.color}">{ep.label}</span>
+									<span class="text-xs px-2 py-1 rounded-full text-white" style="background: {ep.color}">{$t(ep.label)}</span>
 								{/each}
 							</div>
 						{:else}
-							<p class="text-sm text-stone-400">{$t('setup.confirm_none')}</p>
+							<p class="text-sm" style="color: var(--text-muted)">{$t('setup.confirm_none')}</p>
 						{/if}
 					</div>
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_triggers')}</h3>
-						<p class="text-sm text-stone-700 dark:text-stone-300">{working.triggers.length} {$t('setup.configured')}</p>
+						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_triggers')}</h3>
+						<p class="text-sm" style="color: var(--text-secondary)">{working.triggers.length} {$t('setup.configured')}</p>
 					</div>
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_vitals')}</h3>
-						<p class="text-sm text-stone-700 dark:text-stone-300">{working.vitals.length} {$t('setup.configured')}</p>
+						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_vitals')}</h3>
+						<p class="text-sm" style="color: var(--text-secondary)">{working.vitals.length} {$t('setup.configured')}</p>
 					</div>
 					<div>
-						<h3 class="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">{$t('setup.confirm_meds')}</h3>
+						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_meds')}</h3>
 						{#if working.medications.length > 0}
 							<div class="flex flex-wrap gap-1">
 								{#each working.medications as med}
-									<span class="text-xs bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full text-emerald-700 dark:text-emerald-300">
+									<span class="badge badge-olive">
 										{med.name} {med.dose}{#if med.asNeeded} ({$t('setup.as_needed_badge')}){/if}
 									</span>
 								{/each}
 							</div>
 						{:else}
-							<p class="text-sm text-stone-400">{$t('setup.confirm_none')}</p>
+							<p class="text-sm" style="color: var(--text-muted)">{$t('setup.confirm_none')}</p>
 						{/if}
 					</div>
 				</div>
@@ -501,17 +508,17 @@
 		{#if step > 1}
 			<div class="flex gap-3 mt-8">
 				<button on:click={prevStep}
-					class="flex-1 py-3 bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 rounded-xl font-medium hover:bg-stone-300 dark:hover:bg-stone-700 min-h-[48px]">
+					class="btn-secondary flex-1 rounded-xl font-medium min-h-[48px]">
 					{$t('setup.back')}
 				</button>
 				{#if step < totalSteps}
 					<button on:click={nextStep}
-						class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 min-h-[48px]">
+						class="btn-primary flex-1 rounded-xl font-medium min-h-[48px]">
 						{$t('setup.next')}
 					</button>
 				{:else}
 					<button on:click={finalize} disabled={saving}
-						class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-stone-300 min-h-[48px]">
+						class="btn-primary flex-1 rounded-xl font-medium min-h-[48px]">
 						{saving ? $t('setup.saving') : $t('setup.save')}
 					</button>
 				{/if}
