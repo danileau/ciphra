@@ -1,22 +1,30 @@
 <script lang="ts">
 	import { t, locale } from '$lib/i18n';
-	import { isAuthenticated } from '$lib/stores/auth';
+	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { blueprint } from '$lib/blueprint';
+	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
+	import Asterisk from '$lib/components/Asterisk.svelte';
 	import type { Blueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { generateGridPdf, generateAnalyticsPdf, exportCsv } from '$lib/pdf';
+	import { generateDoctorPdf, exportCsv } from '$lib/pdf';
 
 	let currentDate = new Date().toISOString().slice(0, 10);
 	let viewMode: 'month' | 'year' = 'month';
 	let currentYear = new Date().getFullYear();
+	// Track loading explicitly so the empty / loading / ready states don't
+	// all collapse into a single "!bp → Laden…" that hangs forever for
+	// caregivers without their own blueprint.
+	let initialLoadDone = false;
 
 	$: bp = $blueprint;
+	$: liveLinks = $familyLinks.filter(l => !l.revoked);
 
-	onMount(() => {
+	onMount(async () => {
 		if (!$isAuthenticated) { goto('/login'); return; }
-		documents.load();
+		await documents.load();
+		initialLoadDone = true;
 	});
 
 	// Monthly grid helpers
@@ -73,16 +81,10 @@
 		return d.toLocaleDateString($locale, { month: 'long', year: 'numeric' });
 	}
 
-	function exportGridPdf() {
+	function exportForDoctor() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
-		generateGridPdf(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale);
-	}
-
-	function exportAnalyticsPdf() {
-		if (!bp) return;
-		const d = new Date(currentDate + 'T12:00:00');
-		generateAnalyticsPdf(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale);
+		generateDoctorPdf(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '');
 	}
 
 	function exportCsvFile() {
@@ -194,9 +196,39 @@
 	}
 </script>
 
-{#if !bp}
+{#if !bp && !initialLoadDone}
+	<!-- Genuine loading state — we're still fetching/decrypting documents. -->
 	<div class="max-w-6xl mx-auto px-4 py-12 text-center">
-		<p class="text-slate-400">{$t('common.loading')}</p>
+		<Asterisk size={32} spin color="muted" />
+		<p class="mt-3 text-sm" style="color: var(--text-muted)">{$t('common.loading')}</p>
+	</div>
+{:else if !bp}
+	<!-- Blueprint never loaded. This is a caregiver with no own tracking,
+		 or a user who hasn't completed setup. Show an actionable empty state
+		 instead of a forever-spinner. -->
+	<div class="max-w-2xl mx-auto px-4 py-12 space-y-5 text-center">
+		<Asterisk size={40} color="muted" />
+		<h1 class="text-xl font-semibold" style="color: var(--text-primary)">{$t('reports.no_blueprint_title')}</h1>
+		{#if liveLinks.length > 0}
+			<p class="text-sm" style="color: var(--text-secondary)">{$t('reports.no_blueprint_caregiver_desc')}</p>
+			<div class="flex flex-wrap gap-2 justify-center">
+				{#each liveLinks as l}
+					<button
+						type="button"
+						on:click={() => activeVault.set(l.sourceUserId)}
+						class="btn-primary px-4 min-h-[44px]"
+					>
+						{$t('reports.view_for', { user: l.sourceUsername })}
+					</button>
+				{/each}
+			</div>
+		{:else}
+			<p class="text-sm" style="color: var(--text-secondary)">{$t('reports.no_blueprint_desc')}</p>
+			<div class="flex flex-wrap gap-2 justify-center">
+				<a href="/setup" class="btn-primary px-4 min-h-[44px] flex items-center">{$t('companion.caregiver_setup_own')}</a>
+				<a href="/settings" class="btn-secondary px-4 min-h-[44px] flex items-center">{$t('companion.caregiver_open_settings')}</a>
+			</div>
+		{/if}
 	</div>
 {:else}
 <div class="rpt-page">
@@ -245,27 +277,17 @@
 		</div>
 	</div>
 
-	<!-- Export buttons -->
-	<div class="grid grid-cols-3 gap-3 mb-6">
+	<!-- Export buttons — one combined PDF for the doctor, plus CSV for data portability -->
+	<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
 		<button
-			on:click={exportAnalyticsPdf}
+			on:click={exportForDoctor}
 			class="bg-white rounded-xl border border-slate-200 p-4 hover:border-brand/50 transition-colors text-left"
 		>
 			<div class="flex items-center gap-2 mb-2">
-				<svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				<span class="text-sm font-semibold text-slate-900">{$t('reports.analytics')}</span>
+				<svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				<span class="text-sm font-semibold text-slate-900">{$t('companion.export_for_doctor')}</span>
 			</div>
-			<p class="text-xs text-slate-500">{$t('reports.analytics_desc')}</p>
-		</button>
-		<button
-			on:click={exportGridPdf}
-			class="bg-white rounded-xl border border-slate-200 p-4 hover:border-brand/50 transition-colors text-left"
-		>
-			<div class="flex items-center gap-2 mb-2">
-				<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><line x1="3" y1="9" x2="21" y2="9" stroke-width="2"/><line x1="3" y1="15" x2="21" y2="15" stroke-width="2"/><line x1="9" y1="3" x2="9" y2="21" stroke-width="2"/></svg>
-				<span class="text-sm font-semibold text-slate-900">{$t('reports.grid')}</span>
-			</div>
-			<p class="text-xs text-slate-500">{$t('reports.grid_desc')}</p>
+			<p class="text-xs text-slate-500">{$t('reports.doctor_desc')}</p>
 		</button>
 		<button
 			on:click={exportCsvFile}

@@ -4,7 +4,11 @@ Thin encrypted blob store. The server never sees plaintext health data.
 """
 
 import os
+import re
 import json
+import base64
+import hashlib
+import hmac
 import logging
 import secrets
 from contextlib import contextmanager
@@ -19,19 +23,61 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from e2e_encryption import E2EEncryption, UserVault, RecoveryCode
-
 # --- Config ---
 DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://ciphra:ciphra@localhost/ciphra')
-SECRET_KEY = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+# JWT secret MUST be provided via env. A random fallback would invalidate all
+# sessions on every restart (availability issue) and silently hide misconfig.
+SECRET_KEY = os.environ.get('SECRET_KEY') or os.environ.get('JWT_SECRET')
+if not SECRET_KEY or len(SECRET_KEY) < 32:
+    raise RuntimeError(
+        "SECRET_KEY (or JWT_SECRET) env var is required and must be ≥32 chars. "
+        "Generate with: python -c 'import secrets; print(secrets.token_hex(32))'"
+    )
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION_HOURS = 24
 
 # --- Flask ---
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
-CORS(app, supports_credentials=True)
+
+# CORS: restrict to configured app origins. Comma-separated list in CORS_ORIGINS,
+# or '*' for wildcard (dev only). Default matches the docker-compose dev setup.
+_raw_cors = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localhost:8080')
+CORS_ORIGINS = [o.strip() for o in _raw_cors.split(',') if o.strip()]
+CORS(app, supports_credentials=True, origins=CORS_ORIGINS)
+
 limiter = Limiter(get_remote_address, app=app, default_limits=["5000 per hour"])
+
+
+@app.after_request
+def set_security_headers(resp):
+    """Defense-in-depth headers. CSP is strict: no inline scripts, no eval,
+    scripts must come from same origin. The argon2 lib is served from /static
+    and hash-pinned via SRI in the frontend."""
+    resp.headers.setdefault('Content-Security-Policy',
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob:; "
+        "font-src 'self' data:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
+    resp.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    resp.headers.setdefault('X-Frame-Options', 'DENY')
+    resp.headers.setdefault('Referrer-Policy', 'same-origin')
+    resp.headers.setdefault('Permissions-Policy',
+        'camera=(), microphone=(), geolocation=(), payment=()'
+    )
+    # Only set HSTS when the request itself was HTTPS — avoids locking dev
+    # setups out of plain-http localhost.
+    if request.is_secure:
+        resp.headers.setdefault(
+            'Strict-Transport-Security', 'max-age=31536000; includeSubDomains'
+        )
+    return resp
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,10 +105,12 @@ def init_db():
                     id SERIAL PRIMARY KEY,
                     username VARCHAR(255) UNIQUE NOT NULL,
                     auth_hash TEXT NOT NULL,
+                    auth_params TEXT NOT NULL,
                     vault_params TEXT NOT NULL,
                     encrypted_master TEXT NOT NULL,
                     recovery_vault TEXT,
                     recovery_params TEXT,
+                    recovery_auth TEXT,
                     is_admin BOOLEAN DEFAULT FALSE,
                     last_login TIMESTAMP WITH TIME ZONE,
                     login_attempts INTEGER DEFAULT 0,
@@ -91,13 +139,65 @@ def init_db():
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                 )
             """)
+            # Family sharing (Approach C): source user wraps their master_key
+            # with a family-code-derived key. Caregiver can unwrap and gets
+            # equal access. Server sees the link metadata (who shares with
+            # whom) but not the family code or the underlying health data.
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS family_grants (
+                    id SERIAL PRIMARY KEY,
+                    source_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    claimed_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    label TEXT NOT NULL,
+                    grant_params TEXT NOT NULL,
+                    grant_auth TEXT NOT NULL,
+                    wrapped_master TEXT NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    claimed_at TIMESTAMP WITH TIME ZONE,
+                    revoked_at TIMESTAMP WITH TIME ZONE
+                )
+            """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_docs_user ON encrypted_documents(user_id)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id)")
-            # Migration: add is_admin column for existing databases
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_family_source ON family_grants(source_user_id) WHERE revoked_at IS NULL")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_family_claimed ON family_grants(claimed_by_user_id) WHERE revoked_at IS NULL")
+            # Migrations for existing databases. Localhost-only — if legacy rows
+            # still use the old (server-side-KDF) auth_hash format, operator must
+            # reset the users table manually.
             cur.execute("""
                 DO $$ BEGIN
                     ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$
+            """)
+            cur.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE users ADD COLUMN auth_params TEXT;
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$
+            """)
+            cur.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE users ADD COLUMN recovery_auth TEXT;
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$
+            """)
+            cur.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE users ADD COLUMN recovery_attempts INTEGER DEFAULT 0;
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$
+            """)
+            cur.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE users ADD COLUMN password_version INTEGER DEFAULT 1;
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$
+            """)
+            cur.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE family_grants ADD COLUMN last_access_at TIMESTAMP WITH TIME ZONE;
                 EXCEPTION WHEN duplicate_column THEN NULL;
                 END $$
             """)
@@ -105,25 +205,46 @@ def init_db():
 
 
 # --- JWT ---
-def generate_token(user_id: int, username: str, is_admin: bool = False) -> str:
+def generate_token(user_id: int, username: str, is_admin: bool = False, pwd_version: int = 1) -> str:
     return jwt.encode({
         'user_id': user_id,
         'username': username,
         'is_admin': is_admin,
+        'pv': pwd_version,
         'exp': datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS),
         'iat': datetime.now(timezone.utc),
     }, SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 
+def _current_password_version(user_id: int) -> int:
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT password_version FROM users WHERE id = %s", (user_id,))
+                row = cur.fetchone()
+                return int(row['password_version']) if row and row['password_version'] else 1
+    except Exception:
+        return 1
+
+
+def _decode_and_verify_token(auth_header: str):
+    """Returns decoded payload if token valid and password_version matches DB,
+    else raises. A password change increments pv and invalidates old tokens."""
+    if not auth_header.startswith('Bearer '):
+        raise PermissionError('missing')
+    payload = jwt.decode(auth_header[7:], SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    current_pv = _current_password_version(payload['user_id'])
+    if int(payload.get('pv', 1)) != current_pv:
+        raise PermissionError('stale')
+    return payload
+
+
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        auth = request.headers.get('Authorization', '')
-        if not auth.startswith('Bearer '):
-            return jsonify({'error': 'Token missing'}), 401
         try:
-            payload = jwt.decode(auth[7:], SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            payload = _decode_and_verify_token(request.headers.get('Authorization', ''))
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, PermissionError):
             return jsonify({'error': 'Token invalid or expired'}), 401
         request.user_id = payload['user_id']
         request.username = payload['username']
@@ -134,12 +255,9 @@ def token_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        auth = request.headers.get('Authorization', '')
-        if not auth.startswith('Bearer '):
-            return jsonify({'error': 'Token missing'}), 401
         try:
-            payload = jwt.decode(auth[7:], SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            payload = _decode_and_verify_token(request.headers.get('Authorization', ''))
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, PermissionError):
             return jsonify({'error': 'Token invalid or expired'}), 401
         request.user_id = payload['user_id']
         request.username = payload['username']
@@ -147,6 +265,24 @@ def admin_required(f):
             return jsonify({'error': 'Admin access required'}), 403
         return f(*args, **kwargs)
     return decorated
+
+
+AUDIT_RETENTION_DAYS = int(os.environ.get('AUDIT_RETENTION_DAYS', 90))
+AUDIT_IP_ANONYMIZE_DAYS = int(os.environ.get('AUDIT_IP_ANONYMIZE_DAYS', 30))
+
+
+def _anonymize_ip(ip):
+    """Truncate last octet of IPv4 / last 80 bits of IPv6. Keeps city-level
+    signal for forensic use but strips the unique identifier (nDSG Art. 6)."""
+    if not ip:
+        return None
+    if ':' in ip:  # IPv6
+        parts = ip.split(':')
+        return ':'.join(parts[:3]) + '::' if len(parts) > 2 else '::'
+    parts = ip.split('.')
+    if len(parts) == 4:
+        return '.'.join(parts[:3]) + '.0'
+    return None
 
 
 def audit(conn, user_id, action):
@@ -157,8 +293,39 @@ def audit(conn, user_id, action):
         )
 
 
+def apply_audit_retention():
+    """Delete audit rows older than AUDIT_RETENTION_DAYS; anonymize IPs older
+    than AUDIT_IP_ANONYMIZE_DAYS. Idempotent — safe to call on startup and cron."""
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM audit_log WHERE created_at < NOW() - (%s || ' days')::interval",
+                    (AUDIT_RETENTION_DAYS,),
+                )
+                deleted = cur.rowcount
+                cur.execute("""
+                    SELECT id, ip_address FROM audit_log
+                    WHERE ip_address IS NOT NULL
+                      AND created_at < NOW() - (%s || ' days')::interval
+                """, (AUDIT_IP_ANONYMIZE_DAYS,))
+                rows = cur.fetchall()
+                for r in rows:
+                    anon = _anonymize_ip(r['ip_address'])
+                    cur.execute(
+                        "UPDATE audit_log SET ip_address = %s WHERE id = %s",
+                        (anon, r['id']),
+                    )
+                logger.info(f"Audit retention: deleted {deleted}, anonymized {len(rows)}")
+    except Exception:
+        logger.exception("Audit retention run failed")
+
+
 # --- Crypto ---
-e2e = E2EEncryption()
+# All cryptographic key derivation happens in the browser.
+# The server only ever sees hashes and encrypted blobs.
+
+USERNAME_RE = re.compile(r'^[a-z0-9_]{3,64}$')
 
 
 def safe_json(value):
@@ -169,6 +336,32 @@ def safe_json(value):
     if isinstance(value, (bytes, bytearray)):
         return value.decode()
     return str(value)
+
+
+def hash_auth_key(b64_auth_key: str) -> str:
+    """Server stores SHA-256(auth_key); client sends auth_key.
+    A DB leak exposes only the hash-of-hash, not a replay credential."""
+    raw = base64.b64decode(b64_auth_key)
+    return base64.b64encode(hashlib.sha256(raw).digest()).decode('ascii')
+
+
+def verify_auth(b64_auth_key: str, stored_hash: str) -> bool:
+    if not b64_auth_key or not stored_hash:
+        return False
+    try:
+        return hmac.compare_digest(hash_auth_key(b64_auth_key), stored_hash)
+    except Exception:
+        return False
+
+
+def valid_b64(value, min_bytes=1, max_bytes=4096) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        raw = base64.b64decode(value, validate=True)
+        return min_bytes <= len(raw) <= max_bytes
+    except Exception:
+        return False
 
 
 # --- Routes ---
@@ -187,15 +380,31 @@ def health():
 @app.route('/api/register', methods=['POST'])
 @limiter.limit("5 per minute")
 def register():
+    """Accepts a pre-built vault bundle from the browser. The server never
+    sees the password, master_key, or recovery_code — those stay on device."""
     data = request.get_json() or {}
     username = (data.get('username') or '').strip().lower()
-    password = data.get('password')
-    enable_recovery = data.get('enable_recovery', True)
+    auth_hash = data.get('auth_hash')
+    auth_params = data.get('auth_params')
+    vault_params = data.get('vault_params')
+    encrypted_master = data.get('encrypted_master')
+    recovery_vault = data.get('recovery_vault')
+    recovery_params = data.get('recovery_params')
+    recovery_auth = data.get('recovery_auth')
 
-    if not username or len(username) < 3:
-        return jsonify({'error': 'Username must be at least 3 characters'}), 400
-    if not password or len(password) < 8:
-        return jsonify({'error': 'Password must be at least 8 characters'}), 400
+    if not username or not USERNAME_RE.match(username):
+        return jsonify({'error': 'Invalid username'}), 400
+    if not valid_b64(auth_hash, 32, 32):
+        return jsonify({'error': 'Invalid auth_hash'}), 400
+    for field, val in (('auth_params', auth_params),
+                       ('vault_params', vault_params),
+                       ('encrypted_master', encrypted_master)):
+        if not isinstance(val, str) or len(val) < 1 or len(val) > 8192:
+            return jsonify({'error': f'Invalid {field}'}), 400
+    # Recovery fields all-or-nothing
+    has_recovery = any([recovery_vault, recovery_params, recovery_auth])
+    if has_recovery and not (recovery_vault and recovery_params and valid_b64(recovery_auth, 32, 32)):
+        return jsonify({'error': 'Incomplete recovery bundle'}), 400
 
     try:
         with get_db() as conn:
@@ -204,26 +413,60 @@ def register():
                 if cur.fetchone():
                     return jsonify({'error': 'Username already exists'}), 409
 
-                vault, recovery_code = e2e.register_user(username, password, enable_recovery)
                 cur.execute("""
-                    INSERT INTO users (username, auth_hash, vault_params, encrypted_master,
-                                       recovery_vault, recovery_params)
-                    VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+                    INSERT INTO users (username, auth_hash, auth_params, vault_params,
+                                       encrypted_master, recovery_vault, recovery_params,
+                                       recovery_auth)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
                 """, (
-                    vault.username, vault.auth_hash,
-                    safe_json(vault.vault_params), safe_json(vault.encrypted_master),
-                    safe_json(vault.recovery_vault), safe_json(vault.recovery_params),
+                    username, auth_hash, auth_params, vault_params,
+                    encrypted_master, recovery_vault, recovery_params, recovery_auth,
                 ))
                 user_id = cur.fetchone()['id']
                 audit(conn, user_id, 'REGISTER')
 
-        resp = {'success': True, 'username': username, 'user_id': user_id}
-        if recovery_code:
-            resp['recovery_code'] = recovery_code
-        return jsonify(resp), 201
-    except Exception as ex:
+        return jsonify({'success': True, 'username': username, 'user_id': user_id}), 201
+    except Exception:
         logger.exception("Registration failed")
         return jsonify({'error': 'Registration failed'}), 500
+
+
+def _fake_auth_params(username: str) -> str:
+    """Deterministic fake params for unknown users, to thwart enumeration.
+    Uses HMAC(SECRET_KEY, username) as the salt so timing + response shape
+    match a real user. Params must match what the client expects."""
+    fake_salt = hmac.new(SECRET_KEY.encode(), username.encode(), hashlib.sha256).digest()
+    params = {
+        'memory_cost': 65536,
+        'time_cost': 3,
+        'parallelism': 4,
+        'hash_len': 32,
+        'type': 'ID',
+        'salt': base64.b64encode(fake_salt).decode('ascii'),
+    }
+    return base64.b64encode(json.dumps(params).encode()).decode('ascii')
+
+
+@app.route('/api/login/init', methods=['POST'])
+@limiter.limit("20 per minute")
+def login_init():
+    """Returns the Argon2 params the client needs to derive auth_key.
+    Always returns params (fake for unknown users) to prevent enumeration."""
+    data = request.get_json() or {}
+    username = (data.get('username') or '').strip().lower()
+    if not username or not USERNAME_RE.match(username):
+        return jsonify({'error': 'Invalid username'}), 400
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT auth_params FROM users WHERE username = %s", (username,))
+                row = cur.fetchone()
+                auth_params = row['auth_params'] if row and row['auth_params'] else _fake_auth_params(username)
+        return jsonify({'auth_params': auth_params}), 200
+    except Exception:
+        logger.exception("login_init failed")
+        return jsonify({'error': 'Login init failed'}), 500
 
 
 @app.route('/api/login', methods=['POST'])
@@ -231,16 +474,16 @@ def register():
 def login():
     data = request.get_json() or {}
     username = (data.get('username') or '').strip().lower()
-    password = data.get('password')
-    if not username or not password:
-        return jsonify({'error': 'Username and password required'}), 400
+    auth_key = data.get('auth_key')
+    if not username or not USERNAME_RE.match(username) or not valid_b64(auth_key, 32, 32):
+        return jsonify({'error': 'Invalid credentials'}), 401
 
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT id, auth_hash, vault_params, encrypted_master,
-                           login_attempts, locked_until, is_admin
+                    SELECT id, auth_hash, auth_params, vault_params, encrypted_master,
+                           login_attempts, locked_until, is_admin, password_version
                     FROM users WHERE username = %s
                 """, (username,))
                 user = cur.fetchone()
@@ -254,27 +497,24 @@ def login():
                     if datetime.now(timezone.utc) < locked:
                         return jsonify({'error': 'Account temporarily locked'}), 429
 
-                vault = UserVault(
-                    username=username,
-                    auth_hash=user['auth_hash'],
-                    vault_params=user['vault_params'],
-                    encrypted_master=user['encrypted_master'],
-                )
-
-                if e2e.verify_login(password, vault):
+                if verify_auth(auth_key, user['auth_hash']):
                     cur.execute(
                         "UPDATE users SET login_attempts = 0, last_login = NOW() WHERE id = %s",
                         (user['id'],),
                     )
                     audit(conn, user['id'], 'LOGIN_SUCCESS')
                     is_admin = bool(user.get('is_admin', False))
-                    token = generate_token(user['id'], username, is_admin)
+                    token = generate_token(
+                        user['id'], username, is_admin,
+                        pwd_version=int(user.get('password_version') or 1),
+                    )
                     return jsonify({
                         'success': True,
                         'token': token,
                         'username': username,
                         'is_admin': is_admin,
                         'vault': {
+                            'auth_params': user['auth_params'],
                             'vault_params': user['vault_params'],
                             'encrypted_master': user['encrypted_master'],
                         },
@@ -289,13 +529,12 @@ def login():
                         )
                         audit(conn, user['id'], 'ACCOUNT_LOCKED')
                         return jsonify({'error': 'Too many failed attempts. Locked 15 min'}), 429
-                    else:
-                        cur.execute(
-                            "UPDATE users SET login_attempts=%s WHERE id=%s",
-                            (attempts, user['id']),
-                        )
-                        audit(conn, user['id'], 'LOGIN_FAILED')
-                        return jsonify({'error': 'Invalid credentials'}), 401
+                    cur.execute(
+                        "UPDATE users SET login_attempts=%s WHERE id=%s",
+                        (attempts, user['id']),
+                    )
+                    audit(conn, user['id'], 'LOGIN_FAILED')
+                    return jsonify({'error': 'Invalid credentials'}), 401
     except Exception:
         logger.exception("Login failed")
         return jsonify({'error': 'Login failed'}), 500
@@ -399,63 +638,141 @@ def delete_document(doc_id):
         return jsonify({'error': 'Failed to delete document'}), 500
 
 
-@app.route('/api/recover', methods=['POST'])
+def _fake_recovery_params(username: str) -> str:
+    fake_salt = hmac.new(
+        SECRET_KEY.encode(), (username + ':recovery_salt').encode(), hashlib.sha256
+    ).digest()
+    params = {
+        'memory_cost': 65536, 'time_cost': 3, 'parallelism': 4,
+        'hash_len': 32, 'type': 'ID',
+        'salt': base64.b64encode(fake_salt).decode('ascii'),
+    }
+    return base64.b64encode(json.dumps(params).encode()).decode('ascii')
+
+
+def _fake_recovery_vault(username: str) -> str:
+    # 60 bytes = nonce(12) + tag(16) + ct(32) — same shape as a real wrapped master key
+    buf = b''
+    counter = 0
+    while len(buf) < 60:
+        buf += hmac.new(
+            SECRET_KEY.encode(),
+            f'{username}:recovery_vault:{counter}'.encode(),
+            hashlib.sha256,
+        ).digest()
+        counter += 1
+    return base64.b64encode(buf[:60]).decode('ascii')
+
+
+@app.route('/api/recover/init', methods=['POST'])
 @limiter.limit("5 per minute")
-def recover():
+def recover_init():
+    """Returns recovery_params + recovery_vault so the browser can decrypt
+    master_key locally using the recovery code.
+
+    Always returns 200 with structurally valid values — fake deterministic
+    blobs for unknown users or users without recovery. Prevents enumeration
+    of who has an account and who has recovery enabled. Real attempts fail
+    at the subsequent /api/recover step when the recovery_key hash mismatches."""
     data = request.get_json() or {}
     username = (data.get('username') or '').strip().lower()
-    recovery_code = (data.get('recovery_code') or '').strip()
-    new_password = data.get('new_password')
-
-    if not username or not recovery_code or not new_password:
-        return jsonify({'error': 'Username, recovery code, and new password required'}), 400
-    if len(new_password) < 8:
-        return jsonify({'error': 'Password must be at least 8 characters'}), 400
-    if not RecoveryCode.validate(recovery_code):
-        return jsonify({'error': 'Invalid recovery code format'}), 400
+    if not username or not USERNAME_RE.match(username):
+        return jsonify({'error': 'Invalid username'}), 400
 
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT id, auth_hash, vault_params, encrypted_master,
-                           recovery_vault, recovery_params
+                    SELECT recovery_params, recovery_vault
                     FROM users WHERE username = %s
                 """, (username,))
                 user = cur.fetchone()
-                if not user:
-                    return jsonify({'error': 'Invalid credentials'}), 401
+                if user and user['recovery_params'] and user['recovery_vault']:
+                    return jsonify({
+                        'recovery_params': user['recovery_params'],
+                        'recovery_vault': user['recovery_vault'],
+                    }), 200
+        return jsonify({
+            'recovery_params': _fake_recovery_params(username),
+            'recovery_vault': _fake_recovery_vault(username),
+        }), 200
+    except Exception:
+        logger.exception("recover_init failed")
+        return jsonify({
+            'recovery_params': _fake_recovery_params(username),
+            'recovery_vault': _fake_recovery_vault(username),
+        }), 200
 
-                if not user['recovery_vault'] or not user['recovery_params']:
-                    return jsonify({'error': 'Recovery not enabled for this account'}), 400
 
-                vault = UserVault(
-                    username=username,
-                    auth_hash=user['auth_hash'],
-                    vault_params=user['vault_params'],
-                    encrypted_master=user['encrypted_master'],
-                    recovery_vault=user['recovery_vault'],
-                    recovery_params=user['recovery_params'],
-                )
+@app.route('/api/recover', methods=['POST'])
+@limiter.limit("5 per minute")
+def recover():
+    """Client has decrypted master_key via recovery code and re-wrapped it with
+    a new password. Server verifies SHA-256(recovery_key) against stored
+    recovery_auth, then swaps auth/vault (recovery_vault stays untouched)."""
+    data = request.get_json() or {}
+    username = (data.get('username') or '').strip().lower()
+    recovery_key = data.get('recovery_key')
+    auth_hash = data.get('auth_hash')
+    auth_params = data.get('auth_params')
+    vault_params = data.get('vault_params')
+    encrypted_master = data.get('encrypted_master')
 
-                try:
-                    new_vault = e2e.recover_account(
-                        username, recovery_code, new_password, vault
+    if not username or not USERNAME_RE.match(username):
+        return jsonify({'error': 'Invalid request'}), 400
+    if not valid_b64(recovery_key, 32, 32) or not valid_b64(auth_hash, 32, 32):
+        return jsonify({'error': 'Invalid credentials'}), 401
+    for field, val in (('auth_params', auth_params), ('vault_params', vault_params),
+                       ('encrypted_master', encrypted_master)):
+        if not isinstance(val, str) or not (1 <= len(val) <= 8192):
+            return jsonify({'error': f'Invalid {field}'}), 400
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, recovery_auth, recovery_attempts, locked_until
+                    FROM users WHERE username = %s
+                """, (username,))
+                user = cur.fetchone()
+                if not user or not user['recovery_auth']:
+                    return jsonify({'error': 'Invalid recovery code'}), 401
+
+                # Same lockout gate as login — 3 failed recoveries → 15 min lock
+                if user['locked_until']:
+                    locked = user['locked_until']
+                    if locked.tzinfo is None:
+                        locked = locked.replace(tzinfo=timezone.utc)
+                    if datetime.now(timezone.utc) < locked:
+                        return jsonify({'error': 'Account temporarily locked'}), 429
+
+                if not verify_auth(recovery_key, user['recovery_auth']):
+                    attempts = (user['recovery_attempts'] or 0) + 1
+                    if attempts >= 3:
+                        locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+                        cur.execute(
+                            "UPDATE users SET recovery_attempts=%s, locked_until=%s WHERE id=%s",
+                            (attempts, locked_until, user['id']),
+                        )
+                        audit(conn, user['id'], 'RECOVERY_LOCKED')
+                        return jsonify({'error': 'Too many failed attempts. Locked 15 min'}), 429
+                    cur.execute(
+                        "UPDATE users SET recovery_attempts=%s WHERE id=%s",
+                        (attempts, user['id']),
                     )
-                except Exception:
                     audit(conn, user['id'], 'RECOVERY_FAILED')
                     return jsonify({'error': 'Invalid recovery code'}), 401
 
                 cur.execute("""
                     UPDATE users
-                    SET auth_hash = %s, vault_params = %s, encrypted_master = %s,
-                        login_attempts = 0, locked_until = NULL, updated_at = NOW()
+                    SET auth_hash = %s, auth_params = %s, vault_params = %s,
+                        encrypted_master = %s, login_attempts = 0,
+                        recovery_attempts = 0, locked_until = NULL,
+                        password_version = COALESCE(password_version, 1) + 1,
+                        updated_at = NOW()
                     WHERE id = %s
                 """, (
-                    new_vault.auth_hash,
-                    safe_json(new_vault.vault_params),
-                    safe_json(new_vault.encrypted_master),
-                    user['id'],
+                    auth_hash, auth_params, vault_params, encrypted_master, user['id'],
                 ))
                 audit(conn, user['id'], 'RECOVERY_SUCCESS')
 
@@ -465,72 +782,56 @@ def recover():
         return jsonify({'error': 'Recovery failed'}), 500
 
 
-@app.route('/api/validate-recovery', methods=['POST'])
-def validate_recovery():
-    code = (request.get_json() or {}).get('recovery_code', '')
-    return jsonify({'valid': RecoveryCode.validate(code)}), 200
-
-
 @app.route('/api/change-password', methods=['POST'])
 @limiter.limit("5 per minute")
 @token_required
 def change_password():
+    """Client has re-wrapped its master_key under a new password. Server
+    verifies current auth_key (to prove knowledge of current password), then
+    swaps the stored credentials."""
     data = request.get_json() or {}
-    current_password = data.get('current_password')
-    new_password = data.get('new_password')
+    current_auth_key = data.get('current_auth_key')
+    auth_hash = data.get('auth_hash')
+    auth_params = data.get('auth_params')
+    vault_params = data.get('vault_params')
+    encrypted_master = data.get('encrypted_master')
 
-    if not current_password or not new_password:
-        return jsonify({'error': 'Current password and new password required'}), 400
-    if len(new_password) < 8:
-        return jsonify({'error': 'New password must be at least 8 characters'}), 400
+    if not valid_b64(current_auth_key, 32, 32) or not valid_b64(auth_hash, 32, 32):
+        return jsonify({'error': 'Invalid credentials'}), 400
+    for field, val in (('auth_params', auth_params), ('vault_params', vault_params),
+                       ('encrypted_master', encrypted_master)):
+        if not isinstance(val, str) or not (1 <= len(val) <= 8192):
+            return jsonify({'error': f'Invalid {field}'}), 400
 
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT id, auth_hash, vault_params, encrypted_master,
-                           recovery_vault, recovery_params
-                    FROM users WHERE id = %s
-                """, (request.user_id,))
+                cur.execute("SELECT id, auth_hash FROM users WHERE id = %s", (request.user_id,))
                 user = cur.fetchone()
                 if not user:
                     return jsonify({'error': 'User not found'}), 404
 
-                vault = UserVault(
-                    username=request.username,
-                    auth_hash=user['auth_hash'],
-                    vault_params=user['vault_params'],
-                    encrypted_master=user['encrypted_master'],
-                    recovery_vault=user['recovery_vault'],
-                    recovery_params=user['recovery_params'],
-                )
-
-                if not e2e.verify_login(current_password, vault):
+                if not verify_auth(current_auth_key, user['auth_hash']):
                     return jsonify({'error': 'Current password is incorrect'}), 401
-
-                try:
-                    new_vault = e2e.change_password(current_password, new_password, vault)
-                except Exception:
-                    return jsonify({'error': 'Password change failed'}), 500
 
                 cur.execute("""
                     UPDATE users
-                    SET auth_hash = %s, vault_params = %s, encrypted_master = %s,
+                    SET auth_hash = %s, auth_params = %s, vault_params = %s,
+                        encrypted_master = %s,
+                        password_version = COALESCE(password_version, 1) + 1,
                         updated_at = NOW()
                     WHERE id = %s
                 """, (
-                    new_vault.auth_hash,
-                    safe_json(new_vault.vault_params),
-                    safe_json(new_vault.encrypted_master),
-                    request.user_id,
+                    auth_hash, auth_params, vault_params, encrypted_master, request.user_id,
                 ))
                 audit(conn, request.user_id, 'PASSWORD_CHANGED')
 
         return jsonify({
             'success': True,
             'vault': {
-                'vault_params': new_vault.vault_params,
-                'encrypted_master': new_vault.encrypted_master,
+                'auth_params': auth_params,
+                'vault_params': vault_params,
+                'encrypted_master': encrypted_master,
             },
         }), 200
     except Exception:
@@ -543,34 +844,28 @@ def change_password():
 @token_required
 def delete_account():
     data = request.get_json() or {}
-    password = data.get('password')
-
-    if not password:
-        return jsonify({'error': 'Password required'}), 400
+    auth_key = data.get('auth_key')
+    if not valid_b64(auth_key, 32, 32):
+        return jsonify({'error': 'Invalid credentials'}), 400
 
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT id, auth_hash, vault_params, encrypted_master
-                    FROM users WHERE id = %s
-                """, (request.user_id,))
+                cur.execute("SELECT id, auth_hash FROM users WHERE id = %s", (request.user_id,))
                 user = cur.fetchone()
                 if not user:
                     return jsonify({'error': 'User not found'}), 404
 
-                vault = UserVault(
-                    username=request.username,
-                    auth_hash=user['auth_hash'],
-                    vault_params=user['vault_params'],
-                    encrypted_master=user['encrypted_master'],
-                )
-
-                if not e2e.verify_login(password, vault):
+                if not verify_auth(auth_key, user['auth_hash']):
                     return jsonify({'error': 'Invalid password'}), 401
 
                 audit(conn, request.user_id, 'ACCOUNT_DELETED')
-                cur.execute("UPDATE audit_log SET user_id = NULL WHERE user_id = %s", (request.user_id,))
+                # Full erasure (GDPR Art. 17): drop user_id AND ip_address from
+                # residual audit rows so nothing ties back to this person.
+                cur.execute(
+                    "UPDATE audit_log SET user_id = NULL, ip_address = NULL WHERE user_id = %s",
+                    (request.user_id,),
+                )
                 cur.execute("DELETE FROM users WHERE id = %s", (request.user_id,))
 
         return jsonify({'success': True}), 200
@@ -737,8 +1032,12 @@ def admin_delete_user(user_id):
                 user = cur.fetchone()
                 if not user:
                     return jsonify({'error': 'User not found'}), 404
-                # Nullify audit_log references (FK has no ON DELETE action)
-                cur.execute("UPDATE audit_log SET user_id = NULL WHERE user_id = %s", (user_id,))
+                # Full erasure (GDPR Art. 17): null user_id AND ip_address so
+                # deleted users can't be re-linked via IP forensics.
+                cur.execute(
+                    "UPDATE audit_log SET user_id = NULL, ip_address = NULL WHERE user_id = %s",
+                    (user_id,),
+                )
                 # CASCADE on encrypted_documents will delete all docs
                 cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
                 audit(conn, request.user_id, f'ADMIN_DELETE_USER:{user["username"]}')
@@ -806,7 +1105,9 @@ def admin_audit():
                 'user_id': e['user_id'],
                 'username': e['username'],
                 'action': e['action'],
-                'ip_address': e['ip_address'],
+                # Never expose raw IP via the admin API. Show only anonymized
+                # (network-level) IP. Forensic access requires direct DB query.
+                'ip_address': _anonymize_ip(e['ip_address']),
                 'created_at': e['created_at'].isoformat() if e['created_at'] else None,
             } for e in entries]
         }), 200
@@ -815,8 +1116,395 @@ def admin_audit():
         return jsonify({'error': 'Failed to retrieve audit log'}), 500
 
 
+# ---------------------------------------------------------------------------
+# Family sharing (Approach C)
+# ---------------------------------------------------------------------------
+
+@app.route('/api/family/grants', methods=['POST'])
+@limiter.limit("20 per hour")
+@token_required
+def family_grant_create():
+    data = request.get_json() or {}
+    label = (data.get('label') or '').strip()
+    grant_params = data.get('grant_params')
+    grant_auth = data.get('grant_auth')
+    wrapped_master = data.get('wrapped_master')
+
+    if not label or len(label) > 64:
+        return jsonify({'error': 'Invalid label'}), 400
+    if not valid_b64(grant_auth, 32, 32):
+        return jsonify({'error': 'Invalid grant_auth'}), 400
+    for field, val in (('grant_params', grant_params), ('wrapped_master', wrapped_master)):
+        if not isinstance(val, str) or not (1 <= len(val) <= 8192):
+            return jsonify({'error': f'Invalid {field}'}), 400
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO family_grants
+                        (source_user_id, label, grant_params, grant_auth, wrapped_master)
+                    VALUES (%s, %s, %s, %s, %s) RETURNING id, created_at
+                """, (request.user_id, label, grant_params, grant_auth, wrapped_master))
+                row = cur.fetchone()
+                audit(conn, request.user_id, 'FAMILY_GRANT_CREATED')
+        return jsonify({
+            'id': row['id'],
+            'created_at': row['created_at'].isoformat(),
+        }), 201
+    except Exception:
+        logger.exception("family_grant_create failed")
+        return jsonify({'error': 'Grant creation failed'}), 500
+
+
+@app.route('/api/family/grants', methods=['GET'])
+@token_required
+def family_grant_list():
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT g.id, g.label, g.created_at, g.claimed_at, g.claimed_by_user_id,
+                           g.last_access_at, u.username AS claimed_by_username
+                    FROM family_grants g
+                    LEFT JOIN users u ON u.id = g.claimed_by_user_id
+                    WHERE g.source_user_id = %s AND g.revoked_at IS NULL
+                    ORDER BY g.created_at DESC
+                """, (request.user_id,))
+                rows = cur.fetchall()
+        return jsonify({
+            'grants': [{
+                'id': r['id'],
+                'label': r['label'],
+                'created_at': r['created_at'].isoformat() if r['created_at'] else None,
+                'claimed_at': r['claimed_at'].isoformat() if r['claimed_at'] else None,
+                'claimed_by_username': r['claimed_by_username'],
+                'last_access_at': r['last_access_at'].isoformat() if r['last_access_at'] else None,
+            } for r in rows]
+        }), 200
+    except Exception:
+        logger.exception("family_grant_list failed")
+        return jsonify({'error': 'Failed to list grants'}), 500
+
+
+@app.route('/api/family/claimed', methods=['GET'])
+@token_required
+def family_claimed_list():
+    """Caregiver endpoint: return the grants this user has actively claimed
+    (not revoked). Lets the client reconcile locally-cached family_link docs
+    against server truth and flag ones that have been revoked by the patient."""
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT g.id, g.source_user_id, u.username AS source_username
+                    FROM family_grants g
+                    JOIN users u ON u.id = g.source_user_id
+                    WHERE g.claimed_by_user_id = %s AND g.revoked_at IS NULL
+                """, (request.user_id,))
+                rows = cur.fetchall()
+        return jsonify({
+            'active': [
+                {'grant_id': r['id'], 'source_user_id': r['source_user_id'],
+                 'source_username': r['source_username']}
+                for r in rows
+            ]
+        }), 200
+    except Exception:
+        logger.exception("family_claimed_list failed")
+        return jsonify({'error': 'Failed to list claimed grants'}), 500
+
+
+@app.route('/api/family/grants/revoke-all', methods=['POST'])
+@token_required
+def family_grant_revoke_all():
+    """Panic revoke: cut every active grant the user has issued. Server-side
+    access is stopped immediately; caregivers who already downloaded data
+    keep those copies — revocation can't reach local caches."""
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE family_grants SET revoked_at = NOW()
+                    WHERE source_user_id = %s AND revoked_at IS NULL
+                """, (request.user_id,))
+                count = cur.rowcount
+                audit(conn, request.user_id, f'FAMILY_REVOKE_ALL:{count}')
+        return jsonify({'success': True, 'revoked': count}), 200
+    except Exception:
+        logger.exception("family_grant_revoke_all failed")
+        return jsonify({'error': 'Revoke failed'}), 500
+
+
+@app.route('/api/family/grants/<int:grant_id>', methods=['DELETE'])
+@token_required
+def family_grant_revoke(grant_id):
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE family_grants SET revoked_at = NOW()
+                    WHERE id = %s AND source_user_id = %s AND revoked_at IS NULL
+                """, (grant_id, request.user_id))
+                if cur.rowcount == 0:
+                    return jsonify({'error': 'Grant not found'}), 404
+                audit(conn, request.user_id, f'FAMILY_GRANT_REVOKED:{grant_id}')
+        return jsonify({'success': True}), 200
+    except Exception:
+        logger.exception("family_grant_revoke failed")
+        return jsonify({'error': 'Revoke failed'}), 500
+
+
+def _fake_grants_for_username(username: str):
+    """Deterministic fake grant list for unknown users, to block enumeration."""
+    fake = []
+    for i in range(1):
+        seed = hmac.new(
+            SECRET_KEY.encode(), f'{username}:fake_grant:{i}'.encode(), hashlib.sha256
+        ).digest()
+        fake.append({
+            'id': -abs(int.from_bytes(seed[:4], 'big')),
+            'grant_params': _fake_recovery_params(f'{username}:fake:{i}'),
+            'wrapped_master': _fake_recovery_vault(f'{username}:fake:{i}'),
+            'grant_auth': base64.b64encode(seed[:32]).decode('ascii'),
+        })
+    return fake
+
+
+@app.route('/api/family/grants/claim/init', methods=['POST'])
+@limiter.limit("10 per minute")
+def family_grant_claim_init():
+    """Given a source username, return all claimable grants so the caregiver
+    client can test each against the family code locally. Fake list for
+    unknown users (same anti-enumeration pattern as /login/init)."""
+    data = request.get_json() or {}
+    source_username = (data.get('source_username') or '').strip().lower()
+    if not source_username or not USERNAME_RE.match(source_username):
+        return jsonify({'error': 'Invalid username'}), 400
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT g.id, g.grant_params, g.wrapped_master, g.grant_auth
+                    FROM family_grants g
+                    JOIN users u ON u.id = g.source_user_id
+                    WHERE u.username = %s AND g.revoked_at IS NULL
+                """, (source_username,))
+                rows = cur.fetchall()
+                if rows:
+                    return jsonify({'grants': [{
+                        'id': r['id'],
+                        'grant_params': r['grant_params'],
+                        'wrapped_master': r['wrapped_master'],
+                        'grant_auth': r['grant_auth'],
+                    } for r in rows]}), 200
+        return jsonify({'grants': _fake_grants_for_username(source_username)}), 200
+    except Exception:
+        logger.exception("family_grant_claim_init failed")
+        return jsonify({'grants': _fake_grants_for_username(source_username)}), 200
+
+
+@app.route('/api/family/grants/claim', methods=['POST'])
+@limiter.limit("10 per minute")
+@token_required
+def family_grant_claim():
+    data = request.get_json() or {}
+    grant_id = data.get('grant_id')
+    proof = data.get('proof')  # base64 family_key — server SHA-256s and compares
+    if not isinstance(grant_id, int) or not valid_b64(proof, 32, 32):
+        return jsonify({'error': 'Invalid request'}), 400
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, source_user_id, claimed_by_user_id, grant_auth
+                    FROM family_grants
+                    WHERE id = %s AND revoked_at IS NULL
+                """, (grant_id,))
+                g = cur.fetchone()
+                if not g:
+                    return jsonify({'error': 'Grant not available'}), 404
+                if g['source_user_id'] == request.user_id:
+                    return jsonify({'error': 'Cannot claim your own grant'}), 400
+                if not verify_auth(proof, g['grant_auth']):
+                    audit(conn, request.user_id, f'FAMILY_CLAIM_FAILED:{grant_id}')
+                    return jsonify({'error': 'Invalid family code'}), 401
+                if g['claimed_by_user_id'] and g['claimed_by_user_id'] != request.user_id:
+                    return jsonify({'error': 'Grant already claimed'}), 409
+                cur.execute("""
+                    UPDATE family_grants
+                    SET claimed_by_user_id = %s, claimed_at = COALESCE(claimed_at, NOW())
+                    WHERE id = %s
+                """, (request.user_id, grant_id))
+                audit(conn, request.user_id, f'FAMILY_CLAIM_SUCCESS:{grant_id}')
+                cur.execute(
+                    "SELECT username FROM users WHERE id = %s",
+                    (g['source_user_id'],),
+                )
+                src = cur.fetchone()
+        return jsonify({
+            'success': True,
+            'source_user_id': g['source_user_id'],
+            'source_username': src['username'] if src else None,
+        }), 200
+    except Exception:
+        logger.exception("family_grant_claim failed")
+        return jsonify({'error': 'Claim failed'}), 500
+
+
+def _family_access(caregiver_id: int, source_user_id: int) -> bool:
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id FROM family_grants
+                WHERE source_user_id = %s AND claimed_by_user_id = %s
+                  AND revoked_at IS NULL LIMIT 1
+            """, (source_user_id, caregiver_id))
+            row = cur.fetchone()
+            if not row:
+                return False
+            # Stamp the access so the patient sees "last seen X" in Settings.
+            cur.execute(
+                "UPDATE family_grants SET last_access_at = NOW() WHERE id = %s",
+                (row['id'],),
+            )
+            return True
+
+
+@app.route('/api/family/documents', methods=['GET'])
+@token_required
+def family_documents_list():
+    try:
+        source_user_id = int(request.args.get('source_user_id', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid source_user_id'}), 400
+    if not source_user_id or not _family_access(request.user_id, source_user_id):
+        return jsonify({'error': 'Not authorized'}), 403
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, encrypted_data, created_at, updated_at
+                    FROM encrypted_documents WHERE user_id = %s
+                    ORDER BY created_at DESC
+                """, (source_user_id,))
+                docs = cur.fetchall()
+        return jsonify({'documents': [{
+            'id': d['id'],
+            'encrypted_data': d['encrypted_data'],
+            'created_at': d['created_at'].isoformat(),
+            'updated_at': d['updated_at'].isoformat() if d['updated_at'] else None,
+        } for d in docs]}), 200
+    except Exception:
+        logger.exception("family_documents_list failed")
+        return jsonify({'error': 'Failed to list documents'}), 500
+
+
+@app.route('/api/family/documents', methods=['POST'])
+@token_required
+def family_documents_create():
+    data = request.get_json() or {}
+    try:
+        source_user_id = int(data.get('source_user_id') or 0)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid source_user_id'}), 400
+    encrypted_data = data.get('encrypted_data')
+    if not source_user_id or not _family_access(request.user_id, source_user_id):
+        return jsonify({'error': 'Not authorized'}), 403
+    if not encrypted_data:
+        return jsonify({'error': 'No encrypted data'}), 400
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO encrypted_documents (user_id, encrypted_data)
+                    VALUES (%s, %s) RETURNING id, created_at
+                """, (source_user_id, encrypted_data))
+                doc = cur.fetchone()
+                audit(conn, request.user_id, f'FAMILY_DOC_CREATED:{source_user_id}')
+        return jsonify({
+            'success': True,
+            'id': doc['id'],
+            'created_at': doc['created_at'].isoformat(),
+        }), 201
+    except Exception:
+        logger.exception("family_documents_create failed")
+        return jsonify({'error': 'Failed to store document'}), 500
+
+
+@app.route('/api/family/documents/<int:doc_id>', methods=['PUT'])
+@token_required
+def family_documents_update(doc_id):
+    data = request.get_json() or {}
+    try:
+        source_user_id = int(data.get('source_user_id') or 0)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid source_user_id'}), 400
+    encrypted_data = data.get('encrypted_data')
+    if not source_user_id or not _family_access(request.user_id, source_user_id):
+        return jsonify({'error': 'Not authorized'}), 403
+    if not encrypted_data:
+        return jsonify({'error': 'No encrypted data'}), 400
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE encrypted_documents
+                    SET encrypted_data = %s, updated_at = NOW()
+                    WHERE id = %s AND user_id = %s
+                    RETURNING id, updated_at
+                """, (encrypted_data, doc_id, source_user_id))
+                doc = cur.fetchone()
+                if not doc:
+                    return jsonify({'error': 'Document not found'}), 404
+                audit(conn, request.user_id, f'FAMILY_DOC_UPDATED:{source_user_id}:{doc_id}')
+        return jsonify({
+            'success': True,
+            'id': doc['id'],
+            'updated_at': doc['updated_at'].isoformat(),
+        }), 200
+    except Exception:
+        logger.exception("family_documents_update failed")
+        return jsonify({'error': 'Failed to update document'}), 500
+
+
+@app.route('/api/family/documents/<int:doc_id>', methods=['DELETE'])
+@token_required
+def family_documents_delete(doc_id):
+    try:
+        source_user_id = int(request.args.get('source_user_id') or 0)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid source_user_id'}), 400
+    if not source_user_id or not _family_access(request.user_id, source_user_id):
+        return jsonify({'error': 'Not authorized'}), 403
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM encrypted_documents WHERE id = %s AND user_id = %s",
+                    (doc_id, source_user_id),
+                )
+                if cur.rowcount == 0:
+                    return jsonify({'error': 'Document not found'}), 404
+                audit(conn, request.user_id, f'FAMILY_DOC_DELETED:{source_user_id}:{doc_id}')
+        return jsonify({'success': True}), 200
+    except Exception:
+        logger.exception("family_documents_delete failed")
+        return jsonify({'error': 'Failed to delete document'}), 500
+
+
+@app.route('/api/admin/audit/retention', methods=['POST'])
+@admin_required
+def admin_run_retention():
+    apply_audit_retention()
+    return jsonify({'success': True}), 200
+
+
 if __name__ == '__main__':
     init_db()
+    apply_audit_retention()
     logger.info("ciphra API — encrypted by design")
     logger.info(f"Database: {DATABASE_URL}")
     app.run(host='0.0.0.0', port=5000, debug=False)

@@ -105,12 +105,16 @@
 			datasets: [{
 				label: bp.episodeTypes[0]?.label ? $t(bp.episodeTypes[0].label) : $t('protocol.episodes'),
 				data: counts,
-				borderColor: '#DC2626',
-				backgroundColor: 'rgba(220,38,38,0.1)',
+				// Brand brick line + soft ochre fill, matching the PDF trajectory.
+				borderColor: '#b2463c',
+				backgroundColor: 'rgba(250, 243, 233, 0.8)',
 				fill: true,
-				tension: 0.3,
-				pointRadius: 3,
-				pointBackgroundColor: '#DC2626'
+				tension: 0.5,
+				borderWidth: 2,
+				pointRadius: 0,
+				pointHoverRadius: 4,
+				pointHoverBackgroundColor: '#b2463c',
+				pointHoverBorderColor: '#b2463c',
 			}]
 		};
 	})();
@@ -120,7 +124,8 @@
 			x: { ticks: { maxTicksLimit: 15 } },
 			y: { beginAtZero: true, ticks: { stepSize: 1 } }
 		},
-		plugins: { legend: { display: false } }
+		plugins: { legend: { display: false } },
+		elements: { line: { cubicInterpolationMode: 'monotone' as const } }
 	};
 </script>
 

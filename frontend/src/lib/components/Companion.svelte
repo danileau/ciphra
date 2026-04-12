@@ -7,6 +7,14 @@
 	import { goto } from '$app/navigation';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
+	import { familyLinks } from '$lib/stores/familyLinks';
+	import { generateDoctorPdf } from '$lib/pdf';
+
+	function exportForDoctor() {
+		if (!bp) return;
+		const now = new Date();
+		generateDoctorPdf(bp, allDocs, now.getFullYear(), now.getMonth(), $t, $locale, $auth.username || '');
+	}
 
 	let loaded = false;
 	let confirmDeleteId: number | null = null;
@@ -133,8 +141,58 @@
 		<div class="h-48 skeleton" style="animation-delay: 0.15s"></div>
 	</div>
 {:else if !bp}
-	<div class="max-w-3xl mx-auto px-4 py-20 text-center">
-		<Asterisk size={48} spin color="muted" />
+	<!-- Caregiver-mode empty state: user has no blueprint of their own.
+		 Split links into live vs revoked so the page reads: "here's who
+		 you're actively helping, and here's what was revoked — clean it up." -->
+	{@const liveLinks = $familyLinks.filter(l => !l.revoked)}
+	{@const revokedLinks = $familyLinks.filter(l => l.revoked)}
+	<div class="max-w-2xl mx-auto px-4 py-10 space-y-5">
+		<div class="text-center">
+			<Asterisk size={40} color="muted" />
+			<h1 class="text-xl font-semibold mt-4" style="color: var(--text-primary)">{$t('companion.caregiver_empty_title')}</h1>
+			<p class="text-sm mt-2" style="color: var(--text-secondary)">
+				{$t('companion.caregiver_empty_desc')}
+			</p>
+		</div>
+
+		{#if liveLinks.length > 0}
+			<section class="card p-5">
+				<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('family.linked_title')}</h2>
+				<p class="text-xs mb-3" style="color: var(--text-muted)">{$t('companion.caregiver_switch_hint')}</p>
+				<ul class="space-y-2">
+					{#each liveLinks as l}
+						<li class="flex items-center justify-between rounded-lg p-3" style="background: var(--surface-muted); border: 1px solid var(--border)">
+							<p class="text-sm font-medium" style="color: var(--text-primary)">{l.sourceUsername}</p>
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
+
+		{#if revokedLinks.length > 0}
+			<section class="card p-5" style="border-color: rgba(220,38,38,0.2)">
+				<h2 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--danger)">{$t('companion.caregiver_revoked_title')}</h2>
+				<p class="text-xs mb-3" style="color: var(--text-muted)">{$t('companion.caregiver_revoked_desc')}</p>
+				<ul class="space-y-2">
+					{#each revokedLinks as l}
+						<li class="flex items-center justify-between rounded-lg p-3" style="background: rgba(220,38,38,0.04); border: 1px solid rgba(220,38,38,0.2)">
+							<p class="text-sm font-medium" style="color: var(--text-primary)">{l.sourceUsername}</p>
+							<span class="text-xs" style="color: var(--danger)">{$t('family.link_revoked')}</span>
+						</li>
+					{/each}
+				</ul>
+				<a href="/settings" class="text-xs underline block mt-3" style="color: var(--danger)">{$t('companion.caregiver_revoked_cleanup')}</a>
+			</section>
+		{/if}
+
+		<div class="flex flex-wrap gap-2">
+			<a href="/settings" class="btn-secondary px-4 min-h-[44px] flex items-center">
+				{$t('companion.caregiver_open_settings')}
+			</a>
+			<a href="/setup" class="btn-primary px-4 min-h-[44px] flex items-center">
+				{$t('companion.caregiver_setup_own')}
+			</a>
+		</div>
 	</div>
 {:else}
 <div class="max-w-3xl mx-auto px-4 py-6 space-y-6 fade-in">
@@ -191,7 +249,11 @@
 	{/if}
 
 	<!-- ═══ STREAK ═══ -->
-	{#if bp.episodeTypes.length > 0}
+	<!-- Suppress streak framing for conditions where "X days since bad thing"
+		 is hostile: cancer survivors trying to forget treatment, people in
+		 burnout recovery, depression/anxiety where a broken streak reads as
+		 failure. QA round flagged this in multiple personas. -->
+	{#if bp.episodeTypes.length > 0 && !['burnout', 'anxiety_depression', 'cancer_treatment'].includes(bp.conditionId)}
 	<section class="card p-5">
 		<div class="flex items-center gap-4">
 			<div class="text-center">
@@ -208,19 +270,33 @@
 	</section>
 	{/if}
 
-	<!-- ═══ REPORTS ═══ -->
-	<a href="/reports" class="card-interactive p-5 block group">
-		<div class="flex items-center gap-3">
-			<div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: var(--ochre-light)">
+	<!-- ═══ REPORTS & EXPORT ═══ -->
+	<section class="card p-5">
+		<div class="flex items-center gap-3 mb-3">
+			<div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background: var(--ochre-light)">
 				<svg class="w-5 h-5" style="color: var(--ochre)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,2 14,8 20,8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 			</div>
-			<div class="flex-1">
+			<div class="flex-1 min-w-0">
 				<p class="text-sm font-semibold" style="color: var(--text-primary)">{$t('reports.title')}</p>
 				<p class="text-xs" style="color: var(--text-muted)">{$t('reports.analytics_desc')}</p>
 			</div>
-			<svg class="w-5 h-5 transition-transform group-hover:translate-x-0.5" style="color: var(--text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 		</div>
-	</a>
+		<div class="flex flex-wrap gap-2">
+			<button
+				type="button"
+				on:click={exportForDoctor}
+				disabled={!bp || allDocs.length === 0}
+				class="btn-primary text-sm px-4 min-h-[44px] flex items-center gap-2"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				{$t('companion.export_for_doctor')}
+			</button>
+			<a href="/reports" class="btn-secondary text-sm px-4 min-h-[44px] flex items-center gap-2">
+				{$t('companion.open_reports')}
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</a>
+		</div>
+	</section>
 
 	<!-- ═══ 7-DAY EPISODES ═══ -->
 	{#if episodeChartData}

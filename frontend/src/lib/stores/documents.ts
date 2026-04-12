@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { auth } from './auth';
+import { familyLinks, activeVault } from './familyLinks';
 import * as api from '$lib/api';
 import { encryptDocument, decryptDocument } from '$lib/crypto';
 import { getAllDocs, putDocs, clearDocs, type CachedDoc } from '$lib/idb';
@@ -13,11 +14,33 @@ export interface CiphraDocument {
 	data: any;
 }
 
+/**
+ * Resolves the current vault context: which master_key to encrypt/decrypt
+ * with, and which endpoints to hit. Caregiver uses their own key+endpoints
+ * unless they've switched to a linked account via the `activeVault` store.
+ */
+function resolveVault(): { masterKey: Uint8Array | null; sourceUserId: number | null; cacheKey: string } {
+	const { masterKey, username } = get(auth);
+	const active = get(activeVault);
+	if (!active) {
+		return { masterKey, sourceUserId: null, cacheKey: `${username ?? ''}:self` };
+	}
+	const link = get(familyLinks).find(l => l.sourceUserId === active);
+	if (!link) {
+		// stale switcher state — fall back to own vault
+		return { masterKey, sourceUserId: null, cacheKey: `${username ?? ''}:self` };
+	}
+	return {
+		masterKey: link.patientMasterKey,
+		sourceUserId: active,
+		cacheKey: `${username ?? ''}:linked:${active}`,
+	};
+}
+
 function createDocStore() {
 	const { subscribe, set, update } = writable<CiphraDocument[]>([]);
 	let loading = false;
 
-	/** Decrypt raw server docs into CiphraDocument[] (parallel for performance) */
 	async function decryptDocs(
 		rawDocs: Array<{ id: number; encrypted_data: string; created_at: string }>,
 		masterKey: Uint8Array
@@ -30,41 +53,42 @@ function createDocStore() {
 		);
 		return results
 			.filter((r): r is PromiseFulfilledResult<CiphraDocument> => r.status === 'fulfilled')
-			.map(r => r.value);
+			.map(r => r.value)
+			// family_link entries live in the same encrypted_documents table
+			// but are metadata for the family-sharing store, not health data.
+			.filter(doc => doc.data?.type !== 'family_link');
 	}
 
-	/** Persist raw server docs to IndexedDB cache */
 	async function cacheRawDocs(
-		rawDocs: Array<{ id: number; encrypted_data: string; created_at: string }>
+		rawDocs: Array<{ id: number; encrypted_data: string; created_at: string }>,
+		cacheKey: string,
 	): Promise<void> {
-		const { username } = get(auth);
-		if (!browser || !username) return;
+		if (!browser || !cacheKey) return;
 		try {
 			const cached: CachedDoc[] = rawDocs.map((d) => ({
 				id: d.id,
-				user_id: username,
+				user_id: cacheKey,
 				encrypted_data: d.encrypted_data,
 				created_at: d.created_at,
 				updated_at: d.created_at
 			}));
-			await putDocs(username, cached);
+			await putDocs(cacheKey, cached);
 		} catch {
 			// IndexedDB errors should not break the app
 		}
 	}
 
-	return {
+	const store = {
 		subscribe,
 		async load() {
 			if (loading) return;
 			loading = true;
-			const { masterKey, username } = get(auth);
+			const { masterKey, sourceUserId, cacheKey } = resolveVault();
 			if (!masterKey) { loading = false; return; }
 
-			// 1. Try IndexedDB cache first for instant load
-			if (browser && username) {
+			if (browser) {
 				try {
-					const cached = await getAllDocs(username);
+					const cached = await getAllDocs(cacheKey);
 					if (cached.length > 0) {
 						const docs = await decryptDocs(cached, masterKey);
 						set(docs);
@@ -74,14 +98,15 @@ function createDocStore() {
 				}
 			}
 
-			// 2. Fetch from API in background, update store + cache
 			try {
-				const res = await api.getDocuments();
+				const res = sourceUserId
+					? await api.familyDocuments(sourceUserId)
+					: await api.getDocuments();
 				if (res.ok) {
 					const rawDocs = (res.data.documents as Array<{ id: number; encrypted_data: string; created_at: string }>) || [];
 					const docs = await decryptDocs(rawDocs, masterKey);
 					set(docs);
-					await cacheRawDocs(rawDocs);
+					await cacheRawDocs(rawDocs, cacheKey);
 					documentsError.set(null);
 				} else {
 					documentsError.set('Failed to load documents');
@@ -93,14 +118,16 @@ function createDocStore() {
 			loading = false;
 		},
 		async save(data: any): Promise<boolean> {
-			const { masterKey } = get(auth);
+			const { masterKey, sourceUserId } = resolveVault();
 			if (!masterKey) return false;
 			try {
 				const encrypted = await encryptDocument(data, masterKey);
-				const res = await api.storeDocument(encrypted);
+				const res = sourceUserId
+					? await api.familyDocumentCreate(sourceUserId, encrypted)
+					: await api.storeDocument(encrypted);
 				if (res.ok) {
 					documentsError.set(null);
-					await this.load();
+					await store.load();
 				} else {
 					documentsError.set('Failed to save document');
 				}
@@ -111,14 +138,16 @@ function createDocStore() {
 			}
 		},
 		async updateDoc(id: number, data: any): Promise<boolean> {
-			const { masterKey } = get(auth);
+			const { masterKey, sourceUserId } = resolveVault();
 			if (!masterKey) return false;
 			try {
 				const encrypted = await encryptDocument(data, masterKey);
-				const res = await api.updateDocument(id, encrypted);
+				const res = sourceUserId
+					? await api.familyDocumentUpdate(sourceUserId, id, encrypted)
+					: await api.updateDocument(id, encrypted);
 				if (res.ok) {
 					documentsError.set(null);
-					await this.load();
+					await store.load();
 				} else {
 					documentsError.set('Failed to update document');
 				}
@@ -129,17 +158,20 @@ function createDocStore() {
 			}
 		},
 		async remove(id: number): Promise<boolean> {
-			const res = await api.deleteDocument(id);
+			const { sourceUserId, cacheKey } = resolveVault();
+			const res = sourceUserId
+				? await api.familyDocumentDelete(sourceUserId, id)
+				: await api.deleteDocument(id);
 			if (res.ok) {
 				update((docs) => docs.filter((d) => d.id !== id));
-				// Refresh cache after removal
-				const { username } = get(auth);
-				if (browser && username) {
+				if (browser) {
 					try {
-						const apiRes = await api.getDocuments();
+						const apiRes = sourceUserId
+							? await api.familyDocuments(sourceUserId)
+							: await api.getDocuments();
 						if (apiRes.ok) {
 							const rawDocs = (apiRes.data.documents as Array<{ id: number; encrypted_data: string; created_at: string }>) || [];
-							await cacheRawDocs(rawDocs);
+							await cacheRawDocs(rawDocs, cacheKey);
 						}
 					} catch {
 						// non-critical
@@ -150,12 +182,14 @@ function createDocStore() {
 		},
 		clear() {
 			set([]);
-			const { username } = get(auth);
-			if (browser && username) {
-				clearDocs(username).catch(() => {});
+			const { cacheKey } = resolveVault();
+			if (browser && cacheKey) {
+				clearDocs(cacheKey).catch(() => {});
 			}
 		}
 	};
+
+	return store;
 }
 
 export const documents = createDocStore();

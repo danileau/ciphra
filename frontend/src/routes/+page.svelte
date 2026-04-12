@@ -5,6 +5,7 @@
 	import Companion from '$lib/components/Companion.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import { presets } from '$lib/blueprint/presets';
+	import EncryptionDemo from '$lib/components/EncryptionDemo.svelte';
 
 	let showTechnicalDetails = false;
 
@@ -65,7 +66,6 @@
 		<div class="flex items-center gap-3">
 			<div class="hidden md:flex items-center gap-1">
 				<a href="#how" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_how')}</a>
-				<a href="#conditions" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_origin')}</a>
 				<a href="#security" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_security')}</a>
 			</div>
 			<div class="w-px h-6 hidden md:block" style="background: var(--border);"></div>
@@ -79,7 +79,10 @@
 					<option value={l}>{localeNames[l]}</option>
 				{/each}
 			</select>
-			<a href="/login" class="btn-primary min-h-[44px] px-5 text-sm font-semibold rounded-lg">
+			<a href="/login" class="hidden sm:inline-flex text-sm font-medium min-h-[44px] items-center px-3" style="color: var(--text-secondary);">
+				{$t('auth.login')}
+			</a>
+			<a href="/login?mode=register" class="btn-primary min-h-[44px] px-5 text-sm font-semibold rounded-lg">
 				{$t('landing.hero_cta')}
 			</a>
 		</div>
@@ -102,10 +105,15 @@
 					</g>
 				</svg>
 
-				<!-- Tagline -->
-				<h1 class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6" style="color: var(--text-primary);">
+				<!-- Tagline + subtagline — one brand line, one "what" line.
+					 Subtagline replaces the audit-risky "for every condition"
+					 claim with a specific, defensible promise. -->
+				<h1 class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-3" style="color: var(--text-primary);">
 					{$t('landing.tagline')}
 				</h1>
+				<p class="text-xl sm:text-2xl leading-snug mb-6 max-w-xl font-medium" style="color: var(--brand);">
+					{$t('landing.subtagline')}
+				</p>
 
 				<p class="text-lg sm:text-xl leading-relaxed mb-4 max-w-xl font-light" style="color: var(--text-secondary);">
 					{@html $t('landing.hero_subtitle', { strong_start: `<strong class="font-semibold" style="color: var(--text-primary)">`, strong_end: '</strong>' })}
@@ -114,14 +122,31 @@
 					{$t('landing.hero_detail')}
 				</p>
 
-				<div class="flex flex-wrap gap-4 mb-14">
-					<a href="/login" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors" style="box-shadow: 0 4px 14px rgba(178,60,44,0.2);">
+				<div class="flex flex-wrap gap-4 mb-8">
+					<a href="/login?mode=register" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors" style="box-shadow: 0 4px 14px rgba(178,60,44,0.2);">
 						{$t('landing.hero_cta')}
 					</a>
 					<a href="#how" class="btn-secondary min-h-[52px] px-8 font-medium rounded-xl text-base gap-2 transition-colors" style="border: 1px solid var(--border);">
 						{$t('landing.hero_learn_more')}
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</a>
+				</div>
+
+				<!-- Named-chips row: answers the "does it work for mine?"
+					 bounce. Each chip is a real link into the condition detail
+					 page. Keeps the "build your own" promise concrete. -->
+				<div class="flex flex-wrap items-center gap-2 mb-14 text-sm" style="color: var(--text-muted);">
+					<span class="font-medium" style="color: var(--text-secondary);">{$t('landing.chips_prefix')}</span>
+					{#each ['epilepsy', 'migraine', 'diabetes', 'adhd', 'endometriosis', 'long_covid'] as cid}
+						<a
+							href="/conditions/{cid}"
+							class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors hover:underline"
+							style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-secondary);"
+						>
+							{$t(`landing.template_${cid}`)}
+						</a>
+					{/each}
+					<span style="color: var(--text-muted);">— {$t('landing.chips_custom')}</span>
 				</div>
 
 				<!-- Encryption badges -->
@@ -386,6 +411,9 @@
 					</div>
 				</div>
 
+				<!-- Section B2: Live transformation demo -->
+				<EncryptionDemo />
+
 				<!-- Section C: Why these choices? -->
 				<div>
 					<h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-8" style="color: var(--text-primary);">{$t('tech.why_title')}</h3>
@@ -394,7 +422,8 @@
 							{ titleKey: 'tech.why_argon2_title', descKey: 'tech.why_argon2_desc', borderColor: 'var(--ochre)' },
 							{ titleKey: 'tech.why_aes_title', descKey: 'tech.why_aes_desc', borderColor: 'var(--brand)' },
 							{ titleKey: 'tech.why_client_title', descKey: 'tech.why_client_desc', borderColor: 'var(--ochre)' },
-							{ titleKey: 'tech.why_metadata_title', descKey: 'tech.why_metadata_desc', borderColor: 'var(--brand)' }
+							{ titleKey: 'tech.why_metadata_title', descKey: 'tech.why_metadata_desc', borderColor: 'var(--brand)' },
+							{ titleKey: 'tech.why_hardening_title', descKey: 'tech.why_hardening_desc', borderColor: 'var(--olive)' }
 						] as choice}
 							<div class="card rounded-xl p-6" style="border-left: 4px solid {choice.borderColor};">
 								<h4 class="font-bold text-base mb-3" style="color: var(--text-primary);">{$t(choice.titleKey)}</h4>
@@ -415,14 +444,14 @@
 									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg>
 									<span class="font-semibold text-sm" style="color: var(--text-primary);">{$t('tech.verify_encryption')}</span>
 								</div>
-								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">backend/crypto.py</code>
+								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">frontend/src/lib/crypto.ts</code>
 							</div>
 							<div class="rounded-lg p-4" style="background: var(--surface-muted); border: 1px solid var(--border);">
 								<div class="flex items-center gap-2 mb-2">
 									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--ochre);"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 									<span class="font-semibold text-sm" style="color: var(--text-primary);">{$t('tech.verify_api')}</span>
 								</div>
-								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">backend/app.py</code>
+								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">api/server.py</code>
 							</div>
 							<div class="rounded-lg p-4" style="background: var(--surface-muted); border: 1px solid var(--border);">
 								<div class="flex items-center gap-2 mb-2">
@@ -451,7 +480,7 @@
 			<p class="text-lg mb-10 max-w-2xl mx-auto leading-relaxed" style="color: var(--text-secondary);">
 				{$t('landing.cta_subtitle')}
 			</p>
-			<a href="/login" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors">
+			<a href="/login?mode=register" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors">
 				{$t('landing.cta_button')}
 			</a>
 		</div>
@@ -489,7 +518,19 @@
 				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">{$t('landing.footer_links')}</h3>
 				<ul class="space-y-2 text-sm" style="color: var(--text-muted);">
 					<li><a href="/login" class="hover:underline" style="color: inherit;">{$t('landing.footer_login')}</a></li>
-					<li><a href="/login" class="hover:underline" style="color: inherit;">{$t('landing.footer_register')}</a></li>
+					<li><a href="/login?mode=register" class="hover:underline" style="color: inherit;">{$t('landing.footer_register')}</a></li>
+					<li><a href="/conditions" class="hover:underline" style="color: inherit;">{$t('nav.conditions')}</a></li>
+				</ul>
+			</div>
+			<div>
+				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">{$t('landing.footer_legal')}</h3>
+				<ul class="space-y-2 text-sm" style="color: var(--text-muted);">
+					<li><a href="/privacy" class="hover:underline" style="color: inherit;">{$t('privacy.title')}</a></li>
+					<li><a href="/terms" class="hover:underline" style="color: inherit;">{$t('terms.title')}</a></li>
+					<li><a href="https://github.com/danileau/ciphra" target="_blank" rel="noopener" class="hover:underline inline-flex items-center gap-1" style="color: inherit;">
+						<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.09 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.29 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+						GitHub
+					</a></li>
 				</ul>
 			</div>
 			<div>
@@ -504,6 +545,10 @@
 		<div class="asterisk-divider mb-6">
 			<Asterisk size={14} color="muted" />
 		</div>
+		<!-- Medical-device disclaimer — keeps ciphra clearly outside MDR/MepV scope. -->
+		<p class="text-xs text-center mb-4 italic" style="color: var(--text-muted);">
+			{$t('landing.disclaimer_medical')}
+		</p>
 		<div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm" style="color: var(--text-muted);">
 			<span>&copy; 2026 ciphra</span>
 			<div class="flex items-center gap-4">

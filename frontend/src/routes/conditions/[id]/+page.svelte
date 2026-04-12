@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { conditionInfoMap, conditionIds } from '$lib/conditionInfo';
 	import type { ConditionInfo } from '$lib/conditionInfo';
+	import { iconPath } from '$lib/conditionIcons';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 
 	$: conditionId = $page.params.id || '';
@@ -55,32 +56,26 @@
 	</div>
 {:else}
 	<div class="min-h-screen" style="background: var(--surface);">
-		<!-- Hero -->
-		<header style="background: var(--surface-card); border-bottom: 1px solid var(--border);">
-			<div class="max-w-4xl mx-auto px-4 py-12 sm:py-16">
-				<a href="/conditions" class="text-sm mb-4 inline-block transition-colors" style="color: var(--brand);">&larr; {$t('condition.index_title')}</a>
-				<div class="flex items-center gap-4 mb-4">
-					<div class="w-14 h-14 rounded-2xl flex items-center justify-center" style="background: {info.color}15; color: {info.color}">
-						<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/></svg>
-					</div>
-					<div>
-						<h1 class="text-3xl sm:text-4xl font-bold" style="color: var(--text-primary);">{title}</h1>
-						<p class="text-lg mt-1" style="color: var(--text-muted);">{subtitle}</p>
-					</div>
+		<main class="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+			<a href="/conditions" class="text-sm mb-6 inline-block transition-colors" style="color: var(--brand);">&larr; {$t('condition.index_title')}</a>
+			<div class="flex items-center gap-4 mb-4">
+				<div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style="background: {info.color}15; color: {info.color}">
+					<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d={iconPath(info.icon)} stroke-width="2"/></svg>
 				</div>
-				<div class="flex items-center gap-2 mt-4">
-					<span class="badge-olive">
-						<Asterisk size={10} color="olive" />
-						{$t('encryption.badge')}
-					</span>
-					<span class="badge" style="background: var(--surface-muted); color: var(--text-secondary);">
-						{$t('condition.open_source')}
-					</span>
+				<div>
+					<h1 class="text-3xl sm:text-4xl font-bold" style="color: var(--text-primary);">{title}</h1>
+					<p class="text-lg mt-1" style="color: var(--text-muted);">{subtitle}</p>
 				</div>
 			</div>
-		</header>
-
-		<main class="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+			<div class="flex items-center gap-2 mb-8">
+				<span class="badge-olive">
+					<Asterisk size={10} color="olive" />
+					{$t('encryption.badge')}
+				</span>
+				<span class="badge" style="background: var(--surface-muted); color: var(--text-secondary);">
+					{$t('condition.open_source')}
+				</span>
+			</div>
 			<!-- Introduction -->
 			<article class="prose max-w-none mb-12">
 				<p class="text-lg leading-relaxed" style="color: var(--text-secondary);">{$t(info.introKey)}</p>
@@ -212,7 +207,7 @@
 						>
 							<div class="flex items-center gap-3">
 								<div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: {related.color}15; color: {related.color}">
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/></svg>
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d={iconPath(related.icon)} stroke-width="2"/></svg>
 								</div>
 								<span class="text-sm font-medium" style="color: var(--text-primary);">{$t(related.titleKey)}</span>
 							</div>

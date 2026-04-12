@@ -4,7 +4,10 @@
 	import { auth } from '$lib/stores/auth';
 	import * as api from '$lib/api';
 	import { goto } from '$app/navigation';
-	import { decryptMasterKey } from '$lib/crypto';
+	import { page } from '$app/stores';
+	import { createVault, decryptMasterKey, decryptMasterKeyWithRecovery, deriveAuthKey, rewrapMasterKey } from '$lib/crypto';
+	import { validateRecoveryCode } from '$lib/wordlist';
+	import { generateRecoveryPdf } from '$lib/pdf';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 
 	function setLocale(e: Event) {
@@ -12,9 +15,25 @@
 		locale.set(val);
 	}
 
-	let tab: 'login' | 'register' | 'recovery' = 'login';
+	// Default to the register tab when arriving via /login?mode=register
+	// (primary landing-page CTA routes here). Anything else → login.
+	const initialMode = $page.url.searchParams.get('mode');
+	let tab: 'login' | 'register' | 'recovery' =
+		initialMode === 'register' ? 'register'
+		: initialMode === 'recovery' ? 'recovery'
+		: 'login';
 	let error = '';
+	let technicalError = '';
 	let loading = false;
+	// Separate phase label so users see progress during the ~1–7s Argon2id
+	// derivation (looks like a hung app on low-end Android otherwise).
+	let phase = '';
+
+	function setError(userFacing: string, technical?: string) {
+		error = userFacing;
+		technicalError = technical || '';
+	}
+	function clearError() { error = ''; technicalError = ''; }
 
 	// Login
 	let loginUser = '';
@@ -39,35 +58,60 @@
 	let recNewPassConfirm = '';
 
 	async function handleLogin() {
-		error = '';
+		clearError();
 		loading = true;
+		phase = $t('auth.phase_checking');
 		try {
-			const res = await api.login(loginUser, loginPass);
-			if (res.ok) {
-				const vault = res.data.vault as { vault_params: string; encrypted_master: string };
-				try {
-					const masterKey = await decryptMasterKey(
-						loginPass,
-						vault.vault_params,
-						vault.encrypted_master
-					);
-					auth.login(
-						res.data.token as string,
-						res.data.username as string,
-						masterKey,
-						vault,
-						(res.data.is_admin as boolean) || false
-					);
-					goto('/');
-				} catch (e) {
-					console.error('Master key decryption failed:', e);
-					error = 'Vault decryption failed';
-				}
-			} else {
-				error = (res.data.error as string) || $t('auth.error_credentials');
+			const initRes = await api.loginInit(loginUser.trim().toLowerCase());
+			if (!initRes.ok) {
+				setError($t('auth.error_credentials'), initRes.data.error as string);
+				return;
 			}
+			const authParams = (initRes.data as { auth_params: string }).auth_params;
+			phase = $t('auth.phase_deriving');
+			const authKey = await deriveAuthKey(loginPass, authParams);
+			phase = $t('auth.phase_verifying');
+			const res = await api.login(loginUser.trim().toLowerCase(), authKey);
+			if (!res.ok) {
+				const rawErr = res.data.error as string | undefined;
+				const msg = res.status === 429
+					? $t('auth.error_locked')
+					: $t('auth.error_credentials');
+				setError(msg, rawErr);
+				return;
+			}
+			const vault = res.data.vault as { auth_params: string; vault_params: string; encrypted_master: string };
+			try {
+				phase = $t('auth.phase_unlocking');
+				const masterKey = await decryptMasterKey(loginPass, vault.vault_params, vault.encrypted_master);
+				auth.login(
+					res.data.token as string,
+					res.data.username as string,
+					masterKey,
+					vault,
+					(res.data.is_admin as boolean) || false
+				);
+				// Resume a pending family-join if one was stashed before redirect.
+				let dest = '/';
+				try {
+					const pending = sessionStorage.getItem('ciphra_pending_family_claim');
+					if (pending) {
+						const { grantId, familyCode } = JSON.parse(pending);
+						if (grantId && familyCode) {
+							dest = `/join/${grantId}#${encodeURIComponent(familyCode)}`;
+						}
+						sessionStorage.removeItem('ciphra_pending_family_claim');
+					}
+				} catch { /* ignore */ }
+				goto(dest);
+			} catch (e) {
+				setError($t('auth.error_vault_decrypt'), e instanceof Error ? e.message : String(e));
+			}
+		} catch (e) {
+			setError($t('auth.error_credentials'), e instanceof Error ? e.message : String(e));
 		} finally {
 			loading = false;
+			phase = '';
 		}
 	}
 
@@ -78,18 +122,27 @@
 			return;
 		}
 		loading = true;
-		const res = await api.register(regUser, regPass, enableRecovery);
-		loading = false;
-		if (res.ok) {
-			if (res.data.recovery_code) {
-				recoveryCode = res.data.recovery_code as string;
-				showRecovery = true;
+		phase = $t('auth.phase_building_vault');
+		try {
+			// All crypto runs in the browser. Server only sees hashes + ciphertext.
+			const bundle = await createVault(regUser.trim().toLowerCase(), regPass, enableRecovery);
+			const res = await api.register(bundle);
+			if (res.ok) {
+				if (bundle.recovery_code) {
+					recoveryCode = bundle.recovery_code;
+					showRecovery = true;
+				} else {
+					tab = 'login';
+					loginUser = regUser;
+				}
 			} else {
-				tab = 'login';
-				loginUser = regUser;
+				setError($t('auth.error_exists'), res.data.error as string);
 			}
-		} else {
-			error = (res.data.error as string) || $t('auth.error_exists');
+		} catch (e) {
+			setError($t('auth.error_exists'), e instanceof Error ? e.message : String(e));
+		} finally {
+			loading = false;
+			phase = '';
 		}
 	}
 
@@ -106,21 +159,46 @@
 			error = $t('auth.error_password_short');
 			return;
 		}
+		if (!validateRecoveryCode(recCode)) {
+			error = $t('auth.error_recovery');
+			return;
+		}
 		loading = true;
-		const res = await api.recover(recUser, recCode, recNewPass);
-		loading = false;
-		if (res.ok) {
-			recSuccess = $t('auth.recovery_success');
-			recUser = '';
-			recCode = '';
-			recNewPass = '';
-			recNewPassConfirm = '';
-			setTimeout(() => {
-				recSuccess = '';
-				tab = 'login';
-			}, 2000);
-		} else {
-			error = (res.data.error as string) || $t('auth.error_recovery');
+		phase = $t('auth.phase_deriving');
+		try {
+			const username = recUser.trim().toLowerCase();
+			const initRes = await api.recoverInit(username);
+			if (!initRes.ok) {
+				setError($t('auth.error_recovery'), initRes.data.error as string);
+				return;
+			}
+			const initData = initRes.data as { recovery_params: string; recovery_vault: string };
+			const { masterKey, recoveryKeyB64 } = await decryptMasterKeyWithRecovery(
+				username, recCode, initData.recovery_params, initData.recovery_vault
+			);
+			phase = $t('auth.phase_building_vault');
+			const wrap = await rewrapMasterKey(masterKey, recNewPass);
+			const res = await api.recover({
+				username,
+				recovery_key: recoveryKeyB64,
+				auth_hash: wrap.auth_hash,
+				auth_params: wrap.auth_params,
+				vault_params: wrap.vault_params,
+				encrypted_master: wrap.encrypted_master,
+			});
+			if (res.ok) {
+				recSuccess = $t('auth.recovery_success');
+				recUser = ''; recCode = ''; recNewPass = ''; recNewPassConfirm = '';
+				setTimeout(() => { recSuccess = ''; tab = 'login'; }, 2000);
+			} else {
+				const msg = res.status === 429 ? $t('auth.error_locked') : $t('auth.error_recovery');
+				setError(msg, res.data.error as string);
+			}
+		} catch (e) {
+			setError($t('auth.error_recovery'), e instanceof Error ? e.message : String(e));
+		} finally {
+			loading = false;
+			phase = '';
 		}
 	}
 
@@ -131,20 +209,10 @@
 	}
 </script>
 
-<div class="min-h-screen flex items-center justify-center p-4" style="background: var(--surface)">
+<div class="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4" style="background: var(--surface)">
 	<div class="w-full max-w-md">
-		<!-- Logo -->
-		<div class="flex flex-col items-center mb-8">
-			<svg viewBox="0 0 220 50" class="h-10 mb-2" aria-label="ciphra">
-				<text x="28" y="36" font-family="Inter, DM Sans, sans-serif" font-size="36" font-weight="500" letter-spacing="1" style="fill: var(--text-primary)">ciphra</text>
-				<g transform="translate(162,12) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
-					<path d="M -6.5 0 L 6.5 0" stroke-width="1.5"/>
-					<path d="M -2.7 -4.6 L 2.7 4.6" stroke-width="1.2"/>
-					<path d="M 2.6 -4.4 L -2.6 4.4" stroke-width="1.1"/>
-				</g>
-			</svg>
-			<p class="text-sm" style="color: var(--text-muted)">{$t('encryption.badge')}</p>
-		</div>
+		<!-- Logo lives in the sticky layout header; only keep the tagline here -->
+		<p class="text-sm text-center mb-6" style="color: var(--text-muted)">{$t('encryption.badge')}</p>
 
 		<div class="rounded-2xl overflow-hidden" style="background: var(--surface-card); border: 1px solid var(--border)">
 			{#if showRecovery}
@@ -156,6 +224,14 @@
 					<div class="rounded-xl p-4 mb-4" style="background: var(--surface-muted)">
 						<p class="font-mono text-base select-all leading-relaxed" style="color: var(--text-primary)">{recoveryCode}</p>
 					</div>
+					<button
+						type="button"
+						on:click={() => generateRecoveryPdf(regUser.trim().toLowerCase(), recoveryCode, $t, $locale)}
+						class="btn-secondary w-full px-4 min-h-[44px] mb-4 flex items-center justify-center gap-2"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+						{$t('auth.download_recovery_pdf')}
+					</button>
 					<label class="flex items-center gap-3 mb-4 cursor-pointer min-h-[44px]">
 						<input type="checkbox" bind:checked={recoveryConfirmed} class="w-5 h-5 rounded" style="border-color: var(--border)" />
 						<span class="text-sm" style="color: var(--text-secondary)">{$t('auth.recovery_confirm')}</span>
@@ -174,17 +250,17 @@
 					<button
 						class="flex-1 py-3 text-sm font-medium transition-colors min-h-[48px]"
 						style="{tab === 'login' ? 'color: var(--brand); border-bottom: 2px solid var(--brand)' : 'color: var(--text-muted)'}"
-						on:click={() => { tab = 'login'; error = ''; }}
+						on:click={() => { tab = 'login'; clearError(); }}
 					>{$t('auth.login')}</button>
 					<button
 						class="flex-1 py-3 text-sm font-medium transition-colors min-h-[48px]"
 						style="{tab === 'register' ? 'color: var(--brand); border-bottom: 2px solid var(--brand)' : 'color: var(--text-muted)'}"
-						on:click={() => { tab = 'register'; error = ''; }}
+						on:click={() => { tab = 'register'; clearError(); }}
 					>{$t('auth.register')}</button>
 					<button
 						class="flex-1 py-3 text-sm font-medium transition-colors min-h-[48px]"
 						style="{tab === 'recovery' ? 'color: var(--brand); border-bottom: 2px solid var(--brand)' : 'color: var(--text-muted)'}"
-						on:click={() => { tab = 'recovery'; error = ''; recSuccess = ''; }}
+						on:click={() => { tab = 'recovery'; clearError(); recSuccess = '';}}
 					>{$t('auth.recovery')}</button>
 				</div>
 
@@ -192,6 +268,12 @@
 					{#if error}
 						<div class="rounded-xl p-3 mb-4" style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)">
 							<p class="text-sm" style="color: var(--danger)">{error}</p>
+							{#if technicalError}
+								<details class="mt-2">
+									<summary class="text-xs cursor-pointer select-none" style="color: var(--text-muted)">{$t('auth.technical_details')}</summary>
+									<p class="text-xs font-mono mt-1 break-all" style="color: var(--text-muted)">{technicalError}</p>
+								</details>
+							{/if}
 						</div>
 					{/if}
 
@@ -223,7 +305,7 @@
 							</div>
 							<button type="submit" disabled={loading}
 								class="btn-primary w-full px-4 min-h-[48px]">
-								{loading ? $t('common.loading') : $t('auth.login')}
+								{loading ? (phase || $t('common.loading')) : $t('auth.login')}
 							</button>
 						</form>
 					{:else if tab === 'register'}
@@ -263,7 +345,7 @@
 							</div>
 							<button type="submit" disabled={loading}
 								class="btn-primary w-full px-4 min-h-[48px]">
-								{loading ? $t('common.loading') : $t('auth.register')}
+								{loading ? (phase || $t('common.loading')) : $t('auth.register')}
 							</button>
 						</form>
 					{:else if tab === 'recovery'}
@@ -291,7 +373,7 @@
 							</div>
 							<button type="submit" disabled={loading}
 								class="btn-primary w-full px-4 min-h-[48px]">
-								{loading ? $t('common.loading') : $t('auth.recover_button')}
+								{loading ? (phase || $t('common.loading')) : $t('auth.recover_button')}
 							</button>
 						</form>
 					{/if}
@@ -315,6 +397,9 @@
 
 		<p class="text-center text-xs mt-4" style="color: var(--text-muted)">
 			{$t('encryption.zero_knowledge')}
+		</p>
+		<p class="text-center text-xs mt-2">
+			<a href="/privacy" class="underline" style="color: var(--text-muted)">{$t('privacy.title')}</a>
 		</p>
 	</div>
 </div>

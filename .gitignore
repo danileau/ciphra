@@ -6,3 +6,4 @@ build/
 .env
 *.log
 .claude/
+api/seed_marco.py

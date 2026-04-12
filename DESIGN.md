@@ -15,6 +15,7 @@ An encrypted health companion for chronic conditions. Zero-knowledge — the ser
 - Not a clinical tool (patients are tired of those)
 - Not a wellness app (no gamification, no streaks-as-motivation)
 - Not a startup product (no gradients, no "AI-powered", no confetti)
+- Not a mailing list. **No email field exists on the user model and none should be added speculatively.** If a concrete feature requires it (family invites, security alerts, recovery backup), revisit deliberately — the bar is a real user problem, not a "nice to have." See `memory/project_backlog_decisions.md` for the full rationale and the checklist for how to do it right if the answer ever flips to yes.
 
 ### The feeling
 Like writing in a good notebook with a reliable pen. Private but shareable. Warm but precise. You open it, record what matters, close it. The doctor gets a clear picture.

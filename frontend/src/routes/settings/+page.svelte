@@ -7,9 +7,16 @@
 	import type { Blueprint } from '$lib/blueprint';
 	import type { PresetInfo } from '$lib/blueprint';
 	import { changePassword, deleteAccount } from '$lib/api';
+	import { get } from 'svelte/store';
+	import { deriveAuthKey, rewrapMasterKey } from '$lib/crypto';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
+	import FamilySharing from '$lib/components/FamilySharing.svelte';
+	import LinkedAccounts from '$lib/components/LinkedAccounts.svelte';
+	import { iconPath } from '$lib/conditionIcons';
+
+	$: currentPreset = bp ? presets.find(p => p.id === bp.conditionId) : null;
 
 	let showConfirmSwitch = false;
 	let selectedPreset: PresetInfo | null = null;
@@ -73,7 +80,21 @@
 
 		passwordLoading = true;
 		try {
-			const res = await changePassword(currentPassword, newPassword);
+			const state = get(auth);
+			if (!state.masterKey || !state.authParams) {
+				passwordError = $t('auth.error_credentials');
+				return;
+			}
+			// Prove current password by deriving its auth_key; re-wrap master_key for new password.
+			const currentAuthKey = await deriveAuthKey(currentPassword, state.authParams);
+			const wrap = await rewrapMasterKey(state.masterKey, newPassword);
+			const res = await changePassword({
+				current_auth_key: currentAuthKey,
+				auth_hash: wrap.auth_hash,
+				auth_params: wrap.auth_params,
+				vault_params: wrap.vault_params,
+				encrypted_master: wrap.encrypted_master,
+			});
 			if (res.ok) {
 				passwordSuccess = true;
 				currentPassword = '';
@@ -118,7 +139,13 @@
 
 		deleteLoading = true;
 		try {
-			const res = await deleteAccount(deletePassword);
+			const state = get(auth);
+			if (!state.authParams) {
+				deleteError = $t('auth.error_credentials');
+				return;
+			}
+			const authKey = await deriveAuthKey(deletePassword, state.authParams);
+			const res = await deleteAccount(authKey);
 			if (res.ok) {
 				auth.logout();
 				documents.clear();
@@ -155,7 +182,13 @@
 					{$t('settings.vitals_count', { count: String(bp.vitals.length) })}
 				</p>
 			</div>
-			<div class="w-10 h-10 rounded-xl" style="background: {bp.accentColor}"></div>
+			{#if currentPreset}
+				<div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background: {currentPreset.color}15; color: {currentPreset.color}">
+					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d={iconPath(currentPreset.icon)} stroke-width="2"/></svg>
+				</div>
+			{:else}
+				<div class="w-12 h-12 rounded-xl" style="background: {bp.accentColor}"></div>
+			{/if}
 		</div>
 		<button
 			on:click={goToSetup}
@@ -199,8 +232,8 @@
 						? 'border: 1px solid rgba(127,130,27,0.3); background: var(--olive-light)'
 						: 'border: 1px solid var(--border); background: var(--surface-card)'}"
 				>
-					<div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: {preset.color}15">
-						<div class="w-3 h-3 rounded-full" style="background: {preset.color}"></div>
+					<div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background: {preset.color}15; color: {preset.color}">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d={iconPath(preset.icon)} stroke-width="2"/></svg>
 					</div>
 					<div class="flex-1">
 						<span class="text-sm font-medium" style="color: var(--text-primary)">{$t(preset.labelKey)}</span>
@@ -212,6 +245,12 @@
 			{/each}
 		</div>
 	</section>
+
+	<!-- Family sharing — patient view -->
+	<FamilySharing />
+
+	<!-- Linked accounts — caregiver view -->
+	<LinkedAccounts />
 
 	<!-- Data export -->
 	<section class="card p-5">

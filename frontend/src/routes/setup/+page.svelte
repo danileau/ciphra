@@ -209,6 +209,14 @@
 				</div>
 
 				<div class="grid gap-3">
+					<!-- Caregiver escape: users who only want to manage a linked
+						 account don't need their own blueprint. -->
+					<a href="/settings" class="block w-full text-left rounded-xl p-4 mb-2 transition-all"
+						style="background: var(--surface-muted); border: 1px dashed var(--border)">
+						<p class="text-sm font-semibold" style="color: var(--text-primary)">{$t('setup.skip_caregiver_title')}</p>
+						<p class="text-xs mt-0.5" style="color: var(--text-muted)">{$t('setup.skip_caregiver_desc')}</p>
+					</a>
+
 					{#each presets as preset}
 						<button
 							on:click={() => selectPreset(preset)}
