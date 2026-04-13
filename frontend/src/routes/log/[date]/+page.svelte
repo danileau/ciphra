@@ -4,7 +4,7 @@
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { blueprint } from '$lib/blueprint';
 	import type { Blueprint } from '$lib/blueprint';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import Asterisk from '$lib/components/Asterisk.svelte';
@@ -12,6 +12,35 @@
 
 	let collapsed: Record<string, boolean> = {};
 	function toggleSection(id: string) { collapsed[id] = !collapsed[id]; }
+
+	// CIPH-420b — Section-jump nav (mobile)
+	const sectionIds = ['symptoms', 'episodes', 'vitals', 'triggers', 'notes'];
+	let activeSection = 'symptoms';
+	let sectionObserver: IntersectionObserver | null = null;
+
+	function setupSectionObserver() {
+		if (typeof IntersectionObserver === 'undefined') return;
+		if (sectionObserver) sectionObserver.disconnect();
+		const visibleMap: Record<string, boolean> = {};
+		sectionObserver = new IntersectionObserver((entries) => {
+			for (const entry of entries) {
+				const id = (entry.target as HTMLElement).id.replace('section-', '');
+				visibleMap[id] = entry.isIntersecting;
+			}
+			// Pick first section in document order that is currently intersecting
+			for (const id of sectionIds) {
+				if (visibleMap[id]) { activeSection = id; break; }
+			}
+		}, { threshold: 0, rootMargin: '-80px 0px -50% 0px' });
+		for (const id of sectionIds) {
+			const el = document.getElementById(`section-${id}`);
+			if (el) sectionObserver.observe(el);
+		}
+	}
+
+	onDestroy(() => {
+		if (sectionObserver) sectionObserver.disconnect();
+	});
 
 	function handleKeydown(e: KeyboardEvent) {
 		const tag = (e.target as HTMLElement)?.tagName;
@@ -121,6 +150,38 @@
 		initFromBlueprint(bp);
 	}
 
+	// CIPH-301b — Customization filter sets. Empty when blueprint has no
+	// customizations field (pre-301b blueprints), so behavior is identical
+	// to before for existing users.
+	$: hiddenSymptomIds = new Set(bp?.customizations?.hiddenSymptoms || []);
+	$: hiddenTriggerIds = new Set(bp?.customizations?.hiddenTriggers || []);
+	$: hiddenVitalIds = new Set(bp?.customizations?.hiddenVitals || []);
+
+	// Filtered views the template iterates over, so we don't have to thread
+	// the filter into every {#each} block.
+	$: visibleSymptomGroups = bp
+		? bp.symptomGroups
+			.map((g) => ({ ...g, items: g.items.filter((it) => !hiddenSymptomIds.has(it.id)) }))
+			.filter((g) => g.items.length > 0)
+		: [];
+	$: visibleTriggers = bp ? bp.triggers.filter((tr) => !hiddenTriggerIds.has(tr.id)) : [];
+	$: visibleVitals = bp ? bp.vitals.filter((v) => !hiddenVitalIds.has(v.id)) : [];
+
+	// Group multi-entry vitals by pairLabel for side-by-side rendering
+	$: pairedMultiEntryGroups = (() => {
+		if (!bp) return [];
+		const multi = visibleVitals.filter(v => v.multiEntry);
+		const byPair = new Map<string, typeof multi>();
+		for (const v of multi) {
+			if (!v.pairLabel) continue;
+			const arr = byPair.get(v.pairLabel) || [];
+			arr.push(v);
+			byPair.set(v.pairLabel, arr);
+		}
+		return Array.from(byPair.values()).filter(g => g.length === 2);
+	})();
+	$: unpairedMultiEntryVitals = bp ? visibleVitals.filter(v => v.multiEntry && !v.pairLabel) : [];
+
 	function initFromBlueprint(b: Blueprint) {
 		if (Object.keys(symptoms).length === 0) {
 			for (const g of b.symptomGroups) {
@@ -166,6 +227,7 @@
 		documents.load().then(() => {
 			loadExistingLog();
 			mergeQuickCapturedEpisodes();
+			tick().then(() => setupSectionObserver());
 		});
 	});
 
@@ -213,6 +275,11 @@
 		};
 
 		const existing = $documents.find(d => d.data.type === 'daily_log' && d.data.date === currentDate);
+		// Detect "this is the very first daily_log" BEFORE the save completes,
+		// so we can fire a one-time onboarding event (CIPH-103) pointing the
+		// user at the quick-add FAB / event-line feature.
+		const priorDailyLogCount = $documents.filter(d => d.data.type === 'daily_log').length;
+		const wasFirstDailyLog = !existing && priorDailyLogCount === 0;
 		if (existing) {
 			await documents.updateDoc(existing.id, data);
 		} else {
@@ -220,6 +287,13 @@
 		}
 		saving = false;
 		saved = true;
+		if (wasFirstDailyLog && typeof window !== 'undefined') {
+			try {
+				if (localStorage.getItem('ciphra_event_line_tooltip_seen') !== 'true') {
+					window.dispatchEvent(new CustomEvent('ciphra:first-daily-log'));
+				}
+			} catch {}
+		}
 		setTimeout(() => { saved = false; }, 2500);
 	}
 
@@ -277,6 +351,83 @@
 	}
 
 	$: isToday = currentDate === new Date().toISOString().slice(0, 10);
+
+	/* ─── CIPH-302: Incomplete-entry CTA ───
+	 * Look at the last 30 daily_log docs the user has authored. Any vital or
+	 * trigger field filled in >50% of those days is "typical for this user".
+	 * If today's log is missing any of them, surface chip buttons to nudge
+	 * the user to fill them. Skipped for the first 3 days of use (not enough
+	 * signal; nudging an empty baseline produces noise).
+	 */
+	type MissingField = { kind: 'vital' | 'trigger'; id: string; label: string; anchor: string };
+
+	function hasVitalValue(doc: any, vid: string): boolean {
+		const raw = doc?.data?.vitals?.[vid];
+		if (!raw) return false;
+		// Multi-entry vitals store JSON arrays; an empty array counts as missing.
+		try {
+			const parsed = JSON.parse(raw);
+			if (Array.isArray(parsed)) return parsed.length > 0;
+		} catch { /* single value */ }
+		return String(raw).trim() !== '';
+	}
+	function hasTrigger(doc: any, tid: string): boolean {
+		const trs = doc?.data?.triggers;
+		if (!trs) return false;
+		if (Array.isArray(trs)) return trs.includes(tid);
+		return !!trs[tid];
+	}
+
+	$: typicalFields = (() => {
+		if (!bp) return [] as { kind: 'vital' | 'trigger'; id: string; label: string }[];
+		const logs = $documents
+			.filter((d) => d.data.type === 'daily_log' && d.data.date !== currentDate)
+			.sort((a, b) => String(b.data.date).localeCompare(String(a.data.date)))
+			.slice(0, 30);
+		if (logs.length < 3) return [];
+		const threshold = logs.length * 0.5;
+		const out: { kind: 'vital' | 'trigger'; id: string; label: string }[] = [];
+		for (const v of bp.vitals) {
+			const hits = logs.filter((d) => hasVitalValue(d, v.id)).length;
+			if (hits > threshold) out.push({ kind: 'vital', id: v.id, label: $t(v.label) });
+		}
+		for (const tr of bp.triggers) {
+			const hits = logs.filter((d) => hasTrigger(d, tr.id)).length;
+			if (hits > threshold) out.push({ kind: 'trigger', id: tr.id, label: $t(tr.label) });
+		}
+		return out;
+	})();
+
+	$: incompleteFields = (() => {
+		if (!isToday || typicalFields.length === 0) return [] as MissingField[];
+		const out: MissingField[] = [];
+		for (const tf of typicalFields) {
+			if (tf.kind === 'vital') {
+				const raw = vitals[tf.id];
+				const me = multiEntryVitals[tf.id];
+				const filled = (raw && String(raw).trim() !== '' && !(me && me.length === 0))
+					|| (me && me.length > 0);
+				if (!filled) out.push({ kind: 'vital', id: tf.id, label: tf.label, anchor: `vital-${tf.id}` });
+			} else {
+				if (!triggers[tf.id]) out.push({ kind: 'trigger', id: tf.id, label: tf.label, anchor: `trigger-${tf.id}` });
+			}
+		}
+		return out;
+	})();
+
+	function jumpToField(kind: 'vital' | 'trigger', id: string) {
+		// Open the right section if collapsed, then scroll to the field.
+		if (kind === 'vital') collapsed['vitals'] = false;
+		else collapsed['triggers'] = false;
+		collapsed = collapsed;
+		tick().then(() => {
+			const el = document.getElementById(kind === 'vital' ? `vital-${id}` : `trigger-${id}`);
+			if (el) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				try { (el as HTMLElement).focus({ preventScroll: true }); } catch { /* non-focusable */ }
+			}
+		});
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -288,6 +439,19 @@
 	</div>
 {:else}
 <div class="log-page">
+
+	<!-- ─── Sticky section-jump chip bar (mobile only) — CIPH-420b ─── -->
+	<nav class="log-section-nav md:hidden" aria-label={$t('protocol.symptoms')}>
+		<div class="log-section-nav-scroll">
+			{#each sectionIds as sid}
+				<a
+					href="#section-{sid}"
+					class="log-section-chip {activeSection === sid ? 'log-section-chip--active' : ''}"
+					aria-current={activeSection === sid ? 'true' : undefined}
+				>{$t(`nav_section.${sid}`)}</a>
+			{/each}
+		</div>
+	</nav>
 
 	<!-- ─── Date header card ─── -->
 	<div class="log-date-card">
@@ -327,14 +491,14 @@
 		<!-- ─── Left column (desktop) ─── -->
 		<div class="log-grid-col">
 			<!-- ─── Symptoms card ─── -->
-			{#if bp.symptomGroups.length > 0}
-			<section class="log-card log-card--olive">
+			{#if visibleSymptomGroups.length > 0}
+			<section id="section-symptoms" class="log-card log-card--olive">
 				<button class="log-section-toggle" on:click={() => toggleSection('symptoms')}>
 					<h2 class="log-section-header">{$t('protocol.symptoms')}</h2>
 					<svg class="log-section-chevron" class:log-section-chevron--open={!collapsed['symptoms']} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
 				{#if !collapsed['symptoms']}
-				{#each bp.symptomGroups as group, gi}
+				{#each visibleSymptomGroups as group, gi}
 					<p class="log-group-label">{$t(group.label)}</p>
 					<div class="log-chip-wrap">
 						{#each group.items as item}
@@ -355,17 +519,18 @@
 			{/if}
 
 			<!-- ─── Triggers card ─── -->
-			{#if bp.triggers.length > 0}
-			<section class="log-card log-card--ochre">
+			{#if visibleTriggers.length > 0}
+			<section id="section-triggers" class="log-card log-card--ochre">
 				<button class="log-section-toggle" on:click={() => toggleSection('triggers')}>
 					<h2 class="log-section-header">{$t('protocol.triggers')}</h2>
 					<svg class="log-section-chevron" class:log-section-chevron--open={!collapsed['triggers']} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
 				{#if !collapsed['triggers']}
 				<div class="log-chip-wrap">
-					{#each bp.triggers as trig}
+					{#each visibleTriggers as trig}
 						<button
 							type="button"
+							id="trigger-{trig.id}"
 							on:click={() => { triggers[trig.id] = !triggers[trig.id]; markChanged(); }}
 							class="log-chip {triggers[trig.id] ? 'log-chip--ochre-active' : ''}"
 							aria-pressed={triggers[trig.id]}
@@ -422,27 +587,18 @@
 					{/if}
 					{/if}
 				</section>
-			{:else}
-				<section class="log-card log-card--olive">
-					<button class="log-section-toggle" on:click={() => toggleSection('medications')}>
-						<h2 class="log-section-header">{$t('protocol.medications')}</h2>
-						<svg class="log-section-chevron" class:log-section-chevron--open={!collapsed['medications']} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</button>
-					{#if !collapsed['medications']}
-					<p class="log-empty-hint">
-						{$t('protocol.no_meds')}
-						<a href="/settings" class="log-link">{$t('protocol.add_in_settings')}</a>
-					</p>
-					{/if}
-				</section>
 			{/if}
+			<!-- The empty-state medication card was dropping the user into a
+			     dead end (linked to /settings, where medication management does
+			     not exist yet). Hidden until the medication editor ships —
+			     see CIPH-411 in the design backlog. -->
 		</div>
 
 		<!-- ─── Right column (desktop) ─── -->
 		<div class="log-grid-col">
 			<!-- ─── Episodes card ─── -->
 			{#if bp.episodeTypes.length > 0}
-			<section class="log-card log-card--red">
+			<section id="section-episodes" class="log-card log-card--red">
 				<button class="log-section-toggle" on:click={() => toggleSection('episodes')}>
 					<h2 class="log-section-header">{$t('protocol.episodes')}</h2>
 					<svg class="log-section-chevron" class:log-section-chevron--open={!collapsed['episodes']} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -455,31 +611,42 @@
 								<span class="log-episode-dot" style="background: {ep.color}"></span>
 								<span>{$t(ep.label)}</span>
 							</div>
-							<div class="log-counter">
+							{#if ep.multiDay}
 								<button
-									on:click={() => { if (episodes[ep.id] > 0) { episodes[ep.id]--; markChanged(); } }}
-									class="log-counter-btn"
-									aria-label="{$t('common.decrease')} {$t(ep.label)}"
+									type="button"
+									class="log-multiday-toggle {episodes[ep.id] > 0 ? 'log-multiday-toggle--on' : ''}"
+									on:click={() => { episodes[ep.id] = episodes[ep.id] > 0 ? 0 : 1; markChanged(); }}
+									aria-pressed={episodes[ep.id] > 0}
 								>
-									<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/></svg>
+									{episodes[ep.id] > 0 ? $t('protocol.ongoing_today') : $t('protocol.mark_ongoing')}
 								</button>
-								<span class="log-counter-num {episodes[ep.id] > 0 ? 'log-counter-num--active' : ''}">{episodes[ep.id] || 0}</span>
-								<button
-									on:click={() => { episodes[ep.id] = (episodes[ep.id] || 0) + 1; markChanged(); }}
-									class="log-counter-btn"
-									aria-label="{$t('common.increase')} {$t(ep.label)}"
-								>
-									<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/></svg>
-								</button>
-							</div>
+							{:else}
+								<div class="log-counter">
+									<button
+										on:click={() => { if (episodes[ep.id] > 0) { episodes[ep.id]--; markChanged(); } }}
+										class="log-counter-btn"
+										aria-label="{$t('common.decrease')} {$t(ep.label)}"
+									>
+										<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/></svg>
+									</button>
+									<span class="log-counter-num {episodes[ep.id] > 0 ? 'log-counter-num--active' : ''}">{episodes[ep.id] || 0}</span>
+									<button
+										on:click={() => { episodes[ep.id] = (episodes[ep.id] || 0) + 1; markChanged(); }}
+										class="log-counter-btn"
+										aria-label="{$t('common.increase')} {$t(ep.label)}"
+									>
+										<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/></svg>
+									</button>
+								</div>
+							{/if}
 						</div>
 						<!-- Duration & time-of-day (shown when count > 0 and blueprint enables it) -->
 						{#if episodes[ep.id] > 0 && (ep.trackDuration || ep.trackTimeOfDay)}
 							<div class="log-episode-detail">
 								{#if ep.trackTimeOfDay}
 									<div class="log-episode-detail-field">
-										<label class="log-detail-label">{$t('protocol.time_of_day')}</label>
-										<input type="time" class="log-detail-input"
+										<label class="log-detail-label" for="ep-time-{ep.id}">{$t('protocol.time_of_day')}</label>
+										<input type="time" id="ep-time-{ep.id}" class="log-detail-input"
 											bind:value={episodeTimes[ep.id]}
 											on:input={markChanged}
 										/>
@@ -487,8 +654,8 @@
 								{/if}
 								{#if ep.trackDuration}
 									<div class="log-episode-detail-field">
-										<label class="log-detail-label">{$t('protocol.duration')}</label>
-										<select class="log-detail-input"
+										<label class="log-detail-label" for="ep-dur-{ep.id}">{$t('protocol.duration')}</label>
+										<select id="ep-dur-{ep.id}" class="log-detail-input"
 											bind:value={episodeDurations[ep.id]}
 											on:change={markChanged}
 										>
@@ -521,35 +688,93 @@
 			{/if}
 
 			<!-- ─── Vitals card ─── -->
-			{#if bp.vitals.length > 0}
-			<section class="log-card log-card--ochre">
+			{#if visibleVitals.length > 0}
+			<section id="section-vitals" class="log-card log-card--ochre">
 				<button class="log-section-toggle" on:click={() => toggleSection('vitals')}>
 					<h2 class="log-section-header">{$t('protocol.vitals')}</h2>
 					<svg class="log-section-chevron" class:log-section-chevron--open={!collapsed['vitals']} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
 				{#if !collapsed['vitals']}
 				<div class="log-vitals-grid">
-					{#each bp.vitals.filter(v => !v.multiEntry) as vital}
+					{#each visibleVitals.filter(v => !v.multiEntry) as vital}
 						<div class="log-vital">
 							<label class="log-vital-label" for="vital-{vital.id}">
 								{$t(vital.label)}
 								{#if vital.unit}<span class="log-vital-unit">({vital.unit})</span>{/if}
 							</label>
-							<input
-								id="vital-{vital.id}"
-								type="text"
-								inputmode="decimal"
-								bind:value={vitals[vital.id]}
-								placeholder={vital.placeholder}
-								on:input={markChanged}
-								class="input"
-							/>
+							{#if vital.min !== undefined && vital.max !== undefined}
+								<input
+									id="vital-{vital.id}"
+									type="number"
+									min={vital.min}
+									max={vital.max}
+									step="1"
+									bind:value={vitals[vital.id]}
+									placeholder={vital.placeholder}
+									on:input={markChanged}
+									class="input"
+								/>
+							{:else}
+								<input
+									id="vital-{vital.id}"
+									type="text"
+									inputmode="decimal"
+									bind:value={vitals[vital.id]}
+									placeholder={vital.placeholder}
+									on:input={markChanged}
+									class="input"
+								/>
+							{/if}
 						</div>
 					{/each}
 				</div>
 
-				<!-- Multi-entry vitals -->
-				{#each bp.vitals.filter(v => v.multiEntry) as vital}
+				<!-- Multi-entry vitals — paired vitals (same pairLabel) render side-by-side -->
+				{#each pairedMultiEntryGroups as group}
+					{#if group.length === 2}
+						<div class="log-paired-vitals">
+							{#each group as vital}
+								{@const pairTitle = vital.pairLabel ? $t(`vital.pair_${vital.pairLabel}`) : ''}
+								<div class="log-multi-entry log-multi-entry--paired">
+									<p class="log-vital-label" style="margin-bottom: 8px">
+										{$t(vital.label)}
+										{#if vital.unit}<span class="log-vital-unit">({vital.unit})</span>{/if}
+									</p>
+									{#if multiEntryVitals[vital.id]?.length > 0}
+										<div class="log-multi-list">
+											{#each multiEntryVitals[vital.id] as entry, i}
+												<div class="log-multi-item">
+													<span class="log-multi-time">{entry.time || '--:--'}</span>
+													<span class="log-multi-value">{entry.value} {vital.unit}</span>
+													<button type="button" class="log-multi-remove"
+														on:click={() => removeMultiEntry(vital.id, i)}
+														aria-label={$t('vital.remove_entry')}>
+														<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/></svg>
+													</button>
+												</div>
+											{/each}
+										</div>
+									{/if}
+									<div class="log-multi-add">
+										<input type="time" class="log-detail-input log-multi-add-time"
+											bind:value={multiEntryNewTime[vital.id]} placeholder="--:--" />
+										<input type="text" inputmode="decimal" class="log-detail-input log-multi-add-value"
+											bind:value={multiEntryNewValue[vital.id]} placeholder={vital.placeholder}
+											on:keydown={(e) => { if (e.key === 'Enter') addMultiEntry(vital.id); }} />
+										<button type="button" class="log-multi-add-btn"
+											on:click={() => addMultiEntry(vital.id)}
+											aria-label={$t('vital.add_entry')}>
+											<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/></svg>
+										</button>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{/each}
+
+				<!-- Multi-entry vitals — unpaired -->
+				{#each unpairedMultiEntryVitals as vital}
 					<div class="log-multi-entry">
 						<p class="log-vital-label" style="margin-bottom: 8px">
 							{$t(vital.label)}
@@ -609,7 +834,7 @@
 			{/if}
 
 			<!-- ─── Notes card ─── -->
-			<section class="log-card log-card--gray">
+			<section id="section-notes" class="log-card log-card--gray">
 				<button class="log-section-toggle" on:click={() => toggleSection('notes')}>
 					<h2 class="log-section-header">{$t('common.notes')}</h2>
 					<svg class="log-section-chevron" class:log-section-chevron--open={!collapsed['notes']} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -625,6 +850,21 @@
 			</section>
 		</div>
 	</div>
+
+	<!-- CIPH-302 — Incomplete-entry CTA (today only, after ≥3 days history) -->
+	{#if incompleteFields.length > 0}
+		<section class="log-incomplete-cta" aria-label={$t('log.incomplete_cta_title')}>
+			<p class="log-incomplete-title">{$t('log.incomplete_cta_title')}</p>
+			<div class="log-incomplete-chips">
+				<span class="log-incomplete-prefix">{$t('log.incomplete_cta_chip_prefix')}</span>
+				{#each incompleteFields as f}
+					<button type="button" class="log-incomplete-chip" on:click={() => jumpToField(f.kind, f.id)}>
+						{f.label}
+					</button>
+				{/each}
+			</div>
+		</section>
+	{/if}
 
 </div>
 
@@ -655,7 +895,7 @@
 				</button>
 				{#if saved}
 						<div class="log-saved-feedback" transition:fade={{ duration: 300 }}>
-							<Asterisk size={24} color="olive" />
+							<Asterisk size={24} mode="saved" color="olive" />
 							<span>{$t('protocol.auto_saved')}</span>
 						</div>
 					{:else}
@@ -699,6 +939,49 @@
 {/if}
 
 <style>
+	/* ─── Section-jump nav (mobile) — CIPH-420b ─── */
+	.log-section-nav {
+		position: sticky;
+		top: 56px; /* matches Tailwind top-14 = 3.5rem */
+		z-index: 30;
+		margin: -16px -16px 0;
+		padding: 8px 0;
+		background: var(--surface, #fff);
+		border-bottom: 1px solid var(--border, #e5e5e0);
+		backdrop-filter: blur(8px);
+	}
+	.log-section-nav-scroll {
+		display: flex;
+		gap: 8px;
+		overflow-x: auto;
+		padding: 0 16px;
+		scrollbar-width: none;
+		-webkit-overflow-scrolling: touch;
+	}
+	.log-section-nav-scroll::-webkit-scrollbar { display: none; }
+	.log-section-chip {
+		flex-shrink: 0;
+		padding: 6px 14px;
+		border-radius: 999px;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--text-muted, #888);
+		background: var(--surface-muted, #f4f4f0);
+		border: 1px solid transparent;
+		text-decoration: none;
+		scroll-margin: 8px;
+		transition: color 0.15s, background 0.15s, border-color 0.15s;
+	}
+	.log-section-chip--active {
+		color: var(--brand, #b04b2f);
+		font-weight: 700;
+		background: var(--surface, #fff);
+		border-color: var(--brand, #b04b2f);
+	}
+	@media (min-width: 768px) {
+		.log-section-nav { display: none; }
+	}
+
 	/* ─── Loading state ─── */
 	.log-loading {
 		display: flex;
@@ -1176,7 +1459,10 @@
 		transition: all 0.15s ease-out;
 	}
 	.log-btn-danger:hover {
-		background: #b91c1c;
+		/* CIPH-203b — was #b91c1c (semantic destructive hover). Use brand-hover
+		   style: a slightly darker tint of --danger via overlay shadow. */
+		background: var(--danger);
+		filter: brightness(0.88);
 	}
 	.log-btn-danger:disabled {
 		opacity: 0.5;
@@ -1207,6 +1493,43 @@
 			grid-template-columns: 1fr 1fr;
 			gap: 16px;
 		}
+	}
+
+	/* ─── Paired vitals (e.g. left/right IOP) ─── */
+	.log-paired-vitals {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px;
+		margin-top: 12px;
+	}
+	.log-multi-entry--paired {
+		margin-top: 0;
+	}
+	@media (max-width: 480px) {
+		.log-paired-vitals { grid-template-columns: 1fr; }
+	}
+
+	/* ─── Multi-day episode toggle ─── */
+	.log-multiday-toggle {
+		min-height: 44px;
+		padding: 6px 14px;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: var(--surface);
+		color: var(--text-secondary);
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.log-multiday-toggle--on {
+		background: var(--danger);
+		border-color: var(--danger);
+		color: white;
+	}
+	.log-multiday-toggle:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	/* ─── Collapsible section toggle ─── */
@@ -1343,5 +1666,46 @@
 		0% { transform: scale(0.95); opacity: 0; }
 		50% { transform: scale(1.02); }
 		100% { transform: scale(1); opacity: 1; }
+	}
+
+	/* ─── CIPH-302 Incomplete-entry CTA ─── */
+	.log-incomplete-cta {
+		background: var(--ochre-light, rgba(159, 99, 11, 0.06));
+		border: 1px solid var(--ochre, #9f630b);
+		border-radius: 12px;
+		padding: 14px 16px;
+	}
+	.log-incomplete-title {
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--text-primary);
+		margin: 0 0 10px 0;
+		line-height: 1.4;
+	}
+	.log-incomplete-chips {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px;
+	}
+	.log-incomplete-prefix {
+		font-size: 12px;
+		color: var(--text-muted);
+		font-weight: 500;
+	}
+	.log-incomplete-chip {
+		font-size: 13px;
+		font-weight: 500;
+		padding: 6px 12px;
+		min-height: 36px;
+		border-radius: 999px;
+		background: var(--surface-card);
+		border: 1px solid var(--ochre, #9f630b);
+		color: var(--ochre, #9f630b);
+		cursor: pointer;
+		transition: background 0.15s ease-out;
+	}
+	.log-incomplete-chip:hover {
+		background: var(--ochre-light, rgba(159, 99, 11, 0.1));
 	}
 </style>

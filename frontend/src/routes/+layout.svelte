@@ -10,6 +10,8 @@
 	import { browser } from '$app/environment';
 	import { documents, documentsError } from '$lib/stores/documents';
 	import { blueprint, hasBlueprint } from '$lib/blueprint';
+	import { quickAddOpen } from '$lib/stores/quickAdd';
+	import BottomNav from '$lib/components/BottomNav.svelte';
 	import { fade, fly } from 'svelte/transition';
 
 	let docsLoadStarted = false;
@@ -23,12 +25,65 @@
 	// on boot and render a plain-language notice.
 	$: secureContextMissing = browser && (!window.isSecureContext || !window.crypto?.subtle);
 
-	// FAB quick-add state
+	// FAB quick-add state. The bottom-nav center FAB (CIPH-201) writes to
+	// the `quickAddOpen` store; we mirror it into the local `showQuickAdd`
+	// flag so the existing sheet markup keeps working unchanged.
 	let showQuickAdd = false;
+	$: if ($quickAddOpen && !showQuickAdd) showQuickAdd = true;
 	let quickAddNote = '';
 	let quickAddSelectedEpisode: string | null = null;
 	let quickAddSaving = false;
 	let quickAddSaved = false;
+
+	// FAB onboarding (CIPH-102): pulse + tooltip for the first 3 sessions so
+	// the quick-add affordance isn't invisible. Klara missed it for 3 min in
+	// her walkthrough. Session count is incremented once per app load in
+	// onMount below. Tooltip is dismissable and its dismissal is remembered.
+	let fabSeenCount = 0;
+	let fabTooltipDismissed = true;
+	$: fabPulse = browser && fabSeenCount < 3;
+	$: fabShowTooltip = browser && fabSeenCount < 3 && !fabTooltipDismissed;
+
+	function dismissFabTooltip() {
+		fabTooltipDismissed = true;
+		if (browser) {
+			try { localStorage.setItem('ciphra_fab_tooltip_dismissed', 'true'); } catch {}
+		}
+	}
+
+	// CIPH-103 — after the user's first daily_log save, show a one-time
+	// tooltip explaining event lines. Triggered from /log/[date] by
+	// dispatching a `ciphra:first-daily-log` CustomEvent on window.
+	let showEventLineTooltip = false;
+	function dismissEventLineTooltip() {
+		showEventLineTooltip = false;
+		if (browser) {
+			try { localStorage.setItem('ciphra_event_line_tooltip_seen', 'true'); } catch {}
+		}
+	}
+
+	onMount(() => {
+		if (!browser) return;
+		try {
+			const raw = localStorage.getItem('ciphra_fab_seen_count');
+			const n = raw ? parseInt(raw, 10) : 0;
+			fabSeenCount = Number.isFinite(n) ? n + 1 : 1;
+			localStorage.setItem('ciphra_fab_seen_count', String(fabSeenCount));
+			fabTooltipDismissed = localStorage.getItem('ciphra_fab_tooltip_dismissed') === 'true';
+		} catch {
+			fabSeenCount = 3; // fail-safe: suppress rather than spam
+			fabTooltipDismissed = true;
+		}
+
+		const onFirstDailyLog = () => {
+			try {
+				if (localStorage.getItem('ciphra_event_line_tooltip_seen') === 'true') return;
+			} catch {}
+			showEventLineTooltip = true;
+		};
+		window.addEventListener('ciphra:first-daily-log', onFirstDailyLog);
+		return () => window.removeEventListener('ciphra:first-daily-log', onFirstDailyLog);
+	});
 
 	$: bp = $blueprint;
 
@@ -66,11 +121,13 @@
 			quickAddSelectedEpisode = null;
 			quickAddNote = '';
 			showQuickAdd = false;
+			quickAddOpen.set(false);
 		}, 1200);
 	}
 
 	function quickAddReset() {
 		showQuickAdd = false;
+		quickAddOpen.set(false);
 		quickAddSelectedEpisode = null;
 		quickAddNote = '';
 	}
@@ -169,13 +226,6 @@
 		goto('/login');
 	}
 
-	const navItems = [
-		{ path: '/', icon: 'home', labelKey: 'nav.today' },
-		{ path: '/journal', icon: 'book-open', labelKey: 'nav.journal' },
-		{ path: '/calendar', icon: 'calendar', labelKey: 'nav.calendar' },
-		{ path: '/reports', icon: 'bar-chart', labelKey: 'nav.reports' },
-		{ path: '/settings', icon: 'settings', labelKey: 'nav.settings' },
-	];
 </script>
 
 {#if secureContextMissing}
@@ -190,7 +240,7 @@
 {:else if !$authReady}
 	<!-- Stable background while auth hydrates — no content to prevent flashing -->
 	<div class="min-h-screen bg-surface"></div>
-{:else if currentPath === '/login' || currentPath === '/privacy' || currentPath === '/terms' || currentPath.startsWith('/conditions') || currentPath.startsWith('/join/')}
+{:else if (currentPath === '/login' || currentPath === '/privacy' || currentPath === '/terms' || currentPath.startsWith('/conditions') || currentPath.startsWith('/join/')) && !$isAuthenticated}
 	<!-- Public-page chrome: the same nav as the landing page, not a reduced
 		 "lean" variant, so visitors see one identity across every
 		 unauthenticated view. Anchors like #how / #security point back to
@@ -247,7 +297,7 @@
 		</div>
 	</nav>
 	<slot />
-{:else if $isAuthenticated && currentPath !== '/login'}
+{:else if $isAuthenticated && currentPath !== '/login' && currentPath !== '/setup'}
 	<!-- Top Bar -->
 	<header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b">
 		<div class="max-w-6xl mx-auto px-4 flex items-center justify-between h-14 gap-2">
@@ -261,6 +311,31 @@
 					</g>
 				</svg>
 			</a>
+
+			<!-- Desktop primary nav (CIPH-201 follow-up) — bottom-nav handles
+			     mobile, but on >=md the only navigation in the header was logo
+			     + settings + logout, leaving users stranded. Mirror the 4 main
+			     routes here. Active route gets brand color + brand bottom border. -->
+			<nav class="hidden md:flex items-center gap-1 ml-2" aria-label="Primary">
+				{#each [
+					{ href: '/',         label: $t('nav.today') },
+					{ href: '/calendar', label: $t('nav.calendar') },
+					{ href: '/journal',  label: $t('nav.journal') },
+					{ href: '/reports',  label: $t('nav.reports') }
+				] as item}
+					{@const active = item.href === '/'
+						? currentPath === '/'
+						: currentPath === item.href || currentPath.startsWith(item.href + '/')}
+					<a
+						href={item.href}
+						class="text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+						style="color: {active ? 'var(--brand)' : 'var(--text-secondary)'};
+						       {active ? 'background: var(--surface-muted);' : ''}"
+						aria-current={active ? 'page' : undefined}
+					>{item.label}</a>
+				{/each}
+			</nav>
+
 			{#if liveLinks.length > 0}
 				<!-- Vault switcher: visible label + eye icon so it reads as
 					 "you're viewing X" rather than a bare dropdown. -->
@@ -298,6 +373,18 @@
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.031 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</a>
 				{/if}
+				<!-- Settings (kept in header per CIPH-201; not a primary daily action) -->
+				<a
+					href="/settings"
+					class="p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center
+						{currentPath === '/settings'
+							? 'text-brand bg-surface-muted'
+							: 'text-slate-500 hover:bg-surface-muted'}"
+					aria-label={$t('nav.settings')}
+					title={$t('nav.settings')}
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-width="2"/></svg>
+				</a>
 				<!-- Logout -->
 				<button
 					type="button"
@@ -339,10 +426,10 @@
 	{/if}
 
 	{#if $documentsError}
-		<div class="mx-4 mt-2 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
-			<svg class="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke-width="2" stroke-linecap="round"/></svg>
-			<p class="text-sm text-red-700">{$documentsError}</p>
-			<button on:click={() => { documentsError.set(null); documents.load(); }} class="ml-auto text-xs font-medium text-red-600 hover:text-red-800 min-h-[44px] px-2">{$t('common.retry')}</button>
+		<div class="mx-4 mt-2 p-3 rounded-xl flex items-center gap-3" style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)">
+			<svg class="w-5 h-5 shrink-0" style="color: var(--danger)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke-width="2" stroke-linecap="round"/></svg>
+			<p class="text-sm" style="color: var(--danger)">{$documentsError}</p>
+			<button on:click={() => { documentsError.set(null); documents.load(); }} class="ml-auto text-xs font-medium min-h-[44px] px-2" style="color: var(--danger)">{$t('common.retry')}</button>
 		</div>
 	{/if}
 
@@ -352,11 +439,41 @@
 
 	<!-- FAB (+) button -->
 	{#if bp && $hasBlueprint && currentPath !== '/login' && currentPath !== '/setup'}
+		{#if fabShowTooltip}
+			<!-- First-session onboarding tooltip: dismissable, never shown after. -->
+			<button
+				type="button"
+				on:click={dismissFabTooltip}
+				class="fab-tooltip"
+				style="bottom: calc(8rem + env(safe-area-inset-bottom, 0px)); right: 1rem;"
+				transition:fade={{ duration: 200 }}
+				aria-label={$t('fab.tooltip_dismiss')}
+			>
+				<p class="text-xs leading-snug">{$t('fab.tooltip_text')}</p>
+				<p class="text-[10px] mt-1 opacity-80 underline">{$t('fab.tooltip_dismiss')}</p>
+			</button>
+		{/if}
+		{#if showEventLineTooltip}
+			<!-- One-time event-line onboarding tooltip after the user's first
+				 daily_log. Points at the FAB; click to dismiss forever. -->
+			<button
+				type="button"
+				on:click={dismissEventLineTooltip}
+				class="fab-tooltip fab-tooltip--event"
+				style="bottom: calc(8rem + env(safe-area-inset-bottom, 0px)); right: 1rem;"
+				transition:fade={{ duration: 200 }}
+				aria-label={$t('fab.tooltip_dismiss')}
+			>
+				<p class="text-xs leading-snug">{$t('tooltip.event_line_intro')}</p>
+				<p class="text-[10px] mt-1 opacity-80 underline">{$t('fab.tooltip_dismiss')}</p>
+			</button>
+		{/if}
 		<button
-			on:click={() => showQuickAdd = true}
-			class="fab"
+			on:click={() => { if (fabShowTooltip) dismissFabTooltip(); if (showEventLineTooltip) dismissEventLineTooltip(); showQuickAdd = true; }}
+			class="fab hidden md:flex"
+			class:fab-pulse={fabPulse}
 			style="bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); right: 1rem;"
-			aria-label={$t('companion.quick_add')}
+			aria-label={$t('fab.aria_label')}
 		>
 			<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 		</button>
@@ -417,6 +534,7 @@
 								bind:value={quickAddNote}
 								placeholder={$t('quickadd.note')}
 								class="input"
+								on:input={() => { if (fabShowTooltip) dismissFabTooltip(); }}
 								on:keydown={(e) => { if (e.key === 'Enter' && (quickAddSelectedEpisode || quickAddNote.trim())) quickAddSave(); }}
 							/>
 						</div>
@@ -446,34 +564,13 @@
 		{/if}
 	{/if}
 
-	<!-- Bottom Navigation -->
-	<nav class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t" style="padding-bottom: env(safe-area-inset-bottom, 0px)" aria-label="Main navigation">
-		<div class="max-w-2xl mx-auto flex justify-around">
-			{#each navItems as item}
-				<a
-					href={item.path}
-					class="flex flex-col items-center py-2 px-3 min-w-[64px] min-h-[56px] justify-center transition-colors
-						{currentPath === item.path
-							? 'text-brand'
-							: 'text-warm-400 hover:text-warm-600'}"
-					aria-current={currentPath === item.path ? 'page' : undefined}
-				>
-					{#if item.icon === 'home'}
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="9,22 9,12 15,12 15,22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					{:else if item.icon === 'book-open'}
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					{:else if item.icon === 'calendar'}
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
-					{:else if item.icon === 'bar-chart'}
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="20" x2="12" y2="4" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="20" x2="6" y2="14" stroke-width="2" stroke-linecap="round"/></svg>
-					{:else if item.icon === 'settings'}
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-width="2"/></svg>
-					{/if}
-					<span class="text-[10px] mt-0.5 font-medium">{$t(item.labelKey)}</span>
-				</a>
-			{/each}
-		</div>
-	</nav>
+	<!-- Mobile bottom-tab navigation (CIPH-201). md:hidden — desktop uses
+		 the existing FAB + header. -->
+	<BottomNav />
 {:else}
 	<slot />
 {/if}
+
+<!-- Mount BottomNav on public chrome too, but it self-hides on those routes
+	 via its own pathname check. Keeping the mount point inside the auth
+	 branch above is fine — public routes don't need it. -->

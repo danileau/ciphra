@@ -169,7 +169,7 @@
 			<Asterisk size={32} spin color="muted" />
 		</div>
 	{:else if error}
-		<div class="rounded-xl p-4" style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.15);">
+		<div class="rounded-xl p-4" style="background: rgba(var(--danger-rgb),0.05); border: 1px solid rgba(var(--danger-rgb),0.15);">
 			<p class="text-sm" style="color: var(--danger);">{error}</p>
 		</div>
 	{:else}
@@ -284,7 +284,7 @@
 														<button
 															on:click={() => handleUnlock(user)}
 															class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
-															style="background: rgba(5,150,105,0.08); color: var(--success);"
+															style="background: rgba(var(--success-rgb),0.10); color: var(--success);"
 														>{$t('admin.unlock')}</button>
 													{:else}
 														<button
@@ -296,7 +296,7 @@
 													<button
 														on:click={() => confirmDelete(user)}
 														class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
-														style="background: rgba(220,38,38,0.06); color: var(--danger);"
+														style="background: rgba(var(--danger-rgb),0.06); color: var(--danger);"
 													>{$t('common.delete')}</button>
 												{/if}
 											</div>

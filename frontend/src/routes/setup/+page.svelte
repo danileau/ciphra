@@ -1,216 +1,226 @@
 <script lang="ts">
+	/**
+	 * CIPH-301 — Setup wizard expansion (3 screens with skip).
+	 *
+	 * Design decision (spec): the blueprint is kept STOCK for now. Screen 2 + 3
+	 * collect informational overrides (`setupOverrides`) that are NOT persisted
+	 * to the blueprint — they're session-only hints for onboarding. The only
+	 * persisted output is `ciphra_vital_targets:<username>` in localStorage,
+	 * which `generateDoctorPdf` reads as an override for `referenceLine.value`.
+	 * Full blueprint customisation remains reachable via /settings (old 7-step
+	 * wizard — not replaced here).
+	 */
 	import { t } from '$lib/i18n';
-	import { isAuthenticated } from '$lib/stores/auth';
-	import { documents } from '$lib/stores/documents';
+	import { isAuthenticated, auth } from '$lib/stores/auth';
 	import { blueprint, presets } from '$lib/blueprint';
-	import type { Blueprint, BlueprintItem, BlueprintGroup, EpisodeType, VitalField, MedicationSlot } from '$lib/blueprint';
+	import type { Blueprint, MedicationSlot } from '$lib/blueprint';
 	import type { PresetInfo } from '$lib/blueprint';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import Asterisk from '$lib/components/Asterisk.svelte';
+	import { onMount, tick } from 'svelte';
+	import { get } from 'svelte/store';
 
-	let step = 1; // 1=pick preset, 2=symptoms, 3=episodes, 4=triggers, 5=vitals, 6=medications, 7=confirm
-	const totalSteps = 7;
+	let step: 1 | 2 | 3 | 4 = 1;
 	let working: Blueprint | null = null;
 	let saving = false;
 
-	// For adding custom items — per-group input state
-	let groupInputs: Record<number, string> = {};
-	let newGroupLabel = '';
-	let newEpisodeLabel = '';
-	let newTriggerLabel = '';
-	let newVitalLabel = '';
-	let newVitalUnit = '';
-	let newMedName = '';
-	let newMedDose = '';
-	let newMedSchedule = '';
-	let newMedAsNeeded = false;
+	// Session-only overrides — not persisted to the blueprint. Document keys
+	// are group ids / trigger ids / vital ids. `true` = keep asking, `false`
+	// = hide from prompts. (Actual blueprint stays untouched; these are a UI
+	// hint layer we can surface in future stories without schema migration.)
+	let symptomGroupOn: Record<string, boolean> = {};
+	let triggerOn: Record<string, boolean> = {};
+	let vitalOn: Record<string, boolean> = {};
+	let vitalTargets: Record<string, string> = {};
+
+	// CIPH-411c — step 4 medication entry
+	let medName = '';
+	let medDose = '';
+	let medSchedule = '';
+	let medAsNeeded = false;
+
+	function newMedId(): string {
+		try {
+			if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+				return crypto.randomUUID();
+			}
+		} catch { /* fallthrough */ }
+		return `med-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+	}
+
+	function addMed() {
+		if (!working) return;
+		const name = medName.trim();
+		const dose = medDose.trim();
+		if (!name || !dose) return;
+		const schedule = medSchedule.trim();
+		const med: MedicationSlot = { id: newMedId(), name, dose, schedule, asNeeded: medAsNeeded };
+		working.medications = [...working.medications, med];
+		medName = '';
+		medDose = '';
+		medSchedule = '';
+		medAsNeeded = false;
+	}
+
+	function removeMed(id: string) {
+		if (!working) return;
+		working.medications = working.medications.filter(m => m.id !== id);
+	}
 
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
-		// If blueprint already exists (re-entry from settings), load it for editing
-		const existing = $blueprint;
+		// Re-entry with an existing blueprint: pre-seed `working` so the
+		// toggle screens reflect what the user already has. They can Skip
+		// out at any point — no destructive resave happens unless they
+		// reach screen 3 and hit "Complete".
+		const existing = get(blueprint);
 		if (existing) {
 			working = JSON.parse(JSON.stringify(existing));
-			step = 2; // skip preset selection, go straight to editing
+			// CIPH-301b — pre-seed toggle state from any prior customizations.
+			// A symptom group is "on" iff none of its items are hidden.
+			const cz = working!.customizations || {};
+			const hSym = new Set(cz.hiddenSymptoms || []);
+			const hTrg = new Set(cz.hiddenTriggers || []);
+			const hVit = new Set(cz.hiddenVitals || []);
+			for (const g of working!.symptomGroups) {
+				symptomGroupOn[g.id] = !g.items.every((it) => hSym.has(it.id));
+			}
+			for (const tr of working!.triggers) triggerOn[tr.id] = !hTrg.has(tr.id);
+			for (const v of working!.vitals) vitalOn[v.id] = !hVit.has(v.id);
 		}
 	});
 
 	function selectPreset(preset: PresetInfo) {
 		working = JSON.parse(JSON.stringify(preset.blueprint));
-		if (preset.id === 'custom' && working) {
-			working.conditionLabel = '';
+		// Defaults: all groups / triggers / vitals ON (spec: "default ALL ON").
+		if (working) {
+			for (const g of working.symptomGroups) symptomGroupOn[g.id] = true;
+			for (const tr of working.triggers) triggerOn[tr.id] = true;
+			for (const v of working.vitals) vitalOn[v.id] = true;
 		}
 		step = 2;
 	}
 
-	function toggleSymptom(groupIdx: number, itemId: string) {
-		if (!working) return;
-		const group = working.symptomGroups[groupIdx];
-		const idx = group.items.findIndex(i => i.id === itemId);
-		if (idx >= 0) {
-			group.items.splice(idx, 1);
-		}
-		working = working; // trigger reactivity
-	}
-
-	function addSymptomToGroup(groupIdx: number) {
-		const val = (groupInputs[groupIdx] || '').trim();
-		if (!working || !val) return;
-		const id = val.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_äöüàéèêïôùûç]/g, '');
-		working.symptomGroups[groupIdx].items.push({ id, label: val });
-		groupInputs[groupIdx] = '';
-		groupInputs = groupInputs; // trigger reactivity
-		working = working;
-	}
-
-	function addGroup() {
-		if (!working || !newGroupLabel.trim()) return;
-		const id = newGroupLabel.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-		working.symptomGroups.push({ id, label: newGroupLabel.trim(), items: [] });
-		newGroupLabel = '';
-		working = working;
-	}
-
-	function removeGroup(idx: number) {
-		if (!working) return;
-		working.symptomGroups.splice(idx, 1);
-		working = working;
-	}
-
-	function addEpisodeType() {
-		if (!working || !newEpisodeLabel.trim()) return;
-		const id = newEpisodeLabel.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-		const colors = ['#DC2626', '#F59E0B', '#8B5CF6', '#EC4899', '#b23c2c', '#9f630b'];
-		working.episodeTypes.push({
-			id,
-			label: newEpisodeLabel.trim(),
-			color: colors[working.episodeTypes.length % colors.length],
-		});
-		newEpisodeLabel = '';
-		working = working;
-	}
-
-	function removeEpisode(idx: number) {
-		if (!working) return;
-		working.episodeTypes.splice(idx, 1);
-		working = working;
-	}
-
-	function addTrigger() {
-		if (!working || !newTriggerLabel.trim()) return;
-		const id = newTriggerLabel.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-		working.triggers.push({ id, label: newTriggerLabel.trim() });
-		newTriggerLabel = '';
-		working = working;
-	}
-
-	function removeTrigger(idx: number) {
-		if (!working) return;
-		working.triggers.splice(idx, 1);
-		working = working;
-	}
-
-	function addVital() {
-		if (!working || !newVitalLabel.trim()) return;
-		const id = newVitalLabel.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-		working.vitals.push({ id, label: newVitalLabel.trim(), unit: newVitalUnit.trim() || '', placeholder: '' });
-		newVitalLabel = '';
-		newVitalUnit = '';
-		working = working;
-	}
-
-	function removeVital(idx: number) {
-		if (!working) return;
-		working.vitals.splice(idx, 1);
-		working = working;
-	}
-
-	function addMedication() {
-		if (!working || !newMedName.trim()) return;
-		const id = 'med_' + Date.now();
-		working.medications.push({
-			id,
-			name: newMedName.trim(),
-			dose: newMedDose.trim(),
-			schedule: newMedSchedule.trim(),
-			asNeeded: newMedAsNeeded,
-		});
-		newMedName = '';
-		newMedDose = '';
-		newMedSchedule = '';
-		newMedAsNeeded = false;
-		working = working;
-	}
-
-	function removeMedication(idx: number) {
-		if (!working) return;
-		working.medications.splice(idx, 1);
-		working = working;
-	}
-
-	async function finalize() {
-		if (!working) return;
+	async function finishAndSave() {
+		if (!working) { goto('/'); return; }
 		saving = true;
 
-		// Auto-populate grid columns from first items
-		working.gridSymptomColumns = working.symptomGroups
-			.flatMap(g => g.items.map(i => i.id))
-			.slice(0, 7);
-		working.gridEpisodeColumns = working.episodeTypes
-			.map(e => e.id)
-			.slice(0, 3);
-
-		// Auto-populate stream filters
-		if (working.episodeTypes.length > 0 && !working.streamFilters.find(f => f.key === 'episode')) {
-			working.streamFilters = [
-				{ key: 'all', label: $t('stream.all') },
-				{ key: 'daily_log', label: $t('protocol.title') },
-				{ key: 'episode', label: working.episodeTypes.length === 1 ? working.episodeTypes[0].label : $t('protocol.episodes') },
-				{ key: 'event', label: $t('stream.events') },
-			];
+		// CIPH-301b — Persist the wizard toggle state into
+		// `blueprint.customizations.hidden*`. Symptom toggles are per-GROUP
+		// in this UI (the wizard intentionally aggregates), so hiding a
+		// group expands to hiding every BlueprintItem.id inside it.
+		// Triggers + vitals are per-item already.
+		const hiddenSymptoms: string[] = [];
+		for (const g of working.symptomGroups) {
+			if (symptomGroupOn[g.id] === false) {
+				for (const item of g.items) hiddenSymptoms.push(item.id);
+			}
+		}
+		const hiddenTriggers: string[] = [];
+		for (const tr of working.triggers) {
+			if (triggerOn[tr.id] === false) hiddenTriggers.push(tr.id);
+		}
+		const hiddenVitals: string[] = [];
+		for (const v of working.vitals) {
+			if (vitalOn[v.id] === false) hiddenVitals.push(v.id);
+		}
+		// Only attach `customizations` when something was actually hidden,
+		// so blueprints stay clean for users who toggled nothing off.
+		if (hiddenSymptoms.length || hiddenTriggers.length || hiddenVitals.length) {
+			working.customizations = {
+				...(working.customizations || {}),
+				hiddenSymptoms,
+				hiddenTriggers,
+				hiddenVitals,
+			};
 		}
 
 		await blueprint.save(working);
+		// Persist per-user vital target overrides (spec: CIPH-301 screen 3).
+		const username = $auth.username || '';
+		if (username) {
+			const parsed: Record<string, number> = {};
+			for (const [vid, raw] of Object.entries(vitalTargets)) {
+				const n = Number(raw);
+				if (!isNaN(n) && n !== 0 && raw.trim() !== '') parsed[vid] = n;
+			}
+			try {
+				if (Object.keys(parsed).length > 0) {
+					localStorage.setItem(`ciphra_vital_targets:${username}`, JSON.stringify(parsed));
+				}
+			} catch { /* private-mode or quota — non-fatal */ }
+		}
 		saving = false;
 		goto('/');
 	}
 
-	function nextStep() { if (step < totalSteps) step++; }
-	function prevStep() { if (step > 1) step--; }
+	async function skipFromStep1() {
+		// Skipping from screen 1 before choosing a preset → nothing to save.
+		goto('/');
+	}
 
-	$: allSymptoms = working ? working.symptomGroups.flatMap(g => g.items) : [];
+	async function skipFromLater() {
+		// Screens 2/3 — we already have a working blueprint from step 1.
+		await finishAndSave();
+	}
+
+	function goNext() {
+		if (step === 2) step = 3;
+		else if (step === 3) step = 4;
+	}
+	function goBack() {
+		if (step === 4) step = 3;
+		else if (step === 3) step = 2;
+		else if (step === 2) step = 1;
+	}
+
+	// Vitals worth a "target" input = vitals that already carry a
+	// clinical `referenceLine`. No override for vitals without one —
+	// the default placeholder value is fine and we'd need the clinical
+	// label which we don't have here.
+	$: targetableVitals = working
+		? working.vitals.filter((v) => v.referenceLine)
+		: [];
+
+	// Focus management — step changes should move focus to the new heading
+	// for screen-reader users (CIPH-402 landmarks work to come).
+	let headingEl: HTMLElement | null = null;
+	$: if (step) { tick().then(() => headingEl?.focus()); }
 </script>
 
 <div class="min-h-screen pb-12" style="background: var(--surface)">
-	<!-- Header -->
+	<!-- Header with step progress + skip -->
 	<div style="background: var(--surface-card); border-bottom: 1px solid var(--border)">
-		<div class="max-w-2xl mx-auto px-4 py-6">
-			<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('setup.title')}</h1>
-			{#if step > 1}
-				<div class="flex items-center gap-2 mt-3">
-					{#each Array(totalSteps) as _, i}
-						<div class="h-1.5 flex-1 rounded-full" style="background: {i < step ? 'var(--olive)' : 'var(--surface-inset)'}"></div>
-					{/each}
-					<span class="text-xs ml-2" style="color: var(--text-muted)">{step}/{totalSteps}</span>
-				</div>
-			{/if}
+		<div class="max-w-2xl mx-auto px-4 py-5 flex items-center justify-between gap-3">
+			<div class="flex-1 min-w-0">
+				<h1 class="text-lg font-bold truncate" style="color: var(--text-primary)">{$t('setup.title')}</h1>
+				<p class="text-xs mt-0.5" style="color: var(--text-muted)">{$t('setup.step_label', { n: step })}</p>
+			</div>
+			<button
+				type="button"
+				on:click={step === 1 ? skipFromStep1 : skipFromLater}
+				class="text-sm font-medium px-3 py-2 min-h-[44px] rounded-lg"
+				style="color: var(--text-secondary); background: var(--surface-muted)"
+			>
+				{$t('setup.skip')}
+			</button>
+		</div>
+		<div class="max-w-2xl mx-auto px-4 pb-3 flex gap-2">
+			{#each [1, 2, 3, 4] as s}
+				<div class="h-1 flex-1 rounded-full" style="background: {s <= step ? 'var(--olive)' : 'var(--surface-inset)'}"></div>
+			{/each}
 		</div>
 	</div>
 
 	<div class="max-w-2xl mx-auto px-4 py-6">
-
-		<!-- STEP 1: Pick preset -->
+		<!-- ─── SCREEN 1: Condition picker ─── -->
 		{#if step === 1}
-			<div class="space-y-4">
+			<section aria-labelledby="wizard-step1-heading" class="space-y-4">
 				<div class="text-center mb-6">
-					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.choose_title')}</h2>
+					<h2 id="wizard-step1-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.choose_title')}</h2>
 					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.choose_subtitle')}</p>
 				</div>
 
 				<div class="grid gap-3">
-					<!-- Caregiver escape: users who only want to manage a linked
-						 account don't need their own blueprint. -->
 					<a href="/settings" class="block w-full text-left rounded-xl p-4 mb-2 transition-all"
 						style="background: var(--surface-muted); border: 1px dashed var(--border)">
 						<p class="text-sm font-semibold" style="color: var(--text-primary)">{$t('setup.skip_caregiver_title')}</p>
@@ -220,314 +230,197 @@
 					{#each presets as preset}
 						<button
 							on:click={() => selectPreset(preset)}
-							class="w-full text-left rounded-xl p-5 transition-all group"
+							class="w-full text-left rounded-xl p-5 transition-all"
 							style="background: var(--surface-card); border: 1px solid var(--border)"
 						>
 							<div class="flex items-start gap-4">
 								<div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background: {preset.color}15">
-									{#if preset.icon === 'zap'}
-										<svg class="w-6 h-6" style="color: {preset.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-									{:else if preset.icon === 'brain'}
-										<svg class="w-6 h-6" style="color: {preset.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 3 2 5.5 4 7.5S12 20 12 22c0-2 1-3.5 3-5.5s4-4.5 4-7.5a7 7 0 0 0-7-7z" stroke-width="2"/></svg>
-									{:else if preset.icon === 'droplet'}
-										<svg class="w-6 h-6" style="color: {preset.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" stroke-width="2"/></svg>
-									{:else if preset.icon === 'battery-low'}
-										<svg class="w-6 h-6" style="color: {preset.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="1" y="6" width="18" height="12" rx="2" ry="2" stroke-width="2"/><line x1="23" y1="13" x2="23" y2="11" stroke-width="2"/><line x1="5" y1="10" x2="5" y2="14" stroke-width="2"/></svg>
-									{:else if preset.icon === 'cloud-lightning'}
-										<svg class="w-6 h-6" style="color: {preset.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9" stroke-width="2"/><polyline points="13,11 9,17 15,17 11,23" stroke-width="2"/></svg>
-									{:else}
-										<svg class="w-6 h-6" style="color: {preset.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-width="2"/></svg>
-									{/if}
+									<svg class="w-6 h-6" style="color: {preset.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+										<circle cx="12" cy="12" r="4" stroke-width="2"/>
+									</svg>
 								</div>
 								<div class="flex-1">
-									<h3 class="text-base font-semibold transition-colors" style="color: var(--text-primary)">{$t(preset.labelKey)}</h3>
+									<h3 class="text-base font-semibold" style="color: var(--text-primary)">{$t(preset.labelKey)}</h3>
 									<p class="text-sm mt-0.5" style="color: var(--text-secondary)">{$t(preset.descriptionKey)}</p>
-									{#if preset.id !== 'custom'}
-										<a href="/conditions/{preset.id}" on:click|stopPropagation class="text-xs hover:underline mt-1 inline-block" style="color: var(--brand)">{$t('condition.cta_learn_more')}</a>
-									{/if}
 								</div>
 							</div>
 						</button>
 					{/each}
 				</div>
-			</div>
+			</section>
 
-		<!-- STEP 2: Customize symptoms -->
+		<!-- ─── SCREEN 2: Symptom group review ─── -->
 		{:else if step === 2 && working}
-			<div class="space-y-5">
+			<section aria-labelledby="wizard-step2-heading" class="space-y-5">
 				<div>
-					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.symptoms_title')}</h2>
-					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.symptoms_subtitle')}</p>
-				</div>
-
-				{#each working.symptomGroups as group, gi}
-					<div class="card p-4">
-						<div class="flex items-center justify-between mb-3">
-							<h3 class="text-sm font-semibold" style="color: var(--text-secondary)">{$t(group.label)}</h3>
-							<button on:click={() => removeGroup(gi)} class="text-xs min-h-[44px] px-2 transition-colors" style="color: var(--text-muted)" on:mouseenter={(e) => e.currentTarget.style.color = 'var(--danger)'} on:mouseleave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{$t('setup.group_delete')}</button>
-						</div>
-						<div class="flex flex-wrap gap-2">
-							{#each group.items as item}
-								<button
-									on:click={() => toggleSymptom(gi, item.id)}
-									class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors group min-h-[36px]"
-									style="background: var(--olive-light); color: var(--olive)"
-								>
-									{$t(item.label)} <span class="opacity-0 group-hover:opacity-100 ml-1">x</span>
-								</button>
-							{/each}
-						</div>
-						<!-- Add to this group -->
-						<div class="flex gap-2 mt-3">
-							<input type="text" bind:value={groupInputs[gi]} placeholder={$t('setup.symptoms_add')}
-								on:keydown={(e) => { if (e.key === 'Enter') addSymptomToGroup(gi); }}
-								class="input flex-1" />
-							<button on:click={() => addSymptomToGroup(gi)}
-								class="btn-primary px-4 rounded-xl text-sm font-medium">+</button>
-						</div>
-					</div>
-				{/each}
-
-				<!-- Add new group -->
-				<div class="flex gap-2">
-					<input type="text" bind:value={newGroupLabel} placeholder={$t('setup.group_add')}
-						on:keydown={(e) => { if (e.key === 'Enter') addGroup(); }}
-						class="input flex-1" />
-					<button on:click={addGroup}
-						class="btn-secondary px-4 rounded-xl text-sm font-medium">{$t('setup.group_add_button')}</button>
-				</div>
-			</div>
-
-		<!-- STEP 3: Episodes -->
-		{:else if step === 3 && working}
-			<div class="space-y-5">
-				<div>
-					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.episodes_title')}</h2>
-					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.episodes_subtitle')}</p>
+					<h2 id="wizard-step2-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.symptoms_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.wizard_symptoms_caption')}</p>
 				</div>
 
 				<div class="space-y-2">
-					{#each working.episodeTypes as ep, i}
-						<div class="card flex items-center justify-between p-4">
-							<div class="flex items-center gap-3">
-								<div class="w-4 h-4 rounded-full" style="background: {ep.color}"></div>
-								<span class="text-sm font-medium" style="color: var(--text-primary)">{$t(ep.label)}</span>
+					{#each working.symptomGroups as group}
+						<label class="flex items-center justify-between p-4 rounded-xl cursor-pointer min-h-[56px]"
+							style="background: var(--surface-card); border: 1px solid var(--border)">
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium" style="color: var(--text-primary)">{$t(group.label)}</p>
+								<p class="text-xs mt-0.5" style="color: var(--text-muted)">
+									{group.items.length} {$t('protocol.symptoms').toLowerCase()}
+								</p>
 							</div>
-							<button on:click={() => removeEpisode(i)} class="min-h-[44px] px-2 text-sm transition-colors" style="color: var(--text-muted)" on:mouseenter={(e) => e.currentTarget.style.color = 'var(--danger)'} on:mouseleave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{$t('setup.remove')}</button>
-						</div>
-					{/each}
-				</div>
-
-				<div class="flex gap-2">
-					<input type="text" bind:value={newEpisodeLabel} placeholder={$t('setup.episodes_add')}
-						on:keydown={(e) => { if (e.key === 'Enter') addEpisodeType(); }}
-						class="input flex-1" />
-					<button on:click={addEpisodeType}
-						class="btn-primary px-4 rounded-xl text-sm font-medium">{$t('setup.add')}</button>
-				</div>
-
-				{#if working.episodeTypes.length === 0}
-					<p class="text-sm text-center py-4" style="color: var(--text-muted)">{$t('setup.episodes_empty')}</p>
-				{/if}
-			</div>
-
-		<!-- STEP 4: Triggers -->
-		{:else if step === 4 && working}
-			<div class="space-y-5">
-				<div>
-					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.triggers_title')}</h2>
-					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.triggers_subtitle')}</p>
-				</div>
-
-				<div class="flex flex-wrap gap-2">
-					{#each working.triggers as trig, i}
-						<button
-							on:click={() => removeTrigger(i)}
-							class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors group min-h-[36px]"
-							style="background: var(--ochre-light); color: var(--ochre)"
-						>
-							{$t(trig.label)} <span class="opacity-0 group-hover:opacity-100 ml-1">x</span>
-						</button>
-					{/each}
-				</div>
-
-				<div class="flex gap-2">
-					<input type="text" bind:value={newTriggerLabel} placeholder={$t('setup.triggers_add')}
-						on:keydown={(e) => { if (e.key === 'Enter') addTrigger(); }}
-						class="input flex-1" />
-					<button on:click={addTrigger}
-						class="btn-primary px-4 rounded-xl text-sm font-medium">{$t('setup.add')}</button>
-				</div>
-			</div>
-
-		<!-- STEP 5: Vitals -->
-		{:else if step === 5 && working}
-			<div class="space-y-5">
-				<div>
-					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.vitals_title')}</h2>
-					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.vitals_subtitle')}</p>
-				</div>
-
-				<div class="space-y-2">
-					{#each working.vitals as vital, i}
-						<div class="card flex items-center justify-between p-4">
-							<div>
-								<span class="text-sm font-medium" style="color: var(--text-primary)">{$t(vital.label)}</span>
-								{#if vital.unit}
-									<span class="text-xs ml-1" style="color: var(--text-muted)">({vital.unit})</span>
-								{/if}
-							</div>
-							<button on:click={() => removeVital(i)} class="min-h-[44px] px-2 text-sm transition-colors" style="color: var(--text-muted)" on:mouseenter={(e) => e.currentTarget.style.color = 'var(--danger)'} on:mouseleave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{$t('setup.remove')}</button>
-						</div>
-					{/each}
-				</div>
-
-				<div class="flex gap-2">
-					<input type="text" bind:value={newVitalLabel} placeholder={$t('setup.vitals_name')}
-						on:keydown={(e) => { if (e.key === 'Enter') addVital(); }}
-						class="input flex-1" />
-					<input type="text" bind:value={newVitalUnit} placeholder={$t('setup.vitals_unit')}
-						on:keydown={(e) => { if (e.key === 'Enter') addVital(); }}
-						class="input w-24" />
-					<button on:click={addVital}
-						class="btn-primary px-4 rounded-xl text-sm font-medium">+</button>
-				</div>
-			</div>
-
-		<!-- STEP 6: Medications -->
-		{:else if step === 6 && working}
-			<div class="space-y-5">
-				<div>
-					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.meds_title')}</h2>
-					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.meds_subtitle')}</p>
-				</div>
-
-				<div class="space-y-2">
-					{#each working.medications as med, i}
-						<div class="card flex items-center justify-between p-4">
-							<div>
-								<span class="text-sm font-medium" style="color: var(--text-primary)">{med.name}</span>
-								{#if med.dose}
-									<span class="text-xs ml-1" style="color: var(--text-muted)">{med.dose}</span>
-								{/if}
-								{#if med.schedule}
-									<span class="text-xs ml-1" style="color: var(--text-muted)">({med.schedule})</span>
-								{/if}
-								{#if med.asNeeded}
-									<span class="ml-2 badge-ochre badge">{$t('setup.as_needed_badge')}</span>
-								{/if}
-							</div>
-							<button on:click={() => removeMedication(i)} class="min-h-[44px] px-2 text-sm transition-colors" style="color: var(--text-muted)" on:mouseenter={(e) => e.currentTarget.style.color = 'var(--danger)'} on:mouseleave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{$t('setup.remove')}</button>
-						</div>
-					{/each}
-				</div>
-
-				<div class="card p-4 space-y-3">
-					<div class="flex gap-2">
-						<input type="text" bind:value={newMedName} placeholder={$t('setup.meds_name')}
-							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
-							class="input flex-1" />
-						<input type="text" bind:value={newMedDose} placeholder={$t('setup.meds_dose')}
-							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
-							class="input w-28" />
-					</div>
-					<div class="flex gap-2 items-center">
-						<input type="text" bind:value={newMedSchedule} placeholder={$t('setup.meds_schedule')}
-							on:keydown={(e) => { if (e.key === 'Enter') addMedication(); }}
-							class="input flex-1" />
-						<label class="flex items-center gap-2 text-sm whitespace-nowrap min-h-[44px] cursor-pointer" style="color: var(--text-secondary)">
-							<input type="checkbox" bind:checked={newMedAsNeeded} class="rounded" style="border-color: var(--border); accent-color: var(--brand)" />
-							{$t('setup.meds_as_needed')}
+							<input
+								type="checkbox"
+								bind:checked={symptomGroupOn[group.id]}
+								class="w-5 h-5 ml-3"
+								style="accent-color: var(--olive)"
+							/>
 						</label>
-					</div>
-					<button on:click={addMedication}
-						class="btn-primary w-full rounded-xl text-sm font-medium">{$t('setup.add')}</button>
+					{/each}
 				</div>
+			</section>
 
-				{#if working.medications.length === 0}
-					<p class="text-sm text-center py-4" style="color: var(--text-muted)">{$t('setup.meds_empty')}</p>
-				{/if}
-			</div>
-
-		<!-- STEP 7: Confirm -->
-		{:else if step === 7 && working}
-			<div class="space-y-5">
+		<!-- ─── SCREEN 3: Triggers + vitals (with optional targets) ─── -->
+		{:else if step === 3 && working}
+			<section aria-labelledby="wizard-step3-heading" class="space-y-6">
 				<div>
-					<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.confirm_title')}</h2>
-					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.confirm_subtitle')}</p>
+					<h2 id="wizard-step3-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.triggers_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.wizard_triggers_caption')}</p>
 				</div>
 
-				<div class="card p-5 space-y-4">
-					<div>
-						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_profile')}</h3>
-						<p class="text-sm font-semibold" style="color: var(--text-primary)">{working.conditionLabel ? $t(working.conditionLabel) : working.conditionId}</p>
+				{#if working.triggers.length > 0}
+					<div class="flex flex-wrap gap-2">
+						{#each working.triggers as trig}
+							<button
+								type="button"
+								on:click={() => { triggerOn[trig.id] = !triggerOn[trig.id]; triggerOn = triggerOn; }}
+								class="px-3 py-2 rounded-full text-sm font-medium min-h-[40px]"
+								style="background: {triggerOn[trig.id] ? 'var(--ochre-light)' : 'var(--surface-muted)'}; color: {triggerOn[trig.id] ? 'var(--ochre)' : 'var(--text-muted)'}; border: 1px solid {triggerOn[trig.id] ? 'var(--ochre)' : 'var(--border)'};"
+								aria-pressed={triggerOn[trig.id]}
+							>
+								{$t(trig.label)}
+							</button>
+						{/each}
 					</div>
-					<div>
-						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_symptoms')}</h3>
-						<p class="text-sm" style="color: var(--text-secondary)">{$t('setup.confirm_symptoms_count', { count: allSymptoms.length, groups: working.symptomGroups.length })}</p>
-						<div class="flex flex-wrap gap-1 mt-1">
-							{#each allSymptoms.slice(0, 10) as s}
-								<span class="text-xs px-2 py-0.5 rounded-full" style="background: var(--surface-muted); color: var(--text-secondary)">{$t(s.label)}</span>
-							{/each}
-							{#if allSymptoms.length > 10}
-								<span class="text-xs" style="color: var(--text-muted)">{$t('setup.confirm_more', { count: allSymptoms.length - 10 })}</span>
+				{/if}
+
+				<div>
+					<h3 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.vitals_title')}</h3>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.wizard_vitals_caption')}</p>
+				</div>
+
+				<div class="space-y-2">
+					{#each working.vitals as vital}
+						<div class="p-4 rounded-xl" style="background: var(--surface-card); border: 1px solid var(--border)">
+							<label class="flex items-center justify-between min-h-[32px] cursor-pointer">
+								<div class="flex-1 min-w-0">
+									<span class="text-sm font-medium" style="color: var(--text-primary)">{$t(vital.label)}</span>
+									{#if vital.unit}<span class="text-xs ml-1" style="color: var(--text-muted)">({vital.unit})</span>{/if}
+								</div>
+								<input
+									type="checkbox"
+									bind:checked={vitalOn[vital.id]}
+									class="w-5 h-5 ml-3"
+									style="accent-color: var(--olive)"
+								/>
+							</label>
+							{#if vital.referenceLine && vitalOn[vital.id]}
+								<div class="mt-3 flex items-center gap-2">
+									<label class="text-xs flex-1" for="target-{vital.id}" style="color: var(--text-secondary)">
+										{$t('setup.target_label')}
+									</label>
+									<input
+										id="target-{vital.id}"
+										type="number"
+										inputmode="decimal"
+										bind:value={vitalTargets[vital.id]}
+										placeholder={`${$t('setup.target_placeholder')} (${$t(vital.referenceLine.labelKey)}: ${vital.referenceLine.value})`}
+										class="input w-32"
+									/>
+								</div>
 							{/if}
 						</div>
-					</div>
-					<div>
-						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_episodes')}</h3>
-						{#if working.episodeTypes.length > 0}
-							<div class="flex flex-wrap gap-2">
-								{#each working.episodeTypes as ep}
-									<span class="text-xs px-2 py-1 rounded-full text-white" style="background: {ep.color}">{$t(ep.label)}</span>
-								{/each}
-							</div>
-						{:else}
-							<p class="text-sm" style="color: var(--text-muted)">{$t('setup.confirm_none')}</p>
-						{/if}
-					</div>
-					<div>
-						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_triggers')}</h3>
-						<p class="text-sm" style="color: var(--text-secondary)">{working.triggers.length} {$t('setup.configured')}</p>
-					</div>
-					<div>
-						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_vitals')}</h3>
-						<p class="text-sm" style="color: var(--text-secondary)">{working.vitals.length} {$t('setup.configured')}</p>
-					</div>
-					<div>
-						<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('setup.confirm_meds')}</h3>
-						{#if working.medications.length > 0}
-							<div class="flex flex-wrap gap-1">
-								{#each working.medications as med}
-									<span class="badge badge-olive">
-										{med.name} {med.dose}{#if med.asNeeded} ({$t('setup.as_needed_badge')}){/if}
-									</span>
-								{/each}
-							</div>
-						{:else}
-							<p class="text-sm" style="color: var(--text-muted)">{$t('setup.confirm_none')}</p>
-						{/if}
-					</div>
+					{/each}
+					{#if targetableVitals.length === 0 && working.vitals.length === 0}
+						<p class="text-sm text-center py-4" style="color: var(--text-muted)">—</p>
+					{/if}
 				</div>
-			</div>
+			</section>
+
+		<!-- ─── SCREEN 4: Medications (CIPH-411c) ─── -->
+		{:else if step === 4 && working}
+			<section aria-labelledby="wizard-step4-heading" class="space-y-5">
+				<div>
+					<h2 id="wizard-step4-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.medications_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.medications_subtitle')}</p>
+				</div>
+
+				{#if working.medications.length > 0}
+					<ul class="space-y-2">
+						{#each working.medications as med (med.id)}
+							<li class="flex items-center gap-3 p-3 rounded-xl" style="background: var(--surface-card); border: 1px solid var(--border)">
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium truncate" style="color: var(--text-primary)">{med.name}</p>
+									<p class="text-xs mt-0.5 truncate" style="color: var(--text-secondary)">
+										{med.dose}{med.schedule ? ' · ' + med.schedule : ''}{med.asNeeded ? ' · ' + $t('settings.medication_as_needed') : ''}
+									</p>
+								</div>
+								<button
+									type="button"
+									on:click={() => removeMed(med.id)}
+									class="text-xs font-medium px-2 py-1.5 rounded-lg min-h-[36px]"
+									style="color: var(--danger); background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)"
+								>
+									{$t('common.delete')}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
+				<div class="space-y-3 p-4 rounded-xl" style="background: var(--surface-card); border: 1px solid var(--border)">
+					<div>
+						<label class="text-xs block mb-1" for="wiz-med-name" style="color: var(--text-secondary)">{$t('settings.medication_name')}</label>
+						<input id="wiz-med-name" type="text" bind:value={medName} class="input" />
+					</div>
+					<div>
+						<label class="text-xs block mb-1" for="wiz-med-dose" style="color: var(--text-secondary)">{$t('settings.medication_dose')}</label>
+						<input id="wiz-med-dose" type="text" bind:value={medDose} class="input" placeholder="10mg" />
+					</div>
+					<div>
+						<label class="text-xs block mb-1" for="wiz-med-schedule" style="color: var(--text-secondary)">{$t('settings.medication_schedule')}</label>
+						<input id="wiz-med-schedule" type="text" bind:value={medSchedule} class="input" placeholder="morgens, abends" />
+					</div>
+					<label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--text-primary)">
+						<input type="checkbox" bind:checked={medAsNeeded} class="w-4 h-4" style="accent-color: var(--olive)" />
+						{$t('settings.medication_as_needed')}
+					</label>
+					<button
+						type="button"
+						on:click={addMed}
+						disabled={!medName.trim() || !medDose.trim()}
+						class="btn-secondary w-full rounded-xl text-sm font-medium min-h-[44px] disabled:opacity-50"
+					>
+						{$t('settings.add_medication')}
+					</button>
+				</div>
+			</section>
 		{/if}
 
 		<!-- Navigation buttons -->
 		{#if step > 1}
 			<div class="flex gap-3 mt-8">
-				<button on:click={prevStep}
+				<button on:click={goBack}
 					class="btn-secondary flex-1 rounded-xl font-medium min-h-[48px]">
 					{$t('setup.back')}
 				</button>
-				{#if step < totalSteps}
-					<button on:click={nextStep}
+				{#if step < 4}
+					<button on:click={goNext}
 						class="btn-primary flex-1 rounded-xl font-medium min-h-[48px]">
 						{$t('setup.next')}
 					</button>
 				{:else}
-					<button on:click={finalize} disabled={saving}
+					<button on:click={finishAndSave} disabled={saving}
 						class="btn-primary flex-1 rounded-xl font-medium min-h-[48px]">
-						{saving ? $t('setup.saving') : $t('setup.save')}
+						{saving ? $t('setup.saving') : $t('setup.complete_button')}
 					</button>
 				{/if}
 			</div>

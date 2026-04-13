@@ -1,20 +1,26 @@
 /**
- * ciphra — IndexedDB offline cache for encrypted documents
+ * ciphra — IndexedDB cache for decrypted documents.
  *
- * Stores raw encrypted blobs so data remains E2E encrypted at rest.
- * All operations are guarded for SSR safety.
+ * Stores plaintext alongside an etag (the ciphertext, which changes on every
+ * re-encrypt due to random GCM nonce). Subsequent loads reuse plaintext when
+ * the etag matches, skipping crypto entirely.
+ *
+ * Tradeoff: plaintext at rest on the device. Acceptable because logout /
+ * vault-switch wipes the cache, and any device-compromise scenario already
+ * defeats the in-memory master key too.
  */
 
 const DB_NAME = 'ciphra_cache';
-const DB_VERSION = 1;
-const STORE_NAME = 'documents';
+const DB_VERSION = 2;
+const STORE_NAME = 'decrypted_documents';
+const LEGACY_STORE = 'documents';
 
 export interface CachedDoc {
 	id: number;
 	user_id: string;
-	encrypted_data: string;
+	data: any;
+	etag: string;
 	created_at: string;
-	updated_at: string;
 }
 
 function openDB(): Promise<IDBDatabase> {
@@ -23,6 +29,9 @@ function openDB(): Promise<IDBDatabase> {
 
 		req.onupgradeneeded = () => {
 			const db = req.result;
+			if (db.objectStoreNames.contains(LEGACY_STORE)) {
+				db.deleteObjectStore(LEGACY_STORE);
+			}
 			if (!db.objectStoreNames.contains(STORE_NAME)) {
 				const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
 				store.createIndex('user_id', 'user_id', { unique: false });
@@ -34,9 +43,6 @@ function openDB(): Promise<IDBDatabase> {
 	});
 }
 
-/**
- * Get all cached documents for a given user.
- */
 export async function getAllDocs(userId: string): Promise<CachedDoc[]> {
 	if (typeof indexedDB === 'undefined') return [];
 
@@ -54,8 +60,7 @@ export async function getAllDocs(userId: string): Promise<CachedDoc[]> {
 }
 
 /**
- * Replace all cached documents for a user.
- * Clears existing docs for the user, then inserts the new set.
+ * Replace all cached documents for a user with the given set.
  */
 export async function putDocs(userId: string, docs: CachedDoc[]): Promise<void> {
 	if (typeof indexedDB === 'undefined') return;
@@ -66,16 +71,13 @@ export async function putDocs(userId: string, docs: CachedDoc[]): Promise<void> 
 		const store = tx.objectStore(STORE_NAME);
 		const index = store.index('user_id');
 
-		// First, delete all existing docs for this user
 		const cursorReq = index.openCursor(userId);
 		cursorReq.onsuccess = () => {
 			const cursor = cursorReq.result;
 			if (cursor) {
 				cursor.delete();
 				cursor.continue();
-			}
-			// Once cursor is exhausted (cursor === null), insert new docs
-			if (!cursor) {
+			} else {
 				for (const doc of docs) {
 					store.put({ ...doc, user_id: userId });
 				}
@@ -87,9 +89,6 @@ export async function putDocs(userId: string, docs: CachedDoc[]): Promise<void> 
 	});
 }
 
-/**
- * Clear all cached documents for a user (e.g. on logout).
- */
 export async function clearDocs(userId: string): Promise<void> {
 	if (typeof indexedDB === 'undefined') return;
 

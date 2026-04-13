@@ -4,9 +4,17 @@
   Usage:
     <Asterisk />                     — static mark (logo size)
     <Asterisk size={48} />           — large
-    <Asterisk spin />                — loading spinner
+    <Asterisk spin />                — legacy fast spinner (kept for back-compat)
     <Asterisk color="ochre" />       — ochre variant
     <Asterisk muted />               — faded (empty state, watermark)
+
+  CIPH-204 modes (mode prop):
+    mode="static"   — default, decorative
+    mode="loading"  — gentle 3.6s rotation (skeleton placeholder)
+    mode="saved"    — quick scale + olive flash (~700ms)
+    mode="empty"    — slow opacity pulse (3s, empty-state icon)
+
+  All animations honor `prefers-reduced-motion`.
 
   The mark is rotated 8° with asymmetric arms — designed, not typed.
 -->
@@ -15,6 +23,7 @@
 	export let spin: boolean = false;
 	export let muted: boolean = false;
 	export let color: 'brand' | 'ochre' | 'olive' | 'coral' | 'white' | 'muted' = 'brand';
+	export let mode: 'static' | 'loading' | 'saved' | 'empty' = 'static';
 
 	const colors: Record<string, string> = {
 		brand: '#b23c2c',
@@ -25,15 +34,15 @@
 		muted: '#97918a',
 	};
 
-	$: strokeColor = colors[color] || colors.brand;
-	$: scale = size / 48;
+	$: strokeColor = mode === 'saved' ? colors.olive : (colors[color] || colors.brand);
 </script>
 
 <svg
 	width={size}
 	height={size}
 	viewBox="0 0 48 48"
-	class="inline-block {spin ? 'asterisk-spin-anim' : ''}"
+	class="inline-block ast-root ast-mode-{mode}"
+	class:asterisk-spin-anim={spin}
 	style="opacity: {muted ? 0.15 : 1}"
 	aria-hidden="true"
 >
@@ -51,5 +60,43 @@
 	@keyframes asteriskSpin {
 		0% { transform: rotate(0deg); }
 		100% { transform: rotate(360deg); }
+	}
+
+	/* CIPH-204: living-state modes */
+	.ast-root {
+		transform-origin: center;
+	}
+	.ast-mode-loading {
+		animation: astLoading 3.6s ease-in-out infinite;
+	}
+	@keyframes astLoading {
+		0%   { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
+	}
+
+	.ast-mode-saved {
+		animation: astSaved 700ms ease-out;
+	}
+	@keyframes astSaved {
+		0%   { transform: scale(1); }
+		40%  { transform: scale(1.25); }
+		100% { transform: scale(1); }
+	}
+
+	.ast-mode-empty {
+		animation: astEmpty 3s ease-in-out infinite;
+	}
+	@keyframes astEmpty {
+		0%, 100% { opacity: 0.3; }
+		50%      { opacity: 0.6; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.asterisk-spin-anim,
+		.ast-mode-loading,
+		.ast-mode-saved,
+		.ast-mode-empty {
+			animation: none !important;
+		}
 	}
 </style>

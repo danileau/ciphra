@@ -14,11 +14,8 @@ export interface CiphraDocument {
 	data: any;
 }
 
-/**
- * Resolves the current vault context: which master_key to encrypt/decrypt
- * with, and which endpoints to hit. Caregiver uses their own key+endpoints
- * unless they've switched to a linked account via the `activeVault` store.
- */
+interface RawDoc { id: number; encrypted_data: string; created_at: string; }
+
 function resolveVault(): { masterKey: Uint8Array | null; sourceUserId: number | null; cacheKey: string } {
 	const { masterKey, username } = get(auth);
 	const active = get(activeVault);
@@ -27,7 +24,6 @@ function resolveVault(): { masterKey: Uint8Array | null; sourceUserId: number | 
 	}
 	const link = get(familyLinks).find(l => l.sourceUserId === active);
 	if (!link) {
-		// stale switcher state — fall back to own vault
 		return { masterKey, sourceUserId: null, cacheKey: `${username ?? ''}:self` };
 	}
 	return {
@@ -41,41 +37,54 @@ function createDocStore() {
 	const { subscribe, set, update } = writable<CiphraDocument[]>([]);
 	let loading = false;
 
+	/**
+	 * Decrypt raw docs, reusing plaintext from `cachedByEtag` when the
+	 * ciphertext is unchanged. This is where the heavy-user speedup lives:
+	 * on warm loads, the map hits for every unchanged doc and no AES-GCM
+	 * decryption runs at all.
+	 */
 	async function decryptDocs(
-		rawDocs: Array<{ id: number; encrypted_data: string; created_at: string }>,
-		masterKey: Uint8Array
-	): Promise<CiphraDocument[]> {
+		rawDocs: RawDoc[],
+		masterKey: Uint8Array,
+		cachedByEtag: Map<string, CachedDoc>,
+		cacheKey: string
+	): Promise<{ docs: CiphraDocument[]; freshCache: CachedDoc[] }> {
 		const results = await Promise.allSettled(
 			rawDocs.map(async (d) => {
+				const etag = d.encrypted_data;
+				const hit = cachedByEtag.get(`${d.id}|${etag}`);
+				if (hit) {
+					return {
+						doc: { id: d.id, serverCreatedAt: d.created_at, data: hit.data } as CiphraDocument,
+						etag,
+					};
+				}
 				const data = await decryptDocument(d.encrypted_data, masterKey);
-				return { id: d.id, serverCreatedAt: d.created_at, data } as CiphraDocument;
+				return {
+					doc: { id: d.id, serverCreatedAt: d.created_at, data } as CiphraDocument,
+					etag,
+				};
 			})
 		);
-		return results
-			.filter((r): r is PromiseFulfilledResult<CiphraDocument> => r.status === 'fulfilled')
-			.map(r => r.value)
+
+		const docs: CiphraDocument[] = [];
+		const freshCache: CachedDoc[] = [];
+		for (const r of results) {
+			if (r.status !== 'fulfilled') continue;
+			const { doc, etag } = r.value;
 			// family_link entries live in the same encrypted_documents table
 			// but are metadata for the family-sharing store, not health data.
-			.filter(doc => doc.data?.type !== 'family_link');
-	}
-
-	async function cacheRawDocs(
-		rawDocs: Array<{ id: number; encrypted_data: string; created_at: string }>,
-		cacheKey: string,
-	): Promise<void> {
-		if (!browser || !cacheKey) return;
-		try {
-			const cached: CachedDoc[] = rawDocs.map((d) => ({
-				id: d.id,
+			if (doc.data?.type === 'family_link') continue;
+			docs.push(doc);
+			freshCache.push({
+				id: doc.id,
 				user_id: cacheKey,
-				encrypted_data: d.encrypted_data,
-				created_at: d.created_at,
-				updated_at: d.created_at
-			}));
-			await putDocs(cacheKey, cached);
-		} catch {
-			// IndexedDB errors should not break the app
+				data: doc.data,
+				etag,
+				created_at: doc.serverCreatedAt,
+			});
 		}
+		return { docs, freshCache };
 	}
 
 	const store = {
@@ -86,28 +95,59 @@ function createDocStore() {
 			const { masterKey, sourceUserId, cacheKey } = resolveVault();
 			if (!masterKey) { loading = false; return; }
 
+			const t0 = performance.now();
+			let cacheHits = 0;
+			let fresh = 0;
+			let cachedCount = 0;
+			const cachedByEtag = new Map<string, CachedDoc>();
+
 			if (browser) {
 				try {
 					const cached = await getAllDocs(cacheKey);
+					cachedCount = cached.length;
 					if (cached.length > 0) {
-						const docs = await decryptDocs(cached, masterKey);
-						set(docs);
+						for (const c of cached) cachedByEtag.set(`${c.id}|${c.etag}`, c);
+						const instant = cached
+							.filter(c => c.data?.type !== 'family_link')
+							.map(c => ({ id: c.id, serverCreatedAt: c.created_at, data: c.data } as CiphraDocument));
+						set(instant);
 					}
 				} catch {
-					// cache miss is fine, continue to API
+					// cache miss is fine
 				}
 			}
+			const tCache = performance.now();
 
 			try {
 				const res = sourceUserId
 					? await api.familyDocuments(sourceUserId)
 					: await api.getDocuments();
+				const tFetch = performance.now();
 				if (res.ok) {
-					const rawDocs = (res.data.documents as Array<{ id: number; encrypted_data: string; created_at: string }>) || [];
-					const docs = await decryptDocs(rawDocs, masterKey);
+					const rawDocs = (res.data.documents as RawDoc[]) || [];
+					for (const d of rawDocs) {
+						if (cachedByEtag.has(`${d.id}|${d.encrypted_data}`)) cacheHits++;
+						else fresh++;
+					}
+					const { docs, freshCache } = await decryptDocs(rawDocs, masterKey, cachedByEtag, cacheKey);
+					const tDecrypt = performance.now();
 					set(docs);
-					await cacheRawDocs(rawDocs, cacheKey);
+					if (browser && cacheKey) {
+						try {
+							await putDocs(cacheKey, freshCache);
+						} catch {
+							// IndexedDB errors should not break the app
+						}
+					}
 					documentsError.set(null);
+					const tEnd = performance.now();
+					// eslint-disable-next-line no-console
+					console.info(
+						`[ciphra] docs loaded: ${rawDocs.length} total, ${cacheHits} cache-hits, ${fresh} decrypted. ` +
+						`idb:${(tCache - t0).toFixed(0)}ms fetch:${(tFetch - tCache).toFixed(0)}ms ` +
+						`decrypt:${(tDecrypt - tFetch).toFixed(0)}ms persist:${(tEnd - tDecrypt).toFixed(0)}ms ` +
+						`total:${(tEnd - t0).toFixed(0)}ms (cached on disk: ${cachedCount})`
+					);
 				} else {
 					documentsError.set('Failed to load documents');
 				}
@@ -158,25 +198,13 @@ function createDocStore() {
 			}
 		},
 		async remove(id: number): Promise<boolean> {
-			const { sourceUserId, cacheKey } = resolveVault();
+			const { sourceUserId } = resolveVault();
 			const res = sourceUserId
 				? await api.familyDocumentDelete(sourceUserId, id)
 				: await api.deleteDocument(id);
 			if (res.ok) {
 				update((docs) => docs.filter((d) => d.id !== id));
-				if (browser) {
-					try {
-						const apiRes = sourceUserId
-							? await api.familyDocuments(sourceUserId)
-							: await api.getDocuments();
-						if (apiRes.ok) {
-							const rawDocs = (apiRes.data.documents as Array<{ id: number; encrypted_data: string; created_at: string }>) || [];
-							await cacheRawDocs(rawDocs, cacheKey);
-						}
-					} catch {
-						// non-critical
-					}
-				}
+				await store.load();
 			}
 			return res.ok;
 		},

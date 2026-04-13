@@ -5,6 +5,10 @@
 	import type { ConditionInfo } from '$lib/conditionInfo';
 	import { iconPath } from '$lib/conditionIcons';
 	import Asterisk from '$lib/components/Asterisk.svelte';
+	import Toast from '$lib/components/Toast.svelte';
+	import { isAuthenticated } from '$lib/stores/auth';
+	import { blueprint, presets } from '$lib/blueprint';
+	import { goto } from '$app/navigation';
 
 	$: conditionId = $page.params.id || '';
 	$: info = conditionId ? conditionInfoMap[conditionId] as ConditionInfo | undefined : undefined;
@@ -13,6 +17,24 @@
 	$: relatedInfos = (info?.relatedConditions || [])
 		.map(id => conditionInfoMap[id])
 		.filter(Boolean);
+	$: matchingPreset = presets.find((p) => p.id === conditionId);
+
+	let switching = false;
+	let toastMsg = '';
+	let toastShow = false;
+
+	async function switchBlueprint() {
+		if (!matchingPreset) return;
+		switching = true;
+		const newBp = JSON.parse(JSON.stringify(matchingPreset.blueprint));
+		const ok = await blueprint.save(newBp);
+		switching = false;
+		if (ok) {
+			toastMsg = $t('conditions.switch_confirm', { condition: $t(matchingPreset.labelKey) });
+			toastShow = true;
+			setTimeout(() => { goto('/log/today'); }, 1200);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -46,6 +68,10 @@
 	{/if}
 </svelte:head>
 
+{#if toastShow}
+	<Toast message={toastMsg} bind:show={toastShow} />
+{/if}
+
 {#if !info}
 	<div class="min-h-screen flex items-center justify-center" style="background: var(--surface);">
 		<div class="text-center">
@@ -76,6 +102,20 @@
 					{$t('condition.open_source')}
 				</span>
 			</div>
+
+			{#if $isAuthenticated && matchingPreset}
+				<div class="mb-8 card-olive rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
+					<p class="text-sm" style="color: var(--text-primary);">{$t('conditions.switch_logged_in_hint')}</p>
+					<button
+						type="button"
+						on:click={switchBlueprint}
+						disabled={switching}
+						class="btn-primary inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm disabled:opacity-50"
+					>
+						{switching ? $t('common.loading') : $t('conditions.switch_cta')}
+					</button>
+				</div>
+			{/if}
 			<!-- Introduction -->
 			<article class="prose max-w-none mb-12">
 				<p class="text-lg leading-relaxed" style="color: var(--text-secondary);">{$t(info.introKey)}</p>
@@ -103,7 +143,7 @@
 			<!-- Episodes, Triggers, Vitals -->
 			<section class="mb-12 grid sm:grid-cols-3 gap-6">
 				<div class="card rounded-xl p-6">
-					<div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background: rgba(220,38,38,0.1);">
+					<div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background: rgba(var(--danger-rgb),0.1);">
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--danger);"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" stroke-width="2"/></svg>
 					</div>
 					<h3 class="text-base font-semibold mb-2" style="color: var(--text-primary);">{$t('condition.section_episodes')}</h3>

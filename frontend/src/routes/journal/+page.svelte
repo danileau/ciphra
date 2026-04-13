@@ -3,12 +3,31 @@
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { blueprint } from '$lib/blueprint';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Asterisk from '$lib/components/Asterisk.svelte';
+	import EntryPreview from '$lib/components/EntryPreview.svelte';
 
 	let filter = 'all';
 	let searchQuery = '';
+	let searchOpen = false;
+	let searchInputEl: HTMLInputElement | null = null;
+
+	async function openSearch() {
+		searchOpen = true;
+		await tick();
+		searchInputEl?.focus();
+	}
+	function handleSearchKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') {
+			searchQuery = '';
+			searchOpen = false;
+		}
+	}
+	function handleSearchBlur() {
+		if (!searchQuery) searchOpen = false;
+	}
+
 	let confirmDeleteId: number | null = null;
 	let editingId: number | null = null;
 	let editNotes = '';
@@ -69,19 +88,6 @@
 		return type;
 	}
 
-	function getSummary(doc: CiphraDocument): string {
-		const d = doc.data;
-		if (d.type === 'daily_log') {
-			const parts: string[] = [];
-			const sympCount = Object.values(d.symptoms || {}).filter(Boolean).length;
-			if (sympCount > 0) parts.push(`${sympCount} ${$t('companion.symptoms')}`);
-			const epCount = (Object.values(d.episodes || d.seizures || {}) as number[]).reduce((a, b) => a + b, 0);
-			if (epCount > 0) parts.push(`${epCount} ${$t('protocol.episodes')}`);
-			return parts.join(' · ') || d.notes || '';
-		}
-		return d.notes || d.title || '';
-	}
-
 	async function handleDelete(id: number) {
 		await documents.remove(id);
 		confirmDeleteId = null;
@@ -125,39 +131,68 @@
 <div class="max-w-3xl mx-auto px-4 pt-4 pb-32">
 	<h1 class="text-2xl font-bold mb-4" style="color: var(--text-primary)">{$t('stream.title')}</h1>
 
-	<!-- Search -->
-	<div class="relative mb-4">
-		<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style="color: var(--text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke-width="2"/></svg>
-		<input
-			type="text"
-			bind:value={searchQuery}
-			placeholder={$t('stream.search')}
-			class="input pl-10"
-		/>
-	</div>
-
-	<!-- Filter tabs (from blueprint) -->
-	{#if bp}
-		<div class="flex gap-2 mb-4 overflow-x-auto pb-1">
-			{#each bp.streamFilters as tab}
+	<!-- Search + filter row (CIPH-424) -->
+	<div class="flex items-center gap-2 mb-4">
+		{#if !searchOpen}
+			<button
+				type="button"
+				on:click={openSearch}
+				aria-label={$t('journal.search_aria')}
+				class="shrink-0 p-2 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors"
+				style="background: var(--surface-muted); color: var(--text-secondary)"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke-width="2"/></svg>
+			</button>
+		{:else}
+			<div class="relative flex-1 min-w-0 journal-search-anim">
+				<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style="color: var(--text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke-width="2"/></svg>
+				<input
+					bind:this={searchInputEl}
+					type="text"
+					bind:value={searchQuery}
+					on:keydown={handleSearchKeydown}
+					on:blur={handleSearchBlur}
+					placeholder={$t('stream.search')}
+					aria-label={$t('journal.search_aria')}
+					class="input pl-10 pr-10"
+				/>
 				<button
-					on:click={() => { filter = tab.key; }}
-					class="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors min-h-[36px]"
-					style="{filter === tab.key
-						? 'background: var(--olive-light); color: var(--olive);'
-						: 'background: var(--surface-muted); color: var(--text-secondary);'}"
+					type="button"
+					on:click={() => { searchQuery = ''; searchOpen = false; }}
+					aria-label={$t('journal.search_close_aria')}
+					class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded"
+					style="color: var(--text-muted)"
 				>
-					{$t(tab.label)}
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke-width="2"/><line x1="6" y1="6" x2="18" y2="18" stroke-width="2"/></svg>
 				</button>
-			{/each}
-		</div>
-	{/if}
+			</div>
+		{/if}
+
+		{#if bp}
+			<div
+				class="flex gap-2 overflow-x-auto pb-1 flex-1 min-w-0 transition-opacity"
+				style="opacity: {searchQuery ? 0.5 : 1}"
+			>
+				{#each bp.streamFilters as tab}
+					<button
+						on:click={() => { filter = tab.key; }}
+						class="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors min-h-[36px]"
+						style="{filter === tab.key
+							? 'background: var(--olive-light); color: var(--olive);'
+							: 'background: var(--surface-muted); color: var(--text-secondary);'}"
+					>
+						{$t(tab.label)}
+					</button>
+				{/each}
+			</div>
+		{/if}
+	</div>
 
 	<!-- Entries -->
 	{#if filteredDocs.length === 0}
 		<div class="text-center py-12">
 			<div class="mb-3 flex justify-center">
-				<Asterisk size={64} muted color="muted" />
+				<Asterisk size={48} mode="empty" color="muted" />
 			</div>
 			<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('stream.no_entries')}</p>
 			<a href="/log/today" class="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm">
@@ -229,14 +264,7 @@
 						<!-- Normal display -->
 						<div class="flex items-start justify-between gap-3">
 							<div class="flex-1 min-w-0">
-								<div class="flex items-center gap-2 mb-1">
-									<span class={typeBadgeClass(doc.data.type || '')}>{typeLabel(doc.data.type || '')}</span>
-									<span class="text-xs" style="color: var(--text-muted)">{formatDate(doc)}</span>
-								</div>
-								<p class="text-sm line-clamp-2" style="color: var(--text-primary)">{getSummary(doc)}</p>
-								{#if doc.data.notes && doc.data.type === 'daily_log'}
-									<p class="text-xs mt-1 line-clamp-1" style="color: var(--text-muted)">{doc.data.notes}</p>
-								{/if}
+								<EntryPreview entry={doc} {bp} recentDocs={$documents} />
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
 								<!-- Edit button -->
@@ -282,6 +310,13 @@
 </div>
 
 <style>
+	@keyframes journalSearchSlide {
+		from { transform: translateX(-8px); opacity: 0; }
+		to { transform: translateX(0); opacity: 1; }
+	}
+	.journal-search-anim {
+		animation: journalSearchSlide 180ms ease-out;
+	}
 	button.p-2:hover {
 		color: var(--brand);
 		background: var(--brand-light);

@@ -43,6 +43,21 @@
 	</section>
 
 	<section class="space-y-3">
+		<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('privacy.ondevice_heading')}</h2>
+		<p class="text-sm leading-relaxed" style="color: var(--text-secondary)">{$t('privacy.ondevice_body')}</p>
+	</section>
+
+	<section class="space-y-3">
+		<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('privacy.infra_heading')}</h2>
+		<p class="text-sm leading-relaxed" style="color: var(--text-secondary)">{$t('privacy.infra_body')}</p>
+	</section>
+
+	<section class="space-y-3">
+		<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('privacy.analytics_heading')}</h2>
+		<p class="text-sm leading-relaxed" style="color: var(--text-secondary)">{$t('privacy.analytics_body')}</p>
+	</section>
+
+	<section class="space-y-3">
 		<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('privacy.rights_heading')}</h2>
 		<p class="text-sm leading-relaxed" style="color: var(--text-secondary)">{$t('privacy.rights_body')}</p>
 	</section>

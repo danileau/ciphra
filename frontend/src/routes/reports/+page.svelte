@@ -8,9 +8,48 @@
 	import type { Blueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { generateDoctorPdf, exportCsv } from '$lib/pdf';
+	import { generateDoctorPdf, generateCompactPdf, exportCsv, type ReportScope } from '$lib/pdf';
 
 	let currentDate = new Date().toISOString().slice(0, 10);
+	let pdfScope: ReportScope = 'month';
+	let exportMenuOpen = false;
+
+	function scopeLabelKey(s: ReportScope): string {
+		if (s === 'year') return 'pdf.scope_year_label';
+		if (s === '2years') return 'pdf.scope_2years_label';
+		return 'pdf.scope_month_label';
+	}
+
+	function pickExport(scope: ReportScope, compact: boolean) {
+		pdfScope = scope;
+		exportMenuOpen = false;
+		if (compact) exportCompactForDoctor();
+		else exportForDoctor();
+	}
+
+	// Available scope set depends on data span: no point offering "2 years"
+	// when the user only has 2 months of logs. Thresholds are intentionally
+	// generous — even a partial year is more useful than re-running the
+	// monthly export 12 times.
+	$: dataSpanDays = (() => {
+		const dates = $documents
+			.filter(d => d.data?.type === 'daily_log')
+			.map(d => String(d.data.date || ''))
+			.filter(s => s.length === 10);
+		if (dates.length === 0) return 0;
+		const oldest = dates.reduce((a, b) => (a < b ? a : b));
+		const ms = Date.now() - new Date(oldest + 'T12:00:00').getTime();
+		return Math.floor(ms / 86400000);
+	})();
+	$: scopeYearAvailable = dataSpanDays >= 60;
+	$: scopeTwoYearsAvailable = dataSpanDays >= 365;
+	// If the user picks a scope and then their data set shrinks (caregiver
+	// switches accounts), fall back to the most useful available option.
+	$: if (pdfScope === '2years' && !scopeTwoYearsAvailable) {
+		pdfScope = scopeYearAvailable ? 'year' : 'month';
+	} else if (pdfScope === 'year' && !scopeYearAvailable) {
+		pdfScope = 'month';
+	}
 	let viewMode: 'month' | 'year' = 'month';
 	let currentYear = new Date().getFullYear();
 	// Track loading explicitly so the empty / loading / ready states don't
@@ -84,13 +123,19 @@
 	function exportForDoctor() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
-		generateDoctorPdf(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '');
+		generateDoctorPdf(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
+	}
+
+	function exportCompactForDoctor() {
+		if (!bp) return;
+		const d = new Date(currentDate + 'T12:00:00');
+		generateCompactPdf(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
 	}
 
 	function exportCsvFile() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
-		exportCsv(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale);
+		exportCsv(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale, pdfScope);
 	}
 
 	// Stats
@@ -263,43 +308,151 @@
 
 	<!-- Summary stats -->
 	<div class="grid grid-cols-3 gap-3 mb-6">
-		<div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
+		<div class="card p-4 text-center">
 			<p class="text-2xl font-bold text-slate-900">{daysLogged}</p>
 			<p class="text-xs text-slate-500 mt-1">{$t('pdf.days_logged')}</p>
 		</div>
-		<div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
-			<p class="text-2xl font-bold text-red-500">{totalEpisodes}</p>
+		<div class="card p-4 text-center">
+			<p class="text-2xl font-bold" style="color: var(--danger)">{totalEpisodes}</p>
 			<p class="text-xs text-slate-500 mt-1">{$t('pdf.total_episodes')}</p>
 		</div>
-		<div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
+		<div class="card p-4 text-center">
 			<p class="text-2xl font-bold text-brand">{daysInMonth > 0 ? Math.round(daysLogged / daysInMonth * 100) : 0}%</p>
 			<p class="text-xs text-slate-500 mt-1">{$t('reports.coverage')}</p>
 		</div>
 	</div>
 
-	<!-- Export buttons — one combined PDF for the doctor, plus CSV for data portability -->
-	<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+	<!-- CIPH-423 — Combined scope+export dropdown: scope only matters with
+	     export, so collapse them into one decision. CSV stays as a small link. -->
+	<div class="mb-6 relative">
 		<button
-			on:click={exportForDoctor}
-			class="bg-white rounded-xl border border-slate-200 p-4 hover:border-brand/50 transition-colors text-left"
+			type="button"
+			on:click={() => (exportMenuOpen = !exportMenuOpen)}
+			aria-haspopup="menu"
+			aria-expanded={exportMenuOpen}
+			class="w-full px-4 py-3 text-sm font-medium rounded-xl bg-brand text-white hover:opacity-90 transition-opacity flex items-center justify-between gap-2 min-h-[44px]"
 		>
-			<div class="flex items-center gap-2 mb-2">
-				<svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				<span class="text-sm font-semibold text-slate-900">{$t('companion.export_for_doctor')}</span>
-			</div>
-			<p class="text-xs text-slate-500">{$t('reports.doctor_desc')}</p>
+			<span class="flex items-center gap-2">
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				{$t('reports.export_dropdown_label', { scope: $t(scopeLabelKey(pdfScope)) })}
+			</span>
+			<svg class="w-4 h-4 transition-transform" style="transform: rotate({exportMenuOpen ? 180 : 0}deg)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 		</button>
-		<button
-			on:click={exportCsvFile}
-			class="bg-white rounded-xl border border-slate-200 p-4 hover:border-brand/50 transition-colors text-left"
-		>
-			<div class="flex items-center gap-2 mb-2">
-				<svg class="w-5 h-5" style="color: var(--ochre)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="13" x2="16" y2="13" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="17" x2="16" y2="17" stroke-width="2" stroke-linecap="round"/></svg>
-				<span class="text-sm font-semibold text-slate-900">{$t('reports.csv')}</span>
+
+		{#if exportMenuOpen}
+			<!-- Backdrop: click anywhere outside to close -->
+			<button
+				type="button"
+				class="fixed inset-0 z-40"
+				aria-label={$t('common.close')}
+				on:click={() => (exportMenuOpen = false)}
+			></button>
+			<div
+				role="menu"
+				class="absolute z-50 left-0 right-0 mt-2 rounded-xl overflow-hidden shadow-lg"
+				style="background: var(--surface-card); border: 1px solid var(--border)"
+			>
+				<button
+					role="menuitem"
+					type="button"
+					on:click={() => pickExport('month', false)}
+					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between"
+				>
+					<span style="color: var(--text-primary)">{$t('pdf.scope_month_label')}</span>
+					<span class="text-xs" style="color: var(--text-muted)">PDF</span>
+				</button>
+				<button
+					role="menuitem"
+					type="button"
+					on:click={() => scopeYearAvailable && pickExport('year', false)}
+					disabled={!scopeYearAvailable}
+					title={scopeYearAvailable ? '' : $t('pdf.scope_unavailable')}
+					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between disabled:opacity-40 disabled:cursor-not-allowed"
+				>
+					<span style="color: var(--text-primary)">{$t('pdf.scope_year_label')}</span>
+					<span class="text-xs" style="color: var(--text-muted)">PDF</span>
+				</button>
+				<button
+					role="menuitem"
+					type="button"
+					on:click={() => scopeTwoYearsAvailable && pickExport('2years', false)}
+					disabled={!scopeTwoYearsAvailable}
+					title={scopeTwoYearsAvailable ? '' : $t('pdf.scope_unavailable')}
+					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between disabled:opacity-40 disabled:cursor-not-allowed"
+				>
+					<span style="color: var(--text-primary)">{$t('pdf.scope_2years_label')}</span>
+					<span class="text-xs" style="color: var(--text-muted)">PDF</span>
+				</button>
+				<div style="border-top: 1px solid var(--border)"></div>
+				<button
+					role="menuitem"
+					type="button"
+					on:click={() => pickExport(pdfScope, true)}
+					title={$t('pdf.export_compact_desc')}
+					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between"
+				>
+					<span style="color: var(--text-primary)">{$t('pdf.export_compact')}</span>
+					<span class="text-xs" style="color: var(--text-muted)">PDF</span>
+				</button>
 			</div>
-			<p class="text-xs text-slate-500">{$t('reports.csv_desc')}</p>
-		</button>
+		{/if}
+
+		<p class="text-[11px] mt-2" style="color: var(--text-muted)">{$t('reports.doctor_desc')}</p>
+		{#if !scopeYearAvailable || !scopeTwoYearsAvailable}
+			<p class="text-[11px] mt-1" style="color: var(--text-muted)">
+				{$t('pdf.scope_data_span', { days: String(dataSpanDays) })}
+			</p>
+		{/if}
+
+		<div class="mt-2 text-right">
+			<button
+				on:click={exportCsvFile}
+				class="text-[11px] text-slate-500 hover:text-brand underline-offset-2 hover:underline transition-colors"
+				title={$t('reports.csv_desc')}
+			>
+				↓ {$t('reports.csv')}
+			</button>
+		</div>
 	</div>
+
+	<!-- Day-coverage strip (mirrors year-view coloring so the user sees
+	     which days were filled at a glance, before the data table) -->
+	{#if bp}
+	{@const monthIdx = new Date(currentDate + 'T12:00:00').getMonth()}
+	{@const yearOfMonth = new Date(currentDate + 'T12:00:00').getFullYear()}
+	{@const firstDow = getFirstDayOfWeek(yearOfMonth, monthIdx)}
+	<div class="card-inline mb-4">
+		<div class="flex items-center justify-between mb-3">
+			<p class="text-xs font-medium text-slate-500">{$t('reports.day_coverage')}</p>
+			<div class="flex gap-3 text-[10px] text-slate-400">
+				<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-slate-200"></span>{$t('reports.legend_empty')}</span>
+				<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background: var(--olive)"></span>{$t('reports.legend_logged')}</span>
+				<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background: var(--danger, #dc2626)"></span>{$t('reports.legend_episode')}</span>
+			</div>
+		</div>
+		<div class="rpt-month-grid">
+			{#each ['M','T','W','T','F','S','S'] as dw}
+				<span class="rpt-dow">{dw}</span>
+			{/each}
+			{#each Array(firstDow) as _}
+				<span class="rpt-day-cell rpt-day-cell--empty"></span>
+			{/each}
+			{#each Array.from({ length: daysInMonth }, (_, i) => i + 1) as day}
+				{@const dateStr = `${yearOfMonth}-${String(monthIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
+				{@const doc = getDayDoc(monthDocs, dateStr)}
+				{@const hasEp = dayHasEpisodes(doc, bp)}
+				<span
+					class="rpt-day-cell {doc ? (hasEp ? 'rpt-day-cell--episode' : 'rpt-day-cell--logged') : ''}"
+					title={doc ? `${dateStr}: ${dayTooltip(doc, bp)}` : dateStr}
+					on:click={() => goto(`/log/${dateStr}`)}
+					role="button"
+					tabindex="0"
+					on:keydown={(e) => { if (e.key === 'Enter') goto(`/log/${dateStr}`); }}
+				></span>
+			{/each}
+		</div>
+	</div>
+	{/if}
 
 	<!-- Monthly grid table -->
 	{#if monthDocs.length > 0}

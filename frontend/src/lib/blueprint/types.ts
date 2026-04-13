@@ -34,6 +34,10 @@ export interface EpisodeType {
 	trackDuration?: boolean;
 	/** Track time of day per episode */
 	trackTimeOfDay?: boolean;
+	/** This episode typically spans many days (flare, manic episode, etc.).
+	 *  When true, calendar renders consecutive marked days as a band; the
+	 *  log-page UI shows an "ongoing today" toggle instead of a counter. */
+	multiDay?: boolean;
 }
 
 /** A vital sign to track */
@@ -43,6 +47,22 @@ export interface VitalField {
 	unit: string;
 	placeholder: string;
 	multiEntry?: boolean;  // allows multiple time+value entries per day
+	/** Vitals sharing the same pairLabel render side-by-side (e.g. left/right IOP) */
+	pairLabel?: string;
+	/** UI hint: render a constrained range slider/number with min/max */
+	min?: number;
+	max?: number;
+	/** Skip this vital from the auto-generated trend charts.
+	 *  Use for values that don't make sense as a monthly mean —
+	 *  e.g. cycle_day (sawtooths), cycle_length (step function). */
+	excludeFromTrends?: boolean;
+	/** Clinical reference / target line drawn horizontally on the trend chart.
+	 *  E.g. BP target 140 mmHg, IOP target 21 mmHg, HbA1c target 7%. */
+	referenceLine?: { value: number; labelKey: string };
+	/** For multi-entry vitals: split the daily entries by time of day
+	 *  (before vs after noon) and render two lines on the same chart.
+	 *  Morning hypertension is its own clinical entity. */
+	splitByTimeOfDay?: boolean;
 }
 
 /** Medication template */
@@ -95,4 +115,16 @@ export interface Blueprint {
 
 	/** Preferred report type */
 	reportPreference: 'analytics' | 'grid' | 'both';
+
+	/** CIPH-301b — User customizations from the setup wizard (or settings).
+	 *  IDs listed here are HIDDEN from the daily-log form and from PDF
+	 *  aggregations. Optional + backwards-compatible: a missing field means
+	 *  "show everything" (existing pre-301b blueprints). The blueprint
+	 *  itself is untouched — this is a filter layer on top of stock content
+	 *  so we can re-enable items without losing them. */
+	customizations?: {
+		hiddenSymptoms?: string[];   // BlueprintItem.id from any symptomGroup
+		hiddenTriggers?: string[];   // BlueprintItem.id from triggers[]
+		hiddenVitals?: string[];     // VitalField.id
+	};
 }

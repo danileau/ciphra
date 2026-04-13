@@ -51,6 +51,139 @@ const BRAND: Record<string, RGB> = {
 const MM = (n: number) => n; // doc is mm already; alias for readability
 
 /* ────────────────────────────────────────────────────────────────
+ * Shared PDF data-prep layer (CIPH-305).
+ * Both `generateDoctorPdf` and `generateCompactPdf` call into these —
+ * any change to aggregation logic is picked up by both, eliminating
+ * drift (Felix's constraint, vote 4).
+ * ──────────────────────────────────────────────────────────────── */
+
+export interface MonthBucket { y: number; m: number }
+
+export function buildMonthBuckets(year: number, month: number, count: number): MonthBucket[] {
+	const out: MonthBucket[] = [];
+	for (let k = count - 1; k >= 0; k--) {
+		const d = new Date(year, month - k, 1);
+		out.push({ y: d.getFullYear(), m: d.getMonth() });
+	}
+	return out;
+}
+
+export function bucketIndexMap(buckets: MonthBucket[]): Map<string, number> {
+	return new Map(buckets.map((b, i) => [`${b.y}-${String(b.m + 1).padStart(2, '0')}`, i]));
+}
+
+/** Extract numeric values for a vital on a given day's doc.
+ *  Handles both single-value strings and multi-entry JSON arrays. */
+export function dayVitalsShared(d: CiphraDocument | undefined, vid: string): number[] {
+	const raw = d?.data?.vitals?.[vid];
+	if (!raw) return [];
+	try {
+		const parsed = JSON.parse(raw);
+		if (Array.isArray(parsed)) {
+			return parsed.map((e: { value: string }) => Number(e.value)).filter((v) => !isNaN(v));
+		}
+	} catch { /* not JSON */ }
+	const n = Number(raw);
+	return isNaN(n) ? [] : [n];
+}
+
+export function aggregateVitalMonthlyShared(
+	docs: CiphraDocument[],
+	vid: string,
+	buckets: MonthBucket[],
+	idx: Map<string, number>,
+	mode: 'mean' | 'max' = 'mean'
+): (number | null)[] {
+	const acc = buckets.map(() => ({ sum: 0, max: 0, count: 0 }));
+	for (const d of docs) {
+		if (d.data?.type !== 'daily_log') continue;
+		const key = String(d.data.date || '').slice(0, 7);
+		const i = idx.get(key);
+		if (i === undefined) continue;
+		const vals = dayVitalsShared(d, vid);
+		for (const v of vals) {
+			acc[i].sum += v;
+			if (v > acc[i].max) acc[i].max = v;
+			acc[i].count++;
+		}
+	}
+	return acc.map((b) => (b.count > 0 ? (mode === 'mean' ? b.sum / b.count : b.max) : null));
+}
+
+export function aggregateEpisodeMonthlyShared(
+	docs: CiphraDocument[],
+	epId: string,
+	buckets: MonthBucket[],
+	idx: Map<string, number>
+): number[] {
+	const acc = buckets.map(() => 0);
+	for (const d of docs) {
+		if (d.data?.type !== 'daily_log') continue;
+		const key = String(d.data.date || '').slice(0, 7);
+		const i = idx.get(key);
+		if (i === undefined) continue;
+		const eps = (d.data?.episodes || d.data?.seizures || {}) as Record<string, number>;
+		if ((eps[epId] || 0) > 0) acc[i]++;
+	}
+	return acc;
+}
+
+/** CIPH-301: read per-user vital target overrides from localStorage and
+ *  apply them to the blueprint's `referenceLine.value`. Non-destructive —
+ *  returns a shallow-modified blueprint that can be used by either PDF
+ *  generator without touching the saved document. */
+export function applyVitalTargetOverrides(blueprint: Blueprint, username: string): Blueprint {
+	if (!username || typeof localStorage === 'undefined') return blueprint;
+	let overrides: Record<string, number> = {};
+	try {
+		const raw = localStorage.getItem(`ciphra_vital_targets:${username}`);
+		if (raw) overrides = JSON.parse(raw) || {};
+	} catch { return blueprint; }
+	if (!overrides || Object.keys(overrides).length === 0) return blueprint;
+	const cloned: Blueprint = {
+		...blueprint,
+		vitals: blueprint.vitals.map((v) => {
+			if (v.referenceLine && overrides[v.id] !== undefined && !isNaN(overrides[v.id])) {
+				return { ...v, referenceLine: { ...v.referenceLine, value: overrides[v.id] } };
+			}
+			return v;
+		}),
+	};
+	return cloned;
+}
+
+/** CIPH-301b: apply the user's wizard customizations (`blueprint.customizations`)
+ *  by removing hidden symptoms/triggers/vitals from the blueprint *before*
+ *  any aggregator runs. This means symptomFreq, triggerFreq, chartableVitals,
+ *  and the condition-aware bullet builders all naturally skip hidden items
+ *  without needing to thread filter-sets through every loop.
+ *
+ *  Backwards-compatible: blueprints without `customizations` (pre-301b) are
+ *  returned unchanged.
+ *
+ *  Note: `gridSymptomColumns` is also filtered, because the grid table would
+ *  otherwise still reserve a column for a hidden symptom and just print
+ *  blanks for it. `gridEpisodeColumns` is left untouched — episodes are not
+ *  customizable in the wizard. */
+export function applyBlueprintCustomizations(blueprint: Blueprint): Blueprint {
+	const cz = blueprint.customizations;
+	if (!cz) return blueprint;
+	const hSym = new Set(cz.hiddenSymptoms || []);
+	const hTrg = new Set(cz.hiddenTriggers || []);
+	const hVit = new Set(cz.hiddenVitals || []);
+	if (hSym.size === 0 && hTrg.size === 0 && hVit.size === 0) return blueprint;
+	return {
+		...blueprint,
+		symptomGroups: blueprint.symptomGroups
+			.map((g) => ({ ...g, items: g.items.filter((it) => !hSym.has(it.id)) }))
+			.filter((g) => g.items.length > 0),
+		triggers: blueprint.triggers.filter((tr) => !hTrg.has(tr.id)),
+		vitals: blueprint.vitals.filter((v) => !hVit.has(v.id)),
+		gridSymptomColumns: blueprint.gridSymptomColumns.filter((id) => !hSym.has(id)),
+	};
+}
+
+/* ────────────────────────────────────────────────────────────────
  * Helpers
  * ──────────────────────────────────────────────────────────────── */
 
@@ -248,7 +381,11 @@ function drawGridSection(
 		year: 'numeric',
 	});
 
-	const symptomCols = blueprint.gridSymptomColumns;
+	// Strip positive-marker symptoms (slept_well etc.) — see POSITIVE_MARKERS
+	// in generateDoctorPdf for the rationale. Hard denylist as a safety net
+	// for legacy stored blueprints that still carry these IDs.
+	const POSITIVE_MARKERS = new Set(['slept_well']);
+	const symptomCols = blueprint.gridSymptomColumns.filter((id) => !POSITIVE_MARKERS.has(id));
 	const episodeCols = blueprint.gridEpisodeColumns;
 
 	const symptomLabels = symptomCols.map((id) => {
@@ -454,41 +591,303 @@ function drawGridSection(
 }
 
 /* ────────────────────────────────────────────────────────────────
+ * CIPH-305b — Shared condition-aware bullet builder.
+ *
+ * Hoisted out of `generateDoctorPdf` so both the standard and the compact
+ * PDF emit the SAME clinically relevant facts. Felix's note: "a glaucoma
+ * doctor opening a compact PDF still wants peak-IOP" — generalist trajectory
+ * bullets aren't enough on their own. Returns `{fact, question}` pairs;
+ * compact callers can `.map(b => b.fact)` to drop the question hierarchy.
+ *
+ * Pure: depends only on the blueprint + scope-window docs + a translator.
+ * No chart-context, no firstAvg/lastAvg — the trajectory bullet is owned
+ * by the caller (standard PDF only) so the compact format keeps its
+ * 12-month chart math local.
+ * ──────────────────────────────────────────────────────────────── */
+export function buildConditionAwareBullets(
+	blueprint: Blueprint,
+	scopeDocs: CiphraDocument[],
+	t: TranslateFn,
+	scopeWindowLabel: string
+): Array<{ fact: string; question: string }> {
+	const bullets: Array<{ fact: string; question: string }> = [];
+	const vitalIds = new Set(blueprint.vitals.map((v) => v.id));
+
+	// Local copy of the doctor-PDF dayVitals helper. Handles single-value
+	// strings + multi-entry JSON arrays.
+	function dayVitals(d: CiphraDocument | undefined, vid: string): number[] {
+		const raw = d?.data?.vitals?.[vid];
+		if (!raw) return [];
+		try {
+			const parsed = JSON.parse(raw);
+			if (Array.isArray(parsed)) {
+				return parsed.map((e: { value: string }) => Number(e.value)).filter((v) => !isNaN(v));
+			}
+		} catch { /* not JSON */ }
+		const n = Number(raw);
+		return isNaN(n) ? [] : [n];
+	}
+
+	// 1. Total OFF time (Parkinson's)
+	if (vitalIds.has('off_time_hours')) {
+		let total = 0, daysWithEntry = 0;
+		for (const d of scopeDocs) {
+			const vs = dayVitals(d, 'off_time_hours');
+			if (vs.length) { total += vs.reduce((a, b) => a + b, 0); daysWithEntry++; }
+		}
+		if (daysWithEntry > 0) {
+			bullets.push({
+				fact: t('pdf.for_doctor_fact_off_time', {
+					total: total.toFixed(0),
+					avg: (total / daysWithEntry).toFixed(1),
+					window: scopeWindowLabel,
+				}),
+				question: t('pdf.for_doctor_q_off_time'),
+			});
+		}
+	}
+
+	// 2. Mood polarity breakdown (bipolar)
+	if (vitalIds.has('mood_polarity')) {
+		let manicDays = 0, depDays = 0, polSum = 0, polCount = 0;
+		for (const d of scopeDocs) {
+			const vs = dayVitals(d, 'mood_polarity');
+			for (const v of vs) {
+				polSum += v; polCount++;
+				if (v > 0) manicDays++;
+				else if (v < 0) depDays++;
+			}
+		}
+		if (polCount > 0) {
+			bullets.push({
+				fact: t('pdf.for_doctor_fact_polarity', {
+					manic: String(manicDays),
+					dep: String(depDays),
+					avg: (polSum / polCount).toFixed(1),
+					window: scopeWindowLabel,
+				}),
+				question: t('pdf.for_doctor_q_polarity'),
+			});
+		}
+	}
+
+	// 3. Peak IOP per eye (glaucoma) — Felix's hero example
+	if (vitalIds.has('iop_left') && vitalIds.has('iop_right')) {
+		let maxL = 0, maxR = 0;
+		for (const d of scopeDocs) {
+			for (const v of dayVitals(d, 'iop_left')) if (v > maxL) maxL = v;
+			for (const v of dayVitals(d, 'iop_right')) if (v > maxR) maxR = v;
+		}
+		if (maxL > 0 || maxR > 0) {
+			bullets.push({
+				fact: t('pdf.for_doctor_fact_iop', {
+					left: String(maxL),
+					right: String(maxR),
+					window: scopeWindowLabel,
+				}),
+				question: t('pdf.for_doctor_q_iop'),
+			});
+		}
+	}
+
+	// 4. Multi-day episode totals (IBD flare, bipolar episodes, etc.)
+	for (const ep of blueprint.episodeTypes) {
+		if (!ep.multiDay) continue;
+		let activeDays = 0;
+		for (const d of scopeDocs) {
+			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+			if ((eps[ep.id] || 0) > 0) activeDays++;
+		}
+		if (activeDays > 0) {
+			bullets.push({
+				fact: t('pdf.for_doctor_fact_multiday', {
+					label: t(ep.label),
+					days: String(activeDays),
+					weeks: (activeDays / 7).toFixed(1),
+					window: scopeWindowLabel,
+				}),
+				question: t('pdf.for_doctor_q_multiday', { label: t(ep.label).toLowerCase() }),
+			});
+		}
+	}
+
+	// 5. Average bowel movements per day (IBD)
+	if (vitalIds.has('stool_count')) {
+		let total = 0, daysWithEntry = 0;
+		for (const d of scopeDocs) {
+			const vs = dayVitals(d, 'stool_count');
+			if (vs.length) { total += vs.reduce((a, b) => a + b, 0); daysWithEntry++; }
+		}
+		if (daysWithEntry > 0) {
+			bullets.push({
+				fact: t('pdf.for_doctor_fact_stool', {
+					avg: (total / daysWithEntry).toFixed(1),
+					days: String(daysWithEntry),
+					window: scopeWindowLabel,
+				}),
+				question: t('pdf.for_doctor_q_stool'),
+			});
+		}
+	}
+
+	// 6. Pain × mood correlation (≥30 paired days, |r| ≥ 0.4)
+	if (vitalIds.has('pain_level') && vitalIds.has('mood')) {
+		const pairs: [number, number][] = [];
+		for (const d of scopeDocs) {
+			const p = dayVitals(d, 'pain_level');
+			const m = dayVitals(d, 'mood');
+			if (p.length > 0 && m.length > 0) pairs.push([p[0], m[0]]);
+		}
+		if (pairs.length >= 30) {
+			const n = pairs.length;
+			const meanX = pairs.reduce((s, [x]) => s + x, 0) / n;
+			const meanY = pairs.reduce((s, [, y]) => s + y, 0) / n;
+			let num = 0, dx2 = 0, dy2 = 0;
+			for (const [x, y] of pairs) {
+				const dx = x - meanX, dy = y - meanY;
+				num += dx * dy; dx2 += dx * dx; dy2 += dy * dy;
+			}
+			const denom = Math.sqrt(dx2 * dy2);
+			const r = denom > 0 ? num / denom : 0;
+			if (Math.abs(r) >= 0.4) {
+				bullets.push({
+					fact: t('pdf.for_doctor_fact_pain_mood', {
+						r: r.toFixed(2),
+						n: String(n),
+						dir: r < 0 ? t('pdf.correlation_inverse') : t('pdf.correlation_positive'),
+					}),
+					question: t('pdf.for_doctor_q_pain_mood'),
+				});
+			}
+		}
+	}
+
+	// 7. Medication compliance (CIPH-411d) — across regular (non-PRN) meds.
+	//    Denominator: days in scope window where the user logged anything at
+	//    all (any non-empty `data` payload). Numerator: days marked true for
+	//    each med. Only emit when ≥1 regular med and ≥7 logged days.
+	{
+		const regularMeds = blueprint.medications.filter((m) => !m.asNeeded);
+		const loggedDocs = scopeDocs.filter((d) => d && d.data && Object.keys(d.data).length > 0);
+		if (regularMeds.length > 0 && loggedDocs.length >= 7) {
+			const denom = loggedDocs.length;
+			let pctSum = 0;
+			let counted = 0;
+			for (const med of regularMeds) {
+				let taken = 0;
+				for (const d of loggedDocs) {
+					const meds = (d.data.medications || {}) as Record<string, boolean>;
+					if (meds[med.id] === true) taken++;
+				}
+				pctSum += (taken / denom) * 100;
+				counted++;
+			}
+			if (counted > 0) {
+				const avgPct = Math.round(pctSum / counted);
+				bullets.push({
+					fact: t('pdf.for_doctor_fact_med_compliance', {
+						window: scopeWindowLabel,
+						pct: String(avgPct),
+						n: String(counted),
+					}),
+					question: t('pdf.for_doctor_q_med_compliance'),
+				});
+			}
+		}
+	}
+
+	return bullets;
+}
+
+/* ────────────────────────────────────────────────────────────────
  * Doctor Report — one PDF, everything in it: cover + 24-month
  * trajectory + comparison + symptom/medication tables + full
  * day-by-day grid for the selected month. The doctor skims what
  * they need; we give them everything we have.
  * ──────────────────────────────────────────────────────────────── */
 
+export type ReportScope = 'month' | 'year' | '2years';
+
 export function generateDoctorPdf(
-	blueprint: Blueprint,
+	blueprintIn: Blueprint,
 	documents: CiphraDocument[],
 	year: number,
 	month: number, // 0-based
 	t: TranslateFn,
 	locale: string,
-	username: string = ''
+	username: string = '',
+	scope: ReportScope = 'month'
 ): void {
-	const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-	const monthDocs = documents.filter(
-		(d) => d.data.type === 'daily_log' && String(d.data.date || '').startsWith(monthPrefix)
+	// CIPH-301: personal vital-target overrides live in localStorage. Apply
+	// them here so the chart's reference line reflects the user's target,
+	// not the blueprint default. Non-destructive — blueprint doc unchanged.
+	// CIPH-301b: also strip wizard-hidden symptoms/triggers/vitals so every
+	// downstream aggregator (symptomFreq, triggerFreq, chartableVitals,
+	// condition-aware bullets) skips them automatically.
+	const blueprint = applyBlueprintCustomizations(applyVitalTargetOverrides(blueprintIn, username));
+
+	// The "focus month" is always the single month that hosts the detailed
+	// grid appendix. The "scope" is what the rest of the report covers.
+	const focusMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+	const focusMonthDocs = documents.filter(
+		(d) => d.data.type === 'daily_log' && String(d.data.date || '').startsWith(focusMonthPrefix)
 	);
-	const daysInMonth = new Date(year, month + 1, 0).getDate();
-	const monthName = new Date(year, month).toLocaleDateString(locale, {
+	const focusDaysInMonth = new Date(year, month + 1, 0).getDate();
+	const focusMonthName = new Date(year, month).toLocaleDateString(locale, {
 		month: 'long',
 		year: 'numeric',
 	});
 
-	// prev month
-	const prevDate = new Date(year, month - 1, 1);
-	const prevYear = prevDate.getFullYear();
-	const prevMonth = prevDate.getMonth();
-	const prevMonthPrefix = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
-	const prevMonthDocs = documents.filter(
-		(d) => d.data.type === 'daily_log' && String(d.data.date || '').startsWith(prevMonthPrefix)
-	);
-	const prevDaysInMonth = new Date(prevYear, prevMonth + 1, 0).getDate();
+	// Scope window — drives header + stat cards + grid loop.
+	const scopeMonths = scope === 'month' ? 1 : scope === 'year' ? 12 : 24;
+	const scopeEndDate = new Date(year, month + 1, 0);
+	const scopeStartDate = new Date(year, month + 1 - scopeMonths, 1);
+	const scopeStartISO = scopeStartDate.toISOString().slice(0, 10);
+	const scopeEndISO = scopeEndDate.toISOString().slice(0, 10);
+
+	// monthDocs / daysInMonth / monthName / monthPrefix are the scope-aware
+	// variables used by the rest of the function. For 'month' scope they
+	// equal the focus month; for 'year' / '2years' they expand.
+	let monthPrefix: string = focusMonthPrefix;
+	let monthDocs: CiphraDocument[] = focusMonthDocs;
+	let daysInMonth: number = focusDaysInMonth;
+	let monthName: string = focusMonthName;
+	if (scope !== 'month') {
+		monthPrefix = `${scope}-${year}-${month + 1}`;
+		monthDocs = documents.filter((d) => {
+			if (d.data.type !== 'daily_log') return false;
+			const ds = String(d.data.date || '');
+			return ds >= scopeStartISO && ds <= scopeEndISO;
+		});
+		daysInMonth = Math.round(
+			(scopeEndDate.getTime() - scopeStartDate.getTime()) / 86400000
+		) + 1;
+		monthName = t(scope === 'year' ? 'pdf.scope_year' : 'pdf.scope_2years');
+	}
+
+	// Comparison window: for 'month' scope = previous month; for 'year' =
+	// the 12 months before the scope window; for '2years' = no comparison
+	// (no prior 24 months of useful data in most accounts).
+	const prevMonths = scope === 'month' ? 1 : scope === 'year' ? 12 : 0;
+	const prevEndDate = new Date(scopeStartDate);
+	prevEndDate.setDate(prevEndDate.getDate() - 1);
+	const prevStartDate = new Date(prevEndDate);
+	prevStartDate.setMonth(prevStartDate.getMonth() - prevMonths + 1);
+	prevStartDate.setDate(1);
+	const prevStartISO = prevStartDate.toISOString().slice(0, 10);
+	const prevEndISO = prevEndDate.toISOString().slice(0, 10);
+	const prevMonthDocs = prevMonths === 0 ? [] : documents.filter((d) => {
+		if (d.data.type !== 'daily_log') return false;
+		const ds = String(d.data.date || '');
+		return ds >= prevStartISO && ds <= prevEndISO;
+	});
+	const prevDaysInMonth = prevMonths === 0 ? 0 : Math.round(
+		(prevEndDate.getTime() - prevStartDate.getTime()) / 86400000
+	) + 1;
 	const prevDaysLogged = prevMonthDocs.length;
+	const prevMonthPrefix = scope === 'month'
+		? `${prevStartDate.getFullYear()}-${String(prevStartDate.getMonth() + 1).padStart(2, '0')}`
+		: '';
 
 	const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 	paintPaper(doc);
@@ -541,35 +940,48 @@ export function generateDoctorPdf(
 	// ── Compute stats ──
 	const daysLogged = monthDocs.length;
 	const episodeCols = blueprint.gridEpisodeColumns;
+	// dailyEpisodes: only meaningful for 'month' scope (used by cluster-day
+	// analysis). For year/2years scope we compute totals from monthDocs directly.
 	const dailyEpisodes: number[] = [];
 	let totalEpisodes = 0;
-	for (let day = 1; day <= daysInMonth; day++) {
-		const dayStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
-		const dayDoc = monthDocs.find((d) => d.data.date === dayStr);
-		let dayTotal = 0;
-		for (const col of episodeCols) {
-			dayTotal += dayDoc?.data?.episodes?.[col] || dayDoc?.data?.seizures?.[col] || 0;
+	if (scope === 'month') {
+		for (let day = 1; day <= daysInMonth; day++) {
+			const dayStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+			const dayDoc = monthDocs.find((d) => d.data.date === dayStr);
+			let dayTotal = 0;
+			for (const col of episodeCols) {
+				dayTotal += dayDoc?.data?.episodes?.[col] || dayDoc?.data?.seizures?.[col] || 0;
+			}
+			dailyEpisodes.push(dayTotal);
+			totalEpisodes += dayTotal;
 		}
-		dailyEpisodes.push(dayTotal);
-		totalEpisodes += dayTotal;
+	} else {
+		for (const d of monthDocs) {
+			let dayTotal = 0;
+			for (const col of episodeCols) {
+				dayTotal += (d.data?.episodes?.[col] || d.data?.seizures?.[col] || 0) as number;
+			}
+			totalEpisodes += dayTotal;
+		}
 	}
 
-	const prevDailyEpisodes: number[] = [];
 	let prevTotalEpisodes = 0;
-	for (let day = 1; day <= prevDaysInMonth; day++) {
-		const dayStr = `${prevMonthPrefix}-${String(day).padStart(2, '0')}`;
-		const dayDoc = prevMonthDocs.find((d) => d.data.date === dayStr);
-		let t2 = 0;
+	for (const d of prevMonthDocs) {
 		for (const col of episodeCols) {
-			t2 += dayDoc?.data?.episodes?.[col] || dayDoc?.data?.seizures?.[col] || 0;
+			prevTotalEpisodes += (d.data?.episodes?.[col] || d.data?.seizures?.[col] || 0) as number;
 		}
-		prevDailyEpisodes.push(t2);
-		prevTotalEpisodes += t2;
 	}
+
+	// Positive-marker IDs that should NEVER appear as "symptoms" in the
+	// clinical report. They were removed from new presets but legacy stored
+	// blueprints still contain them — this denylist is the safety net so the
+	// "Most frequent symptom: Slept well (157)" bug can't surface again.
+	const POSITIVE_MARKERS = new Set(['slept_well']);
 
 	const symptomFreq: { id: string; label: string; count: number }[] = [];
 	for (const g of blueprint.symptomGroups) {
 		for (const item of g.items) {
+			if (POSITIVE_MARKERS.has(item.id)) continue;
 			const count = monthDocs.filter((d) => d.data?.symptoms?.[item.id]).length;
 			if (count > 0 || blueprint.gridSymptomColumns.includes(item.id)) {
 				symptomFreq.push({ id: item.id, label: t(item.label), count });
@@ -599,34 +1011,29 @@ export function generateDoctorPdf(
 	doc.line(14, cursorY, pageW - 14, cursorY);
 	cursorY += 6;
 
-	if (daysLogged > 0) {
-		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(10);
-		doc.setTextColor(...BRAND.textSecondary);
-		const summary = t('pdf.clinical_summary', {
-			month: monthName,
-			episodes: totalEpisodes,
-			daysLogged,
-			daysInMonth,
-			topSymptom: mostFrequentSymptom ? mostFrequentSymptom.label : '—',
-			topPct,
-		});
-		const lines = doc.splitTextToSize(summary, pageW - 28);
-		doc.text(lines, 14, cursorY);
-		cursorY += lines.length * 5 + 4;
-	}
+	// Clinical summary one-liner removed — duplicated the stat cards below.
+	void monthName; void daysInMonth; void topPct;
 
 	// ── Stat cards (2×2) with accent stripes ──
 	const cardGap = 4;
 	const cardW = (pageW - 28 - cardGap) / 2;
 	const cardH = 18;
 
+	// Days-logged is a data-quality signal (so the doctor knows whether to
+	// trust the means), not a clinical metric — render it as a small line
+	// AFTER the disclaimer banner so it doesn't overlap. Position is right
+	// above the stat cards.
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(7.5);
+	doc.setTextColor(...BRAND.textMuted);
+	doc.text(
+		`${t('pdf.days_logged_short')}: ${daysLogged}/${daysInMonth}`,
+		pageW - 14,
+		cursorY - 1,
+		{ align: 'right' }
+	);
+
 	const cards: { label: string; value: string; accent: RGB }[] = [
-		{
-			label: t('pdf.days_logged'),
-			value: `${daysLogged} / ${daysInMonth}`,
-			accent: BRAND.olive,
-		},
 		{
 			label: t('pdf.total_episodes'),
 			value: String(totalEpisodes),
@@ -658,13 +1065,18 @@ export function generateDoctorPdf(
 	cursorY += 2 * (cardH + cardGap);
 
 	// ── Comparison deltas ──
+	// For '2years' scope there is no meaningful prior window (prevMonths===0),
+	// so we suppress the entire deltas block. For 'year' scope we compare to
+	// the prior 12-month window and retitle accordingly.
 	const episodeChange = totalEpisodes - prevTotalEpisodes;
 	const daysChange = daysLogged - prevDaysLogged;
-
+	const showDeltas = scope !== '2years';
+	if (showDeltas) {
+	const deltaTitleKey = scope === 'year' ? 'pdf.compared_to_prev_year' : 'pdf.compared_to_prev';
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(8);
 	doc.setTextColor(...BRAND.textMuted);
-	doc.text(t('pdf.compared_to_prev').toUpperCase(), 14, cursorY + 2);
+	doc.text(t(deltaTitleKey).toUpperCase(), 14, cursorY + 2);
 	cursorY += 6;
 
 	// jsPDF's built-in fonts render WinAnsi only — Unicode triangles (▲▼)
@@ -692,6 +1104,20 @@ export function generateDoctorPdf(
 	drawDelta(14 + cardW + cardGap, t('pdf.days_logged'), daysChange, false);
 
 	cursorY += 12;
+	}
+
+	// Trajectory metadata exposed outside the scope block so the "trajectory"
+	// bullet on the For-Doctor page can reference it when the chart is drawn.
+	type TrendDir = 'up' | 'down' | 'flat';
+	let chartContext:
+		| { MONTHS: number; firstAvg: number; lastAvg: number; trendLabel: string; trendDir: TrendDir }
+		| null = null;
+
+	// For 'month' scope, skip the 24-month trajectory + vital-trends section.
+	// A month report should stay focused on that month; the grid appendix has
+	// the day-by-day detail, the stat cards have the comparisons to prev month.
+	// Historical context belongs in the 'year' and '2years' scope reports.
+	if (scope !== 'month') {
 
 	// ── Chart: 24-month trajectory ──
 	// Doctors typically see patients once or twice a year. A long-horizon
@@ -702,9 +1128,12 @@ export function generateDoctorPdf(
 	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(10);
 	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(t('pdf.episode_trend'), 14, cursorY);
+	doc.text(t(scope === 'year' ? 'pdf.episode_trend_12m' : 'pdf.episode_trend'), 14, cursorY);
 
-	const MONTHS = 24;
+	// Chart horizon matches scope so the visual matches what the bullets
+	// describe. Month-scope keeps 24 for context (a 1-month line chart is
+	// useless); year shrinks to 12; 2years stays at 24.
+	const MONTHS = scope === 'year' ? 12 : 24;
 	const monthBuckets: Array<{ y: number; m: number; total: number; days: number }> = [];
 	for (let k = MONTHS - 1; k >= 0; k--) {
 		const d = new Date(year, month - k, 1);
@@ -735,7 +1164,6 @@ export function generateDoctorPdf(
 	const trendEps = Math.max(0.5, firstAvg * 0.1);
 	let trendLabelKey = 'pdf.trend_stable';
 	let trendColor: RGB = BRAND.textMuted;
-	type TrendDir = 'up' | 'down' | 'flat';
 	let trendDir: TrendDir = 'flat';
 	if (trendDelta > trendEps) {
 		trendLabelKey = 'pdf.trend_worsening';
@@ -752,6 +1180,8 @@ export function generateDoctorPdf(
 	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(9);
 	const trendLabel = t(trendLabelKey);
+	// Stash for bullet rendering outside this block.
+	chartContext = { MONTHS, firstAvg, lastAvg, trendLabel, trendDir };
 	const pillPadX = 3;
 	const pillPadY = 1.8;
 	const pillW = doc.getTextWidth(trendLabel) + pillPadX * 2;
@@ -789,6 +1219,99 @@ export function generateDoctorPdf(
 	const chartH = 46;
 	const yMax = Math.max(...monthlyTotals, 1);
 
+	// Event markers — user-authored `event` docs falling inside the chart
+	// window. Rendered as thin dashed vertical lines on the trajectory chart
+	// AND on each vital mini-chart so the doctor sees cause-effect.
+	type EventMarker = { x: number; label: string };
+	// Find the date of the very first daily_log doc — used as a synthetic
+	// "Tracking started" marker so the chart always has at least one event
+	// line for context, even before the user has created any manual event.
+	const firstLogISO = (() => {
+		let oldest = '';
+		for (const d of documents) {
+			if (d.data?.type !== 'daily_log') continue;
+			const ds = String(d.data.date || '');
+			if (ds.length !== 10) continue;
+			if (!oldest || ds < oldest) oldest = ds;
+		}
+		return oldest;
+	})();
+
+	function buildEventMarkers(boxX: number, boxW: number): EventMarker[] {
+		const out: EventMarker[] = [];
+		// Synthetic "tracking started" marker — only rendered if it's within
+		// the chart window. Skipped if the user already authored an event on
+		// that exact date (avoids overlap).
+		const startedLabel = t('pdf.event_tracking_started');
+		const userEventDates = new Set(
+			documents
+				.filter((d) => d.data?.type === 'event')
+				.map((d) => String(d.data.date || ''))
+		);
+		if (firstLogISO && !userEventDates.has(firstLogISO)) {
+			const yyyy = parseInt(firstLogISO.slice(0, 4));
+			const mm = parseInt(firstLogISO.slice(5, 7)) - 1;
+			const dd = parseInt(firstLogISO.slice(8, 10));
+			const monthIdx = monthBuckets.findIndex((b) => b.y === yyyy && b.m === mm);
+			if (monthIdx >= 0) {
+				const daysInMo = new Date(yyyy, mm + 1, 0).getDate();
+				const frac = Math.max(0, Math.min(0.999, (dd - 1) / daysInMo));
+				const xRel = Math.min(0.999, (monthIdx + frac) / MONTHS);
+				out.push({ x: boxX + xRel * boxW, label: startedLabel });
+			}
+		}
+		for (const d of documents) {
+			if (d.data?.type !== 'event') continue;
+			const ds = String(d.data.date || '');
+			if (ds.length < 10) continue;
+			const yyyy = parseInt(ds.slice(0, 4));
+			const mm = parseInt(ds.slice(5, 7)) - 1;
+			const dd = parseInt(ds.slice(8, 10));
+			if (isNaN(yyyy) || isNaN(mm) || isNaN(dd)) continue;
+			const monthIdx = monthBuckets.findIndex((b) => b.y === yyyy && b.m === mm);
+			if (monthIdx < 0) continue;
+			const daysInMo = new Date(yyyy, mm + 1, 0).getDate();
+			const frac = Math.max(0, Math.min(0.999, (dd - 1) / daysInMo));
+			// Use MONTHS as denominator (not MONTHS-1) so events stay inside the
+			// chart bounds. Data points use (i / MONTHS-1) which puts the last
+			// point exactly on the right edge; events use (i+frac)/MONTHS so a
+			// late-month event in the last bucket sits just inside the edge.
+			const xRel = Math.min(0.999, (monthIdx + frac) / MONTHS);
+			const x = boxX + xRel * boxW;
+			const raw = String(d.data.notes || '').replace(/\s+/g, ' ').trim();
+			out.push({ x, label: raw.length > 22 ? raw.slice(0, 21) + '…' : raw });
+		}
+		return out;
+	}
+	function drawEventLines(boxX: number, boxY: number, boxW: number, boxH: number, withLabels: boolean) {
+		const markers = buildEventMarkers(boxX, boxW);
+		if (markers.length === 0) return;
+		doc.setDrawColor(...BRAND.ochre);
+		doc.setLineWidth(0.3);
+		doc.setLineDashPattern([0.8, 0.8], 0);
+		for (const m of markers) {
+			doc.line(m.x, boxY, m.x, boxY + boxH);
+		}
+		doc.setLineDashPattern([], 0);
+		// small filled triangle marker at top of each line
+		doc.setFillColor(...BRAND.ochre);
+		for (const m of markers) {
+			doc.triangle(m.x - 1.2, boxY - 0.3, m.x + 1.2, boxY - 0.3, m.x, boxY + 1.5, 'F');
+		}
+		if (withLabels) {
+			doc.setFont('helvetica', 'normal');
+			doc.setFontSize(6);
+			doc.setTextColor(...BRAND.ochre);
+			for (const m of markers) {
+				doc.text(m.label, m.x + 1, boxY - 1.5);
+			}
+		}
+	}
+
+	// Mark the top of the "shared 24-month axis" group so we can frame
+	// it with a slim border once all charts in the group have rendered.
+	const trendsBlockTop = cursorY - 8;
+
 	// Plot area background
 	doc.setFillColor(...BRAND.paper);
 	doc.rect(chartX, cursorY, chartW, chartH, 'F');
@@ -806,7 +1329,12 @@ export function generateDoctorPdf(
 	doc.setFontSize(6);
 	doc.setTextColor(...BRAND.textMuted);
 	doc.text(String(yMax), chartX - 1, cursorY + 2, { align: 'right' });
-	doc.text(String(Math.round(yMax / 2)), chartX - 1, cursorY + chartH / 2 + 1, { align: 'right' });
+	// Skip the middle label when yMax is small enough that rounding would
+	// produce the same value as the top label (e.g. yMax=1 → mid=round(0.5)=1).
+	const midY = Math.round(yMax / 2);
+	if (yMax >= 3 && midY !== yMax && midY !== 0) {
+		doc.text(String(midY), chartX - 1, cursorY + chartH / 2 + 1, { align: 'right' });
+	}
 	doc.text('0', chartX - 1, cursorY + chartH, { align: 'right' });
 
 	// Year divider — dashed vertical at the year boundary
@@ -887,20 +1415,485 @@ export function generateDoctorPdf(
 		doc.circle(ex, ey, 1.2, 'F');
 	}
 
-	// X-axis labels: quarter markers (show month + year at Jan / Apr / Jul / Oct)
+	// Event vertical lines on the trajectory chart (with text labels)
+	drawEventLines(chartX, cursorY, chartW, chartH, true);
+
+	// Slim ochre frame around the trajectory chart's plot area — same color
+	// will frame the vital mini-charts so the doctor sees they share an axis.
+	doc.setDrawColor(...BRAND.ochreSoft);
+	doc.setLineWidth(0.4);
+	doc.roundedRect(chartX - 0.3, cursorY - 0.3, chartW + 0.6, chartH + 0.6, 0.8, 0.8, 'S');
+
+	// X-axis labels: every month for 12-month scope, every other for 24.
+	// All-month labels at 24mo scope cram into each other and become unreadable.
 	doc.setFontSize(6);
 	doc.setTextColor(...BRAND.textMuted);
+	const labelEvery = MONTHS <= 12 ? 1 : 2;
 	for (let i = 0; i < monthBuckets.length; i++) {
+		if (i % labelEvery !== 0 && i !== monthBuckets.length - 1) continue;
 		const b = monthBuckets[i];
-		if (b.m === 0 || b.m === 3 || b.m === 6 || b.m === 9 || i === monthBuckets.length - 1) {
-			const x = chartX + (i / Math.max(1, MONTHS - 1)) * chartW;
-			const d = new Date(b.y, b.m, 1);
-			const shortLabel = d.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
-			doc.text(shortLabel, x, cursorY + chartH + 4, { align: 'center' });
-		}
+		const x = chartX + (i / Math.max(1, MONTHS - 1)) * chartW;
+		const d = new Date(b.y, b.m, 1);
+		// Year suffix only on January or first/last bucket — keeps the strip tidy.
+		const showYear = b.m === 0 || i === 0 || i === monthBuckets.length - 1;
+		const shortLabel = d.toLocaleDateString(locale, showYear
+			? { month: 'short', year: '2-digit' }
+			: { month: 'short' });
+		doc.text(shortLabel, x, cursorY + chartH + 4, { align: 'center' });
 	}
 
 	cursorY += chartH + 10;
+
+	// ── 24-month trends: vitals + multiDay episode breakdown ──
+	// One mini-chart per significant vital (paired vitals share a chart).
+	// One mini-chart for multiDay episode breakdown (e.g. manic vs depressive).
+	// All use the same 24-month buckets as the trajectory chart above so the
+	// X-axes line up.
+
+	function hexToRGB(hex: string): RGB {
+		const m = hex.replace('#', '');
+		return [
+			parseInt(m.slice(0, 2), 16),
+			parseInt(m.slice(2, 4), 16),
+			parseInt(m.slice(4, 6), 16),
+		];
+	}
+
+	function aggregateVitalMonthly(vid: string, mode: 'mean' | 'max' = 'mean'): (number | null)[] {
+		const buckets = monthBuckets.map(() => ({ sum: 0, max: 0, count: 0 }));
+		for (const d of documents) {
+			if (d.data?.type !== 'daily_log') continue;
+			const dateStr = String(d.data.date || '');
+			const idx = bucketIndex.get(dateStr.slice(0, 7));
+			if (idx === undefined) continue;
+			const raw = d.data?.vitals?.[vid];
+			if (!raw) continue;
+			const vals: number[] = [];
+			try {
+				const p = JSON.parse(raw);
+				if (Array.isArray(p)) {
+					for (const e of p) {
+						const n = Number(e.value);
+						if (!isNaN(n)) vals.push(n);
+					}
+				}
+			} catch {
+				/* not JSON */
+			}
+			if (vals.length === 0) {
+				const n = Number(raw);
+				if (!isNaN(n)) vals.push(n);
+			}
+			for (const v of vals) {
+				buckets[idx].sum += v;
+				if (v > buckets[idx].max) buckets[idx].max = v;
+				buckets[idx].count++;
+			}
+		}
+		return buckets.map((b) =>
+			b.count > 0 ? (mode === 'mean' ? b.sum / b.count : b.max) : null
+		);
+	}
+
+	function aggregateEpisodeMonthly(epId: string): number[] {
+		const buckets = monthBuckets.map(() => 0);
+		for (const d of documents) {
+			if (d.data?.type !== 'daily_log') continue;
+			const dateStr = String(d.data.date || '');
+			const idx = bucketIndex.get(dateStr.slice(0, 7));
+			if (idx === undefined) continue;
+			const eps = (d.data?.episodes || d.data?.seizures || {}) as Record<string, number>;
+			if ((eps[epId] || 0) > 0) buckets[idx]++;
+		}
+		return buckets;
+	}
+
+	type MiniSeries = { label: string; color: string; values: (number | null)[] };
+	type RefLine = { value: number; label: string };
+	type MiniChart = { title: string; series: MiniSeries[]; yLabel?: string; referenceLines?: RefLine[] };
+
+	const miniCharts: MiniChart[] = [];
+
+	// Aggregator that filters multi-entry vital values by time of day.
+	// Returns monthly mean of values whose time matches the requested half-day.
+	function aggregateVitalMonthlyByTime(vid: string, half: 'am' | 'pm'): (number | null)[] {
+		const buckets = monthBuckets.map(() => ({ sum: 0, count: 0 }));
+		for (const d of documents) {
+			if (d.data?.type !== 'daily_log') continue;
+			const dateStr = String(d.data.date || '');
+			const idx = bucketIndex.get(dateStr.slice(0, 7));
+			if (idx === undefined) continue;
+			const raw = d.data?.vitals?.[vid];
+			if (!raw) continue;
+			try {
+				const parsed = JSON.parse(raw);
+				if (!Array.isArray(parsed)) continue;
+				for (const e of parsed) {
+					const time = String(e.time || '');
+					const hh = parseInt(time.slice(0, 2));
+					if (isNaN(hh)) continue;
+					const isAM = hh < 12;
+					if (half === 'am' && !isAM) continue;
+					if (half === 'pm' && isAM) continue;
+					const n = Number(e.value);
+					if (isNaN(n)) continue;
+					buckets[idx].sum += n;
+					buckets[idx].count++;
+				}
+			} catch {
+				/* not JSON */
+			}
+		}
+		return buckets.map((b) => (b.count > 0 ? b.sum / b.count : null));
+	}
+
+	// Vitals with excludeFromTrends (cycle_day, cycle_length, period_duration)
+	// never chart — their monthly mean is semantically meaningless.
+	const chartableVitals = blueprint.vitals.filter((v) => !v.excludeFromTrends);
+
+	// 1. Paired vitals (e.g. left/right IOP, pain + pain_interference)
+	const seenVitalIds = new Set<string>();
+	const PAIR_COLORS = ['#0891B2', '#7C3AED'];
+	for (const v of chartableVitals) {
+		if (seenVitalIds.has(v.id) || !v.pairLabel) continue;
+		const pair = chartableVitals.filter((x) => x.pairLabel === v.pairLabel);
+		const series: MiniSeries[] = pair.map((p, i) => ({
+			label: t(p.label),
+			color: PAIR_COLORS[i % PAIR_COLORS.length],
+			values: aggregateVitalMonthly(p.id, 'max'),
+		}));
+		for (const p of pair) seenVitalIds.add(p.id);
+		if (series.some((s) => s.values.some((v2) => v2 !== null))) {
+			const titleKey = `vital.pair_${v.pairLabel}`;
+			const title = t(titleKey);
+			const refLines: RefLine[] = pair
+				.filter((p) => p.referenceLine)
+				.map((p) => ({
+					value: p.referenceLine!.value,
+					label: t(p.referenceLine!.labelKey),
+				}));
+			miniCharts.push({
+				title: (title === titleKey ? t(v.label) : title) + (v.unit ? ` (${v.unit})` : ''),
+				series,
+				referenceLines: refLines.length ? refLines : undefined,
+			});
+		}
+	}
+
+	// 2. Single vitals worth charting (auto-detect from data presence)
+	for (const v of chartableVitals) {
+		if (seenVitalIds.has(v.id)) continue;
+		const values = aggregateVitalMonthly(v.id, 'mean');
+		const populated = values.filter((x) => x !== null).length;
+		if (populated < 2) continue;
+		const refLines: RefLine[] = v.referenceLine
+			? [{ value: v.referenceLine.value, label: t(v.referenceLine.labelKey) }]
+			: [];
+		miniCharts.push({
+			title: `${t(v.label)}${v.unit ? ` (${v.unit})` : ''}`,
+			series: [{ label: t(v.label), color: '#b2463c', values }],
+			referenceLines: refLines.length ? refLines : undefined,
+		});
+		seenVitalIds.add(v.id);
+	}
+
+	// 2b. Time-of-day split charts (morning vs evening) for vitals flagged
+	// `splitByTimeOfDay`. Renders in addition to the paired/single charts so
+	// the doctor sees both the absolute trend and the diurnal pattern.
+	for (const v of chartableVitals) {
+		if (!v.splitByTimeOfDay || !v.multiEntry) continue;
+		const am = aggregateVitalMonthlyByTime(v.id, 'am');
+		const pm = aggregateVitalMonthlyByTime(v.id, 'pm');
+		if (!am.some((x) => x !== null) && !pm.some((x) => x !== null)) continue;
+		const refLines: RefLine[] = v.referenceLine
+			? [{ value: v.referenceLine.value, label: t(v.referenceLine.labelKey) }]
+			: [];
+		miniCharts.push({
+			title: `${t(v.label)}${v.unit ? ` (${v.unit})` : ''} — ${t('pdf.am_pm_split')}`,
+			series: [
+				{ label: t('pdf.am_label'), color: '#DC2626', values: am },
+				{ label: t('pdf.pm_label'), color: '#6366F1', values: pm },
+			],
+			referenceLines: refLines.length ? refLines : undefined,
+		});
+	}
+
+	// 3. Episode breakdown — one line per episode type that has any data.
+	// Relaxed from multiDay-only: burnout has point-event episodes (panic vs
+	// breakdown) that doctors still want to see broken out.
+	const breakdownEps = blueprint.episodeTypes
+		.map((ep) => ({ ep, values: aggregateEpisodeMonthly(ep.id) }))
+		.filter((x) => x.values.some((v) => v > 0));
+	if (breakdownEps.length >= 2) {
+		miniCharts.push({
+			title: t('pdf.episode_breakdown_title'),
+			series: breakdownEps.map(({ ep, values }) => ({
+				label: t(ep.label),
+				color: ep.color,
+				values,
+			})),
+			yLabel: t('pdf.days_per_month'),
+		});
+	}
+
+	// Order: most-populated first, cap at 4 (leaves space for symptom table).
+	miniCharts.sort((a, b) => {
+		const score = (c: MiniChart) =>
+			c.series.reduce(
+				(s, x) => s + x.values.filter((v) => v !== null && v !== 0).length,
+				0
+			);
+		return score(b) - score(a);
+	});
+	const charts = miniCharts.slice(0, 4);
+
+	if (charts.length > 0) {
+		if (cursorY > pageH - 80) {
+			doc.addPage();
+			paintPaper(doc);
+			cursorY = 20;
+		}
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(10);
+		doc.setTextColor(...BRAND.textPrimary);
+		doc.text(t(scope === 'year' ? 'pdf.vital_trends_title_12m' : 'pdf.vital_trends_title'), 14, cursorY);
+		cursorY += 5;
+
+		const cx = 22;
+		const cw = pageW - 28 - 8;
+		const ch = 24;
+
+		for (const chart of charts) {
+			if (cursorY + ch + 14 > pageH - 20) {
+				doc.addPage();
+				paintPaper(doc);
+				cursorY = 20;
+				doc.setFont('helvetica', 'bold');
+				doc.setFontSize(10);
+				doc.setTextColor(...BRAND.textPrimary);
+				doc.text(t(scope === 'year' ? 'pdf.vital_trends_title_12m' : 'pdf.vital_trends_title'), 14, cursorY);
+				cursorY += 5;
+			}
+			// Title + inline legend
+			doc.setFont('helvetica', 'normal');
+			doc.setFontSize(8);
+			doc.setTextColor(...BRAND.textSecondary);
+			doc.text(chart.title, 14, cursorY);
+			if (chart.series.length > 1) {
+				let lx = 14 + doc.getTextWidth(chart.title) + 6;
+				doc.setFontSize(7);
+				for (const s of chart.series) {
+					doc.setFillColor(...hexToRGB(s.color));
+					doc.circle(lx, cursorY - 1.2, 1, 'F');
+					doc.setTextColor(...BRAND.textMuted);
+					doc.text(s.label, lx + 2, cursorY);
+					lx += doc.getTextWidth(s.label) + 7;
+				}
+			}
+			cursorY += 2;
+
+			// Plot area
+			doc.setFillColor(...BRAND.paper);
+			doc.rect(cx, cursorY, cw, ch, 'F');
+			doc.setDrawColor(...BRAND.borderSubtle);
+			doc.setLineWidth(0.1);
+			doc.line(cx, cursorY + ch / 2, cx + cw, cursorY + ch / 2);
+
+			// y-range — include reference values so the line is visible.
+			const refVals = (chart.referenceLines || []).map((r) => r.value);
+			const allVals = [
+				...chart.series.flatMap((s) => s.values.filter((v): v is number => v !== null)),
+				...refVals,
+			];
+			const yMax = Math.max(...allVals, 1);
+			const yMin = Math.min(...allVals, 0);
+			const ySpan = Math.max(0.1, yMax - yMin);
+
+			// y-labels
+			doc.setFont('helvetica', 'normal');
+			doc.setFontSize(6);
+			doc.setTextColor(...BRAND.textMuted);
+			const fmt = (n: number) => (Math.abs(n) >= 100 ? n.toFixed(0) : n.toFixed(1));
+			doc.text(fmt(yMax), cx - 1, cursorY + 2, { align: 'right' });
+			doc.text(fmt(yMin), cx - 1, cursorY + ch, { align: 'right' });
+
+			// Reference / target lines — drawn BEFORE series so the data
+			// sits visually on top. Dashed olive line + tiny right-edge label.
+			if (chart.referenceLines && chart.referenceLines.length > 0) {
+				doc.setLineDashPattern([0.6, 0.6], 0);
+				doc.setLineWidth(0.25);
+				doc.setDrawColor(...BRAND.olive);
+				for (const ref of chart.referenceLines) {
+					const refY = cursorY + ch - ((ref.value - yMin) / ySpan) * ch;
+					doc.line(cx, refY, cx + cw, refY);
+				}
+				doc.setLineDashPattern([], 0);
+				doc.setFontSize(5.5);
+				doc.setTextColor(...BRAND.olive);
+				for (const ref of chart.referenceLines) {
+					const refY = cursorY + ch - ((ref.value - yMin) / ySpan) * ch;
+					doc.text(`${ref.label}: ${ref.value}`, cx + cw - 0.5, refY - 0.5, { align: 'right' });
+				}
+			}
+
+			// Each series — straight segments + dots (sparse data is honest)
+			for (const s of chart.series) {
+				const rgb = hexToRGB(s.color);
+				doc.setDrawColor(...rgb);
+				doc.setLineWidth(0.5);
+				const pts: [number, number][] = [];
+				for (let i = 0; i < s.values.length; i++) {
+					const v = s.values[i];
+					if (v === null) continue;
+					const x = cx + (i / Math.max(1, MONTHS - 1)) * cw;
+					const y = cursorY + ch - ((v - yMin) / ySpan) * ch;
+					pts.push([x, y]);
+				}
+				for (let i = 1; i < pts.length; i++) {
+					doc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+				}
+				doc.setFillColor(...rgb);
+				for (const [x, y] of pts) doc.circle(x, y, 0.55, 'F');
+			}
+			// Event markers (no labels — too cramped on mini charts) and the
+			// shared-axis ochre frame so the doctor sees this chart belongs
+			// to the same temporal group as the trajectory chart above.
+			drawEventLines(cx, cursorY, cw, ch, false);
+			doc.setDrawColor(...BRAND.ochreSoft);
+			doc.setLineWidth(0.4);
+			doc.roundedRect(cx - 0.3, cursorY - 0.3, cw + 0.6, ch + 0.6, 0.8, 0.8, 'S');
+
+			// X-axis month labels — same density rule as the trajectory chart.
+			// Without these the mini-charts read as abstract lines with no
+			// temporal anchor (Klara called this out, screenshot confirmed).
+			doc.setFont('helvetica', 'normal');
+			doc.setFontSize(5.5);
+			doc.setTextColor(...BRAND.textMuted);
+			const miniLabelEvery = MONTHS <= 12 ? 1 : 2;
+			for (let i = 0; i < monthBuckets.length; i++) {
+				if (i % miniLabelEvery !== 0 && i !== monthBuckets.length - 1) continue;
+				const b = monthBuckets[i];
+				const lx = cx + (i / Math.max(1, MONTHS - 1)) * cw;
+				const dt = new Date(b.y, b.m, 1);
+				const showYear = b.m === 0 || i === 0 || i === monthBuckets.length - 1;
+				const lbl = dt.toLocaleDateString(locale, showYear
+					? { month: 'short', year: '2-digit' }
+					: { month: 'short' });
+				doc.text(lbl, lx, cursorY + ch + 3, { align: 'center' });
+			}
+			cursorY += ch + 9;
+		}
+		cursorY += 2;
+	}
+
+	// ── Episode duration breakdown ──
+	// For episode types with `trackDuration: true` (epilepsy, migraine,
+	// glaucoma episodes), aggregate the duration buckets across the last 12
+	// months. A 5-minute focal vs a 30-second focal mean different things —
+	// doctors triage by duration, not just count.
+	const durEps = blueprint.episodeTypes.filter((e) => e.trackDuration);
+	if (durEps.length > 0) {
+		// Local 12-month window (yearDocs is computed later in the bullets block)
+		const dur12End = new Date(year, month + 1, 0);
+		const dur12Start = new Date(dur12End);
+		dur12Start.setFullYear(dur12Start.getFullYear() - 1);
+		dur12Start.setDate(dur12Start.getDate() + 1);
+		const dur12StartISO = dur12Start.toISOString().slice(0, 10);
+		const dur12EndISO = dur12End.toISOString().slice(0, 10);
+		const last12mDocs = documents.filter((d) => {
+			if (d.data?.type !== 'daily_log') return false;
+			const ds = String(d.data.date || '');
+			return ds >= dur12StartISO && ds <= dur12EndISO;
+		});
+
+		// duration counts per episode type
+		const durBuckets: Record<string, { lt1: number; m15: number; gt5: number; unk: number; total: number }> = {};
+		for (const ep of durEps) {
+			durBuckets[ep.id] = { lt1: 0, m15: 0, gt5: 0, unk: 0, total: 0 };
+		}
+		for (const d of last12mDocs) {
+			const eps = (d.data?.episodes || d.data?.seizures || {}) as Record<string, number>;
+			const durs = (d.data?.episodeDurations || {}) as Record<string, string>;
+			for (const ep of durEps) {
+				const cnt = eps[ep.id] || 0;
+				if (cnt <= 0) continue;
+				const dur = durs[ep.id] || '';
+				const b = durBuckets[ep.id];
+				b.total += cnt;
+				if (dur === '<1min') b.lt1 += cnt;
+				else if (dur === '1-5min') b.m15 += cnt;
+				else if (dur === '>5min') b.gt5 += cnt;
+				else b.unk += cnt;
+			}
+		}
+		const hasAny = Object.values(durBuckets).some((b) => b.total > 0);
+		if (hasAny) {
+			if (cursorY > pageH - 50) {
+				doc.addPage();
+				paintPaper(doc);
+				cursorY = 20;
+			}
+			doc.setFont('helvetica', 'bold');
+			doc.setFontSize(10);
+			doc.setTextColor(...BRAND.textPrimary);
+			doc.text(t('pdf.episode_duration_title'), 14, cursorY);
+			cursorY += 2;
+
+			const durRows = durEps
+				.filter((ep) => durBuckets[ep.id].total > 0)
+				.map((ep) => {
+					const b = durBuckets[ep.id];
+					return [
+						t(ep.label),
+						String(b.lt1),
+						String(b.m15),
+						String(b.gt5),
+						String(b.unk),
+						String(b.total),
+					];
+				});
+
+			autoTable(doc, {
+				startY: cursorY,
+				head: [[
+					t('pdf.episode_breakdown_title').split(' — ')[0],
+					t('pdf.episode_duration_under1'),
+					t('pdf.episode_duration_1to5'),
+					t('pdf.episode_duration_over5'),
+					t('pdf.episode_duration_unknown'),
+					t('pdf.total_short'),
+				]],
+				body: durRows,
+				theme: 'plain',
+				styles: {
+					fontSize: 8,
+					cellPadding: 2,
+					lineColor: BRAND.borderSubtle as any,
+					lineWidth: 0.1,
+					textColor: BRAND.textPrimary as any,
+				},
+				headStyles: {
+					fillColor: BRAND.paperInset as any,
+					textColor: BRAND.textPrimary as any,
+					fontStyle: 'bold',
+					fontSize: 8,
+				},
+				alternateRowStyles: { fillColor: [252, 250, 248] as any },
+				columnStyles: {
+					0: { cellWidth: 60 },
+					1: { cellWidth: 22, halign: 'center' },
+					2: { cellWidth: 22, halign: 'center' },
+					3: { cellWidth: 22, halign: 'center' },
+					4: { cellWidth: 32, halign: 'center' },
+					5: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
+				},
+			});
+			cursorY = (doc as any).lastAutoTable?.finalY ?? cursorY + 10;
+			cursorY += 6;
+		}
+	}
+
+	} // end of `if (scope !== 'month')` — skip trajectory + vital-trends + duration for month scope
 
 	// ── Symptom frequency table ──
 	if (cursorY > pageH - 60) {
@@ -1061,61 +2054,139 @@ export function generateDoctorPdf(
 	doc.setLineWidth(0.2);
 	doc.line(14, byY - 4, pageW - 14, byY - 4);
 
-	// Compose up to 4 bullets — each is "fact · question" pairs
-	const bullets: Array<{ fact: string; question: string }> = [];
-	bullets.push({
-		fact: t('pdf.for_doctor_fact_trajectory', {
-			months: String(MONTHS),
-			first: firstAvg.toFixed(1),
-			last: lastAvg.toFixed(1),
-			trend: trendLabel.toLowerCase(),
-		}),
-		question: trendDir === 'up'
-			? t('pdf.for_doctor_q_worsening')
-			: trendDir === 'down'
-				? t('pdf.for_doctor_q_improving')
-				: t('pdf.for_doctor_q_stable'),
-	});
+	// Compose bullets — each is "fact · question" pairs.
+	// Bullet window now matches the report scope: month / year / 2years.
+	// Variable still named `yearDocs` for historical reasons — it holds the
+	// scope-appropriate document set, not necessarily a year.
 
-	// Clustering: days in the selected month with any episodes
-	const clusterDays = dailyEpisodes
-		.map((v, i) => v > 0 ? i + 1 : 0)
-		.filter(d => d > 0);
-	if (clusterDays.length > 0) {
+	const bulletMonths = scope === '2years' ? 24 : scope === 'year' ? 12 : 1;
+	const yearEndDate = new Date(year, month + 1, 0);
+	const yearStartDate = new Date(year, month + 1 - bulletMonths, 1);
+	const yearStartISO = yearStartDate.toISOString().slice(0, 10);
+	const yearEndISO = yearEndDate.toISOString().slice(0, 10);
+	const yearDocs = documents.filter((d) => {
+		if (d.data?.type !== 'daily_log') return false;
+		const ds = String(d.data.date || '');
+		return ds >= yearStartISO && ds <= yearEndISO;
+	});
+	const yearDaysLogged = yearDocs.length;
+
+	// Human-readable label for the bullet window (passed as {window} into
+	// fact strings). Month scope shows the month name (e.g. "April 2026"),
+	// year/2years show the scope header label ("Letzte 12 Monate" etc.).
+	const bulletWindowLabel = scope === 'month'
+		? monthName
+		: t(scope === 'year' ? 'pdf.scope_year' : 'pdf.scope_2years');
+
+	// Year-scoped top symptom and trigger (separate from the month-scoped
+	// symptomFreq used on the page-1 summary).
+	const yearSymptomFreq: { id: string; label: string; count: number }[] = [];
+	for (const g of blueprint.symptomGroups) {
+		for (const item of g.items) {
+			if (POSITIVE_MARKERS.has(item.id)) continue;
+			const count = yearDocs.filter((d) => d.data?.symptoms?.[item.id]).length;
+			if (count > 0) {
+				yearSymptomFreq.push({ id: item.id, label: t(item.label), count });
+			}
+		}
+	}
+	yearSymptomFreq.sort((a, b) => b.count - a.count);
+	const yearTopSymptom = yearSymptomFreq[0] ?? null;
+
+	const yearTriggerFreq: { id: string; label: string; count: number }[] = [];
+	for (const trig of blueprint.triggers) {
+		const count = yearDocs.filter((d) => {
+			const trs = d.data?.triggers;
+			if (Array.isArray(trs)) return trs.includes(trig.id);
+			return !!(trs && trs[trig.id]);
+		}).length;
+		if (count > 0) {
+			yearTriggerFreq.push({ id: trig.id, label: t(trig.label), count });
+		}
+	}
+	yearTriggerFreq.sort((a, b) => b.count - a.count);
+	const yearTopTrigger = yearTriggerFreq[0] ?? null;
+
+	// CIPH-305b — condition-aware bullets now come from the shared helper so
+	// the compact PDF emits the same clinical facts (peak IOP, OFF time,
+	// pain×mood, etc.). Trajectory + episode-burden + top-trigger/symptom
+	// bullets remain inline below since they need scope-local state.
+	const bullets: Array<{ fact: string; question: string }> = [
+		...buildConditionAwareBullets(blueprint, yearDocs, t, bulletWindowLabel),
+	];
+
+	// Trajectory bullet — only when we actually drew a trajectory chart.
+	if (chartContext) {
 		bullets.push({
-			fact: t('pdf.for_doctor_fact_cluster', {
-				count: String(totalEpisodes),
-				month: monthName,
-				days: clusterDays.slice(0, 10).join(', ') + (clusterDays.length > 10 ? '…' : ''),
+			fact: t('pdf.for_doctor_fact_trajectory', {
+				months: String(chartContext.MONTHS),
+				first: chartContext.firstAvg.toFixed(1),
+				last: chartContext.lastAvg.toFixed(1),
+				trend: chartContext.trendLabel.toLowerCase(),
+			}),
+			question: chartContext.trendDir === 'up'
+				? t('pdf.for_doctor_q_worsening')
+				: chartContext.trendDir === 'down'
+					? t('pdf.for_doctor_q_improving')
+					: t('pdf.for_doctor_q_stable'),
+		});
+	}
+
+	// Episode burden across the 12-month window (replaces old "cluster days"
+	// bullet — listing specific day numbers doesn't scale beyond one month).
+	let yearEpisodeDays = 0;
+	let yearTotalEpisodes = 0;
+	for (const d of yearDocs) {
+		const eps = (d.data?.episodes || d.data?.seizures || {}) as Record<string, number>;
+		let dayTotal = 0;
+		for (const col of episodeCols) dayTotal += eps[col] || 0;
+		if (dayTotal > 0) {
+			yearEpisodeDays++;
+			yearTotalEpisodes += dayTotal;
+		}
+	}
+	if (yearTotalEpisodes > 0) {
+		bullets.push({
+			fact: t('pdf.for_doctor_fact_year_burden', {
+				total: String(yearTotalEpisodes),
+				days: String(yearEpisodeDays),
+				logged: String(yearDaysLogged),
+				window: bulletWindowLabel,
 			}),
 			question: t('pdf.for_doctor_q_cluster'),
 		});
 	}
 
-	if (mostFrequentTrigger && mostFrequentTrigger.count > 0) {
+	if (yearTopTrigger && yearTopTrigger.count > 0) {
 		bullets.push({
 			fact: t('pdf.for_doctor_fact_trigger', {
-				label: mostFrequentTrigger.label,
-				count: String(mostFrequentTrigger.count),
+				label: yearTopTrigger.label,
+				count: String(yearTopTrigger.count),
+				window: bulletWindowLabel,
 			}),
 			question: t('pdf.for_doctor_q_trigger'),
 		});
 	}
 
-	if (mostFrequentSymptom && mostFrequentSymptom.count > 0 && daysInMonth > 0) {
+	if (yearTopSymptom && yearTopSymptom.count > 0 && yearDaysLogged > 0) {
 		bullets.push({
 			fact: t('pdf.for_doctor_fact_symptom', {
-				label: mostFrequentSymptom.label,
-				count: String(mostFrequentSymptom.count),
-				pct: String(Math.round((mostFrequentSymptom.count / daysInMonth) * 100)),
+				label: yearTopSymptom.label,
+				count: String(yearTopSymptom.count),
+				pct: String(Math.round((yearTopSymptom.count / yearDaysLogged) * 100)),
 			}),
 			question: t('pdf.for_doctor_q_symptom'),
 		});
 	}
 
-	// Render bullets
-	for (const b of bullets) {
-		const num = bullets.indexOf(b) + 1;
+	// Pain × mood correlation now lives in `buildConditionAwareBullets`
+	// (CIPH-305b) so the compact PDF can also surface it.
+
+	// Cap to 6 bullets (was 5). The pain-mood correlation is a bonus signal
+	// when present; condition-aware bullets still come first.
+	const renderedBullets = bullets.slice(0, 6);
+	for (const b of renderedBullets) {
+		const num = renderedBullets.indexOf(b) + 1;
 		// Number circle
 		doc.setFillColor(...BRAND.brick);
 		doc.circle(18, byY + 2, 3, 'F');
@@ -1124,19 +2195,23 @@ export function generateDoctorPdf(
 		doc.setTextColor(255, 255, 255);
 		doc.text(String(num), 18, byY + 3.5, { align: 'center' });
 
-		// Fact
+		// Fact — wider safety margin so long German compound words don't overflow.
+		// jsPDF's default helvetica is Latin-1 only; all text here avoids the
+		// Unicode arrow (→) which renders as !' and breaks splitTextToSize.
+		const factWidth = pageW - 26 - 14 - 6; // left=26, right=14, 6mm safety
 		doc.setFont('helvetica', 'bold');
 		doc.setFontSize(10);
 		doc.setTextColor(...BRAND.textPrimary);
-		const factLines = doc.splitTextToSize(b.fact, pageW - 40);
+		const factLines = doc.splitTextToSize(b.fact, factWidth);
 		doc.text(factLines, 26, byY + 3);
 
-		// Question underneath
+		// Question underneath — prefix with "Q:" (ASCII) instead of the
+		// Unicode arrow which the font cannot render.
 		doc.setFont('helvetica', 'italic');
 		doc.setFontSize(9.5);
 		doc.setTextColor(...BRAND.ochre);
 		const qY = byY + 3 + factLines.length * 4.5;
-		const qLines = doc.splitTextToSize('→ ' + b.question, pageW - 40);
+		const qLines = doc.splitTextToSize('Q:  ' + b.question, factWidth);
 		doc.text(qLines, 26, qY);
 
 		byY = qY + qLines.length * 4.5 + 8;
@@ -1148,20 +2223,33 @@ export function generateDoctorPdf(
 	doc.setTextColor(...BRAND.textMuted);
 	doc.text(t('pdf.for_doctor_footnote'), pageW / 2, pageH - 28, { align: 'center' });
 
-	drawFooter(doc, t);
+	// ── Append day-by-day grid(s). 'month' scope = one grid for the focus
+	// month. 'year' / '2years' scope = one grid per month in the window, so
+	// the doctor can spot-check any specific month without extra exports.
+	const gridMonths: Array<{ y: number; m: number }> = [];
+	if (scope === 'month') {
+		gridMonths.push({ y: year, m: month });
+	} else {
+		// Iterate from oldest to newest so the appendix reads chronologically.
+		for (let i = scopeMonths - 1; i >= 0; i--) {
+			const d = new Date(year, month - i, 1);
+			gridMonths.push({ y: d.getFullYear(), m: d.getMonth() });
+		}
+	}
+	for (const gm of gridMonths) {
+		doc.addPage();
+		paintPaper(doc);
+		drawGridSection(doc, blueprint, documents, gm.y, gm.m, t, locale, username);
+	}
 
-	// ── Append day-by-day grid for the selected month on a new page ──
-	doc.addPage();
-	paintPaper(doc);
-	drawGridSection(doc, blueprint, documents, year, month, t, locale, username);
-
-	// Footer applies to every page (drawFooter stamps the current page only,
-	// but jsPDF-autotable's didDrawPage hooks already stamped prior pages via
-	// the analytics sections). We stamp the final grid page here.
+	// Footer: stamp every page ONCE, at the very end, after all pages exist.
+	// Calling drawFooter before doc.addPage() would stamp the new page again
+	// on the next call, producing the overlapping "Seite 1/3 Seite 1/4" artifact.
 	drawFooter(doc, t);
 
 	const userTag = username ? `${username}-` : '';
-	doc.save(`ciphra-${userTag}bericht-${blueprint.conditionId}-${monthPrefix}.pdf`);
+	const scopeTag = scope === 'month' ? focusMonthPrefix : `${scope}-${focusMonthPrefix}`;
+	doc.save(`ciphra-${userTag}bericht-${blueprint.conditionId}-${scopeTag}.pdf`);
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -1478,15 +2566,28 @@ export function exportCsv(
 	blueprint: Blueprint,
 	documents: CiphraDocument[],
 	year: number,
-	month: number, // 0-based
+	month: number, // 0-based — for 'month' scope this is the focus month;
+	                //         for 'year'/'2years' it's the END month of the window.
 	t: TranslateFn,
-	locale: string
+	locale: string,
+	scope: ReportScope = 'month'
 ): void {
-	const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-	const monthDocs = documents.filter(
-		(d) => d.data.type === 'daily_log' && String(d.data.date || '').startsWith(monthPrefix)
-	);
-	const daysInMonth = new Date(year, month + 1, 0).getDate();
+	const scopeMonths = scope === 'month' ? 1 : scope === 'year' ? 12 : 24;
+	const endDate = new Date(year, month + 1, 0);
+	const startDate = new Date(year, month + 1 - scopeMonths, 1);
+	const startISO = startDate.toISOString().slice(0, 10);
+	const endISO = endDate.toISOString().slice(0, 10);
+	const filePrefix = scope === 'month'
+		? `${year}-${String(month + 1).padStart(2, '0')}`
+		: `${scope}-${year}-${String(month + 1).padStart(2, '0')}`;
+	const scopeDocs = documents.filter((d) => {
+		if (d.data.type !== 'daily_log') return false;
+		const ds = String(d.data.date || '');
+		return ds >= startISO && ds <= endISO;
+	});
+	const totalDays = Math.round(
+		(endDate.getTime() - startDate.getTime()) / 86400000
+	) + 1;
 
 	const symptomCols: { id: string; label: string }[] = [];
 	for (const g of blueprint.symptomGroups) {
@@ -1519,10 +2620,14 @@ export function exportCsv(
 	];
 
 	const rows: string[][] = [];
-	for (let day = 1; day <= daysInMonth; day++) {
-		const dayStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
-		const dayDoc = monthDocs.find((d) => d.data.date === dayStr);
-		const dateFormatted = new Date(year, month, day).toLocaleDateString(locale, {
+	// Iterate every day in the scope window (oldest to newest) so the CSV
+	// covers the same range as the report scope, not just the focus month.
+	for (let i = 0; i < totalDays; i++) {
+		const cur = new Date(startDate);
+		cur.setDate(cur.getDate() + i);
+		const dayStr = cur.toISOString().slice(0, 10);
+		const dayDoc = scopeDocs.find((d) => d.data.date === dayStr);
+		const dateFormatted = cur.toLocaleDateString(locale, {
 			year: 'numeric',
 			month: '2-digit',
 			day: '2-digit',
@@ -1573,10 +2678,303 @@ export function exportCsv(
 	const url = URL.createObjectURL(blob);
 	const link = document.createElement('a');
 	link.href = url;
-	link.download = `ciphra-${blueprint.conditionId}-${monthPrefix}.csv`;
+	link.download = `ciphra-${blueprint.conditionId}-${filePrefix}.csv`;
 	link.click();
 	URL.revokeObjectURL(url);
 }
 
 // Use MM to silence unused-import warnings if tree-shaken later.
 void MM;
+
+/* ────────────────────────────────────────────────────────────────
+ * CIPH-305 — Compact A4 PDF.
+ * Single column, 12pt body min, 14pt headings, no decorative frames,
+ * no grid appendix. Built for legibility over density. Shares all
+ * aggregator helpers with generateDoctorPdf (see `aggregate*Shared`
+ * + `dayVitalsShared` above) so the two outputs never drift.
+ * ──────────────────────────────────────────────────────────────── */
+export function generateCompactPdf(
+	blueprintIn: Blueprint,
+	documents: CiphraDocument[],
+	year: number,
+	month: number,
+	t: TranslateFn,
+	locale: string,
+	username: string = '',
+	scope: ReportScope = 'month'
+): void {
+	// CIPH-301b: also strip user-hidden symptoms/triggers/vitals so the
+	// compact PDF respects wizard customizations (matches generateDoctorPdf).
+	const blueprint = applyBlueprintCustomizations(applyVitalTargetOverrides(blueprintIn, username));
+
+	const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+	const pageW = doc.internal.pageSize.getWidth();
+	const pageH = doc.internal.pageSize.getHeight();
+	const marginX = 18;
+	const contentW = pageW - 2 * marginX;
+	let y = 20;
+
+	// Scope-appropriate chart horizon: 24mo default, 12mo for 'year', 24 for '2years'.
+	const MONTHS = scope === 'year' ? 12 : 24;
+	const buckets = buildMonthBuckets(year, month, MONTHS);
+	const idx = bucketIndexMap(buckets);
+
+	// ── One-line header (wordmark + scope + condition). No banner frame.
+	drawWordmark(doc, marginX, y, { size: 14 });
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(14);
+	doc.setTextColor(...BRAND.textPrimary);
+	const scopeLabel = scope === 'month'
+		? new Date(year, month).toLocaleDateString(locale, { month: 'long', year: 'numeric' })
+		: t(scope === 'year' ? 'pdf.scope_year' : 'pdf.scope_2years');
+	const conditionLabel = blueprint.conditionLabel ? t(blueprint.conditionLabel) : blueprint.conditionId;
+	doc.text(`${conditionLabel} — ${scopeLabel}`, pageW - marginX, y, { align: 'right' });
+	y += 8;
+
+	// Account + export date line.
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(9);
+	doc.setTextColor(...BRAND.textMuted);
+	const exportDate = new Date().toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+	const metaLine = username
+		? `${t('pdf.account')}: ${username}   ·   ${t('pdf.export_date')}: ${exportDate}`
+		: `${t('pdf.export_date')}: ${exportDate}`;
+	doc.text(metaLine, marginX, y);
+	y += 6;
+
+	// ── Value-prop subtitle (so the reader immediately knows what this is
+	// and why it's a single page at 12pt).
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(10);
+	doc.setTextColor(...BRAND.brick);
+	doc.text(t('pdf.compact_subtitle'), marginX, y);
+	y += 5;
+
+	// ── "What this contains" one-paragraph intro (scope at a glance).
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(10);
+	doc.setTextColor(...BRAND.textSecondary);
+	const introLines = doc.splitTextToSize(t('pdf.compact_intro'), contentW);
+	doc.text(introLines, marginX, y);
+	y += introLines.length * 4.5 + 4;
+
+	// ── Disclaimer (compact, single paragraph, 10pt).
+	doc.setFont('helvetica', 'italic');
+	doc.setFontSize(10);
+	doc.setTextColor(...BRAND.textSecondary);
+	const discText = t('pdf.disclaimer_medical_long');
+	const discLines = doc.splitTextToSize(discText, contentW);
+	doc.text(discLines, marginX, y);
+	y += discLines.length * 4.5 + 6;
+
+	// ── Summary stats (one line, 12pt).
+	const scopeMonths = scope === 'month' ? 1 : scope === 'year' ? 12 : 24;
+	const scopeEndDate = new Date(year, month + 1, 0);
+	const scopeStartDate = new Date(year, month + 1 - scopeMonths, 1);
+	const scopeStartISO = scopeStartDate.toISOString().slice(0, 10);
+	const scopeEndISO = scopeEndDate.toISOString().slice(0, 10);
+	const scopeDocs = documents.filter((d) => {
+		if (d.data?.type !== 'daily_log') return false;
+		const ds = String(d.data.date || '');
+		return ds >= scopeStartISO && ds <= scopeEndISO;
+	});
+	const totalDaysInScope = Math.round((scopeEndDate.getTime() - scopeStartDate.getTime()) / 86400000) + 1;
+	const daysLogged = scopeDocs.length;
+	const episodeCols = blueprint.gridEpisodeColumns;
+	let totalEpisodes = 0;
+	for (const d of scopeDocs) {
+		for (const col of episodeCols) {
+			totalEpisodes += (d.data?.episodes?.[col] || d.data?.seizures?.[col] || 0) as number;
+		}
+	}
+
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(14);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.clinical_summary_title') === 'pdf.clinical_summary_title'
+		? t('pdf.for_doctor_title')
+		: t('pdf.clinical_summary_title'), marginX, y);
+	y += 7;
+
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(12);
+	doc.setTextColor(...BRAND.textPrimary);
+	const summaryLine = `${t('pdf.days_logged')}: ${daysLogged} / ${totalDaysInScope}   ·   ${t('pdf.total_episodes')}: ${totalEpisodes}`;
+	doc.text(summaryLine, marginX, y);
+	y += 8;
+
+	// ── Trajectory chart — scope-appropriate (12 or 24 months).
+	// Straight-segment polyline (no smoothing, no area fill, no ochre frame).
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(14);
+	doc.text(t(scope === 'year' ? 'pdf.episode_trend_12m' : 'pdf.episode_trend'), marginX, y);
+	y += 6;
+
+	const monthlyTotals: number[] = buckets.map((b) => {
+		let sum = 0;
+		const prefix = `${b.y}-${String(b.m + 1).padStart(2, '0')}`;
+		for (const d of documents) {
+			if (d.data?.type !== 'daily_log') continue;
+			const ds = String(d.data.date || '');
+			if (!ds.startsWith(prefix)) continue;
+			for (const col of episodeCols) {
+				sum += (d.data?.episodes?.[col] || d.data?.seizures?.[col] || 0) as number;
+			}
+		}
+		return sum;
+	});
+
+	const chartH = 48;
+	const chartX = marginX + 8;
+	const chartW = contentW - 8;
+	const yMax = Math.max(...monthlyTotals, 1);
+
+	// Background + horizontal mid gridline (no frame, no fill — print-friendly).
+	doc.setDrawColor(...BRAND.border);
+	doc.setLineWidth(0.15);
+	doc.line(chartX, y, chartX, y + chartH);                // y-axis
+	doc.line(chartX, y + chartH, chartX + chartW, y + chartH); // x-axis
+	doc.setDrawColor(...BRAND.borderSubtle);
+	doc.line(chartX, y + chartH / 2, chartX + chartW, y + chartH / 2);
+
+	// y-labels (10pt — still legible on printout).
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(9);
+	doc.setTextColor(...BRAND.textMuted);
+	doc.text(String(yMax), chartX - 1, y + 3, { align: 'right' });
+	doc.text('0', chartX - 1, y + chartH, { align: 'right' });
+
+	// Points + straight line segments in brick.
+	const points: [number, number][] = monthlyTotals.map((v, i) => [
+		chartX + (i / Math.max(1, MONTHS - 1)) * chartW,
+		y + chartH - (v / yMax) * chartH,
+	]);
+	doc.setDrawColor(...BRAND.brick);
+	doc.setLineWidth(0.7);
+	for (let i = 1; i < points.length; i++) {
+		doc.line(points[i - 1][0], points[i - 1][1], points[i][0], points[i][1]);
+	}
+	doc.setFillColor(...BRAND.brick);
+	for (const [px, py] of points) doc.circle(px, py, 0.8, 'F');
+
+	// X-axis month labels — every Nth month, all in 8pt.
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(8);
+	doc.setTextColor(...BRAND.textMuted);
+	const labelEvery = MONTHS <= 12 ? 2 : 4;
+	for (let i = 0; i < buckets.length; i++) {
+		if (i % labelEvery !== 0 && i !== buckets.length - 1) continue;
+		const b = buckets[i];
+		const lx = chartX + (i / Math.max(1, MONTHS - 1)) * chartW;
+		const dt = new Date(b.y, b.m, 1);
+		const lbl = dt.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
+		doc.text(lbl, lx, y + chartH + 5, { align: 'center' });
+	}
+
+	y += chartH + 14;
+
+	// ── "For your doctor" bullets. Reuses the same data-prep as the full
+	// report (episode totals, top symptom, top trigger). Compact format:
+	// numbered, 12pt, no Q/A hierarchy (one line per bullet).
+
+	// Page break if near bottom.
+	if (y > pageH - 80) { doc.addPage(); y = 20; }
+
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(14);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.for_doctor_title'), marginX, y);
+	y += 7;
+
+	// Build bullets — 12-month window (matches `bulletWindowLabel` approach
+	// in generateDoctorPdf). Skip condition-specific bullets for simplicity;
+	// the compact PDF targets the generalist reader.
+	const bulletMonths = scopeMonths >= 12 ? 12 : 1;
+	const yearEndDate = new Date(year, month + 1, 0);
+	const yearStartDate = new Date(year, month + 1 - bulletMonths, 1);
+	const yearDocs = documents.filter((d) => {
+		if (d.data?.type !== 'daily_log') return false;
+		const ds = String(d.data.date || '');
+		return ds >= yearStartDate.toISOString().slice(0, 10) && ds <= yearEndDate.toISOString().slice(0, 10);
+	});
+
+	const POSITIVE_MARKERS = new Set(['slept_well']);
+	const symptomFreq: { label: string; count: number }[] = [];
+	for (const g of blueprint.symptomGroups) {
+		for (const item of g.items) {
+			if (POSITIVE_MARKERS.has(item.id)) continue;
+			const c = yearDocs.filter((d) => d.data?.symptoms?.[item.id]).length;
+			if (c > 0) symptomFreq.push({ label: t(item.label), count: c });
+		}
+	}
+	symptomFreq.sort((a, b) => b.count - a.count);
+
+	// CIPH-305b: top-trigger is no longer a separate filler — the
+	// condition-aware bullets (which include trigger-style facts via
+	// IBD / Parkinson / glaucoma / etc.) come first, then trajectory +
+	// top-symptom fill out the cap of 4. Top-trigger dropped to keep
+	// the compact layout dense.
+
+	// Trajectory direction summary via shared helper isn't needed — compute inline.
+	const first6 = monthlyTotals.slice(0, 6);
+	const last6 = monthlyTotals.slice(-6);
+	const firstAvg = first6.length ? first6.reduce((a, b) => a + b, 0) / first6.length : 0;
+	const lastAvg = last6.length ? last6.reduce((a, b) => a + b, 0) / last6.length : 0;
+	const trendEps = Math.max(0.5, firstAvg * 0.1);
+	let trendKey = 'pdf.trend_stable';
+	if (lastAvg - firstAvg > trendEps) trendKey = 'pdf.trend_worsening';
+	else if (lastAvg - firstAvg < -trendEps) trendKey = 'pdf.trend_improving';
+
+	// CIPH-305b — condition-aware bullets first (peak IOP for glaucoma,
+	// OFF time for Parkinson's, etc.), then trajectory + top-symptom as
+	// generalist fillers. Cap = 4 (denser layout than the standard PDF).
+	const bullets: string[] = [];
+
+	const conditionBullets = buildConditionAwareBullets(blueprint, yearDocs, t, scopeLabel);
+	for (const cb of conditionBullets) bullets.push(cb.fact);
+
+	bullets.push(t('pdf.for_doctor_fact_trajectory', {
+		months: String(MONTHS),
+		first: firstAvg.toFixed(1),
+		last: lastAvg.toFixed(1),
+		trend: t(trendKey).toLowerCase(),
+	}));
+	if (symptomFreq[0] && yearDocs.length > 0) {
+		const s = symptomFreq[0];
+		bullets.push(t('pdf.for_doctor_fact_symptom', {
+			label: s.label,
+			count: String(s.count),
+			pct: String(Math.round((s.count / yearDocs.length) * 100)),
+		}));
+	}
+
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(12);
+	doc.setTextColor(...BRAND.textPrimary);
+	const bulletIndent = marginX + 6;
+	const bulletW = pageW - marginX - bulletIndent;
+	let bi = 1;
+	for (const b of bullets.slice(0, 4)) {
+		if (y > pageH - 24) { doc.addPage(); y = 20; }
+		doc.setFont('helvetica', 'bold');
+		doc.text(`${bi}.`, marginX, y);
+		doc.setFont('helvetica', 'normal');
+		const lines = doc.splitTextToSize(b, bulletW);
+		doc.text(lines, bulletIndent, y);
+		y += lines.length * 5.5 + 3;
+		bi++;
+	}
+
+	// Footnote (10pt).
+	if (y > pageH - 20) { doc.addPage(); y = 20; }
+	doc.setFont('helvetica', 'italic');
+	doc.setFontSize(10);
+	doc.setTextColor(...BRAND.textMuted);
+	doc.text(t('pdf.for_doctor_footnote'), pageW / 2, pageH - 14, { align: 'center' });
+
+	const userTag = username ? `${username}-` : '';
+	const scopeTag = scope === 'month'
+		? `${year}-${String(month + 1).padStart(2, '0')}`
+		: `${scope}-${year}-${String(month + 1).padStart(2, '0')}`;
+	doc.save(`ciphra-${userTag}kompakt-${blueprint.conditionId}-${scopeTag}.pdf`);
+}

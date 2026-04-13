@@ -36,9 +36,17 @@
 		--border: #e8e3dd;
 		--border-subtle: #f0ece7;
 
-		/* ── Semantic ── */
+		/* ── Semantic (CIPH-203: 3 semantic + 1 brand) ── */
+		/* Brand = brick (--brand). Success aliased to olive (the established
+		   "logged / calm" color). Warning aliased to ochre (attention,
+		   in-flight). Danger kept as hard red for destructive + errors. */
 		--danger: #DC2626;
-		--success: #059669;
+		--danger-rgb: 220, 38, 38;        /* CIPH-203b: enables rgba(var(--danger-rgb), …) for tinted bg */
+		--success-rgb: 127, 130, 27;      /* olive */
+		--success: var(--olive);
+		--success-light: var(--olive-light);
+		--warning: var(--ochre);
+		--warning-light: var(--ochre-light);
 	}
 
 	/* Warm overrides for Tailwind's cold slate palette */
@@ -105,12 +113,45 @@
 
 	/* ═══ CARDS ═══ */
 
-	/* Primary card — white on warm surface */
+	/* Primary card — white on warm surface (standard weight) */
 	.card {
 		background: var(--surface-card);
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		transition: all 0.2s ease-out;
+	}
+
+	/* CIPH-202 — Card weight hierarchy: anchor / standard / inline.
+	   Anchor = the page's primary action card. Heavy 2px brand border,
+	   larger padding, slightly larger heading. One per page max. */
+	.card-anchor {
+		background: var(--surface-card);
+		border: 2px solid var(--brand);
+		border-radius: 14px;
+		padding: 24px;
+		transition: all 0.2s ease-out;
+		box-shadow: 0 2px 10px rgba(178, 60, 44, 0.06);
+	}
+	.card-anchor > :global(h2),
+	.card-anchor :global(.card-anchor-title) {
+		font-size: 16px;
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+
+	/* Inline weight — secondary info, badges, encryption note. No border,
+	   muted background, tight padding. */
+	.card-inline {
+		background: var(--surface-muted);
+		border: 0;
+		border-radius: 10px;
+		padding: 12px;
+	}
+	.card-inline > :global(h3),
+	.card-inline :global(.card-inline-title) {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--text-secondary);
 	}
 
 	/* Card with hover lift */
@@ -231,6 +272,43 @@
 		transform: scale(0.95);
 	}
 
+	/* Subtle ochre pulse to draw the eye to the FAB during the first 3 sessions
+	   only. Low opacity, ~2s cycle, respects reduced-motion preferences. */
+	.fab-pulse {
+		animation: fabPulse 2s ease-in-out infinite;
+	}
+	@keyframes fabPulse {
+		0%, 100% { box-shadow: 0 4px 14px rgba(178, 60, 44, 0.3), 0 0 0 0 rgba(159, 99, 11, 0); }
+		50% { box-shadow: 0 4px 14px rgba(178, 60, 44, 0.3), 0 0 0 12px rgba(159, 99, 11, 0.4); }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.fab-pulse { animation: none; }
+	}
+
+	/* Onboarding tooltip balloon anchored above the FAB */
+	.fab-tooltip {
+		@apply fixed z-[46] max-w-[16rem] text-left px-3 py-2 rounded-xl text-white;
+		background: var(--ochre);
+		box-shadow: 0 6px 20px rgba(159, 99, 11, 0.35);
+	}
+	.fab-tooltip::after {
+		content: '';
+		position: absolute;
+		bottom: -6px;
+		right: 20px;
+		width: 12px;
+		height: 12px;
+		background: var(--ochre);
+		transform: rotate(45deg);
+		border-radius: 2px;
+	}
+	.fab-tooltip--event {
+		background: var(--brand);
+	}
+	.fab-tooltip--event::after {
+		background: var(--brand);
+	}
+
 	/* Focus visible for all interactive components */
 	.btn-primary:focus-visible,
 	.btn-secondary:focus-visible,
@@ -244,6 +322,12 @@
 	.badge-danger {
 		background: rgba(220, 38, 38, 0.05);
 		color: var(--danger);
+	}
+
+	/* Hover affordance for destructive icon buttons (CIPH-203) */
+	.hover-danger:hover {
+		color: var(--danger) !important;
+		background: rgba(220, 38, 38, 0.06);
 	}
 }
 

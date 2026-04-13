@@ -28,7 +28,6 @@ export const epilepsy: Blueprint = {
 		},
 		{
 			id: 'sleep', label: 'symptom_group.sleep', items: [
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 			]
 		},
@@ -104,7 +103,6 @@ export const adhd: Blueprint = {
 			id: 'energy', label: 'symptom_group.energy', items: [
 				{ id: 'tired', label: 'symptom.tired' },
 				{ id: 'wired', label: 'symptom.wired' },
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 				{ id: 'hard_to_get_up', label: 'symptom.hard_to_get_up' },
 			]
@@ -174,7 +172,6 @@ export const diabetes: Blueprint = {
 			id: 'general', label: 'symptom_group.general', items: [
 				{ id: 'headache', label: 'symptom.headache' },
 				{ id: 'irritable', label: 'symptom.irritable' },
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 			]
 		},
@@ -195,11 +192,13 @@ export const diabetes: Blueprint = {
 	vitals: [
 		{ id: 'blood_sugar', label: 'vital.blood_sugar', unit: 'mg/dL', placeholder: '110' },
 		{ id: 'insulin', label: 'vital.insulin', unit: 'units', placeholder: '10', multiEntry: true },
-		{ id: 'bp', label: 'vital.bp', unit: 'mmHg', placeholder: '120/80' },
+		{ id: 'bp_systolic', label: 'vital.bp_systolic', unit: 'mmHg', placeholder: '120', pairLabel: 'bp', referenceLine: { value: 140, labelKey: 'vital.target_bp_systolic' } },
+		{ id: 'bp_diastolic', label: 'vital.bp_diastolic', unit: 'mmHg', placeholder: '80', pairLabel: 'bp', referenceLine: { value: 90, labelKey: 'vital.target_bp_diastolic' } },
 		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
 		{ id: 'ketones', label: 'vital.ketones', unit: 'mmol/L', placeholder: '0.5' },
 		{ id: 'carbs', label: 'vital.carbs', unit: 'g', placeholder: '45' },
-		// hba1c omitted — it's a quarterly lab value, not a daily vital
+		// hba1c is a quarterly lab value but we render it as a sparse trend
+		{ id: 'hba1c', label: 'vital.hba1c', unit: '%', placeholder: '7.0', referenceLine: { value: 7.0, labelKey: 'vital.target_hba1c' } },
 	],
 	medications: [],
 	gridSymptomColumns: ['shaking', 'sweating', 'dizzy', 'thirsty', 'tired'],
@@ -242,7 +241,6 @@ export const burnout: Blueprint = {
 		},
 		{
 			id: 'sleep', label: 'symptom_group.sleep', items: [
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 				{ id: 'insomnia', label: 'symptom.insomnia' },
 				{ id: 'nightmares', label: 'symptom.nightmares' },
@@ -426,7 +424,6 @@ export const chronic_pain: Blueprint = {
 		},
 		{
 			id: 'sleep', label: 'symptom_group.sleep', items: [
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 				{ id: 'insomnia', label: 'symptom.insomnia' },
 				{ id: 'woke_from_pain', label: 'symptom.woke_from_pain' },
@@ -435,7 +432,7 @@ export const chronic_pain: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'flare', label: 'seizure.flare', color: '#DC2626' },
+		{ id: 'flare', label: 'seizure.flare', color: '#DC2626', multiDay: true },
 		{ id: 'breakthrough_pain', label: 'seizure.breakthrough_pain', color: '#F59E0B' },
 		{ id: 'severe_episode', label: 'seizure.severe_episode', color: '#B91C1C' },
 		{ id: 'functional_crisis', label: 'seizure.functional_crisis', color: '#7C3AED' },
@@ -452,8 +449,8 @@ export const chronic_pain: Blueprint = {
 		{ id: 'emotional_distress', label: 'trigger.emotional_distress' },
 	],
 	vitals: [
-		{ id: 'pain_level', label: 'vital.pain_level', unit: '0-10', placeholder: '5' },
-		{ id: 'pain_interference', label: 'vital.pain_interference', unit: '0-10', placeholder: '5' },
+		{ id: 'pain_level', label: 'vital.pain_level', unit: '0-10', placeholder: '5', pairLabel: 'pain' },
+		{ id: 'pain_interference', label: 'vital.pain_interference', unit: '0-10', placeholder: '5', pairLabel: 'pain' },
 		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
 		{ id: 'mood', label: 'vital.mood', unit: '1-10', placeholder: '5' },
 	],
@@ -518,9 +515,9 @@ export const ms: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'relapse', label: 'seizure.relapse', color: '#DC2626' },
-		{ id: 'pseudo_relapse', label: 'seizure.pseudo_relapse', color: '#F59E0B' },
-		{ id: 'optic_neuritis', label: 'seizure.optic_neuritis', color: '#EF4444' },
+		{ id: 'relapse', label: 'seizure.relapse', color: '#DC2626', multiDay: true },
+		{ id: 'pseudo_relapse', label: 'seizure.pseudo_relapse', color: '#F59E0B', multiDay: true },
+		{ id: 'optic_neuritis', label: 'seizure.optic_neuritis', color: '#EF4444', multiDay: true },
 	],
 	triggers: [
 		{ id: 'heat', label: 'trigger.heat' },
@@ -592,7 +589,6 @@ export const anxiety_depression: Blueprint = {
 		},
 		{
 			id: 'sleep', label: 'symptom_group.sleep', items: [
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 				{ id: 'insomnia', label: 'symptom.insomnia' },
 				{ id: 'hypersomnia', label: 'symptom.hypersomnia' },
@@ -666,13 +662,12 @@ export const ibs: Blueprint = {
 				{ id: 'tired', label: 'symptom.tired' },
 				{ id: 'brain_fog', label: 'symptom.brain_fog' },
 				{ id: 'anxious', label: 'symptom.anxious' },
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 			]
 		},
 	],
 	episodeTypes: [
-		{ id: 'flare', label: 'seizure.flare', color: '#DC2626' },
+		{ id: 'flare', label: 'seizure.flare', color: '#DC2626', multiDay: true },
 		{ id: 'urgency_crisis', label: 'seizure.urgency_crisis', color: '#F59E0B' },
 		{ id: 'vomiting_episode', label: 'seizure.vomiting_episode', color: '#7C3AED' },
 	],
@@ -692,6 +687,7 @@ export const ibs: Blueprint = {
 		{ id: 'stool_frequency', label: 'vital.stool_frequency', unit: 'x/day', placeholder: '2' },
 		{ id: 'bristol_score', label: 'vital.bristol_score', unit: '1-7', placeholder: '4' },
 		{ id: 'pain_level', label: 'vital.pain_level', unit: '1-10', placeholder: '3' },
+		{ id: 'mood', label: 'vital.mood', unit: '1-10', placeholder: '5' },
 		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
 	],
 	medications: [],
@@ -735,7 +731,6 @@ export const asthma: Blueprint = {
 			id: 'general', label: 'symptom_group.general', items: [
 				{ id: 'headache', label: 'symptom.headache' },
 				{ id: 'anxious', label: 'symptom.anxious' },
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 			]
 		},
@@ -757,8 +752,12 @@ export const asthma: Blueprint = {
 		{ id: 'strong_smells', label: 'trigger.strong_smells' },
 	],
 	vitals: [
+		// Personal best PEF: enter once at setup. Used as the reference line
+		// for the peak_flow trend chart so the doctor sees % predicted at a
+		// glance instead of an arbitrary L/min number.
+		{ id: 'personal_best_pef', label: 'vital.personal_best_pef', unit: 'L/min', placeholder: '550', excludeFromTrends: true },
 		{ id: 'peak_flow', label: 'vital.peak_flow', unit: 'L/min', placeholder: '400' },
-		{ id: 'spo2', label: 'vital.spo2', unit: '%', placeholder: '97' },
+		{ id: 'spo2', label: 'vital.spo2', unit: '%', placeholder: '97', referenceLine: { value: 95, labelKey: 'vital.target_spo2' } },
 		{ id: 'rescue_inhaler_puffs', label: 'vital.rescue_inhaler_puffs', unit: 'puffs', placeholder: '0' },
 		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
 	],
@@ -811,7 +810,7 @@ export const endometriosis: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'flare', label: 'seizure.flare', color: '#DC2626' },
+		{ id: 'flare', label: 'seizure.flare', color: '#DC2626', multiDay: true },
 		{ id: 'er_visit', label: 'seizure.er_visit', color: '#B91C1C' },
 		{ id: 'missed_work_school', label: 'seizure.missed_work_school', color: '#F59E0B' },
 	],
@@ -830,9 +829,9 @@ export const endometriosis: Blueprint = {
 		{ id: 'bleeding_intensity', label: 'vital.bleeding_intensity', unit: '1-5', placeholder: '3' },
 		// Endo-specific cycle tracking — daily cycle_day alone isn't enough
 		// to spot length-irregularity flares (per persona feedback).
-		{ id: 'cycle_day', label: 'vital.cycle_day', unit: 'day', placeholder: '14' },
-		{ id: 'cycle_length', label: 'vital.cycle_length', unit: 'days', placeholder: '28' },
-		{ id: 'period_duration', label: 'vital.period_duration', unit: 'days', placeholder: '5' },
+		{ id: 'cycle_day', label: 'vital.cycle_day', unit: 'day', placeholder: '14', excludeFromTrends: true },
+		{ id: 'cycle_length', label: 'vital.cycle_length', unit: 'days', placeholder: '28', excludeFromTrends: true },
+		{ id: 'period_duration', label: 'vital.period_duration', unit: 'days', placeholder: '5', excludeFromTrends: true },
 		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
 		{ id: 'mood', label: 'vital.mood', unit: '1-10', placeholder: '5' },
 	],
@@ -872,7 +871,6 @@ export const cancer_treatment: Blueprint = {
 				{ id: 'tired', label: 'symptom.tired' },
 				{ id: 'exhausted', label: 'symptom.exhausted' },
 				{ id: 'weakness', label: 'symptom.weakness' },
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 			]
 		},
@@ -1052,7 +1050,6 @@ export const autism: Blueprint = {
 		{
 			id: 'energy', label: 'symptom_group.energy', items: [
 				{ id: 'tired', label: 'symptom.tired' },
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 				{ id: 'autistic_fatigue', label: 'symptom.autistic_fatigue' },
 			]
@@ -1130,7 +1127,6 @@ export const cardiovascular: Blueprint = {
 			id: 'general', label: 'symptom_group.general', items: [
 				{ id: 'tired', label: 'symptom.tired' },
 				{ id: 'exercise_intolerance', label: 'symptom.exercise_intolerance' },
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 				{ id: 'nocturia', label: 'symptom.nocturia' },
 			]
@@ -1154,7 +1150,8 @@ export const cardiovascular: Blueprint = {
 		{ id: 'cold_weather', label: 'trigger.cold_weather' },
 	],
 	vitals: [
-		{ id: 'bp', label: 'vital.bp', unit: 'mmHg', placeholder: '120/80', multiEntry: true },
+		{ id: 'bp_systolic', label: 'vital.bp_systolic', unit: 'mmHg', placeholder: '120', multiEntry: true, pairLabel: 'bp', referenceLine: { value: 140, labelKey: 'vital.target_bp_systolic' }, splitByTimeOfDay: true },
+		{ id: 'bp_diastolic', label: 'vital.bp_diastolic', unit: 'mmHg', placeholder: '80', multiEntry: true, pairLabel: 'bp', referenceLine: { value: 90, labelKey: 'vital.target_bp_diastolic' }, splitByTimeOfDay: true },
 		{ id: 'pulse', label: 'vital.pulse', unit: 'bpm', placeholder: '72' },
 		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
 		{ id: 'spo2', label: 'vital.spo2', unit: '%', placeholder: '97' },
@@ -1197,7 +1194,6 @@ export const hypertension: Blueprint = {
 		},
 		{
 			id: 'sleep', label: 'symptom_group.sleep', items: [
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 			]
 		},
@@ -1217,7 +1213,8 @@ export const hypertension: Blueprint = {
 		{ id: 'poor_sleep', label: 'trigger.poor_sleep' },
 	],
 	vitals: [
-		{ id: 'bp', label: 'vital.bp', unit: 'mmHg', placeholder: '120/80', multiEntry: true },
+		{ id: 'bp_systolic', label: 'vital.bp_systolic', unit: 'mmHg', placeholder: '120', multiEntry: true, pairLabel: 'bp', referenceLine: { value: 140, labelKey: 'vital.target_bp_systolic' }, splitByTimeOfDay: true },
+		{ id: 'bp_diastolic', label: 'vital.bp_diastolic', unit: 'mmHg', placeholder: '80', multiEntry: true, pairLabel: 'bp', referenceLine: { value: 90, labelKey: 'vital.target_bp_diastolic' }, splitByTimeOfDay: true },
 		{ id: 'pulse', label: 'vital.pulse', unit: 'bpm', placeholder: '72' },
 		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
 		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
@@ -1281,8 +1278,8 @@ export const long_covid: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'crash', label: 'seizure.crash', color: '#B91C1C', trackDuration: true },
-		{ id: 'flare', label: 'seizure.flare', color: '#F59E0B' },
+		{ id: 'crash', label: 'seizure.crash', color: '#B91C1C', multiDay: true },
+		{ id: 'flare', label: 'seizure.flare', color: '#F59E0B', multiDay: true },
 	],
 	triggers: [
 		{ id: 'overexertion', label: 'trigger.overexertion' },
@@ -1294,8 +1291,8 @@ export const long_covid: Blueprint = {
 		{ id: 'infection', label: 'trigger.infection' },
 	],
 	vitals: [
-		{ id: 'heart_rate_resting', label: 'vital.heart_rate_resting', unit: 'bpm', placeholder: '70' },
-		{ id: 'heart_rate_standing', label: 'vital.heart_rate_standing', unit: 'bpm', placeholder: '95' },
+		{ id: 'heart_rate_resting', label: 'vital.heart_rate_resting', unit: 'bpm', placeholder: '70', pairLabel: 'hr' },
+		{ id: 'heart_rate_standing', label: 'vital.heart_rate_standing', unit: 'bpm', placeholder: '95', pairLabel: 'hr' },
 		{ id: 'energy_envelope', label: 'vital.energy_envelope', unit: '1-10', placeholder: '5' },
 		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '8' },
 		{ id: 'pacing_score', label: 'vital.pacing_score', unit: '1-10', placeholder: '5' },
@@ -1345,7 +1342,6 @@ export const menopause: Blueprint = {
 		},
 		{
 			id: 'sleep', label: 'symptom_group.sleep', items: [
-				{ id: 'slept_well', label: 'symptom.slept_well' },
 				{ id: 'slept_badly', label: 'symptom.slept_badly' },
 				{ id: 'wake_frequent', label: 'symptom.wake_frequent' },
 				{ id: 'insomnia', label: 'symptom.insomnia' },
@@ -1374,14 +1370,293 @@ export const menopause: Blueprint = {
 		{ id: 'missed_hrt', label: 'trigger.missed_hrt' },
 	],
 	vitals: [
+		{ id: 'flash_count', label: 'vital.flash_count', unit: '/day', placeholder: '4' },
+		{ id: 'bleeding_intensity', label: 'vital.bleeding_intensity', unit: '0-5', placeholder: '0', min: 0, max: 5 },
 		{ id: 'temperature', label: 'vital.temperature', unit: '°C', placeholder: '36.8' },
 		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
 		{ id: 'mood', label: 'vital.mood', unit: '1-10', placeholder: '5' },
-		{ id: 'cycle_day', label: 'vital.cycle_day', unit: '', placeholder: '—' },
+		{ id: 'cycle_day', label: 'vital.cycle_day', unit: '', placeholder: '—', excludeFromTrends: true },
 	],
 	medications: [],
 	gridSymptomColumns: ['hot_flashes', 'night_sweats', 'brain_fog', 'slept_badly', 'irritable'],
 	gridEpisodeColumns: ['hot_flash_severe'],
+	streamFilters: [
+		{ key: 'all', label: 'stream_filter.all' },
+		{ key: 'daily_log', label: 'stream_filter.daily_log' },
+		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'event', label: 'stream_filter.event' },
+	],
+	reportPreference: 'both',
+};
+
+// ─── Bipolar Disorder ───────────────────────────────────────
+
+export const bipolar: Blueprint = {
+	version: 1,
+	conditionId: 'bipolar',
+	conditionLabel: 'landing.template_bipolar',
+	accentColor: '#A855F7',
+	symptomGroups: [
+		{
+			id: 'mania', label: 'symptom_group.mania', items: [
+				{ id: 'elevated_mood', label: 'symptom.elevated_mood' },
+				{ id: 'grandiosity', label: 'symptom.grandiosity' },
+				{ id: 'pressured_speech', label: 'symptom.pressured_speech' },
+				{ id: 'racing_thoughts', label: 'symptom.racing_thoughts' },
+				{ id: 'reduced_sleep_need', label: 'symptom.reduced_sleep_need' },
+				{ id: 'risk_taking', label: 'symptom.risk_taking' },
+			]
+		},
+		{
+			id: 'depression', label: 'symptom_group.depression', items: [
+				{ id: 'depressed_mood', label: 'symptom.depressed_mood' },
+				{ id: 'anhedonia', label: 'symptom.anhedonia' },
+				{ id: 'hopelessness', label: 'symptom.hopelessness' },
+				{ id: 'tired', label: 'symptom.tired' },
+				{ id: 'guilt', label: 'symptom.guilt' },
+				{ id: 'psychomotor_slowing', label: 'symptom.psychomotor_slowing' },
+			]
+		},
+		{
+			id: 'mixed', label: 'symptom_group.mixed_state', items: [
+				{ id: 'irritable', label: 'symptom.irritable' },
+				{ id: 'anxious', label: 'symptom.anxious' },
+				{ id: 'agitated', label: 'symptom.agitated' },
+				{ id: 'restless', label: 'symptom.restless' },
+			]
+		},
+		{
+			id: 'sleep', label: 'symptom_group.sleep', items: [
+				{ id: 'slept_badly', label: 'symptom.slept_badly' },
+				{ id: 'insomnia', label: 'symptom.insomnia' },
+				{ id: 'hypersomnia', label: 'symptom.hypersomnia' },
+			]
+		},
+	],
+	episodeTypes: [
+		{ id: 'hypomanic', label: 'seizure.hypomanic', color: '#F59E0B', multiDay: true },
+		{ id: 'manic', label: 'seizure.manic', color: '#DC2626', multiDay: true },
+		{ id: 'depressive', label: 'seizure.depressive', color: '#1E40AF', multiDay: true },
+		{ id: 'mixed', label: 'seizure.mixed_ep', color: '#7C3AED', multiDay: true },
+	],
+	triggers: [
+		{ id: 'sleep_deprivation', label: 'trigger.sleep_deprivation' },
+		{ id: 'stress', label: 'trigger.stress' },
+		{ id: 'seasonal_change', label: 'trigger.seasonal_change' },
+		{ id: 'missed_meds', label: 'trigger.missed_meds' },
+		{ id: 'substance_use', label: 'trigger.substance_use' },
+		{ id: 'travel', label: 'trigger.travel' },
+		{ id: 'circadian_disruption', label: 'trigger.circadian_disruption' },
+	],
+	vitals: [
+		{ id: 'mood', label: 'vital.mood', unit: '1-10', placeholder: '5' },
+		{ id: 'mood_polarity', label: 'vital.mood_polarity', unit: '-5..+5', placeholder: '0', min: -5, max: 5 },
+		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
+		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
+	],
+	medications: [],
+	gridSymptomColumns: ['elevated_mood', 'depressed_mood', 'anhedonia', 'insomnia', 'racing_thoughts', 'irritable'],
+	gridEpisodeColumns: ['manic', 'depressive'],
+	streamFilters: [
+		{ key: 'all', label: 'stream_filter.all' },
+		{ key: 'daily_log', label: 'stream_filter.daily_log' },
+		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'event', label: 'stream_filter.event' },
+	],
+	reportPreference: 'both',
+};
+
+// ─── Glaucoma ───────────────────────────────────────────────
+
+export const glaucoma: Blueprint = {
+	version: 1,
+	conditionId: 'glaucoma',
+	conditionLabel: 'landing.template_glaucoma',
+	accentColor: '#0891B2',
+	symptomGroups: [
+		{
+			id: 'vision', label: 'symptom_group.vision', items: [
+				{ id: 'blurred_vision', label: 'symptom.blurred_vision' },
+				{ id: 'halos_around_lights', label: 'symptom.halos_around_lights' },
+				{ id: 'tunnel_vision', label: 'symptom.tunnel_vision' },
+				{ id: 'reduced_contrast', label: 'symptom.reduced_contrast' },
+			]
+		},
+		{
+			id: 'pressure_pain', label: 'symptom_group.pressure_pain', items: [
+				{ id: 'eye_pain', label: 'symptom.eye_pain' },
+				{ id: 'brow_ache', label: 'symptom.brow_ache' },
+				{ id: 'headache', label: 'symptom.headache' },
+				{ id: 'eye_redness', label: 'symptom.eye_redness' },
+			]
+		},
+		{
+			id: 'systemic', label: 'symptom_group.systemic', items: [
+				{ id: 'nausea', label: 'symptom.nausea' },
+				{ id: 'dizzy', label: 'symptom.dizzy' },
+			]
+		},
+	],
+	episodeTypes: [
+		{ id: 'iop_spike', label: 'seizure.iop_spike', color: '#DC2626', trackDuration: true, trackTimeOfDay: true },
+		{ id: 'angle_closure', label: 'seizure.angle_closure', color: '#B91C1C', trackDuration: true, trackTimeOfDay: true },
+	],
+	triggers: [
+		{ id: 'missed_drops', label: 'trigger.missed_drops' },
+		{ id: 'head_down_posture', label: 'trigger.head_down_posture' },
+		{ id: 'valsalva', label: 'trigger.valsalva' },
+		{ id: 'caffeine', label: 'trigger.caffeine' },
+		{ id: 'dehydration', label: 'trigger.dehydration' },
+		{ id: 'stress', label: 'trigger.stress' },
+	],
+	vitals: [
+		{ id: 'iop_left', label: 'vital.iop_left', unit: 'mmHg', placeholder: '16', multiEntry: true, pairLabel: 'iop', referenceLine: { value: 21, labelKey: 'vital.target_iop' } },
+		{ id: 'iop_right', label: 'vital.iop_right', unit: 'mmHg', placeholder: '16', multiEntry: true, pairLabel: 'iop', referenceLine: { value: 21, labelKey: 'vital.target_iop' } },
+		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
+	],
+	medications: [],
+	gridSymptomColumns: ['blurred_vision', 'halos_around_lights', 'eye_pain', 'headache'],
+	gridEpisodeColumns: ['iop_spike'],
+	streamFilters: [
+		{ key: 'all', label: 'stream_filter.all' },
+		{ key: 'daily_log', label: 'stream_filter.daily_log' },
+		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'event', label: 'stream_filter.event' },
+	],
+	reportPreference: 'both',
+};
+
+// ─── Parkinson's ────────────────────────────────────────────
+
+export const parkinson: Blueprint = {
+	version: 1,
+	conditionId: 'parkinson',
+	conditionLabel: 'landing.template_parkinson',
+	accentColor: '#4F46E5',
+	symptomGroups: [
+		{
+			id: 'motor', label: 'symptom_group.motor', items: [
+				{ id: 'resting_tremor', label: 'symptom.resting_tremor' },
+				{ id: 'rigidity', label: 'symptom.rigidity' },
+				{ id: 'bradykinesia', label: 'symptom.bradykinesia' },
+				{ id: 'postural_instability', label: 'symptom.postural_instability' },
+				{ id: 'shuffling_gait', label: 'symptom.shuffling_gait' },
+			]
+		},
+		{
+			id: 'movement_complications', label: 'symptom_group.movement_complications', items: [
+				{ id: 'dyskinesia', label: 'symptom.dyskinesia' },
+				{ id: 'dystonia', label: 'symptom.dystonia' },
+				{ id: 'freezing_of_gait', label: 'symptom.freezing_of_gait' },
+			]
+		},
+		{
+			id: 'non_motor', label: 'symptom_group.non_motor', items: [
+				{ id: 'depressed_mood', label: 'symptom.depressed_mood' },
+				{ id: 'anxious', label: 'symptom.anxious' },
+				{ id: 'tired', label: 'symptom.tired' },
+				{ id: 'rem_sleep_behavior', label: 'symptom.rem_sleep_behavior' },
+				{ id: 'constipation', label: 'symptom.constipation' },
+				{ id: 'drooling', label: 'symptom.drooling' },
+				{ id: 'hypomimia', label: 'symptom.hypomimia' },
+				{ id: 'dysphagia', label: 'symptom.dysphagia' },
+			]
+		},
+		{
+			id: 'cognitive', label: 'symptom_group.cognitive', items: [
+				{ id: 'brain_fog', label: 'symptom.brain_fog' },
+				{ id: 'forgetful', label: 'symptom.forgetful' },
+				{ id: 'slow_processing', label: 'symptom.slow_processing' },
+			]
+		},
+	],
+	episodeTypes: [
+		{ id: 'off_period', label: 'seizure.off_period', color: '#B91C1C', trackDuration: true, trackTimeOfDay: true },
+		{ id: 'freezing', label: 'seizure.freezing', color: '#DC2626', trackDuration: true, trackTimeOfDay: true },
+		{ id: 'dyskinesia_flare', label: 'seizure.dyskinesia_flare', color: '#F59E0B', trackDuration: true, trackTimeOfDay: true },
+	],
+	triggers: [
+		{ id: 'missed_meds', label: 'trigger.missed_meds' },
+		{ id: 'stress', label: 'trigger.stress' },
+		{ id: 'protein_meal', label: 'trigger.protein_meal' },
+		{ id: 'infection', label: 'trigger.infection' },
+		{ id: 'sleep_deprivation', label: 'trigger.sleep_deprivation' },
+	],
+	vitals: [
+		{ id: 'off_time_hours', label: 'vital.off_time_hours', unit: 'h', placeholder: '2' },
+		{ id: 'tremor_intensity', label: 'vital.tremor_intensity', unit: '1-10', placeholder: '3' },
+		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
+		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
+	],
+	medications: [],
+	gridSymptomColumns: ['resting_tremor', 'bradykinesia', 'dyskinesia', 'freezing_of_gait', 'constipation'],
+	gridEpisodeColumns: ['off_period', 'freezing'],
+	streamFilters: [
+		{ key: 'all', label: 'stream_filter.all' },
+		{ key: 'daily_log', label: 'stream_filter.daily_log' },
+		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'event', label: 'stream_filter.event' },
+	],
+	reportPreference: 'both',
+};
+
+// ─── IBD (Crohn's / UC) ─────────────────────────────────────
+
+export const ibd: Blueprint = {
+	version: 1,
+	conditionId: 'ibd',
+	conditionLabel: 'landing.template_ibd',
+	accentColor: '#EA580C',
+	symptomGroups: [
+		{
+			id: 'bowel', label: 'symptom_group.bowel', items: [
+				{ id: 'diarrhea', label: 'symptom.diarrhea' },
+				{ id: 'bloody_stool', label: 'symptom.bloody_stool' },
+				{ id: 'mucus_stool', label: 'symptom.mucus_stool' },
+				{ id: 'urgency', label: 'symptom.urgency' },
+				{ id: 'incomplete_evacuation', label: 'symptom.incomplete_evacuation' },
+				{ id: 'abdominal_pain', label: 'symptom.abdominal_pain' },
+				{ id: 'cramping', label: 'symptom.cramping' },
+			]
+		},
+		{
+			id: 'systemic', label: 'symptom_group.systemic', items: [
+				{ id: 'fever', label: 'symptom.fever' },
+				{ id: 'tired', label: 'symptom.tired' },
+				{ id: 'weight_loss', label: 'symptom.weight_loss' },
+			]
+		},
+		{
+			id: 'extraintestinal', label: 'symptom_group.extraintestinal', items: [
+				{ id: 'joint_pain', label: 'symptom.joint_pain' },
+				{ id: 'mouth_ulcers', label: 'symptom.mouth_ulcers' },
+				{ id: 'skin_lesions', label: 'symptom.skin_lesions' },
+				{ id: 'eye_inflammation', label: 'symptom.eye_inflammation' },
+			]
+		},
+	],
+	episodeTypes: [
+		{ id: 'flare', label: 'seizure.flare', color: '#DC2626', multiDay: true },
+		{ id: 'infusion_day', label: 'seizure.infusion_day', color: '#0D9488', trackTimeOfDay: true },
+		{ id: 'tapering', label: 'seizure.tapering', color: '#F59E0B', multiDay: true },
+	],
+	triggers: [
+		{ id: 'stress', label: 'trigger.stress' },
+		{ id: 'nsaid', label: 'trigger.nsaid' },
+		{ id: 'antibiotic', label: 'trigger.antibiotic' },
+		{ id: 'missed_meds', label: 'trigger.missed_meds' },
+		{ id: 'dietary_trigger', label: 'trigger.dietary_trigger' },
+		{ id: 'infection', label: 'trigger.infection' },
+	],
+	vitals: [
+		{ id: 'stool_count', label: 'vital.stool_count', unit: '/day', placeholder: '3' },
+		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
+		{ id: 'crp', label: 'vital.crp', unit: 'mg/L', placeholder: '5' },
+		{ id: 'calprotectin', label: 'vital.calprotectin', unit: 'µg/g', placeholder: '50' },
+	],
+	medications: [],
+	gridSymptomColumns: ['diarrhea', 'bloody_stool', 'abdominal_pain', 'fever', 'tired'],
+	gridEpisodeColumns: ['flare'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
 		{ key: 'daily_log', label: 'stream_filter.daily_log' },
@@ -1432,6 +1707,11 @@ export const presets: PresetInfo[] = [
 	// { id: 'dermatology', labelKey: 'landing.template_dermatology', descriptionKey: 'landing.template_dermatology_desc', icon: 'scan', color: '#F43F5E', blueprint: dermatology },
 	{ id: 'endometriosis', labelKey: 'landing.template_endometriosis', descriptionKey: 'landing.template_endometriosis_desc', icon: 'flower', color: '#E11D48', blueprint: endometriosis },
 	{ id: 'menopause', labelKey: 'landing.template_menopause', descriptionKey: 'landing.template_menopause_desc', icon: 'scan', color: '#DB2777', blueprint: menopause },
+	// New presets (wave 1)
+	{ id: 'bipolar', labelKey: 'landing.template_bipolar', descriptionKey: 'landing.template_bipolar_desc', icon: 'activity', color: '#A855F7', blueprint: bipolar },
+	{ id: 'glaucoma', labelKey: 'landing.template_glaucoma', descriptionKey: 'landing.template_glaucoma_desc', icon: 'eye', color: '#0891B2', blueprint: glaucoma },
+	{ id: 'parkinson', labelKey: 'landing.template_parkinson', descriptionKey: 'landing.template_parkinson_desc', icon: 'waves', color: '#4F46E5', blueprint: parkinson },
+	{ id: 'ibd', labelKey: 'landing.template_ibd', descriptionKey: 'landing.template_ibd_desc', icon: 'donut', color: '#EA580C', blueprint: ibd },
 	// Custom
 	{ id: 'custom', labelKey: 'landing.template_custom', descriptionKey: 'landing.template_custom_desc', icon: 'settings', color: '#64748B', blueprint: custom },
 ];

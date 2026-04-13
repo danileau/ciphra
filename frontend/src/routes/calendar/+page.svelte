@@ -8,6 +8,7 @@
 	import { fade, fly } from 'svelte/transition';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
+	import EntryPreview from '$lib/components/EntryPreview.svelte';
 
 	let selectedDate: string | null = null;
 	let currentYear = new Date().getFullYear();
@@ -43,22 +44,85 @@
 	}
 
 	function dayHasEpisode(day: number): boolean {
-		return getDocsForDay(day).some(d =>
-			d.data.type === 'episode' ||
-			(d.data.type === 'daily_log' && (Object.values(d.data.episodes || d.data.seizures || {}) as number[]).some(v => v > 0))
+		// Counter-style episodes only — multiDay episodes are shown as bars below
+		const docs = getDocsForDay(day);
+		if (docs.some(d => d.data.type === 'episode')) return true;
+		const multiDayIds = new Set((bp?.episodeTypes || []).filter(e => e.multiDay).map(e => e.id));
+		return docs.some(d =>
+			d.data.type === 'daily_log' &&
+			Object.entries((d.data.episodes || d.data.seizures || {}) as Record<string, number>)
+				.some(([id, v]) => v > 0 && !multiDayIds.has(id))
 		);
+	}
+
+	/** Returns the list of multiDay episode types active on `day`, with color. */
+	function dayMultiDayBands(day: number): { id: string; color: string; label: string }[] {
+		if (!bp?.episodeTypes) return [];
+		const docs = getDocsForDay(day);
+		const result: { id: string; color: string; label: string }[] = [];
+		for (const ep of bp.episodeTypes) {
+			if (!ep.multiDay) continue;
+			const active = docs.some(d =>
+				d.data.type === 'daily_log' && (((d.data.episodes || d.data.seizures || {}) as Record<string, number>)[ep.id] || 0) > 0
+			);
+			if (active) result.push({ id: ep.id, color: ep.color, label: ep.label });
+		}
+		return result;
 	}
 
 	function dayHasLog(day: number): boolean {
 		return getDocsForDay(day).some(d => d.data.type === 'daily_log');
 	}
 
+	/** Count active symptoms across all daily_log docs on this day. */
+	function countSymptomsForDay(day: number): number {
+		const docs = getDocsForDay(day);
+		let sum = 0;
+		for (const d of docs) {
+			if (d.data.type !== 'daily_log') continue;
+			const syms = (d.data.symptoms || {}) as Record<string, boolean>;
+			for (const k of Object.keys(syms)) if (syms[k]) sum++;
+		}
+		return sum;
+	}
+
+	/** Sum counter-style episodes on this day (excluding multi-day bands). */
+	function countEpisodesForDay(day: number): number {
+		const docs = getDocsForDay(day);
+		const multiDayIds = new Set((bp?.episodeTypes || []).filter(e => e.multiDay).map(e => e.id));
+		let sum = 0;
+		for (const d of docs) {
+			if (d.data.type === 'episode') {
+				const eps = (d.data.episodes || {}) as Record<string, number>;
+				let added = 0;
+				for (const [id, v] of Object.entries(eps)) if (!multiDayIds.has(id)) { sum += Number(v) || 0; added++; }
+				if (added === 0) sum += 1;
+			} else if (d.data.type === 'daily_log') {
+				const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+				for (const [id, v] of Object.entries(eps)) if (!multiDayIds.has(id)) sum += Number(v) || 0;
+			}
+		}
+		return sum;
+	}
+
+	function dayAriaLabel(day: number): string {
+		const dateStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+		const dateFmt = new Date(dateStr + 'T12:00:00').toLocaleDateString($locale, {
+			day: 'numeric', month: 'long', year: 'numeric'
+		});
+		const epCount = countEpisodesForDay(day);
+		const symCount = countSymptomsForDay(day);
+		if (epCount > 0) {
+			return $t('calendar.aria_day_episode', { date: dateFmt, episodes: epCount, symptoms: symCount });
+		}
+		if (dayHasLog(day)) {
+			return $t('calendar.aria_day_logged', { date: dateFmt, count: symCount });
+		}
+		return $t('calendar.aria_day_empty', { date: dateFmt });
+	}
+
 	$: selectedDayDocs = selectedDate ? $documents.filter(d => String(d.data.date || '') === selectedDate) : [];
 	$: monthName = new Date(currentYear, currentMonth).toLocaleDateString($locale, { month: 'long', year: 'numeric' });
-
-	function sumEpisodes(doc: CiphraDocument): number {
-		return (Object.values(doc.data.episodes || doc.data.seizures || {}) as number[]).reduce((a, b) => a + b, 0);
-	}
 
 	function handleEditEntry(doc: CiphraDocument) {
 		const date = String(doc.data.date || selectedDate || '');
@@ -119,6 +183,13 @@
 		};
 	})();
 
+	// Events occurring within the selected month, sorted chronologically.
+	// Used to render the event strip under the monthly trend chart.
+	$: monthEvents = $documents
+		.filter(d => d.data?.type === 'event' && String(d.data.date || '').startsWith(monthPrefix))
+		.map(d => ({ date: String(d.data.date), notes: String(d.data.notes || '').trim() || $t('stream.events') }))
+		.sort((a, b) => a.date.localeCompare(b.date));
+
 	$: monthlyLineOptions = {
 		scales: {
 			x: { ticks: { maxTicksLimit: 15 } },
@@ -171,9 +242,11 @@
 					{@const isSelected = dayStr === selectedDate}
 					{@const hasEpisode = dayHasEpisode(day)}
 					{@const hasLog = dayHasLog(day)}
+					{@const bands = dayMultiDayBands(day)}
 					<button
 						on:click={() => { selectedDate = dayStr; }}
-						class="relative aspect-square rounded-xl flex flex-col items-center justify-center transition-colors min-h-[44px]"
+						aria-label={dayAriaLabel(day)}
+						class="relative aspect-square rounded-xl flex flex-col items-center justify-center transition-colors min-h-[44px] overflow-hidden"
 						style="{isSelected
 							? 'background: var(--olive-light); box-shadow: inset 0 0 0 2px var(--olive);'
 							: isToday
@@ -192,6 +265,13 @@
 								<span class="w-1.5 h-1.5 rounded-full" style="background: var(--olive)"></span>
 							{/if}
 						</div>
+						{#if bands.length > 0}
+							<div class="absolute bottom-0 left-0 right-0 flex flex-col">
+								{#each bands as band}
+									<span class="block h-[3px] w-full" style="background: {band.color}" title={$t(band.label)}></span>
+								{/each}
+							</div>
+						{/if}
 					</button>
 				{/each}
 			</div>
@@ -215,6 +295,27 @@
 				<div class="h-48">
 					<ChartWrapper type="line" data={monthlyLineData} options={monthlyLineOptions} />
 				</div>
+				{#if monthEvents.length > 0}
+					<!-- Event strip aligned under the chart x-axis. ChartJS lacks
+					     annotation support without a plugin, so we render the
+					     events as a horizontal pill strip with date + label. -->
+					<div class="mt-2 pt-2 border-t" style="border-color: var(--border)">
+						<p class="text-[11px] uppercase tracking-wide mb-1" style="color: var(--text-muted)">{$t('calendar.events_in_month')}</p>
+						<div class="flex flex-wrap gap-1.5">
+							{#each monthEvents as ev}
+								<button
+									on:click={() => { selectedDate = ev.date; }}
+									class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px]"
+									style="background: var(--ochre-soft, #fde68a); color: var(--ochre)"
+									title={ev.notes}
+								>
+									<span class="font-semibold">{new Date(ev.date + 'T12:00:00').getDate()}.</span>
+									<span class="max-w-[180px] truncate">{ev.notes}</span>
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/if}
 			</div>
 			{/if}
 		</div>
@@ -264,20 +365,7 @@
 						>
 							<div class="flex items-start justify-between gap-2">
 								<div class="flex-1 min-w-0">
-									<p class="text-sm font-medium" style="color: var(--text-primary)">{doc.data.type === 'daily_log' ? $t('protocol.title') : doc.data.type === 'episode' ? $t('quickadd.episode') : doc.data.type === 'event' ? $t('stream.events') : doc.data.type}</p>
-									{#if doc.data.type === 'daily_log'}
-										{@const activeSymptoms = Object.entries(doc.data.symptoms || {}).filter(([,v]) => v).map(([k]) => k)}
-										{#if activeSymptoms.length > 0}
-											<p class="text-xs mt-1" style="color: var(--text-secondary)">{activeSymptoms.join(', ')}</p>
-										{/if}
-										{@const epCount = sumEpisodes(doc)}
-										{#if epCount > 0}
-											<p class="text-xs mt-1" style="color: var(--danger)">{epCount} {bp?.episodeTypes?.[0]?.label ? $t(bp.episodeTypes[0].label) : $t('protocol.episodes')}</p>
-										{/if}
-									{/if}
-									{#if doc.data.notes}
-										<p class="text-xs mt-1" style="color: var(--text-muted)">{doc.data.notes}</p>
-									{/if}
+									<EntryPreview entry={doc} {bp} showDate={false} compact={true} recentDocs={$documents} />
 								</div>
 								<div class="flex items-center gap-0.5 shrink-0">
 									{#if confirmDeleteId === doc.id}
@@ -339,7 +427,7 @@
 	}
 	button[aria-label]:last-child:hover {
 		color: var(--danger) !important;
-		background: rgba(220, 38, 38, 0.05) !important;
+		background: rgba(var(--danger-rgb), 0.05) !important;
 	}
 	a[style*="--brand"]:hover {
 		text-decoration: underline;
