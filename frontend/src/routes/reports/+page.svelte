@@ -6,8 +6,9 @@
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import type { Blueprint } from '$lib/blueprint';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { generateDoctorPdf, generateCompactPdf, exportCsv, type ReportScope } from '$lib/pdf';
 	import { isEpisodeBearing } from '$lib/utils/episodeCounts';
 	import { isExportable } from '$lib/utils/exportable';
@@ -71,6 +72,23 @@
 		if (!$isAuthenticated) { goto('/login'); return; }
 		await documents.load();
 		initialLoadDone = true;
+
+		// CIPH-873 — Deep-link from Companion "Export for doctor" button.
+		// When `?action=export` is present, open the export menu and scroll
+		// it into view. Previous flow silently generated a current-month PDF
+		// with no scope choice; this respects the existing picker UI and
+		// stops the button from surprising the user.
+		if ($page.url.searchParams.get('action') === 'export') {
+			exportMenuOpen = true;
+			await tick();
+			document
+				.getElementById('reports-export-section')
+				?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			// Clean the URL so a refresh doesn't re-trigger.
+			const u = new URL($page.url);
+			u.searchParams.delete('action');
+			history.replaceState(null, '', u.pathname + (u.search || ''));
+		}
 	});
 
 	// Recent note-marker events (type === 'event') — shown on Reports so
@@ -390,8 +408,9 @@
 	</div>
 
 	<!-- CIPH-423 — Combined scope+export dropdown: scope only matters with
-	     export, so collapse them into one decision. CSV stays as a small link. -->
-	<div class="mb-6 relative">
+	     export, so collapse them into one decision. CSV stays as a small link.
+	     CIPH-873 — id=reports-export-section for deep-link scroll-into-view. -->
+	<div id="reports-export-section" class="mb-6 relative">
 		<button
 			type="button"
 			on:click={() => (exportMenuOpen = !exportMenuOpen)}

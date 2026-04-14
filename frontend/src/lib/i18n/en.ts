@@ -1,5 +1,5 @@
 export default {
-	'nav.today': 'Today',
+	'nav.dashboard': 'Dashboard',
 	'nav.protocol': 'Protocol',
 	'nav.calendar': 'Calendar',
 	'nav.reports': 'Reports',
@@ -61,7 +61,6 @@ export default {
 	'auth.phase_unlocking': 'Unlocking your notebook…',
 	'auth.phase_building_vault': 'Building your encrypted vault…',
 	'companion.export_for_doctor': 'Export for doctor',
-	'companion.open_reports': 'Open reports',
 	'reports.doctor_desc': '24-month trend + monthly grid + symptom and medication tables — one PDF, everything.',
 	'companion.caregiver_empty_title': 'You haven\'t set up your own tracking',
 	'companion.caregiver_empty_desc': 'That\'s fine — you can keep using ciphra just to help someone else. Link a family account from Settings, or set up tracking for yourself if you want.',
@@ -141,8 +140,6 @@ export default {
 	'companion.streak_record': 'Your record: {count} days',
 	'companion.streak_current': 'Current: {count} days',
 	'companion.last_seizure': 'Last seizure: {date}',
-	'companion.quick_actions': 'Quick actions',
-	'companion.add_another': 'Add another entry',
 	'companion.log_seizure': 'Log seizure',
 	'companion.write_diary': 'Write diary',
 	'companion.record_event': 'Record event',

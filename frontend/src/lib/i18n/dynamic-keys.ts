@@ -241,7 +241,7 @@ export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
 	'calendar.summary',
 
 	// Nav aliases — `nav.protocol` / `nav.stream` replaced by
-	// `nav.today` / `nav.journal` in PI v4 type-merge. Likely dead.
+	// `nav.dashboard` / `nav.journal` (nav.today renamed in CIPH-871).
 	'nav.protocol',
 	'nav.stream',
 

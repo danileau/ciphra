@@ -11,12 +11,12 @@
 	// belong in the 1/3 rail), "Wie geht's dir?" trend chart moved OUT into
 	// the main 2/3 column alongside the other charts.
 	import { t } from '$lib/i18n';
-	import Asterisk from '$lib/components/Asterisk.svelte';
 	import EntryPreview from '$lib/components/EntryPreview.svelte';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint } from '$lib/blueprint/types';
 
-	export let todayLogged: boolean;
+	// CIPH-872 — `todayLogged` + Asterisk import removed with the
+	// redundant Quick-Action rail card.
 
 	// Today's entries moved into rail per CIPH-781 follow-up.
 	export let todayEntries: CiphraDocument[];
@@ -38,7 +38,8 @@
 
 	// Reports / export. Doctor PDF + Open reports. Moved in from CompanionMain.
 	export let canExport: boolean;
-	export let onExportForDoctor: () => void;
+	// CIPH-873 — `onExportForDoctor` prop removed. Export is now a deep-link
+	// to /reports?action=export so the scope picker drives the export.
 </script>
 
 <div class="space-y-6">
@@ -70,19 +71,11 @@
 		</div>
 	</section>
 
-	<!-- ═══ QUICK ACTION ═══ -->
-	<section class="card p-4">
-		<p class="text-xs uppercase tracking-wider font-medium mb-2" style="color: var(--text-muted)">
-			{$t('companion.quick_actions')}
-		</p>
-		<a
-			href="/log/today"
-			class="btn-primary w-full text-sm px-4 py-2 flex items-center justify-center gap-2"
-		>
-			<Asterisk size={14} color="white" />
-			{todayLogged ? $t('companion.add_another') : $t('companion.fill_today')}
-		</a>
-	</section>
+	<!-- CIPH-872 — Rail "quick action" card removed. User dogfood feedback
+		 flagged it as redundant with (a) the prominent "Fill today" card in
+		 main column when !todayLog and (b) the global + FAB that handles
+		 add-entry everywhere. Three entry points for the same action broke
+		 the "one canonical add affordance" rule from PI v6. -->
 
 	<!-- ═══ REPORTS & EXPORT ═══ -->
 	<section class="card p-4">
@@ -106,38 +99,39 @@
 				<p class="text-[11px]" style="color: var(--text-muted)">{$t('reports.analytics_desc')}</p>
 			</div>
 		</div>
+		<!-- CIPH-873 — Single primary CTA that routes to /reports with the
+			 export menu auto-opened. Previous version had two buttons:
+			 (a) "Export for doctor" generating a current-month PDF silently
+			 with no scope choice, and (b) "Open reports" → plain route. Both
+			 collapsed into one action because `/reports` already has the
+			 scope picker (month/year/2-year). Secondary button dropped —
+			 navigation to /reports is also in the BottomNav. -->
 		<div class="flex flex-col gap-2">
-			<button
-				type="button"
-				on:click={onExportForDoctor}
-				disabled={!canExport}
-				data-testid="export-doctor-pdf"
-				class="btn-primary text-sm px-4 min-h-[44px] flex items-center justify-center gap-2"
-			>
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					/>
-				</svg>
-				{$t('companion.export_for_doctor')}
-			</button>
-			<a
-				href="/reports"
-				class="btn-secondary text-sm px-4 min-h-[44px] flex items-center justify-center gap-2"
-			>
-				{$t('companion.open_reports')}
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<polyline
-						points="9,6 15,12 9,18"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					/>
-				</svg>
-			</a>
+			{#if canExport}
+				<a
+					href="/reports?action=export"
+					data-testid="export-doctor-pdf"
+					class="btn-primary text-sm px-4 min-h-[44px] flex items-center justify-center gap-2"
+				>
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+					{$t('companion.export_for_doctor')}
+				</a>
+			{:else}
+				<button
+					type="button"
+					disabled
+					class="btn-primary text-sm px-4 min-h-[44px] flex items-center justify-center gap-2 opacity-50 cursor-not-allowed"
+				>
+					{$t('companion.export_for_doctor')}
+				</button>
+			{/if}
 		</div>
 	</section>
 

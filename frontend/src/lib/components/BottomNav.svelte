@@ -66,7 +66,7 @@
 					<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 					<polyline points="9,22 9,12 15,12 15,22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 				</svg>
-				<span class="bn-label">{$t('nav.today')}</span>
+				<span class="bn-label">{$t('nav.dashboard')}</span>
 			</a>
 
 			<!-- Calendar -->

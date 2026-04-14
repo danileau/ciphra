@@ -1,6 +1,6 @@
 export default {
 	// Nav
-	'nav.today': 'Heute',
+	'nav.dashboard': 'Dashboard',
 	'nav.protocol': 'Protokoll',
 	'nav.calendar': 'Kalender',
 	'nav.reports': 'Berichte',
@@ -66,7 +66,6 @@ export default {
 	'auth.phase_unlocking': 'Notizbuch wird entsperrt…',
 	'auth.phase_building_vault': 'Verschlüsselter Vault wird erstellt…',
 	'companion.export_for_doctor': 'Für Arzt exportieren',
-	'companion.open_reports': 'Berichte öffnen',
 	'reports.doctor_desc': '24-Monats-Verlauf + Monatsprotokoll + Symptom- und Medikamententabellen — ein PDF, alles drin.',
 	'companion.caregiver_empty_title': 'Du hast noch keine eigene Erfassung eingerichtet',
 	'companion.caregiver_empty_desc': 'Das ist in Ordnung — du kannst ciphra auch nur nutzen, um jemand anderem zu helfen. Verknüpfe ein Familien-Konto in den Einstellungen oder richte deine eigene Erfassung ein.',
@@ -147,8 +146,6 @@ export default {
 	'companion.streak_record': 'Dein Rekord: {count} Tage',
 	'companion.streak_current': 'Aktuell: {count} Tage',
 	'companion.last_seizure': 'Letzter Anfall: {date}',
-	'companion.quick_actions': 'Schnellaktionen',
-	'companion.add_another': 'Weiteren Eintrag hinzufügen',
 	'companion.log_seizure': 'Anfall erfassen',
 	'companion.write_diary': 'Tagebuch schreiben',
 	'companion.record_event': 'Ereignis erfassen',

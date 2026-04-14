@@ -180,7 +180,12 @@
 	}
 
 	function goToSetup() {
-		goto('/setup');
+		// CIPH-874 — "Profil anpassen" is fine-tuning (symptom/trigger/vital
+		// toggles), NOT a preset change. The `?customize=1` param makes
+		// /setup skip the preset-picker step for users who already have a
+		// blueprint. Switching preset happens via the "Vorlage wechseln"
+		// list lower on this tab.
+		goto('/setup?customize=1');
 	}
 
 	function handleLogout() {

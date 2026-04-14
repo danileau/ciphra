@@ -13,15 +13,12 @@
 	// without explicit user country selection conflict with zero-knowledge.
 	// Replaced by CIPH-790 (settings-based opt-in help section).
 	import { familyLinks } from '$lib/stores/familyLinks';
-	import { generateDoctorPdf } from '$lib/pdf';
 	import { DATA_1, DATA_3, DATA_4, DATA_5 } from '$lib/dataPalette';
 	import { cohortOf } from '$lib/blueprint/cohort';
 
-	function exportForDoctor() {
-		if (!bp) return;
-		const now = new Date();
-		generateDoctorPdf(bp, allDocs, now.getFullYear(), now.getMonth(), $t, $locale, $auth.username || '');
-	}
+	// CIPH-873 — exportForDoctor() helper + generateDoctorPdf import removed.
+	// The "Export for doctor" rail button now deep-links to
+	// /reports?action=export which opens the scope picker.
 
 	let loaded = false;
 	let confirmDeleteId: number | null = null;
@@ -682,7 +679,6 @@
 		</div>
 		<aside class="min-w-0">
 			<CompanionRail
-				todayLogged={!!todayLog}
 				{complianceLogged}
 				{complianceTotal}
 				{complianceRatio}
@@ -690,7 +686,6 @@
 				{complianceMessage}
 				{complianceAccent}
 				canExport={!!bp && allDocs.length > 0}
-				onExportForDoctor={exportForDoctor}
 				{todayEntries}
 				{bp}
 				allDocsStore={$documents}

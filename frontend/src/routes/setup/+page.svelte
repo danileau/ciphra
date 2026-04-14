@@ -143,6 +143,17 @@
 			}
 			for (const tr of working!.triggers) triggerOn[tr.id] = !hTrg.has(tr.id);
 			for (const v of working!.vitals) vitalOn[v.id] = !hVit.has(v.id);
+
+			// CIPH-874 — Deep-link from Settings/Tracking "Profil anpassen"
+			// lands here. When an existing blueprint is loaded and the
+			// caller passed `?customize=1`, skip the preset-picker (step 1)
+			// and go straight to the symptom/trigger/vital finetuning.
+			// Switching preset remains available via the separate "Vorlage
+			// wechseln" list in Settings.
+			const u = new URL(window.location.href);
+			if (u.searchParams.get('customize') === '1') {
+				step = 2;
+			}
 		}
 	});
 

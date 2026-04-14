@@ -486,7 +486,7 @@
 			     routes here. Active route gets brand color + brand bottom border. -->
 			<nav class="hidden md:flex items-center gap-1 ml-2" aria-label="Primary">
 				{#each [
-					{ href: '/',         label: $t('nav.today') },
+					{ href: '/',         label: $t('nav.dashboard') },
 					{ href: '/calendar', label: $t('nav.calendar') },
 					{ href: '/journal',  label: $t('nav.journal') },
 					{ href: '/reports',  label: $t('nav.reports') }

@@ -1,5 +1,5 @@
 export default {
-	'nav.today': "Aujourd'hui",
+	'nav.dashboard': 'Tableau de bord',
 	'nav.protocol': 'Protocole',
 	'nav.calendar': 'Calendrier',
 	'nav.reports': 'Rapports',
@@ -61,7 +61,6 @@ export default {
 	'auth.phase_unlocking': 'Déverrouillage du carnet…',
 	'auth.phase_building_vault': 'Création du coffre chiffré…',
 	'companion.export_for_doctor': 'Exporter pour le médecin',
-	'companion.open_reports': 'Ouvrir les rapports',
 	'reports.doctor_desc': 'Tendance 24 mois + protocole mensuel + tableaux symptômes et médicaments — un PDF, tout y est.',
 	'companion.caregiver_empty_title': "Vous n'avez pas encore configuré de suivi personnel",
 	'companion.caregiver_empty_desc': "Pas de souci — vous pouvez utiliser ciphra uniquement pour aider quelqu'un d'autre. Liez un compte famille depuis les paramètres, ou configurez votre propre suivi.",
@@ -141,8 +140,6 @@ export default {
 	'companion.streak_record': 'Votre record : {count} jours',
 	'companion.streak_current': 'Actuel : {count} jours',
 	'companion.last_seizure': 'Dernière crise : {date}',
-	'companion.quick_actions': 'Actions rapides',
-	'companion.add_another': 'Ajouter une autre entrée',
 	'companion.log_seizure': 'Enregistrer une crise',
 	'companion.write_diary': 'Écrire dans le journal',
 	'companion.record_event': 'Enregistrer un événement',
