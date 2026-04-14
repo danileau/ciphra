@@ -1,11 +1,18 @@
 <!--
 	SignupFlow — shared zero-knowledge signup flow used by /login and /migrate.
 
-	Handles: createVault → register → loginInit → deriveAuthKey → login → decryptMasterKey → auth.login.
+	Handles: createVault → register → loginInit → deriveAuthKey → login → decryptMasterKey.
 	Then presents the recovery code with PDF download, copy-to-clipboard, and an
-	acknowledgment checkbox. Emits `signup-complete` only after the user ticks
-	the checkbox and clicks continue — losing the recovery code in zero-knowledge
-	crypto means permanent vault loss, so the gate is mandatory.
+	acknowledgment checkbox. Only AFTER the user ticks the checkbox and clicks
+	Continue do we commit to `auth.login` (populating the auth store) and emit
+	`signup-complete`. This ordering is load-bearing: the root layout swaps the
+	page shell the instant `$isAuthenticated` flips truthy, which would unmount
+	this component before the recovery gate can render. Holding the session
+	artifacts in component-local state until acknowledgment keeps the auth store
+	an accurate source of truth for "user has completed signup".
+
+	Losing the recovery code in zero-knowledge crypto means permanent vault
+	loss, so the gate is mandatory.
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
@@ -29,6 +36,19 @@
 	let showRecovery = false;
 	let acknowledged = false;
 	let copied = false;
+
+	// Session artifacts collected during the register+login sequence but NOT
+	// yet committed to the auth store. We hold them here until the user
+	// acknowledges the recovery gate; committing early would cause the root
+	// layout to unmount this component mid-flow.
+	type PendingSession = {
+		token: string;
+		username: string;
+		masterKey: Uint8Array;
+		vault: { auth_params: string; vault_params: string; encrypted_master: string };
+		isAdmin: boolean;
+	};
+	let pending: PendingSession | null = null;
 
 	let touched: Record<string, boolean> = {};
 
@@ -81,13 +101,16 @@
 
 			busyLabel = $t('auth.phase_unlocking');
 			const masterKey = await decryptMasterKey(password, vault.vault_params, vault.encrypted_master);
-			auth.login(
-				lr.data.token as string,
-				lr.data.username as string,
+			// Hold the session in component-local state. DO NOT call auth.login
+			// yet — that would flip $isAuthenticated and cause the root layout to
+			// swap shells before the recovery gate renders.
+			pending = {
+				token: lr.data.token as string,
+				username: lr.data.username as string,
 				masterKey,
 				vault,
-				(lr.data.is_admin as boolean) || false
-			);
+				isAdmin: (lr.data.is_admin as boolean) || false,
+			};
 			showRecovery = true;
 		} catch (e) {
 			setError($t('auth.error_exists'), e instanceof Error ? e.message : String(e));
@@ -109,6 +132,18 @@
 
 	function proceed() {
 		if (!acknowledged) return;
+		if (!pending) return;
+		// Commit to the auth store NOW — after the user has acknowledged the
+		// recovery code. This is the moment the layout may reactively swap
+		// shells; the parent's `signup-complete` handler then routes as needed.
+		auth.login(
+			pending.token,
+			pending.username,
+			pending.masterKey,
+			pending.vault,
+			pending.isAdmin
+		);
+		pending = null;
 		dispatch('signup-complete');
 	}
 </script>
@@ -163,6 +198,7 @@
 			</div>
 		{/if}
 		<button type="submit" disabled={busy}
+			data-testid="register-submit"
 			class="btn-primary w-full px-4 min-h-[48px]">
 			{busy ? (busyLabel || $t('common.loading')) : $t('auth.register')}
 		</button>
@@ -174,7 +210,11 @@
 			<p class="text-sm font-medium" style="color: var(--olive)">{$t('auth.recovery_save_warning')}</p>
 		</div>
 		<div class="rounded-xl p-4 mb-4" style="background: var(--surface-muted)">
-			<p class="font-mono text-base select-all leading-relaxed" style="color: var(--text-primary)">{recoveryCode}</p>
+			<!-- CIPH-763b — SR-only DOM label announces context before the
+				 raw code characters. Sighted users already see the olive
+				 warning box above; announcer users had no such framing. -->
+			<span class="sr-only">{$t('auth.recovery_code_label')}</span>
+			<p data-testid="recovery-code-display" class="font-mono text-base select-all leading-relaxed" style="color: var(--text-primary)">{recoveryCode}</p>
 		</div>
 		<div class="grid grid-cols-2 gap-2 mb-4">
 			<button
@@ -195,13 +235,14 @@
 			</button>
 		</div>
 		<label class="flex items-center gap-3 mb-4 cursor-pointer min-h-[44px]">
-			<input type="checkbox" bind:checked={acknowledged} class="w-5 h-5 rounded" style="border-color: var(--border)" />
+			<input type="checkbox" bind:checked={acknowledged} data-testid="recovery-ack-checkbox" class="w-5 h-5 rounded" style="border-color: var(--border)" />
 			<span class="text-sm" style="color: var(--text-secondary)">{$t('auth.recovery_confirm')}</span>
 		</label>
 		<button
 			type="button"
 			on:click={proceed}
 			disabled={!acknowledged}
+			data-testid="recovery-continue"
 			class="btn-primary w-full px-4 min-h-[48px]"
 		>
 			{$t('auth.proceed')}

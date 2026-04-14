@@ -12,6 +12,8 @@
 	import { blueprint, hasBlueprint } from '$lib/blueprint';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
+	import Toast from '$lib/components/Toast.svelte';
+	import { shellFor } from '$lib/routeShells';
 	import { fade, fly } from 'svelte/transition';
 
 	let docsLoadStarted = false;
@@ -61,6 +63,63 @@
 		}
 	}
 
+	// CIPH-767c — FAB long-press (≥500ms) skips the mode picker and opens
+	// directly into the user's most-recently-used quick-add mode, persisted
+	// in localStorage. Normal tap behavior is unchanged (picker shown).
+	const QUICKADD_LAST_MODE_KEY = 'ciphra_quickadd_last_mode';
+	let fabPressTimer: ReturnType<typeof setTimeout> | null = null;
+	let fabLongPressed = false;
+
+	function fabOpenPicker() {
+		if (fabShowTooltip) dismissFabTooltip();
+		if (showEventLineTooltip) dismissEventLineTooltip();
+		showQuickAdd = true;
+	}
+	function fabOpenLastMode() {
+		let last: 'log' | 'diary' = 'log';
+		if (browser) {
+			try {
+				const v = localStorage.getItem(QUICKADD_LAST_MODE_KEY);
+				if (v === 'diary' || v === 'log') last = v;
+			} catch {}
+		}
+		quickAddMode = last;
+		if (last === 'diary' && !diaryDate) diaryDate = new Date().toISOString().slice(0, 10);
+		fabOpenPicker();
+	}
+	function onFabPointerDown() {
+		fabLongPressed = false;
+		fabPressTimer = setTimeout(() => {
+			fabLongPressed = true;
+			fabOpenLastMode();
+		}, 500);
+	}
+	function onFabPointerUp() {
+		if (fabPressTimer) { clearTimeout(fabPressTimer); fabPressTimer = null; }
+	}
+	function onFabPointerCancel() {
+		if (fabPressTimer) { clearTimeout(fabPressTimer); fabPressTimer = null; }
+		fabLongPressed = false;
+	}
+	function onFabClick() {
+		// If long-press already opened + primed the mode, swallow the
+		// subsequent click to avoid toggling state twice.
+		if (fabLongPressed) { fabLongPressed = false; return; }
+		fabOpenPicker();
+	}
+	// Persist last-used mode whenever it changes (observer runs after save).
+	$: if (browser) {
+		try { localStorage.setItem(QUICKADD_LAST_MODE_KEY, quickAddMode); } catch {}
+	}
+
+	// CIPH-767e — sync indicator (Astrid) + PWA install prompt.
+	let syncToastShow = false;
+	let syncToastKey = 0;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let deferredInstallPrompt: any = null;
+	let pwaInstallVisible = false;
+	const PWA_DISMISS_KEY = 'ciphra_pwa_install_dismissed_at';
+
 	// CIPH-103 — after the user's first daily_log save, show a one-time
 	// tooltip explaining event lines. Triggered from /log/[date] by
 	// dispatching a `ciphra:first-daily-log` CustomEvent on window.
@@ -92,8 +151,65 @@
 			showEventLineTooltip = true;
 		};
 		window.addEventListener('ciphra:first-daily-log', onFirstDailyLog);
-		return () => window.removeEventListener('ciphra:first-daily-log', onFirstDailyLog);
+
+		// CIPH-767e — "Synced" toast on save round-trips (dispatched from
+		// documents.save). Re-keying the Toast via syncToastKey forces a
+		// fresh mount so its onMount duration timer restarts cleanly when a
+		// user saves several entries in quick succession.
+		const onSynced = () => {
+			syncToastKey += 1;
+			syncToastShow = true;
+			setTimeout(() => { syncToastShow = false; }, 1800);
+		};
+		window.addEventListener('ciphra:synced', onSynced);
+
+		// CIPH-767e — PWA install prompt (Astrid / Samsung). Capture the
+		// beforeinstallprompt event so we can offer install from our own UI.
+		// Suppressed for 7 days after dismissal, forever after successful install.
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const onBeforeInstall = (e: any) => {
+			e.preventDefault?.();
+			deferredInstallPrompt = e;
+			// Respect prior dismissal (7-day cool-off).
+			try {
+				const raw = localStorage.getItem(PWA_DISMISS_KEY);
+				const ts = raw ? parseInt(raw, 10) : 0;
+				const sevenDays = 7 * 24 * 60 * 60 * 1000;
+				if (ts && Date.now() - ts < sevenDays) return;
+			} catch {}
+			pwaInstallVisible = true;
+		};
+		window.addEventListener('beforeinstallprompt', onBeforeInstall as EventListener);
+		const onAppInstalled = () => {
+			pwaInstallVisible = false;
+			deferredInstallPrompt = null;
+			try { localStorage.setItem(PWA_DISMISS_KEY, String(Date.now())); } catch {}
+		};
+		window.addEventListener('appinstalled', onAppInstalled);
+
+		return () => {
+			window.removeEventListener('ciphra:first-daily-log', onFirstDailyLog);
+			window.removeEventListener('ciphra:synced', onSynced);
+			window.removeEventListener('beforeinstallprompt', onBeforeInstall as EventListener);
+			window.removeEventListener('appinstalled', onAppInstalled);
+		};
 	});
+
+	async function acceptPwaInstall() {
+		if (!deferredInstallPrompt) { pwaInstallVisible = false; return; }
+		try {
+			deferredInstallPrompt.prompt();
+			await deferredInstallPrompt.userChoice;
+		} catch {}
+		deferredInstallPrompt = null;
+		pwaInstallVisible = false;
+	}
+	function dismissPwaInstall() {
+		pwaInstallVisible = false;
+		if (browser) {
+			try { localStorage.setItem(PWA_DISMISS_KEY, String(Date.now())); } catch {}
+		}
+	}
 
 	$: bp = $blueprint;
 
@@ -191,15 +307,17 @@
 		});
 	}
 
-	// Redirect to setup when authenticated but no blueprint (and not already on /setup or /login or /admin)
-	// Only redirect AFTER documents have fully loaded and blueprint has been checked.
-	// Caregivers who have already linked to someone else's vault don't need to
-	// set up their own condition — they can skip the wizard and still use the
-	// app. They can always run /setup later if they want their own tracking.
+	// Redirect to setup when authenticated but no blueprint, only for
+	// routes that require a blueprint per the registry. Caregivers who
+	// have already linked to someone else's vault don't need to set up
+	// their own condition — they can skip the wizard and still use the
+	// app. Only redirect AFTER documents have fully loaded and blueprint
+	// has been checked. The per-route allow-list (login/setup/settings/
+	// admin/migrate) that used to live here is now encoded in the
+	// registry via `requiresBlueprint=false` on each of those shells.
 	$: if (browser && $authReady && $isAuthenticated && docsLoaded && !$hasBlueprint
 		&& $familyLinks.length === 0
-		&& currentPath !== '/setup' && currentPath !== '/login' && currentPath !== '/settings' && currentPath !== '/admin'
-		&& currentPath !== '/migrate') {
+		&& shellFor(currentPath).requiresBlueprint) {
 		goto('/setup');
 	}
 
@@ -252,16 +370,19 @@
 	}
 
 	$: currentPath = $page.url.pathname as string;
+	// CIPH-833 — route-shell registry. One lookup per route drives
+	// both the chrome selection and the auth/blueprint guards below,
+	// replacing the old multi-branch `currentPath !== '/X' && …`
+	// chains that each new route had to be patched into.
+	$: currentShell = shellFor(currentPath);
 
 	// Redirect to login when auth is ready but user is not authenticated
-	// (except if already on /login)
-	// Only force redirect to /login for app pages (not / which shows landing for guests)
+	// and the current route requires auth. Public routes (landing,
+	// /login itself, /privacy, /terms, /conditions/*, /join/*, /migrate,
+	// /stream) all have requiresAuth=false in the registry.
 	$: if (browser && $authReady && !$isAuthenticated
-		&& currentPath !== '/login' && currentPath !== '/'
-		&& currentPath !== '/setup' && currentPath !== '/privacy' && currentPath !== '/terms'
-		&& currentPath !== '/migrate'
-		&& !currentPath.startsWith('/conditions')
-		&& !currentPath.startsWith('/join/')) {
+		&& currentShell.requiresAuth
+		&& currentPath !== '/login') {
 		goto('/login');
 	}
 
@@ -287,7 +408,7 @@
 {:else if !$authReady}
 	<!-- Stable background while auth hydrates — no content to prevent flashing -->
 	<div class="min-h-screen bg-surface"></div>
-{:else if (currentPath === '/login' || currentPath === '/privacy' || currentPath === '/terms' || currentPath.startsWith('/conditions') || currentPath.startsWith('/join/')) && !$isAuthenticated}
+{:else if !$isAuthenticated && (currentPath === '/login' || currentShell.shell === 'public-doc' || currentShell.shell === 'family-claim')}
 	<!-- Public-page chrome: the same nav as the landing page, not a reduced
 		 "lean" variant, so visitors see one identity across every
 		 unauthenticated view. Anchors like #how / #security point back to
@@ -386,7 +507,7 @@
 			{#if liveLinks.length > 0}
 				<!-- Vault switcher: visible label + eye icon so it reads as
 					 "you're viewing X" rather than a bare dropdown. -->
-				<label class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 min-h-[36px] cursor-pointer"
+				<label class="flex items-center gap-1.5 rounded-lg px-2 py-1 min-h-[36px] cursor-pointer"
 					style="background: {$activeVault ? 'rgba(159, 99, 11, 0.12)' : 'var(--surface-muted)'};
 					       border: 1px solid {$activeVault ? 'var(--ochre)' : 'var(--border)'};">
 					<svg class="w-4 h-4 shrink-0" style="color: {$activeVault ? 'var(--ochre)' : 'var(--text-muted)'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
@@ -410,7 +531,7 @@
 				{#if $auth.isAdmin}
 					<a
 						href="/admin"
-						class="p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center
+						class="p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center
 							{currentPath === '/admin'
 								? 'text-brand bg-surface-muted'
 								: 'text-slate-500 hover:bg-surface-muted'}"
@@ -423,7 +544,7 @@
 				<!-- Settings (kept in header per CIPH-201; not a primary daily action) -->
 				<a
 					href="/settings"
-					class="p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center
+					class="p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center
 						{currentPath === '/settings'
 							? 'text-brand bg-surface-muted'
 							: 'text-slate-500 hover:bg-surface-muted'}"
@@ -438,7 +559,7 @@
 					on:click={handleLogout}
 					aria-label={$t('auth.logout')}
 					title={$t('auth.logout')}
-					class="p-2.5 rounded-lg text-slate-500 hover:bg-surface-muted transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+					class="p-2 rounded-lg text-slate-500 hover:bg-surface-muted transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
@@ -449,6 +570,7 @@
 	{#if $activeVault}
 		{@const activeLink = $familyLinks.find(l => l.sourceUserId === $activeVault)}
 		{@const hiddenCount = $documents.filter(d => d.data?.type === 'diary' || d.data?.private === true).length}
+		{@const visibleCount = $documents.length - hiddenCount}
 		<div class="border-b px-4 py-2" style="background: rgba(159, 99, 11, 0.08); border-color: rgba(159, 99, 11, 0.2)">
 			<div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
 				<p class="text-sm" style="color: var(--ochre)">
@@ -469,7 +591,7 @@
 					 private/diary entries. Muted, lock-iconed, non-alarmist. -->
 				<div class="max-w-6xl mx-auto mt-1 flex items-center gap-1.5 text-xs" style="color: var(--text-muted)">
 					<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke-width="2"/><path d="M8 11V8a4 4 0 018 0v3" stroke-width="2" stroke-linecap="round"/></svg>
-					<span>{$t('family.private_hidden', { count: String(hiddenCount) })}</span>
+					<span>{$t('family.private_context', { visible: String(visibleCount), private: String(hiddenCount) })}</span>
 				</div>
 			{/if}
 		</div>
@@ -525,7 +647,12 @@
 			</button>
 		{/if}
 		<button
-			on:click={() => { if (fabShowTooltip) dismissFabTooltip(); if (showEventLineTooltip) dismissEventLineTooltip(); showQuickAdd = true; }}
+			on:click={onFabClick}
+			on:pointerdown={onFabPointerDown}
+			on:pointerup={onFabPointerUp}
+			on:pointerleave={onFabPointerCancel}
+			on:pointercancel={onFabPointerCancel}
+			data-testid="fab-quickadd"
 			class="fab hidden md:flex"
 			class:fab-pulse={fabPulse}
 			style="bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); right: 1rem;"
@@ -568,12 +695,14 @@
 							<button
 								type="button"
 								on:click={() => { quickAddMode = 'log'; }}
+								data-testid="quickadd-mode-log"
 								class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px]"
 								style="background: {quickAddMode === 'log' ? 'white' : 'transparent'}; color: {quickAddMode === 'log' ? 'var(--text-primary)' : 'var(--text-muted)'}"
 							>{$t('quickadd.mode_entry')} / {$t('quickadd.mode_event')}</button>
 							<button
 								type="button"
 								on:click={() => { quickAddMode = 'diary'; if (!diaryDate) diaryDate = new Date().toISOString().slice(0, 10); }}
+								data-testid="quickadd-mode-diary"
 								class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px] inline-flex items-center justify-center gap-1.5"
 								style="background: {quickAddMode === 'diary' ? 'white' : 'transparent'}; color: {quickAddMode === 'diary' ? 'var(--text-primary)' : 'var(--text-muted)'}"
 							>
@@ -599,11 +728,12 @@
 							</div>
 							<div class="mb-4">
 								<label class="text-xs" style="color: var(--text-secondary)" for="qa-diary-text">{$t('quickadd.diary_text_label')}</label>
-								<textarea id="qa-diary-text" bind:value={diaryText} rows="5" class="input mt-1 resize-y" placeholder={$t('quickadd.diary_placeholder')}></textarea>
+								<textarea id="qa-diary-text" bind:value={diaryText} rows="5" data-testid="quickadd-diary-text" class="input mt-1 resize-y" placeholder={$t('quickadd.diary_placeholder')}></textarea>
 							</div>
 							<button
 								on:click={quickAddSave}
 								disabled={quickAddSaving || !diaryText.trim()}
+								data-testid="quickadd-save"
 								class="btn-primary w-full py-3 text-sm mb-3"
 							>{quickAddSaving ? $t('common.loading') : $t('quickadd.save')}</button>
 						{:else}
@@ -623,7 +753,8 @@
 									{#each bp.episodeTypes as ep}
 										<button
 											on:click={() => selectEpisodeType(ep.id)}
-											class="flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all min-h-[44px]"
+											data-testid="quickadd-episode-{ep.id}"
+											class="flex items-center gap-2 px-4 py-2 rounded-xl border transition-all min-h-[44px]"
 											style="border-color: {quickAddSelectedEpisode === ep.id ? ep.color : 'var(--border)'}; background: {quickAddSelectedEpisode === ep.id ? ep.color + '10' : 'var(--surface-muted)'}"
 										>
 											<span class="w-3 h-3 rounded-full shrink-0" style="background: {ep.color}"></span>
@@ -643,20 +774,29 @@
 								type="text"
 								bind:value={quickAddNote}
 								placeholder={$t('quickadd.note')}
+								data-testid="quickadd-note"
 								class="input"
 								on:input={() => { if (fabShowTooltip) dismissFabTooltip(); }}
 								on:keydown={(e) => { if (e.key === 'Enter' && (quickAddSelectedEpisode || quickAddNote.trim())) quickAddSave(); }}
 							/>
 						</div>
 
-						<!-- CIPH-713 — private toggle for the resulting entry/event -->
-						<label class="flex items-center gap-2 text-xs mb-3" style="color: var(--text-secondary)">
+						<!-- CIPH-713 / CIPH-783 — private toggle with semantic lock state -->
+						<label class="flex items-center gap-2 text-xs mb-3" style="color: var(--text-secondary)"
+							aria-label={quickAddPrivate ? $t('private.toggle_to_public') : $t('private.toggle_to_private')}>
 							<input type="checkbox" bind:checked={quickAddPrivate} class="w-4 h-4" />
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-								<rect x="4" y="11" width="16" height="10" rx="2" />
-								<path d="M8 11V7a4 4 0 1 1 8 0v4" />
-							</svg>
-							{$t('private.label')}
+							{#if quickAddPrivate}
+								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="transition-all duration-150">
+									<rect x="4" y="11" width="16" height="10" rx="2" />
+									<path d="M8 11V7a4 4 0 1 1 8 0v4" />
+								</svg>
+							{:else}
+								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="transition-all duration-150">
+									<rect x="4" y="11" width="16" height="10" rx="2" />
+									<path d="M8 11V7a4 4 0 0 1 7 -1.5" />
+								</svg>
+							{/if}
+							{quickAddPrivate ? $t('private.state_private') : $t('private.state_public')}
 							<span style="color: var(--text-muted)">— {$t('private.tooltip')}</span>
 						</label>
 
@@ -664,6 +804,7 @@
 						<button
 							on:click={quickAddSave}
 							disabled={quickAddSaving || (!quickAddSelectedEpisode && !quickAddNote.trim())}
+							data-testid="quickadd-save"
 							class="btn-primary w-full py-3 text-sm mb-3"
 						>
 							{quickAddSaving ? $t('common.loading') : $t('quickadd.save')}
@@ -684,6 +825,33 @@
 				</div>
 			</div>
 		{/if}
+	{/if}
+
+	<!-- CIPH-767e — Sync toast (brief, top-centered). Re-keyed so each new
+		 save restarts the fade-out timer cleanly. -->
+	{#key syncToastKey}
+		<Toast message={syncToastShow ? $t('sync.synced') : ''} duration={1800} show={syncToastShow} />
+	{/key}
+
+	<!-- CIPH-767e — PWA install banner (Astrid / Samsung). Shown only when
+		 beforeinstallprompt fires and the user hasn't dismissed in the last
+		 7 days. `appinstalled` also suppresses it permanently for this profile. -->
+	{#if pwaInstallVisible}
+		<div
+			class="fixed left-4 right-4 z-[70] rounded-xl p-3 flex items-center gap-3"
+			style="bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); background: var(--surface-card); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,0.08); max-width: 480px; margin-left: auto; margin-right: auto;"
+			role="dialog"
+			aria-label={$t('pwa.install_title')}
+			transition:fade={{ duration: 200 }}
+		>
+			<svg class="w-5 h-5 shrink-0" style="color: var(--brand)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+				<rect x="5" y="2" width="14" height="20" rx="2"/>
+				<line x1="12" y1="18" x2="12" y2="18"/>
+			</svg>
+			<p class="text-sm flex-1" style="color: var(--text-primary)">{$t('pwa.install_title')}</p>
+			<button on:click={dismissPwaInstall} class="text-xs px-2 min-h-[36px]" style="color: var(--text-muted)">{$t('pwa.install_dismiss')}</button>
+			<button on:click={acceptPwaInstall} class="btn-primary text-xs px-3 min-h-[36px]">{$t('pwa.install_cta')}</button>
+		</div>
 	{/if}
 
 	<!-- Mobile bottom-tab navigation (CIPH-201). md:hidden — desktop uses

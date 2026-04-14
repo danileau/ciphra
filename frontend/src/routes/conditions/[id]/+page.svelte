@@ -82,7 +82,7 @@
 	</div>
 {:else}
 	<div class="min-h-screen" style="background: var(--surface);">
-		<main class="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+		<main class="layout-default py-8 sm:py-12">
 			<a href="/conditions" class="text-sm mb-6 inline-block transition-colors" style="color: var(--brand);">&larr; {$t('condition.index_title')}</a>
 			<div class="flex items-center gap-4 mb-4">
 				<div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style="background: {info.color}15; color: {info.color}">
@@ -268,7 +268,7 @@
 				<p class="mb-6 max-w-lg mx-auto" style="color: var(--text-muted);">{$t('condition.cta_subtitle')}</p>
 				<a
 					href="/login"
-					class="btn-primary inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-medium text-lg"
+					class="btn-primary inline-flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-lg"
 				>
 					{$t('condition.cta_button')}
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>

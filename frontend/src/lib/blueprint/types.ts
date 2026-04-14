@@ -122,6 +122,15 @@ export interface Blueprint {
 	/** Preferred report type */
 	reportPreference: 'analytics' | 'grid' | 'both';
 
+	/** CIPH-852 — the browse-surface the user most benefits from for this
+	 *  condition. Home dashboard + navigation emphasize this surface.
+	 *  - 'journal' — chronological entry stream is primary (narrative conditions)
+	 *  - 'calendar' — spatial month view is primary (cycle / phase-band conditions)
+	 *  - 'trend' — trend chart is primary (discrete-event conditions)
+	 *  Optional for backwards-compat; read through `getPrimaryBrowseSurface()`
+	 *  which falls back to the cohort default. User can override in Settings. */
+	primaryBrowseSurface?: 'journal' | 'calendar' | 'trend';
+
 	/** CIPH-301b — User customizations from the setup wizard (or settings).
 	 *  IDs listed here are HIDDEN from the daily-log form and from PDF
 	 *  aggregations. Optional + backwards-compatible: a missing field means

@@ -9,6 +9,11 @@
 	Token never leaves the client — fragments are not sent to the ciphra server.
 	Bundle is fetched directly from the source (epilepc) and encrypted under
 	the new user's master_key before any POST to ciphra.
+
+	CIPH-780 — visual parity with /login. Same wrapper, same wordmark,
+	same card shell. Every phase renders inside the same rounded-2xl card
+	so the user feels zero discontinuity from the login tab they likely
+	arrived from.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -19,6 +24,7 @@
 	import { get } from 'svelte/store';
 	import { documents } from '$lib/stores/documents';
 	import SignupFlow from '$lib/components/SignupFlow.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 	import { blueprint } from '$lib/blueprint/store';
 	import {
 		validateBundle,
@@ -38,7 +44,10 @@
 		| 'fetch-error'
 		| 'preview'
 		| 'importing'
-		| 'done';
+		| 'done'
+		| 'tour';
+
+	const TOUR_FLAG_KEY = 'ciphra_migrate_tour_seen';
 
 	let phase: Phase = 'init';
 	let token = '';
@@ -57,6 +66,20 @@
 
 	let progressDone = 0;
 	let progressTotal = 0;
+
+	// CIPH-760 — preview date range across all imported collections.
+	let dateRangeStart = '';
+	let dateRangeEnd = '';
+
+	function computeDateRange(b: EpilepcBundle): { start: string; end: string } {
+		const all: string[] = [];
+		for (const s of b.seizures) if (s.date) all.push(s.date);
+		for (const e of b.events) if (e.date) all.push(e.date);
+		for (const d of b.diary) if (d.date) all.push(d.date);
+		if (all.length === 0) return { start: '', end: '' };
+		all.sort();
+		return { start: all[0], end: all[all.length - 1] };
+	}
 
 	const CHECKPOINT_KEY_PREFIX = 'ciphra_migrate_done:';
 
@@ -198,6 +221,9 @@
 			mapped = mapBundle(valid);
 			progressTotal = mapped.entries.length + mapped.events.length + mapped.diaries.length;
 			progressDone = 0;
+			const range = computeDateRange(valid);
+			dateRangeStart = range.start;
+			dateRangeEnd = range.end;
 			phase = 'preview';
 		} catch (e) {
 			setError('migrate.error_fetch', e instanceof Error ? e.message : String(e));
@@ -243,8 +269,17 @@
 			for (const d of mapped.diaries) await saveOne(d);
 
 			clearCheckpoint();
-			phase = 'done';
-			setTimeout(() => goto('/'), 1200);
+			// CIPH-761 — show the one-shot Tagebuch-private tour after a
+			// successful import, unless the user has already seen it on this
+			// browser. The tour has its own explicit "continue" button to
+			// /today — no setTimeout redirect.
+			const seen = browser && localStorage.getItem(TOUR_FLAG_KEY) === '1';
+			if (seen) {
+				phase = 'done';
+				setTimeout(() => goto('/'), 1200);
+			} else {
+				phase = 'tour';
+			}
 		} catch (e) {
 			setError('migrate.error_import', e instanceof Error ? e.message : String(e));
 			// stay on importing/preview so user can retry — checkpoint preserved
@@ -257,130 +292,221 @@
 	function goHome() {
 		goto('/');
 	}
+
+	function finishTour() {
+		if (browser) {
+			try {
+				localStorage.setItem(TOUR_FLAG_KEY, '1');
+			} catch {
+				/* ignore quota */
+			}
+		}
+		goto('/');
+	}
 </script>
 
 <svelte:head>
 	<title>{$t('migrate.title')}</title>
 </svelte:head>
 
-<main class="migrate">
-	{#if phase === 'init'}
-		<p>…</p>
-	{:else if phase === 'no-fragment'}
-		<h1>{$t('migrate.not_found_title')}</h1>
-		<p>{$t('migrate.not_found_body')}</p>
-		<button on:click={goHome}>{$t('common.back')}</button>
-	{:else if phase === 'signup'}
-		<h1>{$t('migrate.welcome_title')}</h1>
-		<p>{$t('migrate.welcome_body', { source })}</p>
-		<SignupFlow on:signup-complete={handleSignupComplete} />
-	{:else if phase === 'confirm-origin'}
-		<h1>{$t('migrate.confirm_title')}</h1>
-		<p>{$t('migrate.confirm_body')}</p>
-		<div class="origin-block">
-			<div class="origin-label">{$t('migrate.confirm_target_label')}</div>
-			<code class="origin-value">{currentOrigin}</code>
+<main
+	class="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4"
+	style="background: var(--surface)"
+>
+	<div class="w-full max-w-md">
+		<!-- Wordmark + tagline header — identical to /login -->
+		<div class="flex justify-center mb-2">
+			<svg viewBox="0 0 112 36" class="h-10" aria-label="ciphra">
+				<text
+					x="0"
+					y="27"
+					font-family="Inter, DM Sans, sans-serif"
+					font-size="26"
+					font-weight="500"
+					letter-spacing="0.5"
+					style="fill: var(--text-primary)">ciphra</text
+				>
+				<g transform="translate(98,8) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
+					<path d="M -5 0 L 5 0" stroke-width="1.3" />
+					<path d="M -2 -3.5 L 2 3.5" stroke-width="1" />
+					<path d="M 2 -3.3 L -2 3.3" stroke-width="0.9" />
+				</g>
+			</svg>
 		</div>
-		<div class="origin-block">
-			<div class="origin-label">{$t('migrate.confirm_source_label')}</div>
-			<code class="origin-value">{source}</code>
-		</div>
-		<label class="ack">
-			<input type="checkbox" bind:checked={originConfirmed} />
-			<span>{$t('migrate.confirm_checkbox')}</span>
-		</label>
-		<button on:click={confirmOriginAndFetch} disabled={!originConfirmed}>
-			{$t('migrate.confirm_button')}
-		</button>
-	{:else if phase === 'fetching'}
-		<h1>{$t('migrate.phase_fetching')}</h1>
-		<p>{busyLabel}</p>
-	{:else if phase === 'fetch-error'}
-		<h1>{$t('migrate.error_title')}</h1>
-		<p class="err">{$t(errorKey)}</p>
-		{#if errorDetail}<p class="detail">{errorDetail}</p>{/if}
-		<a class="back-link" href="https://{source}">{$t('migrate.back_to_source', { source })}</a>
-	{:else if phase === 'preview' && bundle && mapped}
-		<h1>{$t('migrate.preview_title')}</h1>
-		<p>
-			{$t('migrate.preview_body', {
-				seizures: mapped.entries.length,
-				events: mapped.events.length,
-				meds: mapped.medications.length,
-				diary: mapped.diaries.length,
-			})}
+		<p class="text-sm text-center mb-6" style="color: var(--text-muted)">
+			{$t('encryption.badge')}
 		</p>
-		<p class="decom">{$t('migrate.decommission_note', { date: decommissionDate })}</p>
-		{#if errorKey}<p class="err">{$t(errorKey)} {errorDetail}</p>{/if}
-		<button on:click={runImport} disabled={busy}>{$t('migrate.confirm_import')}</button>
-	{:else if phase === 'importing'}
-		<h1>{$t('migrate.importing_title')}</h1>
-		<p>{progressDone} / {progressTotal}</p>
-		<progress value={progressDone} max={progressTotal}></progress>
-	{:else if phase === 'done'}
-		<h1>{$t('migrate.done_title')}</h1>
-		<p>{$t('migrate.done_body')}</p>
-	{/if}
-</main>
 
-<style>
-	.migrate {
-		max-width: 36rem;
-		margin: 2rem auto;
-		padding: 1.5rem;
-		font-family: system-ui, sans-serif;
-	}
-	button {
-		padding: 0.6rem 1rem;
-		font-size: 1rem;
-		cursor: pointer;
-	}
-	.err {
-		color: #b00020;
-	}
-	.detail {
-		color: #666;
-		font-size: 0.9rem;
-	}
-	progress {
-		width: 100%;
-		height: 1rem;
-	}
-	.decom {
-		color: #666;
-		font-size: 0.9rem;
-	}
-	.back-link {
-		display: inline-block;
-		margin-top: 1rem;
-	}
-	.origin-block {
-		margin: 1rem 0;
-		padding: 0.75rem 1rem;
-		background: #f5f5f7;
-		border: 1px solid #ddd;
-		border-radius: 6px;
-	}
-	.origin-label {
-		font-size: 0.8rem;
-		color: #666;
-		margin-bottom: 0.25rem;
-	}
-	.origin-value {
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-		font-size: 1.05rem;
-		font-weight: 600;
-		word-break: break-all;
-	}
-	.ack {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin: 1rem 0;
-		cursor: pointer;
-	}
-	button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-</style>
+		{#if phase === 'tour'}
+			<!-- CIPH-761 — one-shot post-import Tagebuch-private tour. Uses
+				 the shared Modal primitive (CIPH-834). Not dismissable: the
+				 user must tap Continue so we know they saw the notice. -->
+			<Modal open={true} dismissable={false} title={$t('migrate.tour_title')}>
+				<p class="text-sm mb-6" style="color: var(--text-secondary)">{$t('migrate.tour_body')}</p>
+				<button type="button" class="btn-primary w-full px-4 min-h-[48px]" on:click={finishTour}>
+					{$t('migrate.tour_continue')}
+				</button>
+			</Modal>
+		{:else}
+			<div
+				class="rounded-2xl overflow-hidden"
+				style="background: var(--surface-card); border: 1px solid var(--border)"
+			>
+				<div class="p-6">
+					{#if phase === 'init'}
+						<p class="text-sm text-center" style="color: var(--text-muted)">…</p>
+					{:else if phase === 'no-fragment'}
+						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
+							{$t('migrate.not_found_title')}
+						</h1>
+						<p class="text-sm mb-6" style="color: var(--text-secondary)">{$t('migrate.not_found_body')}</p>
+						<button type="button" class="btn-primary w-full px-4 min-h-[48px]" on:click={goHome}>
+							{$t('common.back')}
+						</button>
+					{:else if phase === 'signup'}
+						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
+							{$t('migrate.welcome_title')}
+						</h1>
+						<p class="text-sm mb-6" style="color: var(--text-secondary)">
+							{$t('migrate.welcome_body', { source })}
+						</p>
+						<SignupFlow on:signup-complete={handleSignupComplete} />
+					{:else if phase === 'confirm-origin'}
+						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
+							{$t('migrate.confirm_title')}
+						</h1>
+						<p class="text-sm mb-4" style="color: var(--text-secondary)">{$t('migrate.confirm_body')}</p>
+
+						<div
+							class="rounded-xl p-3 mb-3"
+							style="background: var(--surface-muted); border: 1px solid var(--border)"
+						>
+							<p class="text-xs mb-1" style="color: var(--text-muted)">
+								{$t('migrate.confirm_target_label')}
+							</p>
+							<code class="text-sm font-mono font-semibold break-all" style="color: var(--text-primary)"
+								>{currentOrigin}</code
+							>
+						</div>
+						<div
+							class="rounded-xl p-3 mb-4"
+							style="background: var(--surface-muted); border: 1px solid var(--border)"
+						>
+							<p class="text-xs mb-1" style="color: var(--text-muted)">
+								{$t('migrate.confirm_source_label')}
+							</p>
+							<code class="text-sm font-mono font-semibold break-all" style="color: var(--text-primary)"
+								>{source}</code
+							>
+						</div>
+
+						<label class="flex items-start gap-2 mb-6 cursor-pointer">
+							<input type="checkbox" bind:checked={originConfirmed} class="mt-0.5" />
+							<span class="text-sm" style="color: var(--text-secondary)">{$t('migrate.confirm_checkbox')}</span>
+						</label>
+
+						<button
+							type="button"
+							class="btn-primary w-full px-4 min-h-[48px]"
+							on:click={confirmOriginAndFetch}
+							disabled={!originConfirmed}
+							data-testid="migrate-confirm-origin"
+						>
+							{$t('migrate.confirm_button')}
+						</button>
+					{:else if phase === 'fetching'}
+						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
+							{$t('migrate.phase_fetching')}
+						</h1>
+						<p class="text-sm" style="color: var(--text-secondary)">{busyLabel}</p>
+					{:else if phase === 'fetch-error'}
+						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
+							{$t('migrate.error_title')}
+						</h1>
+						<div
+							class="rounded-xl p-3 mb-4"
+							style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)"
+						>
+							<p class="text-sm" style="color: var(--danger)">{$t(errorKey)}</p>
+							{#if errorDetail}
+								<p class="text-xs mt-1 font-mono break-all" style="color: var(--text-muted)">
+									{errorDetail}
+								</p>
+							{/if}
+						</div>
+						<a
+							class="btn-secondary w-full px-4 min-h-[48px] flex items-center justify-center"
+							href="https://{source}"
+						>
+							{$t('migrate.back_to_source', { source })}
+						</a>
+					{:else if phase === 'preview' && bundle && mapped}
+						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
+							{$t('migrate.preview_title')}
+						</h1>
+						<p class="text-sm mb-4" style="color: var(--text-secondary)">
+							{$t('migrate.preview_body', {
+								seizures: mapped.entries.length,
+								events: mapped.events.length,
+								meds: mapped.medications.length,
+								diary: mapped.diaries.length,
+							})}
+						</p>
+						{#if dateRangeStart && dateRangeEnd}
+							<p class="text-xs mb-2" style="color: var(--text-muted)">
+								{$t('migrate.date_range', { start: dateRangeStart, end: dateRangeEnd })}
+							</p>
+						{/if}
+						<p class="text-xs mb-6" style="color: var(--text-muted)">
+							{$t('migrate.decommission_note', { date: decommissionDate })}
+						</p>
+						{#if errorKey}
+							<div
+								class="rounded-xl p-3 mb-4"
+								style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)"
+							>
+								<p class="text-sm" style="color: var(--danger)">{$t(errorKey)} {errorDetail}</p>
+							</div>
+						{/if}
+						<button
+							type="button"
+							class="btn-primary w-full px-4 min-h-[48px]"
+							on:click={runImport}
+							disabled={busy}
+							data-testid="migrate-confirm-import"
+						>
+							{$t('migrate.confirm_import')}
+						</button>
+					{:else if phase === 'importing'}
+						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
+							{$t('migrate.importing_title')}
+						</h1>
+						<p class="text-sm mb-3" style="color: var(--text-secondary)">
+							{progressDone} / {progressTotal}
+						</p>
+						<div class="w-full rounded-full h-2 mb-2" style="background: var(--surface-inset)">
+							<div
+								class="h-2 rounded-full transition-all duration-300"
+								style="background: var(--brand); width: {progressTotal > 0
+									? Math.round((progressDone / progressTotal) * 100)
+									: 0}%"
+							></div>
+						</div>
+						<p class="text-xs" style="color: var(--text-muted)">
+							{$t('migrate.importing_status', { done: progressDone, total: progressTotal })}
+						</p>
+					{:else if phase === 'done'}
+						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
+							{$t('migrate.done_title')}
+						</h1>
+						<p class="text-sm" style="color: var(--text-secondary)">{$t('migrate.done_body')}</p>
+					{/if}
+				</div>
+			</div>
+		{/if}
+
+		<p class="text-center text-xs mt-4" style="color: var(--text-muted)">
+			{$t('encryption.zero_knowledge')}
+		</p>
+	</div>
+</main>

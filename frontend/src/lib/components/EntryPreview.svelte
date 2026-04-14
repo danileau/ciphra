@@ -275,6 +275,13 @@
 		<p class="text-xs mt-0.5" style="color: var(--text-muted)">{epLabelFor(entry.data.episodeType)}</p>
 	{/if}
 
+	<!-- CIPH-760 — preserved epilepc raw type_name (e.g. "Fokal rechts") -->
+	{#if entry.data.epilepc_original_type}
+		<p class="text-xs mt-0.5" style="color: var(--text-muted)">
+			{$t('entry.original_type_label').replace('{value}', String(entry.data.epilepc_original_type))}
+		</p>
+	{/if}
+
 	{#if needsCollapse && !expanded}
 		<button
 			type="button"

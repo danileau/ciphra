@@ -50,6 +50,18 @@ const BRAND: Record<string, RGB> = {
 	borderSubtle: [240, 236, 231],
 };
 
+// CIPH-801 — data-palette hex strings for MiniSeries colors.
+// Mirror of src/lib/dataPalette.ts + src/app.css --data-N. Keep in sync.
+const DATA_HEX = {
+	d1: '#b23c2c',
+	d2: '#8a2a1f',
+	d3: '#9f630b',
+	d4: '#7f821b',
+	d5: '#5c6b73',
+	d6: '#a87559',
+	danger: '#DC2626',
+};
+
 const MM = (n: number) => n; // doc is mm already; alias for readability
 
 /* ────────────────────────────────────────────────────────────────
@@ -1275,7 +1287,12 @@ export function generateDoctorPdf(
 	const chartX = 22;
 	const chartW = pageW - 28 - 8;
 	const chartH = 46;
-	const yMax = Math.max(...monthlyTotals, ...monthlySymptomDays, 1);
+	// CIPH-762 — dual scaling. Episodes on the primary y-axis; symptom-days
+	// on a secondary scale so a 90-symptom-days / 3-episode month doesn't
+	// flatten the seizure line to the x-axis. Dr. Nguyen explicitly asked
+	// for this: clinicians read the two series as separate clinical signals.
+	const yMax = Math.max(...monthlyTotals, 1);
+	const symptomMax = Math.max(...monthlySymptomDays, 1);
 
 	// Event markers — user-authored `event` docs falling inside the chart
 	// window. Rendered as thin dashed vertical lines on the trajectory chart
@@ -1460,12 +1477,14 @@ export function generateDoctorPdf(
 		doc.circle(ex, ey, 1.2, 'F');
 	}
 
-	// Symptom-days secondary line (faint, dashed). Lets the clinician spot
-	// "episodes down but symptom burden up" on the same y-axis.
+	// Symptom-days secondary line (faint, dashed) — CIPH-762 uses its OWN
+	// scale (`symptomMax`) so it can't dominate the primary episodes line.
+	// A muted right-edge label discloses the symptom-days scale so the
+	// doctor isn't misled into comparing absolute heights across series.
 	if (monthlySymptomDays.some((v) => v > 0)) {
 		const sPoints: Array<[number, number]> = monthlySymptomDays.map((v, i) => [
 			chartX + (i / Math.max(1, MONTHS - 1)) * chartW,
-			cursorY + chartH - (v / yMax) * chartH,
+			cursorY + chartH - (v / symptomMax) * chartH,
 		]);
 		doc.setDrawColor(...BRAND.textMuted);
 		doc.setLineWidth(0.4);
@@ -1476,6 +1495,13 @@ export function generateDoctorPdf(
 		doc.setLineDashPattern([], 0);
 		doc.setFillColor(...BRAND.textMuted);
 		for (const [px, py] of sPoints) doc.circle(px, py, 0.4, 'F');
+
+		// Right-edge scale disclosure: "max Symptom-Tage: 28"
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(5.5);
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(String(symptomMax), chartX + chartW + 0.5, cursorY + 2, { align: 'left' });
+		doc.text('0', chartX + chartW + 0.5, cursorY + chartH, { align: 'left' });
 	}
 
 	// Event vertical lines on the trajectory chart (with text labels)
@@ -1617,7 +1643,7 @@ export function generateDoctorPdf(
 
 	// 1. Paired vitals (e.g. left/right IOP, pain + pain_interference)
 	const seenVitalIds = new Set<string>();
-	const PAIR_COLORS = ['#0891B2', '#7C3AED'];
+	const PAIR_COLORS = [DATA_HEX.d1, DATA_HEX.d5];
 	for (const v of chartableVitals) {
 		if (seenVitalIds.has(v.id) || !v.pairLabel) continue;
 		const pair = chartableVitals.filter((x) => x.pairLabel === v.pairLabel);
@@ -1655,7 +1681,7 @@ export function generateDoctorPdf(
 			: [];
 		miniCharts.push({
 			title: `${t(v.label)}${v.unit ? ` (${translateUnit(t, v.unit)})` : ''}`,
-			series: [{ label: t(v.label), color: '#b2463c', values }],
+			series: [{ label: t(v.label), color: DATA_HEX.d1, values }],
 			referenceLines: refLines.length ? refLines : undefined,
 		});
 		seenVitalIds.add(v.id);
@@ -1675,8 +1701,8 @@ export function generateDoctorPdf(
 		miniCharts.push({
 			title: `${t(v.label)}${v.unit ? ` (${translateUnit(t, v.unit)})` : ''} — ${t('pdf.am_pm_split')}`,
 			series: [
-				{ label: t('pdf.am_label'), color: '#DC2626', values: am },
-				{ label: t('pdf.pm_label'), color: '#6366F1', values: pm },
+				{ label: t('pdf.am_label'), color: DATA_HEX.d1, values: am },
+				{ label: t('pdf.pm_label'), color: DATA_HEX.d5, values: pm },
 			],
 			referenceLines: refLines.length ? refLines : undefined,
 		});
@@ -2928,7 +2954,10 @@ export function generateCompactPdf(
 	const chartH = 48;
 	const chartX = marginX + 8;
 	const chartW = contentW - 8;
-	const yMax = Math.max(...monthlyTotals, ...monthlySymptomDays, 1);
+	// CIPH-762 — see generateDoctorPdf: separate y-scale for symptom-days so
+	// the episodes line stays readable even when symptom-days dominate.
+	const yMax = Math.max(...monthlyTotals, 1);
+	const symptomMax = Math.max(...monthlySymptomDays, 1);
 
 	// Background + horizontal mid gridline (no frame, no fill — print-friendly).
 	doc.setDrawColor(...BRAND.border);
@@ -2958,11 +2987,12 @@ export function generateCompactPdf(
 	doc.setFillColor(...BRAND.brick);
 	for (const [px, py] of points) doc.circle(px, py, 0.8, 'F');
 
-	// Symptom-days secondary line (faint dashed). Same y-axis.
+	// Symptom-days secondary line (faint dashed) — CIPH-762: uses a SEPARATE
+	// scale so a high symptom-day month can't flatten the episodes line.
 	if (monthlySymptomDays.some((v) => v > 0)) {
 		const sPoints: [number, number][] = monthlySymptomDays.map((v, i) => [
 			chartX + (i / Math.max(1, MONTHS - 1)) * chartW,
-			y + chartH - (v / yMax) * chartH,
+			y + chartH - (v / symptomMax) * chartH,
 		]);
 		doc.setDrawColor(...BRAND.textMuted);
 		doc.setLineWidth(0.4);
@@ -2973,6 +3003,13 @@ export function generateCompactPdf(
 		doc.setLineDashPattern([], 0);
 		doc.setFillColor(...BRAND.textMuted);
 		for (const [px, py] of sPoints) doc.circle(px, py, 0.5, 'F');
+
+		// Right-edge scale disclosure for the secondary series.
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(7);
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(String(symptomMax), chartX + chartW + 1, y + 3, { align: 'left' });
+		doc.text('0', chartX + chartW + 1, y + chartH, { align: 'left' });
 	}
 
 	// X-axis month labels — every Nth month, all in 8pt.
@@ -3001,7 +3038,9 @@ export function generateCompactPdf(
 			return ds >= scopeStartISO && ds <= scopeEndISO;
 		})
 		.sort((a, b) => String(b.data.date || '').localeCompare(String(a.data.date || '')))
-		.slice(0, 8);
+		// CIPH-767a — Dr. Nguyen: PDF event list 8 → 15 so multi-week review has
+		// enough context. splitTextToSize + pageH guard below handles wrap.
+		.slice(0, 15);
 
 	if (eventDocs.length > 0) {
 		if (y > pageH - 30) { doc.addPage(); y = 20; }

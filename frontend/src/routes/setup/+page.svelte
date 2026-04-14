@@ -18,6 +18,56 @@
 	import { goto } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
 	import { get } from 'svelte/store';
+	import { slide } from 'svelte/transition';
+	import { iconPath } from '$lib/conditionIcons';
+
+	/** CIPH-740 — map symptom_group.* label keys to icons from the shared
+	 *  iconPaths registry. Falls back to a generic "donut" (category) icon. */
+	const GROUP_ICON: Record<string, string> = {
+		'symptom_group.behavior': 'brain',
+		'symptom_group.physical': 'activity',
+		'symptom_group.sleep': 'battery-low',
+		'symptom_group.focus': 'focus',
+		'symptom_group.impulse': 'zap',
+		'symptom_group.emotion': 'heart',
+		'symptom_group.energy': 'battery-low',
+		'symptom_group.hypo_signs': 'droplet',
+		'symptom_group.hyper_signs': 'droplet',
+		'symptom_group.general': 'donut',
+		'symptom_group.mental': 'brain',
+		'symptom_group.social': 'shield',
+		'symptom_group.prodrome': 'waves',
+		'symptom_group.aura': 'waves',
+		'symptom_group.attack': 'zap',
+		'symptom_group.postdrome': 'battery-low',
+		'symptom_group.pain_quality': 'flame',
+		'symptom_group.cognitive_emotional': 'brain',
+		'symptom_group.motor': 'activity',
+		'symptom_group.sensory': 'waves',
+		'symptom_group.vision': 'eye',
+		'symptom_group.cognitive': 'brain',
+		'symptom_group.fatigue_bladder': 'battery-low',
+		'symptom_group.mood_affect': 'heart',
+		'symptom_group.anxiety_fear': 'cloud-lightning',
+		'symptom_group.abdominal': 'activity',
+		'symptom_group.bowel': 'activity',
+		'symptom_group.respiratory': 'wind',
+		'symptom_group.activity': 'activity',
+		'symptom_group.pelvic_pain': 'flower',
+		'symptom_group.gi_symptoms': 'activity',
+		'symptom_group.gi': 'activity',
+		'symptom_group.fatigue': 'battery-low',
+		'symptom_group.neuro': 'brain',
+		'symptom_group.pain': 'flame',
+		'symptom_group.emotional': 'heart',
+		'symptom_group.skin_symptoms': 'flower',
+		'symptom_group.quality_of_life': 'shield-plus',
+		'symptom_group.executive': 'focus',
+		'symptom_group.masking': 'shield',
+		'symptom_group.regulation': 'heart-pulse',
+		'symptom_group.cardiac': 'heart-pulse',
+		'symptom_group.circulation': 'heart-pulse',
+	};
 
 	let step: 1 | 2 | 3 | 4 = 1;
 	let working: Blueprint | null = null;
@@ -27,7 +77,13 @@
 	// are group ids / trigger ids / vital ids. `true` = keep asking, `false`
 	// = hide from prompts. (Actual blueprint stays untouched; these are a UI
 	// hint layer we can surface in future stories without schema migration.)
+	//
+	// CIPH-740 — symptoms are now toggled per ITEM (not per group). We keep
+	// `symptomGroupOn` only to seed initial item state on re-entry; the
+	// source of truth for persistence is `symptomItemOn[item.id]`.
 	let symptomGroupOn: Record<string, boolean> = {};
+	let symptomItemOn: Record<string, boolean> = {};
+	let expandedGroup: string | null = null;
 	let triggerOn: Record<string, boolean> = {};
 	let vitalOn: Record<string, boolean> = {};
 	let vitalTargets: Record<string, string> = {};
@@ -83,6 +139,7 @@
 			const hVit = new Set(cz.hiddenVitals || []);
 			for (const g of working!.symptomGroups) {
 				symptomGroupOn[g.id] = !g.items.every((it) => hSym.has(it.id));
+				for (const it of g.items) symptomItemOn[it.id] = !hSym.has(it.id);
 			}
 			for (const tr of working!.triggers) triggerOn[tr.id] = !hTrg.has(tr.id);
 			for (const v of working!.vitals) vitalOn[v.id] = !hVit.has(v.id);
@@ -91,9 +148,12 @@
 
 	function selectPreset(preset: PresetInfo) {
 		working = JSON.parse(JSON.stringify(preset.blueprint));
-		// Defaults: all groups / triggers / vitals ON (spec: "default ALL ON").
+		// Defaults: all groups / items / triggers / vitals ON (spec: "default ALL ON").
 		if (working) {
-			for (const g of working.symptomGroups) symptomGroupOn[g.id] = true;
+			for (const g of working.symptomGroups) {
+				symptomGroupOn[g.id] = true;
+				for (const it of g.items) symptomItemOn[it.id] = true;
+			}
 			for (const tr of working.triggers) triggerOn[tr.id] = true;
 			for (const v of working.vitals) vitalOn[v.id] = true;
 		}
@@ -105,14 +165,14 @@
 		saving = true;
 
 		// CIPH-301b — Persist the wizard toggle state into
-		// `blueprint.customizations.hidden*`. Symptom toggles are per-GROUP
-		// in this UI (the wizard intentionally aggregates), so hiding a
-		// group expands to hiding every BlueprintItem.id inside it.
-		// Triggers + vitals are per-item already.
+		// `blueprint.customizations.hidden*`.
+		// CIPH-740 — symptoms are now toggled per item in the drill-in UI.
+		// `symptomItemOn[item.id] === false` → hide that item. Triggers +
+		// vitals remain per-item already.
 		const hiddenSymptoms: string[] = [];
 		for (const g of working.symptomGroups) {
-			if (symptomGroupOn[g.id] === false) {
-				for (const item of g.items) hiddenSymptoms.push(item.id);
+			for (const item of g.items) {
+				if (symptomItemOn[item.id] === false) hiddenSymptoms.push(item.id);
 			}
 		}
 		const hiddenTriggers: string[] = [];
@@ -161,6 +221,21 @@
 	async function skipFromLater() {
 		// Screens 2/3 — we already have a working blueprint from step 1.
 		await finishAndSave();
+	}
+
+	function toggleGroupExpand(gid: string) {
+		expandedGroup = expandedGroup === gid ? null : gid;
+	}
+
+	function countItemsOn(items: { id: string }[]): number {
+		let n = 0;
+		for (const it of items) if (symptomItemOn[it.id] !== false) n++;
+		return n;
+	}
+
+	function toggleAllInGroup(items: { id: string }[], on: boolean) {
+		for (const it of items) symptomItemOn[it.id] = on;
+		symptomItemOn = symptomItemOn;
 	}
 
 	function goNext() {
@@ -235,8 +310,8 @@
 						>
 							<div class="flex items-start gap-4">
 								<div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background: {preset.color}15">
-									<svg class="w-6 h-6" style="color: {preset.color}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-										<circle cx="12" cy="12" r="4" stroke-width="2"/>
+									<svg class="w-6 h-6" style="color: {preset.color}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+										<path d={iconPath(preset.icon)} />
 									</svg>
 								</div>
 								<div class="flex-1">
@@ -258,22 +333,85 @@
 				</div>
 
 				<div class="space-y-2">
-					{#each working.symptomGroups as group}
-						<label class="flex items-center justify-between p-4 rounded-xl cursor-pointer min-h-[56px]"
-							style="background: var(--surface-card); border: 1px solid var(--border)">
-							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium" style="color: var(--text-primary)">{$t(group.label)}</p>
-								<p class="text-xs mt-0.5" style="color: var(--text-muted)">
-									{group.items.length} {$t('protocol.symptoms')}
-								</p>
-							</div>
-							<input
-								type="checkbox"
-								bind:checked={symptomGroupOn[group.id]}
-								class="w-5 h-5 ml-3"
-								style="accent-color: var(--olive)"
-							/>
-						</label>
+					{#each working.symptomGroups as group (group.id)}
+						{@const onCount = countItemsOn(group.items)}
+						{@const total = group.items.length}
+						{@const isOpen = expandedGroup === group.id}
+						<div
+							data-testid="symptom-group-row"
+							class="rounded-xl overflow-hidden"
+							style="background: var(--surface-card); border: 1px solid var(--border)"
+						>
+							<button
+								type="button"
+								on:click={() => toggleGroupExpand(group.id)}
+								aria-expanded={isOpen}
+								aria-controls="group-items-{group.id}"
+								class="w-full flex items-center gap-3 p-4 text-left min-h-[56px]"
+							>
+								<div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background: var(--surface-muted)">
+									<svg class="w-5 h-5" style="color: var(--olive)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+										<path d={iconPath(GROUP_ICON[group.label] || 'donut')} />
+									</svg>
+								</div>
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium" style="color: var(--text-primary)">{$t(group.label)}</p>
+									<p class="text-xs mt-0.5" style="color: var(--text-muted)">
+										{onCount} / {total} {$t('protocol.symptoms')}
+									</p>
+								</div>
+								<svg
+									class="w-5 h-5 shrink-0 transition-transform"
+									style="color: var(--text-muted); transform: rotate({isOpen ? 180 : 0}deg)"
+									fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<polyline points="6 9 12 15 18 9" />
+								</svg>
+							</button>
+							{#if isOpen}
+								<div
+									id="group-items-{group.id}"
+									transition:slide={{ duration: 180 }}
+									class="px-3 pb-3 pt-1 space-y-1"
+									style="border-top: 1px solid var(--border)"
+								>
+									<div class="flex justify-end gap-2 py-2">
+										<button
+											type="button"
+											on:click={() => toggleAllInGroup(group.items, true)}
+											class="text-xs font-medium px-2 py-1 rounded-lg min-h-[32px]"
+											style="color: var(--olive); background: var(--surface-muted)"
+										>
+											{$t('setup.select_all')}
+										</button>
+										<button
+											type="button"
+											on:click={() => toggleAllInGroup(group.items, false)}
+											class="text-xs font-medium px-2 py-1 rounded-lg min-h-[32px]"
+											style="color: var(--text-muted); background: var(--surface-muted)"
+										>
+											{$t('setup.select_none')}
+										</button>
+									</div>
+									{#each group.items as item (item.id)}
+										<label
+											data-testid="symptom-item-toggle"
+											class="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer min-h-[44px]"
+											style="background: var(--surface-muted)"
+										>
+											<span class="text-sm flex-1 min-w-0" style="color: var(--text-primary)">{$t(item.label)}</span>
+											<input
+												type="checkbox"
+												bind:checked={symptomItemOn[item.id]}
+												class="w-5 h-5 ml-3 shrink-0"
+												style="accent-color: var(--olive)"
+											/>
+										</label>
+									{/each}
+								</div>
+							{/if}
+						</div>
 					{/each}
 				</div>
 			</section>
@@ -414,11 +552,13 @@
 				</button>
 				{#if step < 4}
 					<button on:click={goNext}
+						data-testid="wizard-next"
 						class="btn-primary flex-1 rounded-xl font-medium min-h-[48px]">
 						{$t('setup.next')}
 					</button>
 				{:else}
 					<button on:click={finishAndSave} disabled={saving}
+						data-testid="wizard-finish"
 						class="btn-primary flex-1 rounded-xl font-medium min-h-[48px]">
 						{saving ? $t('setup.saving') : $t('setup.complete_button')}
 					</button>

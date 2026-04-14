@@ -6,9 +6,9 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { fade, fly } from 'svelte/transition';
-	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import EntryPreview from '$lib/components/EntryPreview.svelte';
+	import ConfirmDelete from '$lib/components/ConfirmDelete.svelte';
 
 	let selectedDate: string | null = null;
 	let currentYear = new Date().getFullYear();
@@ -136,6 +136,50 @@
 		return d.toLocaleDateString($locale, { weekday: 'short' });
 	});
 
+	// CIPH-763c — roving-tabindex focus model for the day grid. Only one
+	// cell is in the tab sequence at a time; arrow keys move focus within
+	// the grid (WAI-ARIA Grid pattern). Default focus = today when visible,
+	// otherwise day 1.
+	let focusedDay: number = (() => {
+		const now = new Date();
+		if (now.getFullYear() === currentYear && now.getMonth() === currentMonth) {
+			return now.getDate();
+		}
+		return 1;
+	})();
+	$: if (focusedDay > daysInMonth) focusedDay = daysInMonth;
+
+	function handleGridKey(e: KeyboardEvent, day: number) {
+		let next = day;
+		switch (e.key) {
+			case 'ArrowLeft':  next = day - 1; break;
+			case 'ArrowRight': next = day + 1; break;
+			case 'ArrowUp':    next = day - 7; break;
+			case 'ArrowDown':  next = day + 7; break;
+			case 'Home':       next = 1; break;
+			case 'End':        next = daysInMonth; break;
+			default: return;
+		}
+		e.preventDefault();
+		if (next < 1) {
+			prevMonth();
+			// After month change daysInMonth reflects the new month next tick.
+			focusedDay = Math.max(1, Math.min(31, next + 31));
+			return;
+		}
+		if (next > daysInMonth) {
+			nextMonth();
+			focusedDay = next - daysInMonth;
+			return;
+		}
+		focusedDay = next;
+		// Move DOM focus to the new cell.
+		queueMicrotask(() => {
+			const el = document.querySelector<HTMLElement>(`[data-calendar-day="${focusedDay}"]`);
+			el?.focus();
+		});
+	}
+
 	$: totalEpisodes = monthDocs.reduce((sum: number, d: CiphraDocument) => {
 		if (d.data.type === 'entry' && (d.data.episodes || d.data.seizures)) {
 			return sum + (Object.values(d.data.episodes || d.data.seizures || {}) as number[]).reduce((a, b) => a + b, 0);
@@ -144,61 +188,25 @@
 	}, 0);
 	$: daysWithLogs = new Set(monthDocs.map(d => String(d.data.date || ''))).size;
 
-	// --- Monthly episode line chart ---
-	$: monthlyLineData = (() => {
-		if (!bp?.episodeTypes?.length) return null;
-		const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-		const counts = days.map(day => {
-			const dayStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
-			return $documents
-				.filter(d => String(d.data.date || '') === dayStr)
-				.reduce((sum, d) => {
-					const eps = d.data.episodes || d.data.seizures || {};
-					return sum + (Object.values(eps) as number[]).reduce((a, b) => a + b, 0);
-				}, 0);
-		});
-		return {
-			labels: days.map(String),
-			datasets: [{
-				label: bp.episodeTypes[0]?.label ? $t(bp.episodeTypes[0].label) : $t('protocol.episodes'),
-				data: counts,
-				// Brand brick line + soft ochre fill, matching the PDF trajectory.
-				borderColor: '#b2463c',
-				backgroundColor: 'rgba(250, 243, 233, 0.8)',
-				fill: true,
-				tension: 0.5,
-				borderWidth: 2,
-				pointRadius: 0,
-				pointHoverRadius: 4,
-				pointHoverBackgroundColor: '#b2463c',
-				pointHoverBorderColor: '#b2463c',
-			}]
-		};
-	})();
-
 	// Events occurring within the selected month, sorted chronologically.
 	// Used to render the event strip under the monthly trend chart.
 	$: monthEvents = $documents
 		.filter(d => d.data?.type === 'event' && String(d.data.date || '').startsWith(monthPrefix))
 		.map(d => ({ date: String(d.data.date), notes: String(d.data.notes || '').trim() || $t('stream.events') }))
 		.sort((a, b) => a.date.localeCompare(b.date));
-
-	$: monthlyLineOptions = {
-		scales: {
-			x: { ticks: { maxTicksLimit: 15 } },
-			y: { beginAtZero: true, ticks: { stepSize: 1 } }
-		},
-		plugins: { legend: { display: false } },
-		elements: { line: { cubicInterpolationMode: 'monotone' as const } }
-	};
 </script>
 
-<div class="max-w-6xl mx-auto px-4 pt-4 pb-32">
-	<div class="max-w-2xl mx-auto">
+<!-- CIPH-746: widened to layout-data and dropped the nested max-w-2xl
+	 that used to pinch the month grid + event timeline on desktop.
+	 CIPH-782: tighter desktop spacing so month + event strip + day list
+	 fit in a 900px-tall viewport without scroll. Mobile sizing preserved
+	 by gating shrinkage on `md:` — tap targets stay ≥44px on phones. -->
+<div class="layout-data pt-2 md:pt-3 pb-32">
+	<div>
 		<!-- Calendar grid -->
 		<div>
 			<!-- Month navigation -->
-			<div class="flex items-center justify-between mb-4">
+			<div class="flex items-center justify-between mb-2 md:mb-3">
 				<button
 					on:click={prevMonth}
 					class="p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
@@ -206,7 +214,7 @@
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
-				<h1 class="text-lg font-bold capitalize" style="color: var(--text-primary)">{monthName}</h1>
+				<h1 class="text-base md:text-base font-bold capitalize" style="color: var(--text-primary)">{monthName}</h1>
 				<button
 					on:click={nextMonth}
 					class="p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
@@ -217,16 +225,17 @@
 			</div>
 
 			<!-- Weekday headers -->
-			<div class="grid grid-cols-7 gap-1 mb-1">
+			<div class="grid grid-cols-7 gap-1 md:gap-0.5 mb-1" role="row">
 				{#each weekdays as wd}
-					<div class="text-center text-xs font-medium py-2" style="color: var(--text-muted)">{wd}</div>
+					<div class="text-center text-xs md:text-[10px] font-medium py-2 md:py-1" role="columnheader" style="color: var(--text-muted)">{wd}</div>
 				{/each}
 			</div>
 
-			<!-- Days grid -->
-			<div class="grid grid-cols-7 gap-1">
+			<!-- Days grid — CIPH-763c: ARIA grid pattern + roving tabindex
+				 CIPH-782: md: breakpoint shrinks the grid rhythm on desktop. -->
+			<div class="grid grid-cols-7 gap-1 md:gap-0.5" role="grid" aria-label={monthName}>
 				{#each Array(firstDayOfWeek) as _}
-					<div></div>
+					<div role="gridcell"></div>
 				{/each}
 
 				{#each Array.from({ length: daysInMonth }, (_, i) => i + 1) as day}
@@ -237,9 +246,14 @@
 					{@const hasLog = dayHasLog(day)}
 					{@const bands = dayMultiDayBands(day)}
 					<button
-						on:click={() => { selectedDate = dayStr; }}
+						on:click={() => { selectedDate = dayStr; focusedDay = day; }}
+						on:keydown={(e) => handleGridKey(e, day)}
 						aria-label={dayAriaLabel(day)}
-						class="relative aspect-square rounded-xl flex flex-col items-center justify-center transition-colors min-h-[44px] overflow-hidden"
+						aria-selected={isSelected}
+						role="gridcell"
+						data-calendar-day={day}
+						tabindex={day === focusedDay ? 0 : -1}
+						class="relative aspect-square md:aspect-auto md:h-12 lg:h-14 rounded-xl md:rounded-lg flex flex-col items-center justify-center transition-colors min-h-[44px] overflow-hidden"
 						style="{isSelected
 							? 'background: var(--olive-light); box-shadow: inset 0 0 0 2px var(--olive);'
 							: isToday
@@ -269,47 +283,41 @@
 				{/each}
 			</div>
 
-			<!-- Monthly summary -->
-			<div class="mt-6 grid grid-cols-2 gap-3">
-				<div class="card p-4">
-					<p class="text-2xl font-bold num-data" style="color: var(--ochre)">{totalEpisodes}</p>
-					<p class="text-xs" style="color: var(--text-secondary)">{bp?.episodeTypes?.[0]?.label ? $t(bp.episodeTypes[0].label) : $t('protocol.episodes')}</p>
+			<!-- Monthly summary — CIPH-782 tighter on desktop -->
+			<div class="mt-4 md:mt-3 grid grid-cols-2 gap-3 md:gap-2">
+				<div class="card p-4 md:p-3">
+					<p class="text-2xl md:text-xl font-bold num-data" style="color: var(--ochre)">{totalEpisodes}</p>
+					<p class="text-xs" style="color: var(--text-secondary)">{$t('pdf.total_episodes')}</p>
 				</div>
-				<div class="card p-4">
-					<p class="text-2xl font-bold num-data" style="color: var(--ochre)">{daysWithLogs}</p>
+				<div class="card p-4 md:p-3">
+					<p class="text-2xl md:text-xl font-bold num-data" style="color: var(--ochre)">{daysWithLogs}</p>
 					<p class="text-xs" style="color: var(--text-secondary)">{$t('calendar.days_logged')}</p>
 				</div>
 			</div>
 
-			<!-- Monthly Episode Trend -->
-			{#if monthlyLineData}
-			<div class="card mt-4 p-4">
-				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{bp?.episodeTypes?.[0]?.label ? $t(bp.episodeTypes[0].label) : $t('protocol.episodes')} — {monthName}</h3>
-				<div class="h-48">
-					<ChartWrapper type="line" data={monthlyLineData} options={monthlyLineOptions} />
-				</div>
-				{#if monthEvents.length > 0}
-					<!-- Event strip aligned under the chart x-axis. ChartJS lacks
-					     annotation support without a plugin, so we render the
-					     events as a horizontal pill strip with date + label. -->
-					<div class="mt-2 pt-2 border-t" style="border-color: var(--border)">
-						<p class="text-[11px] uppercase tracking-wide mb-1" style="color: var(--text-muted)">{$t('calendar.events_in_month')}</p>
-						<div class="flex flex-wrap gap-1.5">
-							{#each monthEvents as ev}
-								<button
-									on:click={() => { selectedDate = ev.date; }}
-									class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px]"
-									style="background: var(--ochre-soft, #fde68a); color: var(--ochre)"
-									title={ev.notes}
-								>
-									<span class="font-semibold">{new Date(ev.date + 'T12:00:00').getDate()}.</span>
-									<span class="max-w-[180px] truncate">{ev.notes}</span>
-								</button>
-							{/each}
-						</div>
+			<!-- Trend chart removed (PI v8 close — team consensus: calendars are
+			     spatial, not temporal-trend; trend belongs on /reports). Event
+			     strip preserved as standalone card since it's spatial info
+			     (which days had events) not trend info.
+			     Calendar v2 (PI v9 — CIPH-820..825) replaces this section
+			     entirely with multi-type overlay + ongoing-phase bands. -->
+			{#if monthEvents.length > 0}
+				<div class="card mt-4 md:mt-3 p-4 md:p-3">
+					<p class="text-[11px] uppercase tracking-wide mb-2" style="color: var(--text-muted)">{$t('calendar.events_in_month')}</p>
+					<div class="flex flex-wrap gap-1.5">
+						{#each monthEvents as ev}
+							<button
+								on:click={() => { selectedDate = ev.date; }}
+								class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px]"
+								style="background: var(--ochre-light); color: var(--ochre)"
+								title={ev.notes}
+							>
+								<span class="font-semibold">{new Date(ev.date + 'T12:00:00').getDate()}.</span>
+								<span class="max-w-[180px] truncate">{ev.notes}</span>
+							</button>
+						{/each}
 					</div>
-				{/if}
-			</div>
+				</div>
 			{/if}
 		</div>
 
@@ -362,15 +370,11 @@
 								</div>
 								<div class="flex items-center gap-0.5 shrink-0">
 									{#if confirmDeleteId === doc.id}
-										<button
-											on:click={() => handleDeleteEntry(doc.id)}
-											class="p-1.5 rounded-lg text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-medium"
-											style="background: var(--danger)"
-										>{$t('common.yes_delete')}</button>
-										<button
-											on:click={() => { confirmDeleteId = null; }}
-											class="btn-secondary p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-medium"
-										>{$t('common.cancel')}</button>
+										<ConfirmDelete
+											padding="p-1.5"
+											onConfirm={() => handleDeleteEntry(doc.id)}
+											onCancel={() => { confirmDeleteId = null; }}
+										/>
 									{:else}
 										<button
 											on:click={() => handleEditEntry(doc)}
@@ -402,7 +406,7 @@
 					<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('calendar.no_entries')}</p>
 					<a
 						href="/log/{selectedDate}"
-						class="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+						class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2"/></svg>
 						{$t('companion.fill_today')}

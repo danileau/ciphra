@@ -26,8 +26,11 @@
 		pathname === '/setup' ||
 		pathname.startsWith('/join/');
 
+	// CIPH-785 — active state must follow the real current route.
+	// "Heute" owns both `/` (dashboard) and any `/log/...` (daily entry).
+	// Other tabs match their route prefix. The FAB has no active state.
 	function isActive(path: string): boolean {
-		if (path === '/') return pathname === '/';
+		if (path === '/') return pathname === '/' || pathname.startsWith('/log');
 		return pathname === path || pathname.startsWith(path + '/');
 	}
 
@@ -77,6 +80,7 @@
 				<button
 					type="button"
 					on:click={openQuickAdd}
+					data-testid="fab-quickadd"
 					class="bn-fab"
 					aria-label={$t('nav.add')}
 				>

@@ -268,13 +268,13 @@
 												{#if user.is_admin}
 													<button
 														on:click={() => handleDemote(user)}
-														class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
+														class="text-xs px-2 py-1.5 rounded-lg transition-colors min-h-[44px]"
 														style="background: var(--surface-muted); color: var(--text-secondary);"
 													>{$t('admin.demote')}</button>
 												{:else}
 													<button
 														on:click={() => handlePromote(user)}
-														class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
+														class="text-xs px-2 py-1.5 rounded-lg transition-colors min-h-[44px]"
 														style="background: var(--olive-light); color: var(--olive);"
 													>{$t('admin.promote')}</button>
 												{/if}
@@ -283,19 +283,19 @@
 													{#if isLocked(user)}
 														<button
 															on:click={() => handleUnlock(user)}
-															class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
+															class="text-xs px-2 py-1.5 rounded-lg transition-colors min-h-[44px]"
 															style="background: rgba(var(--success-rgb),0.10); color: var(--success);"
 														>{$t('admin.unlock')}</button>
 													{:else}
 														<button
 															on:click={() => handleLock(user)}
-															class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
+															class="text-xs px-2 py-1.5 rounded-lg transition-colors min-h-[44px]"
 															style="background: var(--ochre-light); color: var(--ochre);"
 														>{$t('admin.lock')}</button>
 													{/if}
 													<button
 														on:click={() => confirmDelete(user)}
-														class="text-xs px-2.5 py-1.5 rounded-lg transition-colors min-h-[44px]"
+														class="text-xs px-2 py-1.5 rounded-lg transition-colors min-h-[44px]"
 														style="background: rgba(var(--danger-rgb),0.06); color: var(--danger);"
 													>{$t('common.delete')}</button>
 												{/if}
@@ -333,9 +333,9 @@
 						<tbody>
 							{#each auditLog as entry (entry.id)}
 								<tr style="border-bottom: 1px solid var(--border-subtle);">
-									<td class="px-4 py-2.5 whitespace-nowrap" style="color: var(--text-muted);">{formatDateTime(entry.created_at)}</td>
-									<td class="px-4 py-2.5" style="color: var(--text-primary);">{entry.username || '-'}</td>
-									<td class="px-4 py-2.5">
+									<td class="px-4 py-2 whitespace-nowrap" style="color: var(--text-muted);">{formatDateTime(entry.created_at)}</td>
+									<td class="px-4 py-2" style="color: var(--text-primary);">{entry.username || '-'}</td>
+									<td class="px-4 py-2">
 										{#if entry.action.includes('FAILED') || entry.action.includes('LOCKED')}
 											<span class="badge-danger">{entry.action}</span>
 										{:else if entry.action.includes('SUCCESS') || entry.action === 'REGISTER'}
@@ -346,7 +346,7 @@
 											<span class="badge" style="background: var(--surface-muted); color: var(--text-secondary);">{entry.action}</span>
 										{/if}
 									</td>
-									<td class="px-4 py-2.5 font-mono text-xs hidden sm:table-cell" style="color: var(--text-muted);">{entry.ip_address || '-'}</td>
+									<td class="px-4 py-2 font-mono text-xs hidden sm:table-cell" style="color: var(--text-muted);">{entry.ip_address || '-'}</td>
 								</tr>
 							{/each}
 						</tbody>
@@ -363,6 +363,9 @@
 	{/if}
 </div>
 
+<!-- primitive-exempt: Modal — admin user-delete dialog has bespoke danger
+	 chrome (blur backdrop + multi-button footer with loading state) the Modal
+	 primitive does not expose today. Sweep target for a future admin pass. -->
 <!-- Delete confirmation modal -->
 {#if showDeleteModal && deleteTarget}
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
@@ -383,14 +386,14 @@
 		<div class="flex gap-3">
 			<button
 				on:click={() => { showDeleteModal = false; }}
-				class="btn-secondary flex-1 py-2.5 rounded-xl text-sm font-medium min-h-[44px]"
+				class="btn-secondary flex-1 py-2 rounded-xl text-sm font-medium min-h-[44px]"
 			>
 				{$t('common.cancel')}
 			</button>
 			<button
 				on:click={handleDelete}
 				disabled={deleteLoading}
-				class="flex-1 py-2.5 rounded-xl text-sm font-medium min-h-[44px] transition-colors"
+				class="flex-1 py-2 rounded-xl text-sm font-medium min-h-[44px] transition-colors"
 				style="background: var(--danger); color: white;"
 			>
 				{deleteLoading ? $t('common.loading') : $t('common.delete')}

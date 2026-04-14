@@ -44,7 +44,7 @@
 {/if}
 
 <div class="min-h-screen" style="background: var(--surface);">
-	<main class="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+	<main class="layout-default py-8 sm:py-12">
 		<h1 class="text-3xl sm:text-4xl font-bold" style="color: var(--text-primary);">{$t('condition.index_title')}</h1>
 		<p class="text-lg mt-2 mb-10" style="color: var(--text-muted);">{$t('condition.index_subtitle')}</p>
 
@@ -91,7 +91,7 @@
 		<div class="text-center">
 			<a
 				href="/login"
-				class="btn-primary inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-medium text-lg"
+				class="btn-primary inline-flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-lg"
 			>
 				{$t('condition.cta_button')}
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>

@@ -14,9 +14,54 @@
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import FamilySharing from '$lib/components/FamilySharing.svelte';
 	import LinkedAccounts from '$lib/components/LinkedAccounts.svelte';
+	import Tabs from '$lib/components/Tabs.svelte';
 	import { iconPath } from '$lib/conditionIcons';
+	import { page } from '$app/stores';
+	import { getCohort } from '$lib/blueprint/cohort';
 
 	$: currentPreset = bp ? presets.find(p => p.id === bp.conditionId) : null;
+
+	// CIPH-857 — tab query param (?tab=account|tracking|sharing). Default: account.
+	type SettingsTab = 'account' | 'tracking' | 'sharing';
+	const VALID_TABS: SettingsTab[] = ['account', 'tracking', 'sharing'];
+	$: tab = (VALID_TABS.includes(($page.url.searchParams.get('tab') ?? '') as SettingsTab)
+		? ($page.url.searchParams.get('tab') as SettingsTab)
+		: 'account') as SettingsTab;
+
+	function selectTab(id: string) {
+		const url = new URL($page.url);
+		if (id === 'account') url.searchParams.delete('tab');
+		else url.searchParams.set('tab', id);
+		goto(url.pathname + (url.search ? url.search : ''), { replaceState: true, noScroll: true });
+	}
+
+	$: tabList = [
+		{ id: 'account', label: $t('settings.tab_account') },
+		{ id: 'tracking', label: $t('settings.tab_tracking') },
+		{ id: 'sharing', label: $t('settings.tab_sharing') },
+	];
+
+	// CIPH-852 — primaryBrowseSurface override. 'auto' = clear the field,
+	// fall back to cohort default. Otherwise write the explicit choice.
+	type SurfaceChoice = 'auto' | 'journal' | 'calendar' | 'trend';
+	async function setPrimarySurface(value: SurfaceChoice) {
+		if (!bp) return;
+		const next: Blueprint = JSON.parse(JSON.stringify(bp));
+		if (value === 'auto') {
+			delete (next as Partial<Blueprint>).primaryBrowseSurface;
+		} else {
+			next.primaryBrowseSurface = value;
+		}
+		await blueprint.save(next);
+	}
+	function onSurfaceChange(e: Event) {
+		const target = e.currentTarget as HTMLSelectElement;
+		setPrimarySurface(target.value as SurfaceChoice);
+	}
+
+	// For the <select>: 'auto' when the field is missing, otherwise the value.
+	$: currentSurfaceChoice = bp?.primaryBrowseSurface ?? 'auto';
+	$: cohortDefault = bp ? getCohort(bp.conditionId) : 'custom';
 
 	let showConfirmSwitch = false;
 	let selectedPreset: PresetInfo | null = null;
@@ -240,12 +285,148 @@
 	}
 </script>
 
-<div class="max-w-3xl mx-auto px-4 py-6 space-y-8">
-	<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('nav.more')}</h1>
+<div class="layout-default py-6 space-y-6">
+	<h1 id="settings-heading" class="text-2xl font-bold" style="color: var(--text-primary)">{$t('nav.more')}</h1>
 
-	<!-- ═══ Account section (profile + login identity) ═══ -->
-	<section aria-labelledby="settings-account-heading" class="space-y-4">
-		<h2 id="settings-account-heading" class="text-sm font-semibold uppercase tracking-wider" style="color: var(--text-muted)">{$t('settings.section_account')}</h2>
+	<!-- CIPH-857 — Tabs: Account / Tracking / Sharing -->
+	<Tabs
+		tabs={tabList}
+		current={tab}
+		onSelect={selectTab}
+		labelledBy="settings-heading"
+		ariaLabel={$t('settings.tabs_label')}
+	/>
+
+	<!-- ═══════════════════ ACCOUNT TAB ═══════════════════ -->
+	{#if tab === 'account'}
+	<div role="tabpanel" id="tabpanel-account" aria-labelledby="tab-account" class="space-y-4">
+
+	<!-- Account login info + password -->
+	<section class="card p-5">
+		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.account')}</h3>
+		<div class="space-y-2">
+			<div class="flex items-center justify-between py-2">
+				<span class="text-sm" style="color: var(--text-secondary)">{$t('settings.logged_in_as')}</span>
+				<span class="text-sm font-medium" style="color: var(--text-primary)">{$auth.username}</span>
+			</div>
+			<div class="flex items-center justify-between py-2">
+				<span class="text-sm" style="color: var(--text-secondary)">{$t('settings.encryption')}</span>
+				<span class="badge badge-olive">AES-256-GCM + Argon2id</span>
+			</div>
+		</div>
+
+		<!-- Change password -->
+		<div class="mt-4">
+			{#if !showChangePassword}
+				<button
+					on:click={() => { showChangePassword = true; }}
+					class="btn-secondary w-full rounded-xl text-sm font-medium min-h-[44px]"
+				>
+					{$t('settings.change_password')}
+				</button>
+			{:else}
+				<form on:submit|preventDefault={handleChangePassword} class="space-y-3">
+					<input
+						type="password"
+						bind:value={currentPassword}
+						placeholder={$t('settings.current_password')}
+						class="input"
+						required
+					/>
+					<input
+						type="password"
+						bind:value={newPassword}
+						placeholder={$t('settings.new_password')}
+						class="input"
+						required
+					/>
+					<input
+						type="password"
+						bind:value={confirmNewPassword}
+						placeholder={$t('settings.confirm_new_password')}
+						class="input"
+						required
+					/>
+					{#if passwordError}
+						<p class="text-sm" style="color: var(--danger)">{passwordError}</p>
+					{/if}
+					{#if passwordSuccess}
+						<p class="text-sm" style="color: var(--success)">{$t('settings.password_changed')}</p>
+					{/if}
+					<div class="flex gap-3">
+						<button
+							type="button"
+							on:click={() => { showChangePassword = false; passwordError = ''; passwordSuccess = false; currentPassword = ''; newPassword = ''; confirmNewPassword = ''; }}
+							class="btn-secondary flex-1 rounded-xl text-sm font-medium min-h-[44px]"
+						>
+							{$t('common.cancel')}
+						</button>
+						<button
+							type="submit"
+							disabled={passwordLoading}
+							class="btn-primary flex-1 rounded-xl text-sm font-medium min-h-[44px]"
+						>
+							{$t('common.save')}
+						</button>
+					</div>
+				</form>
+			{/if}
+		</div>
+
+		<button
+			on:click={handleLogout}
+			class="mt-4 w-full py-2 rounded-xl text-sm font-medium min-h-[44px] transition-colors"
+			style="background: rgba(220,38,38,0.05); color: var(--danger)"
+		>
+			{$t('auth.logout')}
+		</button>
+	</section>
+
+	<!-- Language & Appearance -->
+	<section class="card p-5">
+		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.appearance')}</h3>
+		<div class="space-y-4">
+			<div>
+				<label class="text-sm mb-1.5 block" style="color: var(--text-secondary)" for="settings-language-select">{$t('common.language')}</label>
+				<select
+					id="settings-language-select"
+					class="input cursor-pointer"
+					value={$locale}
+					on:change={(e) => locale.set(e.currentTarget.value)}
+				>
+					{#each locales as l}
+						<option value={l}>{localeNames[l]}</option>
+					{/each}
+				</select>
+			</div>
+		</div>
+	</section>
+
+	<!-- Danger zone — kept in Account tab because account-deletion is
+		 conceptually "end of my account", and users look here for logout. -->
+	<hr style="border: none; border-top: 1px dashed var(--border); margin-top: 24px; margin-bottom: 8px;" aria-hidden="true" />
+	<section aria-labelledby="settings-danger-heading" class="space-y-4" style="margin-top: 16px">
+		<h2 id="settings-danger-heading" class="text-sm font-semibold uppercase tracking-wider" style="color: var(--danger)">{$t('settings.section_danger')}</h2>
+
+		<section class="rounded-xl p-5" style="background: rgba(220,38,38,0.05); border: 2px solid var(--danger)">
+			<h3 class="text-xs font-medium uppercase tracking-wider mb-1" style="color: var(--danger)">{$t('settings.delete_account')}</h3>
+			<p class="text-sm mb-4" style="color: var(--danger); opacity: 0.8">{$t('settings.delete_account_warning')}</p>
+			<button
+				on:click={() => { showDeleteModal = true; deletePassword = ''; deleteUsernameTyped = ''; deleteError = ''; }}
+				class="w-full py-2 text-white rounded-xl text-sm font-medium min-h-[44px] transition-colors"
+				style="background: var(--danger)"
+			>
+				{$t('settings.delete_account')}
+			</button>
+		</section>
+	</section>
+
+	</div>
+	{/if}
+
+	<!-- ═══════════════════ TRACKING TAB ═══════════════════ -->
+	{#if tab === 'tracking'}
+	<div role="tabpanel" id="tabpanel-tracking" aria-labelledby="tab-tracking" class="space-y-4">
 
 	<!-- Current profile -->
 	{#if bp}
@@ -281,25 +462,25 @@
 	</section>
 	{/if}
 
-	<!-- Language & Appearance -->
+	<!-- CIPH-852 — Home layout / primary browse surface override -->
+	{#if bp}
 	<section class="card p-5">
-		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.appearance')}</h3>
-		<div class="space-y-4">
-			<div>
-				<label class="text-sm mb-1.5 block" style="color: var(--text-secondary)" for="settings-language-select">{$t('common.language')}</label>
-				<select
-					id="settings-language-select"
-					class="input cursor-pointer"
-					value={$locale}
-					on:change={(e) => locale.set(e.currentTarget.value)}
-				>
-					{#each locales as l}
-						<option value={l}>{localeNames[l]}</option>
-					{/each}
-				</select>
-			</div>
-		</div>
+		<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('settings.primary_surface_title')}</h3>
+		<p class="text-sm mb-3" style="color: var(--text-secondary)">{$t('settings.primary_surface_desc')}</p>
+		<label class="sr-only" for="primary-surface-select">{$t('settings.primary_surface_title')}</label>
+		<select
+			id="primary-surface-select"
+			class="input cursor-pointer"
+			value={currentSurfaceChoice}
+			on:change={onSurfaceChange}
+		>
+			<option value="auto">{$t('settings.primary_surface_auto')}</option>
+			<option value="journal">{$t('settings.primary_surface_journal')}</option>
+			<option value="calendar">{$t('settings.primary_surface_calendar')}</option>
+			<option value="trend">{$t('settings.primary_surface_trend')}</option>
+		</select>
 	</section>
+	{/if}
 
 	<!-- Quick switch (profile template) -->
 	<section class="card p-5">
@@ -329,23 +510,9 @@
 		</div>
 	</section>
 
-	</section>
-
-	<!-- ═══ Sharing section ═══ -->
-	<section aria-labelledby="settings-sharing-heading" class="space-y-4">
-		<h2 id="settings-sharing-heading" class="text-sm font-semibold uppercase tracking-wider" style="color: var(--text-muted)">{$t('settings.section_sharing')}</h2>
-
-	<!-- Family sharing — patient view -->
-	<FamilySharing />
-
-	<!-- Linked accounts — caregiver view -->
-	<LinkedAccounts />
-
-	</section>
-
-	<!-- ═══ Medications section (CIPH-411b) ═══ -->
+	<!-- Medications (CIPH-411b) -->
 	{#if bp}
-	<section aria-labelledby="settings-medications-heading" class="space-y-4">
+	<section aria-labelledby="settings-medications-heading" class="space-y-3">
 		<h2 id="settings-medications-heading" class="text-sm font-semibold uppercase tracking-wider" style="color: var(--text-muted)">{$t('settings.section_medications')}</h2>
 
 		<section class="card p-5">
@@ -443,131 +610,35 @@
 	</section>
 	{/if}
 
-	<!-- ═══ Data section ═══ -->
-	<section aria-labelledby="settings-data-heading" class="space-y-4">
-		<h2 id="settings-data-heading" class="text-sm font-semibold uppercase tracking-wider" style="color: var(--text-muted)">{$t('settings.section_data')}</h2>
+	</div>
+	{/if}
 
-	<!-- Data export -->
-	<section class="card p-5">
-		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.export_data')}</h3>
-		<p class="text-sm mb-4" style="color: var(--text-secondary)">{$t('settings.export_data_desc')}</p>
-		<button
-			on:click={exportAllData}
-			class="w-full py-2.5 rounded-xl text-sm font-medium min-h-[44px] transition-colors text-white"
-			style="background: var(--ochre)"
-		>
-			{$t('settings.export_button')}
-		</button>
-	</section>
+	<!-- ═══════════════════ SHARING TAB ═══════════════════ -->
+	{#if tab === 'sharing'}
+	<div role="tabpanel" id="tabpanel-sharing" aria-labelledby="tab-sharing" class="space-y-4">
 
-	</section>
+		<!-- Family sharing — patient view -->
+		<FamilySharing />
 
-	<!-- ═══ Privacy & Security section ═══ -->
-	<section aria-labelledby="settings-privacy-heading" class="space-y-4">
-		<h2 id="settings-privacy-heading" class="text-sm font-semibold uppercase tracking-wider" style="color: var(--text-muted)">{$t('settings.section_privacy')}</h2>
+		<!-- Linked accounts — caregiver view -->
+		<LinkedAccounts />
 
-	<!-- Account login info + password -->
-	<section class="card p-5">
-		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.account')}</h3>
-		<div class="space-y-2">
-			<div class="flex items-center justify-between py-2">
-				<span class="text-sm" style="color: var(--text-secondary)">{$t('settings.logged_in_as')}</span>
-				<span class="text-sm font-medium" style="color: var(--text-primary)">{$auth.username}</span>
-			</div>
-			<div class="flex items-center justify-between py-2">
-				<span class="text-sm" style="color: var(--text-secondary)">{$t('settings.encryption')}</span>
-				<span class="badge badge-olive">AES-256-GCM + Argon2id</span>
-			</div>
-		</div>
+		<!-- Data export — moved here from its own section. Exporting IS a form
+			 of sharing (PDF to a doctor, JSON to a backup). -->
+		<section class="card p-5">
+			<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.export_data')}</h3>
+			<p class="text-sm mb-4" style="color: var(--text-secondary)">{$t('settings.export_data_desc')}</p>
+			<button
+				on:click={exportAllData}
+				class="w-full py-2 rounded-xl text-sm font-medium min-h-[44px] transition-colors text-white"
+				style="background: var(--ochre)"
+			>
+				{$t('settings.export_button')}
+			</button>
+		</section>
 
-		<!-- Change password -->
-		<div class="mt-4">
-			{#if !showChangePassword}
-				<button
-					on:click={() => { showChangePassword = true; }}
-					class="btn-secondary w-full rounded-xl text-sm font-medium min-h-[44px]"
-				>
-					{$t('settings.change_password')}
-				</button>
-			{:else}
-				<form on:submit|preventDefault={handleChangePassword} class="space-y-3">
-					<input
-						type="password"
-						bind:value={currentPassword}
-						placeholder={$t('settings.current_password')}
-						class="input"
-						required
-					/>
-					<input
-						type="password"
-						bind:value={newPassword}
-						placeholder={$t('settings.new_password')}
-						class="input"
-						required
-					/>
-					<input
-						type="password"
-						bind:value={confirmNewPassword}
-						placeholder={$t('settings.confirm_new_password')}
-						class="input"
-						required
-					/>
-					{#if passwordError}
-						<p class="text-sm" style="color: var(--danger)">{passwordError}</p>
-					{/if}
-					{#if passwordSuccess}
-						<p class="text-sm" style="color: var(--success)">{$t('settings.password_changed')}</p>
-					{/if}
-					<div class="flex gap-3">
-						<button
-							type="button"
-							on:click={() => { showChangePassword = false; passwordError = ''; passwordSuccess = false; currentPassword = ''; newPassword = ''; confirmNewPassword = ''; }}
-							class="btn-secondary flex-1 rounded-xl text-sm font-medium min-h-[44px]"
-						>
-							{$t('common.cancel')}
-						</button>
-						<button
-							type="submit"
-							disabled={passwordLoading}
-							class="btn-primary flex-1 rounded-xl text-sm font-medium min-h-[44px]"
-						>
-							{$t('common.save')}
-						</button>
-					</div>
-				</form>
-			{/if}
-		</div>
-
-		<button
-			on:click={handleLogout}
-			class="mt-4 w-full py-2.5 rounded-xl text-sm font-medium min-h-[44px] transition-colors"
-			style="background: rgba(220,38,38,0.05); color: var(--danger)"
-		>
-			{$t('auth.logout')}
-		</button>
-	</section>
-
-	</section>
-
-	<!-- ═══ Danger zone — separated from other sections by extra margin + 2px border ═══ -->
-	<hr style="border: none; border-top: 1px dashed var(--border); margin-top: 24px; margin-bottom: 8px;" aria-hidden="true" />
-	<section aria-labelledby="settings-danger-heading" class="space-y-4" style="margin-top: 16px">
-		<h2 id="settings-danger-heading" class="text-sm font-semibold uppercase tracking-wider" style="color: var(--danger)">{$t('settings.section_danger')}</h2>
-
-	<!-- Delete account -->
-	<section class="rounded-xl p-5" style="background: rgba(220,38,38,0.05); border: 2px solid var(--danger)">
-		<h3 class="text-xs font-medium uppercase tracking-wider mb-1" style="color: var(--danger)">{$t('settings.delete_account')}</h3>
-		<p class="text-sm mb-4" style="color: var(--danger); opacity: 0.8">{$t('settings.delete_account_warning')}</p>
-		<button
-			on:click={() => { showDeleteModal = true; deletePassword = ''; deleteUsernameTyped = ''; deleteError = ''; }}
-			class="w-full py-2.5 text-white rounded-xl text-sm font-medium min-h-[44px] transition-colors"
-			style="background: var(--danger)"
-		>
-			{$t('settings.delete_account')}
-		</button>
-	</section>
-
-	</section>
+	</div>
+	{/if}
 
 	<!-- E2E badge -->
 	<div class="flex items-center justify-center gap-2 py-4">
@@ -576,6 +647,9 @@
 	</div>
 </div>
 
+<!-- primitive-exempt: Modal — two bespoke confirmation dialogs (switch preset,
+	 remove preset) with a blur backdrop and in-dialog danger chrome the current
+	 Modal primitive does not expose. Sweep target for a future visual pass. -->
 <!-- Confirm switch modal -->
 {#if showConfirmSwitch && selectedPreset}
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
@@ -639,7 +713,7 @@
 			autocapitalize="off"
 			autocorrect="off"
 			spellcheck="false"
-			class="w-full px-4 py-2.5 min-h-[44px] rounded-xl text-sm mb-3 outline-none"
+			class="w-full px-4 py-2 min-h-[44px] rounded-xl text-sm mb-3 outline-none"
 			style="background: var(--surface-muted); border: 1px solid var(--border); color: var(--text-primary)"
 		/>
 		<input
@@ -647,7 +721,7 @@
 			bind:value={deletePassword}
 			placeholder={$t('auth.password')}
 			disabled={!deleteUsernameMatches}
-			class="w-full px-4 py-2.5 min-h-[44px] rounded-xl text-sm mb-3 outline-none disabled:opacity-50"
+			class="w-full px-4 py-2 min-h-[44px] rounded-xl text-sm mb-3 outline-none disabled:opacity-50"
 			style="background: var(--surface-muted); border: 1px solid var(--border); color: var(--text-primary)"
 		/>
 		{#if deleteError}
@@ -663,7 +737,7 @@
 			<button
 				on:click={handleDeleteAccount}
 				disabled={deleteLoading || !deletePassword || !deleteUsernameMatches}
-				class="flex-1 py-2.5 text-white rounded-xl text-sm font-medium min-h-[44px] disabled:opacity-50"
+				class="flex-1 py-2 text-white rounded-xl text-sm font-medium min-h-[44px] disabled:opacity-50"
 				style="background: var(--danger)"
 			>
 				{$t('settings.delete_account')}

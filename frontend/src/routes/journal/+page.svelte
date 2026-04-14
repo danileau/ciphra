@@ -7,6 +7,7 @@
 	import { goto } from '$app/navigation';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import EntryPreview from '$lib/components/EntryPreview.svelte';
+	import ConfirmDelete from '$lib/components/ConfirmDelete.svelte';
 
 	let filter = 'all';
 	let searchQuery = '';
@@ -68,8 +69,15 @@
 			if (d.data?.type === 'blueprint') return false;
 			if (filter !== 'all' && d.data.type !== filter) return false;
 			if (searchQuery) {
-				const json = JSON.stringify(d.data).toLowerCase();
-				if (!json.includes(searchQuery.toLowerCase())) return false;
+				// CIPH-767d — scope search to user-authored text only. The
+				// previous full-JSON stringify matched field names like "type"
+				// and "date", producing false positives. Only search the three
+				// narrative fields: notes, title, and (diary) text.
+				const haystack = [d.data.notes, d.data.title, d.data.text]
+					.filter(Boolean)
+					.join(' ')
+					.toLowerCase();
+				if (!haystack.includes(searchQuery.toLowerCase())) return false;
 			}
 			return true;
 		})
@@ -142,7 +150,7 @@
 	}
 </script>
 
-<div class="max-w-3xl mx-auto px-4 pt-4 pb-32">
+<div class="layout-data pt-4 pb-32">
 	<h1 class="text-2xl font-bold mb-4" style="color: var(--text-primary)">{$t('stream.title')}</h1>
 
 	<!-- Search + filter row (CIPH-424) -->
@@ -190,6 +198,7 @@
 				{#each bp.streamFilters as tab}
 					<button
 						on:click={() => { filter = tab.key; }}
+						data-testid="filter-tab-{tab.key}"
 						class="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors min-h-[36px]"
 						style="{filter === tab.key
 							? 'background: var(--olive-light); color: var(--olive);'
@@ -205,7 +214,7 @@
 	<!-- CIPH-711 — Tagebuch first-view soft clarification -->
 	{#if showDiaryHint}
 		<div
-			class="mb-4 p-3 rounded-lg flex items-start gap-2 text-sm"
+			class="mb-4 p-3 rounded-lg flex items-start gap-2 text-sm md:text-base"
 			style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border)"
 			role="status"
 		>
@@ -227,14 +236,18 @@
 				<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('journal.diary_empty')}</p>
 			{:else}
 				<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('stream.no_entries')}</p>
-				<a href="/log/today" class="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm">
+				<a href="/log/today" class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2"/></svg>
 					{$t('companion.fill_today')}
 				</a>
 			{/if}
 		</div>
 	{:else}
-		<div class="space-y-2">
+		<!-- CIPH-763b — aria-live announces new additions to the entry list
+			 (e.g. quick-add diary entry). aria-relevant="additions" scopes
+			 announcements to newly-appearing nodes so SR users don't hear
+			 the full list re-read when filters change. -->
+		<div class="space-y-2" aria-live="polite" aria-relevant="additions" aria-atomic="false">
 			{#each filteredDocs as doc, i (doc.id)}
 				<div
 					class="card p-4 stagger-in"
@@ -256,14 +269,22 @@
 									class="input resize-y mt-1"
 								></textarea>
 							</div>
-							<!-- CIPH-713 — private toggle -->
-							<label class="flex items-center gap-2 text-xs" style="color: var(--text-secondary)">
+							<!-- CIPH-713 / CIPH-783 — private toggle with semantic lock state -->
+							<label class="flex items-center gap-2 text-xs" style="color: var(--text-secondary)"
+								aria-label={editPrivate ? $t('private.toggle_to_public') : $t('private.toggle_to_private')}>
 								<input type="checkbox" bind:checked={editPrivate} class="w-4 h-4" />
-								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-									<rect x="4" y="11" width="16" height="10" rx="2" />
-									<path d="M8 11V7a4 4 0 1 1 8 0v4" />
-								</svg>
-								{$t('private.label')}
+								{#if editPrivate}
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="transition-all duration-150">
+										<rect x="4" y="11" width="16" height="10" rx="2" />
+										<path d="M8 11V7a4 4 0 1 1 8 0v4" />
+									</svg>
+								{:else}
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="transition-all duration-150">
+										<rect x="4" y="11" width="16" height="10" rx="2" />
+										<path d="M8 11V7a4 4 0 0 1 7 -1.5" />
+									</svg>
+								{/if}
+								{editPrivate ? $t('private.state_private') : $t('private.state_public')}
 								<span style="color: var(--text-muted)">— {$t('private.tooltip')}</span>
 							</label>
 							<div class="flex gap-2 justify-end">
@@ -298,15 +319,10 @@
 								{#if confirmDeleteId === doc.id}
 									<div class="flex items-center gap-1">
 										<span class="text-xs font-medium whitespace-nowrap" style="color: var(--danger)">{$t('common.confirm_delete')}</span>
-										<button
-											on:click={() => handleDelete(doc.id)}
-											class="p-2 rounded-lg text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-medium"
-											style="background: var(--danger)"
-										>{$t('common.yes_delete')}</button>
-										<button
-											on:click={() => { confirmDeleteId = null; }}
-											class="btn-secondary p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-medium"
-										>{$t('common.cancel')}</button>
+										<ConfirmDelete
+											onConfirm={() => handleDelete(doc.id)}
+											onCancel={() => { confirmDeleteId = null; }}
+										/>
 									</div>
 								{:else}
 									<button
@@ -325,6 +341,7 @@
 			{/each}
 		</div>
 	{/if}
+
 </div>
 
 <style>

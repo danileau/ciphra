@@ -1,3 +1,9 @@
+<!-- primitive-exempt: ConfirmDelete — /log/[date] uses a full-width red-
+	 tinted *banner* form ("Delete this entry?" + Yes / Cancel) styled by
+	 per-page `.log-delete-confirm`/`.log-btn-danger`/`.log-btn-cancel`
+	 CSS. The ConfirmDelete primitive renders the compact icon-pair used
+	 on journal + calendar rows; merging the two variants would regress
+	 this page's visual. Candidate for a future banner-variant addition. -->
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
 	import { isAuthenticated } from '$lib/stores/auth';
@@ -463,24 +469,26 @@
 				<button
 					type="button"
 					on:click={() => { isPrivate = !isPrivate; markChanged(); }}
-					class="ml-2 inline-flex items-center justify-center gap-1 px-2 h-8 rounded-full transition-colors text-xs"
+					class="ml-2 inline-flex items-center justify-center gap-1 px-2 h-8 rounded-full transition-all duration-150 text-xs"
 					style="background: {isPrivate ? 'var(--surface-muted)' : 'transparent'}; color: {isPrivate ? 'var(--text-primary)' : 'var(--text-muted)'}"
 					aria-pressed={isPrivate}
-					aria-label={$t('private.label')}
-					title={isPrivate ? $t('private.tooltip') : $t('private.toggle_make_private')}
+					aria-label={isPrivate ? $t('private.toggle_to_public') : $t('private.toggle_to_private')}
+					title={isPrivate ? $t('private.toggle_to_public') : $t('private.toggle_to_private')}
 				>
 					{#if isPrivate}
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<!-- Closed padlock: shackle arcs over body, fully attached -->
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="transition-all duration-150">
 							<rect x="4" y="11" width="16" height="10" rx="2" />
 							<path d="M8 11V7a4 4 0 1 1 8 0v4" />
 						</svg>
 					{:else}
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<!-- Open padlock: shackle on top-left only, right side lifted away (Heroicons lock-open) -->
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="transition-all duration-150">
 							<rect x="4" y="11" width="16" height="10" rx="2" />
-							<path d="M8 11V7a4 4 0 0 1 7 1" />
+							<path d="M8 11V7a4 4 0 0 1 7 -1.5" />
 						</svg>
 					{/if}
-					<span>{$t('private.label')}</span>
+					<span>{isPrivate ? $t('private.state_private') : $t('private.state_public')}</span>
 				</button>
 			</div>
 
@@ -952,6 +960,7 @@
 			{/if}
 		{/if}
 	</div>
+
 </div>
 {/if}
 
@@ -1382,31 +1391,17 @@
 		font-size: 16px; /* Prevents iOS auto-zoom */
 	}
 
-	/* ─── Empty hint ─── */
-	.log-empty-hint {
-		font-size: 14px;
-		color: var(--text-muted);
-	}
-	.log-link {
-		color: var(--brand);
-		text-decoration: underline;
-		text-underline-offset: 2px;
-	}
-	.log-link:hover {
-		color: var(--brand-hover);
-	}
-
-	/* ─── Save bar ─── */
+	/* ─── Save bar — CIPH-784: solid surface background, no backdrop blur. ─── */
 	.log-save-bar {
 		position: fixed;
 		bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 		left: 0;
 		right: 0;
 		z-index: 30;
-		padding: 0 16px 8px;
-		background: linear-gradient(to top, rgba(250, 248, 246, 0.95) 70%, rgba(250, 248, 246, 0) 100%);
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
+		padding: 10px 16px;
+		background: var(--surface-card);
+		border-top: 1px solid var(--border);
+		box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
 	}
 	.log-save-inner {
 		max-width: 768px;

@@ -167,12 +167,25 @@
 	}
 
 	// Stats
-	// Reference currentDate + exportableDocs so Svelte recomputes when the
-	// month changes or docs reload — episodeSum reads them via closure.
-	$: totalEpisodes = (() => {
-		void currentDate; void exportableDocs;
-		return bp ? bp.episodeTypes.reduce((sum, ep) => sum + episodeSum(ep.id), 0) : 0;
-	})();
+	// Inline the sum so Svelte sees `bp`, `currentDate`, `exportableDocs`
+	// directly as reactive deps. The earlier IIFE+`void` trick didn't always
+	// trigger recompute on month change (Svelte's reactive analyzer can
+	// optimize `void <ident>` away).
+	$: totalEpisodes = bp
+		? (() => {
+			const prefix = currentDate.slice(0, 7);
+			let total = 0;
+			for (const d of exportableDocs) {
+				if (d.data?.type !== 'entry') continue;
+				if (!String(d.data.date || '').startsWith(prefix)) continue;
+				const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+				for (const ep of bp.episodeTypes) {
+					total += Number(eps[ep.id] || 0);
+				}
+			}
+			return total;
+		})()
+		: 0;
 	$: daysLogged = monthDocs.length;
 	$: daysInMonth = getDaysInMonth(currentDate);
 
@@ -290,7 +303,7 @@
 		<Asterisk size={40} color="muted" />
 		<h1 class="text-xl font-semibold" style="color: var(--text-primary)">{$t('reports.no_blueprint_title')}</h1>
 		{#if liveLinks.length > 0}
-			<p class="text-sm" style="color: var(--text-secondary)">{$t('reports.no_blueprint_caregiver_desc')}</p>
+			<p class="text-sm md:text-base" style="color: var(--text-secondary)">{$t('reports.no_blueprint_caregiver_desc')}</p>
 			<div class="flex flex-wrap gap-2 justify-center">
 				{#each liveLinks as l}
 					<button
@@ -303,7 +316,7 @@
 				{/each}
 			</div>
 		{:else}
-			<p class="text-sm" style="color: var(--text-secondary)">{$t('reports.no_blueprint_desc')}</p>
+			<p class="text-sm md:text-base" style="color: var(--text-secondary)">{$t('reports.no_blueprint_desc')}</p>
 			<div class="flex flex-wrap gap-2 justify-center">
 				<a href="/setup" class="btn-primary px-4 min-h-[44px] flex items-center">{$t('companion.caregiver_setup_own')}</a>
 				<a href="/settings" class="btn-secondary px-4 min-h-[44px] flex items-center">{$t('companion.caregiver_open_settings')}</a>
@@ -367,7 +380,7 @@
 		{:else}
 			<ul class="flex flex-col gap-1.5">
 				{#each recentEvents as ev}
-					<li class="flex items-baseline gap-2 text-sm">
+					<li class="flex items-baseline gap-2 text-sm md:text-base">
 						<span class="font-mono text-xs shrink-0" style="color: var(--text-muted)">{ev.data.date}</span>
 						<span class="truncate" style="color: var(--text-primary)">{ev.data.notes || ''}</span>
 					</li>
@@ -481,7 +494,7 @@
 			<div class="flex gap-3 text-[10px] text-slate-400">
 				<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-slate-200"></span>{$t('reports.legend_empty')}</span>
 				<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background: var(--olive)"></span>{$t('reports.legend_logged')}</span>
-				<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background: var(--danger, #dc2626)"></span>{$t('reports.legend_episode')}</span>
+				<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background: var(--danger)"></span>{$t('reports.legend_episode')}</span>
 			</div>
 		</div>
 		<div class="rpt-month-grid">
@@ -520,7 +533,7 @@
 							<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200 whitespace-nowrap">{itemLabel(col)}</th>
 						{/each}
 						{#each bp.gridEpisodeColumns as col}
-							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || '#DC2626'}">{itemLabel(col)}</th>
+							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{itemLabel(col)}</th>
 						{/each}
 						<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200">{$t('common.notes')}</th>
 					</tr>
@@ -557,13 +570,13 @@
 									on:keydown={(e) => { if (e.key === 'Enter') incrementGridEpisode(dayStr, col); }}
 								>
 									{#if getEpisodeCount(dayDoc, col) > 0}
-										<span class="font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || '#DC2626'}">{getEpisodeCount(dayDoc, col)}</span>
+										<span class="font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{getEpisodeCount(dayDoc, col)}</span>
 									{:else}
 										<span class="grid-episode-zero">-</span>
 									{/if}
 								</td>
 							{/each}
-							<td class="px-2 py-1.5 max-w-[120px] truncate" style="color: var(--text-secondary)">
+							<td class="px-2 py-1.5 max-w-[240px] truncate" style="color: var(--text-secondary)">
 								{dayDoc?.data?.notes || ''}
 							</td>
 						</tr>
@@ -576,7 +589,7 @@
 							<td class="px-2 py-2 text-center text-slate-700">{symptomSum(col)}</td>
 						{/each}
 						{#each bp.gridEpisodeColumns as col}
-							<td class="px-2 py-2 text-center font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || '#DC2626'}">{episodeSum(col)}</td>
+							<td class="px-2 py-2 text-center font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{episodeSum(col)}</td>
 						{/each}
 						<td></td>
 					</tr>
@@ -674,7 +687,10 @@
 
 <style>
 	.rpt-page {
-		max-width: 1152px;
+		/* CIPH-746: widened to 1280 so data tables stop truncating cells
+		   on desktop. Below 640 the percentage-free padding keeps the
+		   mobile edge-to-edge feel unchanged. */
+		max-width: 1280px;
 		margin: 0 auto;
 		padding: 16px 16px 128px;
 	}

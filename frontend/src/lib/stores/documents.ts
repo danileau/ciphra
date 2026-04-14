@@ -141,13 +141,15 @@ function createDocStore() {
 					}
 					documentsError.set(null);
 					const tEnd = performance.now();
-					// eslint-disable-next-line no-console
-					console.info(
-						`[ciphra] docs loaded: ${rawDocs.length} total, ${cacheHits} cache-hits, ${fresh} decrypted. ` +
-						`idb:${(tCache - t0).toFixed(0)}ms fetch:${(tFetch - tCache).toFixed(0)}ms ` +
-						`decrypt:${(tDecrypt - tFetch).toFixed(0)}ms persist:${(tEnd - tDecrypt).toFixed(0)}ms ` +
-						`total:${(tEnd - t0).toFixed(0)}ms (cached on disk: ${cachedCount})`
-					);
+					if (import.meta.env.DEV) {
+						// eslint-disable-next-line no-console
+						console.info(
+							`[ciphra] docs loaded: ${rawDocs.length} total, ${cacheHits} cache-hits, ${fresh} decrypted. ` +
+							`idb:${(tCache - t0).toFixed(0)}ms fetch:${(tFetch - tCache).toFixed(0)}ms ` +
+							`decrypt:${(tDecrypt - tFetch).toFixed(0)}ms persist:${(tEnd - tDecrypt).toFixed(0)}ms ` +
+							`total:${(tEnd - t0).toFixed(0)}ms (cached on disk: ${cachedCount})`
+						);
+					}
 				} else {
 					documentsError.set('Failed to load documents');
 				}
@@ -167,6 +169,15 @@ function createDocStore() {
 					: await api.storeDocument(encrypted);
 				if (res.ok) {
 					documentsError.set(null);
+					// CIPH-767e — sync indicator: notify the UI that a successful
+					// save round-trip to the server completed so the layout can
+					// surface a brief "Synced" toast. Online-only by nature since
+					// `res.ok` requires a real API response.
+					if (browser) {
+						try {
+							window.dispatchEvent(new CustomEvent('ciphra:synced'));
+						} catch {}
+					}
 					await store.load();
 				} else {
 					documentsError.set('Failed to save document');

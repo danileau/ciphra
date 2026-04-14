@@ -31,6 +31,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
       SECRET_KEY: "${SECRET_KEY:?SECRET_KEY required (see .env.example)}"
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
+      CIPHRA_DEV_MOCKS: ${CIPHRA_DEV_MOCKS:-0}
       PYTHONUNBUFFERED: "1"
     ports:
       - "5000:5000"

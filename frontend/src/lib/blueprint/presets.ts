@@ -1,4 +1,13 @@
 import type { Blueprint } from './types';
+import { DATA_1, DATA_2, DATA_3, DATA_4, DATA_5, DATA_6 } from '../dataPalette';
+
+/*
+ * CIPH-801 — every `accentColor` and every `episodeTypes[].color` in
+ * this file MUST reference DATA_1..DATA_6 from `../dataPalette`. The
+ * vitest `presets-palette.test.ts` enforces this, and also checks
+ * that no two adjacent episodeTypes within a preset share the same
+ * color (so stacked bars stay scannable and color-blind friendly).
+ */
 
 // ─── Epilepsy ────────────────────────────────────────────────
 
@@ -6,7 +15,7 @@ export const epilepsy: Blueprint = {
 	version: 1,
 	conditionId: 'epilepsy',
 	conditionLabel: 'landing.template_epilepsy',
-	accentColor: '#6366F1',
+	accentColor: DATA_1,
 	episodeNoun: 'episode_noun.seizure',
 	symptomGroups: [
 		{
@@ -34,11 +43,11 @@ export const epilepsy: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'focal', label: 'seizure.focal', color: '#DC2626', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'generalized', label: 'seizure.generalized', color: '#B91C1C', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'absence', label: 'seizure.absence', color: '#EF4444', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'myoclonic', label: 'seizure.myoclonic', color: '#F87171', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'unknown', label: 'seizure.unknown', color: '#FCA5A5', trackDuration: true, trackTimeOfDay: true },
+		{ id: 'focal', label: 'seizure.focal', color: DATA_1, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'generalized', label: 'seizure.generalized', color: DATA_2, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'absence', label: 'seizure.absence', color: DATA_3, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'myoclonic', label: 'seizure.myoclonic', color: DATA_4, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'unknown', label: 'seizure.unknown', color: DATA_5, trackDuration: true, trackTimeOfDay: true },
 	],
 	triggers: [
 		{ id: 'stress', label: 'trigger.stress' },
@@ -64,6 +73,7 @@ export const epilepsy: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'trend',
 };
 
 // ─── ADHD ────────────────────────────────────────────────────
@@ -72,7 +82,7 @@ export const adhd: Blueprint = {
 	version: 1,
 	conditionId: 'adhd',
 	conditionLabel: 'landing.template_adhd',
-	accentColor: '#F59E0B',
+	accentColor: DATA_3,
 	symptomGroups: [
 		{
 			id: 'focus', label: 'symptom_group.focus', items: [
@@ -110,9 +120,9 @@ export const adhd: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'meltdown', label: 'seizure.meltdown', color: '#DC2626' },
-		{ id: 'shutdown', label: 'seizure.shutdown', color: '#7C3AED' },
-		{ id: 'panic_attack', label: 'seizure.panic_attack', color: '#F59E0B' },
+		{ id: 'meltdown', label: 'seizure.meltdown', color: DATA_1 },
+		{ id: 'shutdown', label: 'seizure.shutdown', color: DATA_5 },
+		{ id: 'panic_attack', label: 'seizure.panic_attack', color: DATA_3 },
 	],
 	triggers: [
 		{ id: 'stress', label: 'trigger.stress' },
@@ -141,6 +151,7 @@ export const adhd: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'trend',
 };
 
 // ─── Diabetes ────────────────────────────────────────────────
@@ -149,7 +160,7 @@ export const diabetes: Blueprint = {
 	version: 1,
 	conditionId: 'diabetes',
 	conditionLabel: 'landing.template_diabetes',
-	accentColor: '#0D9488',
+	accentColor: DATA_4,
 	symptomGroups: [
 		{
 			id: 'hypo_signs', label: 'symptom_group.hypo_signs', items: [
@@ -178,9 +189,9 @@ export const diabetes: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'hypoglycemia', label: 'seizure.hypoglycemia', color: '#DC2626' },
-		{ id: 'hyperglycemia', label: 'seizure.hyperglycemia', color: '#F59E0B' },
-		{ id: 'ketoacidosis', label: 'seizure.ketoacidosis', color: '#B91C1C' },
+		{ id: 'hypoglycemia', label: 'seizure.hypoglycemia', color: DATA_1 },
+		{ id: 'hyperglycemia', label: 'seizure.hyperglycemia', color: DATA_3 },
+		{ id: 'ketoacidosis', label: 'seizure.ketoacidosis', color: DATA_2 },
 	],
 	triggers: [
 		{ id: 'missed_meds', label: 'trigger.missed_meds' },
@@ -211,6 +222,7 @@ export const diabetes: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'trend',
 };
 
 // ─── Burnout ─────────────────────────────────────────────────
@@ -219,7 +231,7 @@ export const burnout: Blueprint = {
 	version: 1,
 	conditionId: 'burnout',
 	conditionLabel: 'landing.template_burnout',
-	accentColor: '#8B5CF6',
+	accentColor: DATA_5,
 	symptomGroups: [
 		{
 			id: 'mental', label: 'symptom_group.mental', items: [
@@ -256,9 +268,9 @@ export const burnout: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'breakdown', label: 'seizure.breakdown', color: '#DC2626' },
-		{ id: 'panic_attack', label: 'seizure.panic_attack', color: '#F59E0B' },
-		{ id: 'crying_spell', label: 'seizure.crying_spell', color: '#8B5CF6' },
+		{ id: 'breakdown', label: 'seizure.breakdown', color: DATA_1 },
+		{ id: 'panic_attack', label: 'seizure.panic_attack', color: DATA_3 },
+		{ id: 'crying_spell', label: 'seizure.crying_spell', color: DATA_5 },
 	],
 	triggers: [
 		{ id: 'work_overload', label: 'trigger.work_overload' },
@@ -285,6 +297,7 @@ export const burnout: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── Migraine ────────────────────────────────────────────────
@@ -293,7 +306,7 @@ export const migraine: Blueprint = {
 	version: 1,
 	conditionId: 'migraine',
 	conditionLabel: 'landing.template_migraine',
-	accentColor: '#EC4899',
+	accentColor: DATA_2,
 	episodeNoun: 'episode_noun.attack',
 	symptomGroups: [
 		{
@@ -330,10 +343,10 @@ export const migraine: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'migraine_with_aura', label: 'seizure.migraine_with_aura', color: '#EC4899', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'migraine_without_aura', label: 'seizure.migraine_without_aura', color: '#F472B6', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'tension_headache', label: 'seizure.tension_headache', color: '#FB923C', trackDuration: true },
-		{ id: 'cluster_headache', label: 'seizure.cluster_headache', color: '#DC2626', trackDuration: true, trackTimeOfDay: true },
+		{ id: 'migraine_with_aura', label: 'seizure.migraine_with_aura', color: DATA_2, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'migraine_without_aura', label: 'seizure.migraine_without_aura', color: DATA_6, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'tension_headache', label: 'seizure.tension_headache', color: DATA_3, trackDuration: true },
+		{ id: 'cluster_headache', label: 'seizure.cluster_headache', color: DATA_1, trackDuration: true, trackTimeOfDay: true },
 	],
 	triggers: [
 		{ id: 'stress', label: 'trigger.stress' },
@@ -361,6 +374,7 @@ export const migraine: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'journal',
 };
 
 // ─── Empty starter for fully custom blueprints ───────────────
@@ -369,7 +383,7 @@ export const custom: Blueprint = {
 	version: 1,
 	conditionId: 'custom',
 	conditionLabel: 'landing.template_custom',
-	accentColor: '#6366F1',
+	accentColor: DATA_5,
 	symptomGroups: [
 		{ id: 'general', label: 'symptom_group.general', items: [] },
 	],
@@ -386,6 +400,7 @@ export const custom: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'journal',
 };
 
 // ─── Chronic Pain / Fibromyalgia ─────────────────────────────
@@ -394,7 +409,7 @@ export const chronic_pain: Blueprint = {
 	version: 1,
 	conditionId: 'chronic_pain',
 	conditionLabel: 'landing.template_chronic_pain',
-	accentColor: '#E11D48',
+	accentColor: DATA_1,
 	symptomGroups: [
 		{
 			id: 'pain_quality', label: 'symptom_group.pain_quality', items: [
@@ -435,10 +450,10 @@ export const chronic_pain: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'flare', label: 'seizure.flare', color: '#DC2626', multiDay: true },
-		{ id: 'breakthrough_pain', label: 'seizure.breakthrough_pain', color: '#F59E0B' },
-		{ id: 'severe_episode', label: 'seizure.severe_episode', color: '#B91C1C' },
-		{ id: 'functional_crisis', label: 'seizure.functional_crisis', color: '#7C3AED' },
+		{ id: 'flare', label: 'seizure.flare', color: DATA_1, multiDay: true },
+		{ id: 'breakthrough_pain', label: 'seizure.breakthrough_pain', color: DATA_3 },
+		{ id: 'severe_episode', label: 'seizure.severe_episode', color: DATA_2 },
+		{ id: 'functional_crisis', label: 'seizure.functional_crisis', color: DATA_5 },
 	],
 	triggers: [
 		{ id: 'stress', label: 'trigger.stress' },
@@ -467,6 +482,7 @@ export const chronic_pain: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── Multiple Sclerosis ─────────────────────────────────────
@@ -475,7 +491,7 @@ export const ms: Blueprint = {
 	version: 1,
 	conditionId: 'ms',
 	conditionLabel: 'landing.template_ms',
-	accentColor: '#3B82F6',
+	accentColor: DATA_5,
 	symptomGroups: [
 		{
 			id: 'motor', label: 'symptom_group.motor', items: [
@@ -518,9 +534,9 @@ export const ms: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'relapse', label: 'seizure.relapse', color: '#DC2626', multiDay: true },
-		{ id: 'pseudo_relapse', label: 'seizure.pseudo_relapse', color: '#F59E0B', multiDay: true },
-		{ id: 'optic_neuritis', label: 'seizure.optic_neuritis', color: '#EF4444', multiDay: true },
+		{ id: 'relapse', label: 'seizure.relapse', color: DATA_1, multiDay: true },
+		{ id: 'pseudo_relapse', label: 'seizure.pseudo_relapse', color: DATA_3, multiDay: true },
+		{ id: 'optic_neuritis', label: 'seizure.optic_neuritis', color: DATA_2, multiDay: true },
 	],
 	triggers: [
 		{ id: 'heat', label: 'trigger.heat' },
@@ -546,6 +562,7 @@ export const ms: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── Anxiety & Depression ───────────────────────────────────
@@ -554,7 +571,7 @@ export const anxiety_depression: Blueprint = {
 	version: 1,
 	conditionId: 'anxiety_depression',
 	conditionLabel: 'landing.template_anxiety_depression',
-	accentColor: '#3B82F6',
+	accentColor: DATA_5,
 	symptomGroups: [
 		{
 			id: 'mood_affect', label: 'symptom_group.mood_affect', items: [
@@ -600,10 +617,10 @@ export const anxiety_depression: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'panic_attack', label: 'seizure.panic_attack', color: '#DC2626' },
-		{ id: 'depressive_episode', label: 'seizure.depressive_episode', color: '#1E40AF' },
-		{ id: 'anxiety_crisis', label: 'seizure.anxiety_crisis', color: '#F59E0B' },
-		{ id: 'dissociation', label: 'seizure.dissociation', color: '#7C3AED' },
+		{ id: 'panic_attack', label: 'seizure.panic_attack', color: DATA_1 },
+		{ id: 'depressive_episode', label: 'seizure.depressive_episode', color: DATA_5 },
+		{ id: 'anxiety_crisis', label: 'seizure.anxiety_crisis', color: DATA_3 },
+		{ id: 'dissociation', label: 'seizure.dissociation', color: DATA_6 },
 	],
 	triggers: [
 		{ id: 'stress', label: 'trigger.stress' },
@@ -632,6 +649,7 @@ export const anxiety_depression: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── IBS / Digestive Health ─────────────────────────────────
@@ -640,7 +658,7 @@ export const ibs: Blueprint = {
 	version: 1,
 	conditionId: 'ibs',
 	conditionLabel: 'landing.template_ibs',
-	accentColor: '#D97706',
+	accentColor: DATA_3,
 	symptomGroups: [
 		{
 			id: 'abdominal', label: 'symptom_group.abdominal', items: [
@@ -670,9 +688,9 @@ export const ibs: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'flare', label: 'seizure.flare', color: '#DC2626', multiDay: true },
-		{ id: 'urgency_crisis', label: 'seizure.urgency_crisis', color: '#F59E0B' },
-		{ id: 'vomiting_episode', label: 'seizure.vomiting_episode', color: '#7C3AED' },
+		{ id: 'flare', label: 'seizure.flare', color: DATA_1, multiDay: true },
+		{ id: 'urgency_crisis', label: 'seizure.urgency_crisis', color: DATA_3 },
+		{ id: 'vomiting_episode', label: 'seizure.vomiting_episode', color: DATA_5 },
 	],
 	triggers: [
 		{ id: 'stress', label: 'trigger.stress' },
@@ -703,6 +721,7 @@ export const ibs: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── Asthma / COPD ──────────────────────────────────────────
@@ -711,7 +730,7 @@ export const asthma: Blueprint = {
 	version: 1,
 	conditionId: 'asthma',
 	conditionLabel: 'landing.template_asthma',
-	accentColor: '#0EA5E9',
+	accentColor: DATA_5,
 	symptomGroups: [
 		{
 			id: 'respiratory', label: 'symptom_group.respiratory', items: [
@@ -739,9 +758,9 @@ export const asthma: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'asthma_attack', label: 'seizure.asthma_attack', color: '#DC2626', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'copd_exacerbation', label: 'seizure.copd_exacerbation', color: '#B91C1C', trackDuration: true },
-		{ id: 'respiratory_infection', label: 'seizure.respiratory_infection', color: '#F59E0B' },
+		{ id: 'asthma_attack', label: 'seizure.asthma_attack', color: DATA_1, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'copd_exacerbation', label: 'seizure.copd_exacerbation', color: DATA_2, trackDuration: true },
+		{ id: 'respiratory_infection', label: 'seizure.respiratory_infection', color: DATA_3 },
 	],
 	triggers: [
 		{ id: 'allergens', label: 'trigger.allergens' },
@@ -774,6 +793,7 @@ export const asthma: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'trend',
 };
 
 // ─── Endometriosis ──────────────────────────────────────────
@@ -782,7 +802,7 @@ export const endometriosis: Blueprint = {
 	version: 1,
 	conditionId: 'endometriosis',
 	conditionLabel: 'landing.template_endometriosis',
-	accentColor: '#E11D48',
+	accentColor: DATA_1,
 	symptomGroups: [
 		{
 			id: 'pelvic_pain', label: 'symptom_group.pelvic_pain', items: [
@@ -813,9 +833,9 @@ export const endometriosis: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'flare', label: 'seizure.flare', color: '#DC2626', multiDay: true },
-		{ id: 'er_visit', label: 'seizure.er_visit', color: '#B91C1C' },
-		{ id: 'missed_work_school', label: 'seizure.missed_work_school', color: '#F59E0B' },
+		{ id: 'flare', label: 'seizure.flare', color: DATA_1, multiDay: true },
+		{ id: 'er_visit', label: 'seizure.er_visit', color: DATA_2 },
+		{ id: 'missed_work_school', label: 'seizure.missed_work_school', color: DATA_3 },
 	],
 	triggers: [
 		{ id: 'menstruation', label: 'trigger.menstruation' },
@@ -848,6 +868,7 @@ export const endometriosis: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── Cancer Treatment ───────────────────────────────────────
@@ -856,7 +877,7 @@ export const cancer_treatment: Blueprint = {
 	version: 1,
 	conditionId: 'cancer_treatment',
 	conditionLabel: 'landing.template_cancer_treatment',
-	accentColor: '#059669',
+	accentColor: DATA_4,
 	symptomGroups: [
 		{
 			id: 'gi', label: 'symptom_group.gi', items: [
@@ -904,10 +925,10 @@ export const cancer_treatment: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'febrile_neutropenia', label: 'seizure.febrile_neutropenia', color: '#DC2626' },
-		{ id: 'er_visit', label: 'seizure.er_visit', color: '#B91C1C' },
-		{ id: 'dose_reduction', label: 'seizure.dose_reduction', color: '#F59E0B' },
-		{ id: 'hospitalization', label: 'seizure.hospitalization', color: '#991B1B' },
+		{ id: 'febrile_neutropenia', label: 'seizure.febrile_neutropenia', color: DATA_1 },
+		{ id: 'er_visit', label: 'seizure.er_visit', color: DATA_3 },
+		{ id: 'dose_reduction', label: 'seizure.dose_reduction', color: DATA_4 },
+		{ id: 'hospitalization', label: 'seizure.hospitalization', color: DATA_2 },
 	],
 	triggers: [
 		{ id: 'chemo_day', label: 'trigger.chemo_day' },
@@ -934,6 +955,7 @@ export const cancer_treatment: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'journal',
 };
 
 // ─── Dermatology ────────────────────────────────────────────
@@ -942,7 +964,7 @@ export const dermatology: Blueprint = {
 	version: 1,
 	conditionId: 'dermatology',
 	conditionLabel: 'landing.template_dermatology',
-	accentColor: '#F43F5E',
+	accentColor: DATA_6,
 	symptomGroups: [
 		{
 			id: 'skin_symptoms', label: 'symptom_group.skin_symptoms', items: [
@@ -972,10 +994,10 @@ export const dermatology: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'flare', label: 'seizure.flare', color: '#DC2626' },
-		{ id: 'skin_infection', label: 'seizure.skin_infection', color: '#B91C1C' },
-		{ id: 'allergic_reaction', label: 'seizure.allergic_reaction', color: '#F59E0B' },
-		{ id: 'joint_flare', label: 'seizure.joint_flare', color: '#7C3AED' },
+		{ id: 'flare', label: 'seizure.flare', color: DATA_1 },
+		{ id: 'skin_infection', label: 'seizure.skin_infection', color: DATA_2 },
+		{ id: 'allergic_reaction', label: 'seizure.allergic_reaction', color: DATA_3 },
+		{ id: 'joint_flare', label: 'seizure.joint_flare', color: DATA_6 },
 	],
 	triggers: [
 		{ id: 'stress', label: 'trigger.stress' },
@@ -1005,6 +1027,7 @@ export const dermatology: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'journal',
 };
 
 // ─── Autism / Sensory Processing ────────────────────────────
@@ -1013,7 +1036,7 @@ export const autism: Blueprint = {
 	version: 1,
 	conditionId: 'autism',
 	conditionLabel: 'landing.template_autism',
-	accentColor: '#0EA5E9',
+	accentColor: DATA_5,
 	symptomGroups: [
 		{
 			id: 'sensory', label: 'symptom_group.sensory', items: [
@@ -1059,10 +1082,10 @@ export const autism: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'meltdown', label: 'seizure.meltdown', color: '#DC2626' },
-		{ id: 'shutdown', label: 'seizure.shutdown', color: '#7C3AED' },
-		{ id: 'sensory_crisis', label: 'seizure.sensory_crisis', color: '#F97316' },
-		{ id: 'burnout_episode', label: 'seizure.burnout_episode', color: '#64748B' },
+		{ id: 'meltdown', label: 'seizure.meltdown', color: DATA_1 },
+		{ id: 'shutdown', label: 'seizure.shutdown', color: DATA_5 },
+		{ id: 'sensory_crisis', label: 'seizure.sensory_crisis', color: DATA_3 },
+		{ id: 'burnout_episode', label: 'seizure.burnout_episode', color: DATA_4 },
 	],
 	triggers: [
 		{ id: 'sensory_environment', label: 'trigger.sensory_environment' },
@@ -1092,6 +1115,7 @@ export const autism: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'journal',
 };
 
 // ─── Heart & Cardiovascular ─────────────────────────────────
@@ -1100,7 +1124,7 @@ export const cardiovascular: Blueprint = {
 	version: 1,
 	conditionId: 'cardiovascular',
 	conditionLabel: 'landing.template_cardiovascular',
-	accentColor: '#DC2626',
+	accentColor: DATA_1,
 	symptomGroups: [
 		{
 			id: 'respiratory', label: 'symptom_group.respiratory', items: [
@@ -1136,10 +1160,10 @@ export const cardiovascular: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'afib_episode', label: 'seizure.afib_episode', color: '#DC2626', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'angina', label: 'seizure.angina', color: '#F59E0B', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'syncope', label: 'seizure.syncope', color: '#7C3AED', trackTimeOfDay: true },
-		{ id: 'hf_decompensation', label: 'seizure.hf_decompensation', color: '#B91C1C' },
+		{ id: 'afib_episode', label: 'seizure.afib_episode', color: DATA_1, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'angina', label: 'seizure.angina', color: DATA_3, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'syncope', label: 'seizure.syncope', color: DATA_5, trackTimeOfDay: true },
+		{ id: 'hf_decompensation', label: 'seizure.hf_decompensation', color: DATA_2 },
 	],
 	triggers: [
 		{ id: 'exertion', label: 'trigger.exertion' },
@@ -1170,6 +1194,7 @@ export const cardiovascular: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'trend',
 };
 
 // ─── Hypertension ────────────────────────────────────────────
@@ -1178,7 +1203,7 @@ export const hypertension: Blueprint = {
 	version: 1,
 	conditionId: 'hypertension',
 	conditionLabel: 'landing.template_hypertension',
-	accentColor: '#DC2626',
+	accentColor: DATA_1,
 	symptomGroups: [
 		{
 			id: 'headache_signs', label: 'symptom_group.headache_signs', items: [
@@ -1202,8 +1227,8 @@ export const hypertension: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'hypertensive_crisis', label: 'seizure.hypertensive_crisis', color: '#DC2626', trackTimeOfDay: true },
-		{ id: 'orthostatic_drop', label: 'seizure.orthostatic_drop', color: '#F59E0B', trackTimeOfDay: true },
+		{ id: 'hypertensive_crisis', label: 'seizure.hypertensive_crisis', color: DATA_1, trackTimeOfDay: true },
+		{ id: 'orthostatic_drop', label: 'seizure.orthostatic_drop', color: DATA_3, trackTimeOfDay: true },
 	],
 	triggers: [
 		{ id: 'high_salt_meal', label: 'trigger.high_salt_meal' },
@@ -1232,6 +1257,7 @@ export const hypertension: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'trend',
 };
 
 // ─── Long COVID / ME-CFS ─────────────────────────────────────
@@ -1240,7 +1266,7 @@ export const long_covid: Blueprint = {
 	version: 1,
 	conditionId: 'long_covid',
 	conditionLabel: 'landing.template_long_covid',
-	accentColor: '#7C3AED',
+	accentColor: DATA_4,
 	symptomGroups: [
 		{
 			id: 'fatigue', label: 'symptom_group.fatigue', items: [
@@ -1281,8 +1307,8 @@ export const long_covid: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'crash', label: 'seizure.crash', color: '#B91C1C', multiDay: true },
-		{ id: 'flare', label: 'seizure.flare', color: '#F59E0B', multiDay: true },
+		{ id: 'crash', label: 'seizure.crash', color: DATA_2, multiDay: true },
+		{ id: 'flare', label: 'seizure.flare', color: DATA_3, multiDay: true },
 	],
 	triggers: [
 		{ id: 'overexertion', label: 'trigger.overexertion' },
@@ -1310,6 +1336,7 @@ export const long_covid: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── Menopause / Perimenopause ───────────────────────────────
@@ -1318,7 +1345,7 @@ export const menopause: Blueprint = {
 	version: 1,
 	conditionId: 'menopause',
 	conditionLabel: 'landing.template_menopause',
-	accentColor: '#DB2777',
+	accentColor: DATA_6,
 	symptomGroups: [
 		{
 			id: 'vasomotor', label: 'symptom_group.vasomotor', items: [
@@ -1361,8 +1388,8 @@ export const menopause: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'hot_flash_severe', label: 'seizure.hot_flash_severe', color: '#F59E0B', trackTimeOfDay: true },
-		{ id: 'panic_episode', label: 'seizure.panic_episode', color: '#B91C1C' },
+		{ id: 'hot_flash_severe', label: 'seizure.hot_flash_severe', color: DATA_3, trackTimeOfDay: true },
+		{ id: 'panic_episode', label: 'seizure.panic_episode', color: DATA_1 },
 	],
 	triggers: [
 		{ id: 'stress', label: 'trigger.stress' },
@@ -1390,6 +1417,7 @@ export const menopause: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── Bipolar Disorder ───────────────────────────────────────
@@ -1398,7 +1426,7 @@ export const bipolar: Blueprint = {
 	version: 1,
 	conditionId: 'bipolar',
 	conditionLabel: 'landing.template_bipolar',
-	accentColor: '#A855F7',
+	accentColor: DATA_5,
 	symptomGroups: [
 		{
 			id: 'mania', label: 'symptom_group.mania', items: [
@@ -1437,10 +1465,10 @@ export const bipolar: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'hypomanic', label: 'seizure.hypomanic', color: '#F59E0B', multiDay: true },
-		{ id: 'manic', label: 'seizure.manic', color: '#DC2626', multiDay: true },
-		{ id: 'depressive', label: 'seizure.depressive', color: '#1E40AF', multiDay: true },
-		{ id: 'mixed', label: 'seizure.mixed_ep', color: '#7C3AED', multiDay: true },
+		{ id: 'hypomanic', label: 'seizure.hypomanic', color: DATA_3, multiDay: true },
+		{ id: 'manic', label: 'seizure.manic', color: DATA_1, multiDay: true },
+		{ id: 'depressive', label: 'seizure.depressive', color: DATA_5, multiDay: true },
+		{ id: 'mixed', label: 'seizure.mixed_ep', color: DATA_6, multiDay: true },
 	],
 	triggers: [
 		{ id: 'sleep_deprivation', label: 'trigger.sleep_deprivation' },
@@ -1467,6 +1495,7 @@ export const bipolar: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── Glaucoma ───────────────────────────────────────────────
@@ -1475,7 +1504,7 @@ export const glaucoma: Blueprint = {
 	version: 1,
 	conditionId: 'glaucoma',
 	conditionLabel: 'landing.template_glaucoma',
-	accentColor: '#0891B2',
+	accentColor: DATA_5,
 	episodeNoun: 'episode_noun.iop_spike',
 	symptomGroups: [
 		{
@@ -1502,8 +1531,8 @@ export const glaucoma: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'iop_spike', label: 'seizure.iop_spike', color: '#DC2626', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'angle_closure', label: 'seizure.angle_closure', color: '#B91C1C', trackDuration: true, trackTimeOfDay: true },
+		{ id: 'iop_spike', label: 'seizure.iop_spike', color: DATA_1, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'angle_closure', label: 'seizure.angle_closure', color: DATA_3, trackDuration: true, trackTimeOfDay: true },
 	],
 	triggers: [
 		{ id: 'missed_drops', label: 'trigger.missed_drops' },
@@ -1528,6 +1557,7 @@ export const glaucoma: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'trend',
 };
 
 // ─── Parkinson's ────────────────────────────────────────────
@@ -1536,7 +1566,7 @@ export const parkinson: Blueprint = {
 	version: 1,
 	conditionId: 'parkinson',
 	conditionLabel: 'landing.template_parkinson',
-	accentColor: '#4F46E5',
+	accentColor: DATA_3,
 	episodeNoun: 'episode_noun.tremor',
 	symptomGroups: [
 		{
@@ -1576,9 +1606,9 @@ export const parkinson: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'off_period', label: 'seizure.off_period', color: '#B91C1C', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'freezing', label: 'seizure.freezing', color: '#DC2626', trackDuration: true, trackTimeOfDay: true },
-		{ id: 'dyskinesia_flare', label: 'seizure.dyskinesia_flare', color: '#F59E0B', trackDuration: true, trackTimeOfDay: true },
+		{ id: 'off_period', label: 'seizure.off_period', color: DATA_2, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'freezing', label: 'seizure.freezing', color: DATA_1, trackDuration: true, trackTimeOfDay: true },
+		{ id: 'dyskinesia_flare', label: 'seizure.dyskinesia_flare', color: DATA_3, trackDuration: true, trackTimeOfDay: true },
 	],
 	triggers: [
 		{ id: 'missed_meds', label: 'trigger.missed_meds' },
@@ -1603,6 +1633,7 @@ export const parkinson: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'trend',
 };
 
 // ─── IBD (Crohn's / UC) ─────────────────────────────────────
@@ -1611,7 +1642,7 @@ export const ibd: Blueprint = {
 	version: 1,
 	conditionId: 'ibd',
 	conditionLabel: 'landing.template_ibd',
-	accentColor: '#EA580C',
+	accentColor: DATA_6,
 	symptomGroups: [
 		{
 			id: 'bowel', label: 'symptom_group.bowel', items: [
@@ -1641,9 +1672,9 @@ export const ibd: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'flare', label: 'seizure.flare', color: '#DC2626', multiDay: true },
-		{ id: 'infusion_day', label: 'seizure.infusion_day', color: '#0D9488', trackTimeOfDay: true },
-		{ id: 'tapering', label: 'seizure.tapering', color: '#F59E0B', multiDay: true },
+		{ id: 'flare', label: 'seizure.flare', color: DATA_1, multiDay: true },
+		{ id: 'infusion_day', label: 'seizure.infusion_day', color: DATA_4, trackTimeOfDay: true },
+		{ id: 'tapering', label: 'seizure.tapering', color: DATA_3, multiDay: true },
 	],
 	triggers: [
 		{ id: 'stress', label: 'trigger.stress' },
@@ -1669,6 +1700,7 @@ export const ibd: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── PCOS (Polycystic Ovary Syndrome) ───────────────────────
@@ -1677,7 +1709,7 @@ export const pcos: Blueprint = {
 	version: 1,
 	conditionId: 'pcos',
 	conditionLabel: 'landing.template_pcos',
-	accentColor: '#D946EF',
+	accentColor: DATA_6,
 	symptomGroups: [
 		{
 			id: 'menstrual', label: 'symptom_group.menstrual', items: [
@@ -1715,8 +1747,8 @@ export const pcos: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		{ id: 'fertility_concern', label: 'seizure.fertility_concern', color: '#D946EF', trackTimeOfDay: false, trackDuration: false },
-		{ id: 'skin_flare', label: 'seizure.skin_flare', color: '#F472B6' },
+		{ id: 'fertility_concern', label: 'seizure.fertility_concern', color: DATA_6, trackTimeOfDay: false, trackDuration: false },
+		{ id: 'skin_flare', label: 'seizure.skin_flare', color: DATA_3 },
 	],
 	triggers: [
 		{ id: 'high_carb_meal', label: 'trigger.high_carb_meal' },
@@ -1746,6 +1778,7 @@ export const pcos: Blueprint = {
 		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
 };
 
 // ─── Registry ────────────────────────────────────────────────
@@ -1761,40 +1794,40 @@ export interface PresetInfo {
 
 export const presets: PresetInfo[] = [
 	// Neurology
-	{ id: 'epilepsy', labelKey: 'landing.template_epilepsy', descriptionKey: 'landing.template_epilepsy_desc', icon: 'zap', color: '#6366F1', blueprint: epilepsy },
-	{ id: 'migraine', labelKey: 'landing.template_migraine', descriptionKey: 'landing.template_migraine_desc', icon: 'cloud-lightning', color: '#EC4899', blueprint: migraine },
-	{ id: 'ms', labelKey: 'landing.template_ms', descriptionKey: 'landing.template_ms_desc', icon: 'brain', color: '#3B82F6', blueprint: ms },
+	{ id: 'epilepsy', labelKey: 'landing.template_epilepsy', descriptionKey: 'landing.template_epilepsy_desc', icon: 'zap', color: DATA_1, blueprint: epilepsy },
+	{ id: 'migraine', labelKey: 'landing.template_migraine', descriptionKey: 'landing.template_migraine_desc', icon: 'cloud-lightning', color: DATA_2, blueprint: migraine },
+	{ id: 'ms', labelKey: 'landing.template_ms', descriptionKey: 'landing.template_ms_desc', icon: 'brain', color: DATA_5, blueprint: ms },
 	// Neurodivergence
-	{ id: 'adhd', labelKey: 'landing.template_adhd', descriptionKey: 'landing.template_adhd_desc', icon: 'focus', color: '#F59E0B', blueprint: adhd },
+	{ id: 'adhd', labelKey: 'landing.template_adhd', descriptionKey: 'landing.template_adhd_desc', icon: 'focus', color: DATA_3, blueprint: adhd },
 	// Removed per product review — kept blueprint def above for potential future re-enable
-	// { id: 'autism', labelKey: 'landing.template_autism', descriptionKey: 'landing.template_autism_desc', icon: 'ear', color: '#0EA5E9', blueprint: autism },
+	// { id: 'autism', labelKey: 'landing.template_autism', descriptionKey: 'landing.template_autism_desc', icon: 'ear', color: DATA_5, blueprint: autism },
 	// Mental health
-	{ id: 'burnout', labelKey: 'landing.template_burnout', descriptionKey: 'landing.template_burnout_desc', icon: 'battery-low', color: '#8B5CF6', blueprint: burnout },
-	{ id: 'anxiety_depression', labelKey: 'landing.template_anxiety_depression', descriptionKey: 'landing.template_anxiety_depression_desc', icon: 'heart', color: '#3B82F6', blueprint: anxiety_depression },
+	{ id: 'burnout', labelKey: 'landing.template_burnout', descriptionKey: 'landing.template_burnout_desc', icon: 'battery-low', color: DATA_5, blueprint: burnout },
+	{ id: 'anxiety_depression', labelKey: 'landing.template_anxiety_depression', descriptionKey: 'landing.template_anxiety_depression_desc', icon: 'heart', color: DATA_5, blueprint: anxiety_depression },
 	// Metabolic & Pain
-	{ id: 'diabetes', labelKey: 'landing.template_diabetes', descriptionKey: 'landing.template_diabetes_desc', icon: 'droplet', color: '#0D9488', blueprint: diabetes },
-	{ id: 'chronic_pain', labelKey: 'landing.template_chronic_pain', descriptionKey: 'landing.template_chronic_pain_desc', icon: 'flame', color: '#E11D48', blueprint: chronic_pain },
-	{ id: 'long_covid', labelKey: 'landing.template_long_covid', descriptionKey: 'landing.template_long_covid_desc', icon: 'shield-plus', color: '#7C3AED', blueprint: long_covid },
+	{ id: 'diabetes', labelKey: 'landing.template_diabetes', descriptionKey: 'landing.template_diabetes_desc', icon: 'droplet', color: DATA_4, blueprint: diabetes },
+	{ id: 'chronic_pain', labelKey: 'landing.template_chronic_pain', descriptionKey: 'landing.template_chronic_pain_desc', icon: 'flame', color: DATA_1, blueprint: chronic_pain },
+	{ id: 'long_covid', labelKey: 'landing.template_long_covid', descriptionKey: 'landing.template_long_covid_desc', icon: 'shield-plus', color: DATA_4, blueprint: long_covid },
 	// Respiratory & Cardio
-	{ id: 'asthma', labelKey: 'landing.template_asthma', descriptionKey: 'landing.template_asthma_desc', icon: 'wind', color: '#0EA5E9', blueprint: asthma },
-	{ id: 'hypertension', labelKey: 'landing.template_hypertension', descriptionKey: 'landing.template_hypertension_desc', icon: 'heart-pulse', color: '#DC2626', blueprint: hypertension },
+	{ id: 'asthma', labelKey: 'landing.template_asthma', descriptionKey: 'landing.template_asthma_desc', icon: 'wind', color: DATA_5, blueprint: asthma },
+	{ id: 'hypertension', labelKey: 'landing.template_hypertension', descriptionKey: 'landing.template_hypertension_desc', icon: 'heart-pulse', color: DATA_1, blueprint: hypertension },
 	// Removed per product review — kept blueprint def above for potential future re-enable
-	// { id: 'cardiovascular', labelKey: 'landing.template_cardiovascular', descriptionKey: 'landing.template_cardiovascular_desc', icon: 'heart-pulse', color: '#DC2626', blueprint: cardiovascular },
+	// { id: 'cardiovascular', labelKey: 'landing.template_cardiovascular', descriptionKey: 'landing.template_cardiovascular_desc', icon: 'heart-pulse', color: DATA_1, blueprint: cardiovascular },
 	// GI & Oncology
-	{ id: 'ibs', labelKey: 'landing.template_ibs', descriptionKey: 'landing.template_ibs_desc', icon: 'shield', color: '#D97706', blueprint: ibs },
+	{ id: 'ibs', labelKey: 'landing.template_ibs', descriptionKey: 'landing.template_ibs_desc', icon: 'shield', color: DATA_3, blueprint: ibs },
 	// Removed per product review — kept blueprint def above for potential future re-enable
-	// { id: 'cancer_treatment', labelKey: 'landing.template_cancer_treatment', descriptionKey: 'landing.template_cancer_treatment_desc', icon: 'shield-plus', color: '#059669', blueprint: cancer_treatment },
+	// { id: 'cancer_treatment', labelKey: 'landing.template_cancer_treatment', descriptionKey: 'landing.template_cancer_treatment_desc', icon: 'shield-plus', color: DATA_4, blueprint: cancer_treatment },
 	// Dermatology & Gynecology
 	// Removed per product review — kept blueprint def above for potential future re-enable
-	// { id: 'dermatology', labelKey: 'landing.template_dermatology', descriptionKey: 'landing.template_dermatology_desc', icon: 'scan', color: '#F43F5E', blueprint: dermatology },
-	{ id: 'endometriosis', labelKey: 'landing.template_endometriosis', descriptionKey: 'landing.template_endometriosis_desc', icon: 'flower', color: '#E11D48', blueprint: endometriosis },
-	{ id: 'menopause', labelKey: 'landing.template_menopause', descriptionKey: 'landing.template_menopause_desc', icon: 'scan', color: '#DB2777', blueprint: menopause },
-	{ id: 'pcos', labelKey: 'landing.template_pcos', descriptionKey: 'landing.template_pcos_desc', icon: 'flower2', color: '#D946EF', blueprint: pcos },
+	// { id: 'dermatology', labelKey: 'landing.template_dermatology', descriptionKey: 'landing.template_dermatology_desc', icon: 'scan', color: DATA_6, blueprint: dermatology },
+	{ id: 'endometriosis', labelKey: 'landing.template_endometriosis', descriptionKey: 'landing.template_endometriosis_desc', icon: 'flower', color: DATA_1, blueprint: endometriosis },
+	{ id: 'menopause', labelKey: 'landing.template_menopause', descriptionKey: 'landing.template_menopause_desc', icon: 'scan', color: DATA_6, blueprint: menopause },
+	{ id: 'pcos', labelKey: 'landing.template_pcos', descriptionKey: 'landing.template_pcos_desc', icon: 'flower2', color: DATA_6, blueprint: pcos },
 	// New presets (wave 1)
-	{ id: 'bipolar', labelKey: 'landing.template_bipolar', descriptionKey: 'landing.template_bipolar_desc', icon: 'activity', color: '#A855F7', blueprint: bipolar },
-	{ id: 'glaucoma', labelKey: 'landing.template_glaucoma', descriptionKey: 'landing.template_glaucoma_desc', icon: 'eye', color: '#0891B2', blueprint: glaucoma },
-	{ id: 'parkinson', labelKey: 'landing.template_parkinson', descriptionKey: 'landing.template_parkinson_desc', icon: 'waves', color: '#4F46E5', blueprint: parkinson },
-	{ id: 'ibd', labelKey: 'landing.template_ibd', descriptionKey: 'landing.template_ibd_desc', icon: 'donut', color: '#EA580C', blueprint: ibd },
+	{ id: 'bipolar', labelKey: 'landing.template_bipolar', descriptionKey: 'landing.template_bipolar_desc', icon: 'activity', color: DATA_5, blueprint: bipolar },
+	{ id: 'glaucoma', labelKey: 'landing.template_glaucoma', descriptionKey: 'landing.template_glaucoma_desc', icon: 'eye', color: DATA_5, blueprint: glaucoma },
+	{ id: 'parkinson', labelKey: 'landing.template_parkinson', descriptionKey: 'landing.template_parkinson_desc', icon: 'waves', color: DATA_3, blueprint: parkinson },
+	{ id: 'ibd', labelKey: 'landing.template_ibd', descriptionKey: 'landing.template_ibd_desc', icon: 'donut', color: DATA_6, blueprint: ibd },
 	// Custom
-	{ id: 'custom', labelKey: 'landing.template_custom', descriptionKey: 'landing.template_custom_desc', icon: 'settings', color: '#64748B', blueprint: custom },
+	{ id: 'custom', labelKey: 'landing.template_custom', descriptionKey: 'landing.template_custom_desc', icon: 'settings', color: DATA_5, blueprint: custom },
 ];

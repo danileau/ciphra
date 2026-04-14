@@ -1,3 +1,5 @@
+import { DATA_1, DATA_2, DATA_3, DATA_4, DATA_5, DATA_6 } from './dataPalette';
+
 /**
  * ciphra — Public condition info data.
  *
@@ -38,7 +40,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	epilepsy: {
 		id: 'epilepsy',
 		icon: 'zap',
-		color: '#6366F1',
+		color: DATA_1,
 		titleKey: 'condition.epilepsy.title',
 		subtitleKey: 'condition.epilepsy.subtitle',
 		introKey: 'condition.epilepsy.intro',
@@ -73,7 +75,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	migraine: {
 		id: 'migraine',
 		icon: 'cloud-lightning',
-		color: '#EC4899',
+		color: DATA_2,
 		titleKey: 'condition.migraine.title',
 		subtitleKey: 'condition.migraine.subtitle',
 		introKey: 'condition.migraine.intro',
@@ -97,7 +99,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	ms: {
 		id: 'ms',
 		icon: 'brain',
-		color: '#3B82F6',
+		color: DATA_5,
 		titleKey: 'condition.ms.title',
 		subtitleKey: 'condition.ms.subtitle',
 		introKey: 'condition.ms.intro',
@@ -121,7 +123,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	adhd: {
 		id: 'adhd',
 		icon: 'focus',
-		color: '#F59E0B',
+		color: DATA_3,
 		titleKey: 'condition.adhd.title',
 		subtitleKey: 'condition.adhd.subtitle',
 		introKey: 'condition.adhd.intro',
@@ -143,7 +145,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	burnout: {
 		id: 'burnout',
 		icon: 'battery-low',
-		color: '#8B5CF6',
+		color: DATA_5,
 		titleKey: 'condition.burnout.title',
 		subtitleKey: 'condition.burnout.subtitle',
 		introKey: 'condition.burnout.intro',
@@ -165,7 +167,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	anxiety_depression: {
 		id: 'anxiety_depression',
 		icon: 'heart',
-		color: '#3B82F6',
+		color: DATA_5,
 		titleKey: 'condition.anxiety_depression.title',
 		subtitleKey: 'condition.anxiety_depression.subtitle',
 		introKey: 'condition.anxiety_depression.intro',
@@ -188,7 +190,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	diabetes: {
 		id: 'diabetes',
 		icon: 'droplet',
-		color: '#0D9488',
+		color: DATA_4,
 		titleKey: 'condition.diabetes.title',
 		subtitleKey: 'condition.diabetes.subtitle',
 		introKey: 'condition.diabetes.intro',
@@ -209,7 +211,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	chronic_pain: {
 		id: 'chronic_pain',
 		icon: 'flame',
-		color: '#E11D48',
+		color: DATA_1,
 		titleKey: 'condition.chronic_pain.title',
 		subtitleKey: 'condition.chronic_pain.subtitle',
 		introKey: 'condition.chronic_pain.intro',
@@ -232,7 +234,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	asthma: {
 		id: 'asthma',
 		icon: 'wind',
-		color: '#0EA5E9',
+		color: DATA_5,
 		titleKey: 'condition.asthma.title',
 		subtitleKey: 'condition.asthma.subtitle',
 		introKey: 'condition.asthma.intro',
@@ -254,7 +256,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	hypertension: {
 		id: 'hypertension',
 		icon: 'heart-pulse',
-		color: '#DC2626',
+		color: DATA_1,
 		titleKey: 'condition.hypertension.title',
 		subtitleKey: 'condition.hypertension.subtitle',
 		introKey: 'condition.hypertension.intro',
@@ -274,7 +276,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	long_covid: {
 		id: 'long_covid',
 		icon: 'shield-plus',
-		color: '#7C3AED',
+		color: DATA_4,
 		titleKey: 'condition.long_covid.title',
 		subtitleKey: 'condition.long_covid.subtitle',
 		introKey: 'condition.long_covid.intro',
@@ -295,7 +297,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	menopause: {
 		id: 'menopause',
 		icon: 'scan',
-		color: '#DB2777',
+		color: DATA_6,
 		titleKey: 'condition.menopause.title',
 		subtitleKey: 'condition.menopause.subtitle',
 		introKey: 'condition.menopause.intro',
@@ -317,7 +319,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	ibs: {
 		id: 'ibs',
 		icon: 'shield',
-		color: '#D97706',
+		color: DATA_3,
 		titleKey: 'condition.ibs.title',
 		subtitleKey: 'condition.ibs.subtitle',
 		introKey: 'condition.ibs.intro',
@@ -339,7 +341,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	endometriosis: {
 		id: 'endometriosis',
 		icon: 'flower',
-		color: '#E11D48',
+		color: DATA_1,
 		titleKey: 'condition.endometriosis.title',
 		subtitleKey: 'condition.endometriosis.subtitle',
 		introKey: 'condition.endometriosis.intro',
@@ -361,7 +363,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	bipolar: {
 		id: 'bipolar',
 		icon: 'activity',
-		color: '#A855F7',
+		color: DATA_5,
 		titleKey: 'condition.bipolar.title',
 		subtitleKey: 'condition.bipolar.subtitle',
 		introKey: 'condition.bipolar.intro',
@@ -385,7 +387,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	glaucoma: {
 		id: 'glaucoma',
 		icon: 'eye',
-		color: '#0891B2',
+		color: DATA_5,
 		titleKey: 'condition.glaucoma.title',
 		subtitleKey: 'condition.glaucoma.subtitle',
 		introKey: 'condition.glaucoma.intro',
@@ -407,7 +409,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	parkinson: {
 		id: 'parkinson',
 		icon: 'waves',
-		color: '#4F46E5',
+		color: DATA_3,
 		titleKey: 'condition.parkinson.title',
 		subtitleKey: 'condition.parkinson.subtitle',
 		introKey: 'condition.parkinson.intro',
@@ -431,7 +433,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	ibd: {
 		id: 'ibd',
 		icon: 'donut',
-		color: '#EA580C',
+		color: DATA_6,
 		titleKey: 'condition.ibd.title',
 		subtitleKey: 'condition.ibd.subtitle',
 		introKey: 'condition.ibd.intro',
@@ -455,7 +457,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	pcos: {
 		id: 'pcos',
 		icon: 'flower2',
-		color: '#D946EF',
+		color: DATA_6,
 		titleKey: 'condition.pcos.title',
 		subtitleKey: 'condition.pcos.subtitle',
 		introKey: 'condition.pcos.intro',

@@ -5,6 +5,14 @@ export default {
 	'nav.calendar': 'Kalender',
 	'nav.reports': 'Berichte',
 	'nav.conditions': 'Erkrankungen',
+	// CIPH-764 — Swiss crisis-resources footer. Static, never conditional
+	// on detected user state. Resources: 143 (Dargebotene Hand, 24/7),
+	// 147 (Pro Juventute, under 25s). DE/FR/IT primary; EN gives Swiss context.
+	// CIPH-767e — sync indicator
+	'sync.synced': 'Synchronisiert',
+	'pwa.install_title': 'ciphra als App installieren',
+	'pwa.install_cta': 'Installieren',
+	'pwa.install_dismiss': 'Später',
 	'secure_context.title': 'Sichere Verbindung erforderlich',
 	'secure_context.desc': 'ciphra führt die gesamte Verschlüsselung im Browser aus — das erfordert eine HTTPS-Verbindung (oder localhost). Die aktuelle Adresse ist kein HTTPS, deshalb hat der Browser die Krypto-APIs deaktiviert. Öffne ciphra über die HTTPS-Adresse.',
 	'nav.stream': 'Stream',
@@ -43,6 +51,7 @@ export default {
 	'auth.password_confirm': 'Passwort bestätigen',
 	'auth.recovery': 'Passwort vergessen',
 	'auth.recovery_code': 'Recovery-Code',
+	'auth.recovery_code_label': 'Wiederherstellungscode:',
 	'auth.recovery_save_warning': 'Speichern Sie diesen Recovery-Code sicher! Sie können ihn später NICHT mehr abrufen.',
 	'auth.recovery_confirm': 'Ich habe meinen Recovery-Code sicher gespeichert',
 	'auth.login_success': 'Erfolgreich angemeldet',
@@ -77,6 +86,7 @@ export default {
 	'family.switcher_viewing': 'Ansicht:',
 	'family.banner_viewing': 'Du erfasst für {user}',
 	'family.private_hidden': '{count} private Einträge sind hier nicht sichtbar',
+	'family.private_context': 'Du siehst {visible} geteilte Einträge. {private} persönliche Einträge bleiben privat.',
 	'family.banner_desc': 'alle neuen Einträge, Änderungen und Löschungen gehen in dessen Notizbuch.',
 	'family.banner_switch_back': 'Zurück zu meinen',
 	'family.section_title': 'Familien-Zugriff',
@@ -138,6 +148,7 @@ export default {
 	'companion.streak_current': 'Aktuell: {count} Tage',
 	'companion.last_seizure': 'Letzter Anfall: {date}',
 	'companion.quick_actions': 'Schnellaktionen',
+	'companion.add_another': 'Weiteren Eintrag hinzufügen',
 	'companion.log_seizure': 'Anfall erfassen',
 	'companion.write_diary': 'Tagebuch schreiben',
 	'companion.record_event': 'Ereignis erfassen',
@@ -712,10 +723,12 @@ export default {
 
 	// Setup wizard
 	'setup.title': 'ciphra einrichten',
-	'setup.choose_title': 'Was möchten Sie dokumentieren?',
+	'setup.choose_title': 'Was möchtest du dokumentieren?',
 	'setup.skip_caregiver_title': 'Ich nutze ciphra für jemand anderen',
 	'setup.skip_caregiver_desc': 'Einrichtung überspringen und direkt ein Familien-Konto verknüpfen. Kann die Person ciphra nicht selbst nutzen (Kleinkind, schwer krank, hochbetagt)? Einfacher: abmelden und das Konto direkt im Namen dieser Person anlegen — du behältst das Login.',
-	'setup.choose_subtitle': 'Wählen Sie eine Vorlage oder erstellen Sie ein eigenes Profil',
+	'setup.choose_subtitle': 'Wähle eine Vorlage oder erstelle ein eigenes Profil',
+	'setup.select_all': 'Alle an',
+	'setup.select_none': 'Alle aus',
 	'setup.symptoms_title': 'Symptome & Anzeichen',
 	'setup.symptoms_subtitle': 'Entfernen oder ergänzen Sie Symptome nach Bedarf',
 	'setup.symptoms_add': 'Neues Symptom...',
@@ -1036,6 +1049,10 @@ export default {
 	'private.label': 'Privat',
 	'private.tooltip': 'Privater Eintrag — wird nie exportiert oder geteilt.',
 	'private.toggle_make_private': 'Eintrag privat machen',
+	'private.toggle_to_private': 'Öffentlich — klicken, um privat zu machen (Schloss offen)',
+	'private.toggle_to_public': 'Privat — klicken, um öffentlich zu machen (Schloss geschlossen)',
+	'private.state_public': 'Öffentlich',
+	'private.state_private': 'Privat',
 	'common.date': 'Datum',
 	'common.time': 'Uhrzeit',
 	'common.optional': 'optional',
@@ -1800,6 +1817,7 @@ export default {
 	'companion.how_headline_up': 'Diesen Monat {last} {noun} — letzten Monat waren es {prev}.',
 	'companion.how_headline_down': 'Diesen Monat {last} {noun} — weniger als letzten Monat ({prev}).',
 	'companion.how_headline_flat': 'Diesen Monat {last} {noun} — gleich wie letzten Monat.',
+	'companion.how_softener_up': 'Du erfasst sie sorgfältig.',
 	'companion.how_sr_caption': 'In den letzten 12 Monaten: {total} {noun} insgesamt, {symptomDays} Tage mit Symptomen. Letzter Monat: {last}, Vormonat: {prev}.',
 	'episode_noun.seizure': 'Anfälle',
 	'episode_noun.tremor': 'Tremor',
@@ -1835,11 +1853,27 @@ export default {
 	'log.incomplete_cta_chip_prefix': 'Nachtragen:',
 
 	// CIPH-304 — Settings grouping
-	'settings.section_privacy': 'Datenschutz & Sicherheit',
-	'settings.section_account': 'Konto',
-	'settings.section_data': 'Daten',
-	'settings.section_sharing': 'Teilen',
 	'settings.section_danger': 'Gefahrenzone',
+
+	// CIPH-854 — Phasen-Kontext-Karte (Phasen-Kohorte)
+	'phase.active_title': 'Laufende Phase',
+	'phase.day_n': 'Tag {n}',
+	'phase.day_label': 'der Phase',
+	'phase.started_on': 'Begonnen am {date}',
+
+	// CIPH-857 — Settings-Tabs
+	'settings.tab_account': 'Konto',
+	'settings.tab_tracking': 'Tracking',
+	'settings.tab_sharing': 'Teilen',
+	'settings.tabs_label': 'Einstellungsbereiche',
+
+	// CIPH-852 — Primäre Ansicht
+	'settings.primary_surface_title': 'Startseiten-Layout',
+	'settings.primary_surface_desc': 'Welche Ansicht auf der Startseite im Vordergrund stehen soll. Die Voreinstellung passt zu Ihrem Krankheitsbild — ändern Sie sie, wenn eine andere Ansicht für Sie besser funktioniert.',
+	'settings.primary_surface_auto': 'Automatisch (je nach Krankheitsbild)',
+	'settings.primary_surface_journal': 'Journal — chronologische Einträge',
+	'settings.primary_surface_calendar': 'Kalender — Monatsansicht',
+	'settings.primary_surface_trend': 'Trend — Diagramm zuerst',
 
 	// CIPH-305 — Compact PDF export
 	'pdf.export_compact': 'Kompakt A4',
@@ -1918,7 +1952,7 @@ export default {
 	'migrate.not_found_title': 'Seite nicht gefunden',
 	'migrate.not_found_body': 'Diese Seite ist nur über einen Migrations-Link erreichbar.',
 	'migrate.welcome_title': 'Willkommen bei ciphra',
-	'migrate.welcome_body': 'Wir übernehmen deine Daten von {source}. Lege zuerst dein verschlüsseltes ciphra-Konto an.',
+	'migrate.welcome_body': 'ciphra ist ein eigener Dienst — nicht epilepc. Dein epilepc-Login funktioniert hier nicht; bitte lege ein neues, verschlüsseltes ciphra-Konto an. Deine Daten aus {source} werden danach verschlüsselt in dein neues Konto kopiert, bevor epilepc stillgelegt wird.',
 	'migrate.signup_continue': 'Konto anlegen',
 	'migrate.fetch_bundle': 'Daten von der Quelle laden',
 	'migrate.phase_building_vault': 'Tresor wird aufgebaut…',
@@ -1942,9 +1976,15 @@ export default {
 	'migrate.error_import': 'Import fehlgeschlagen. Du kannst es erneut versuchen — bereits importierte Einträge werden übersprungen.',
 	'migrate.back_to_source': 'Zurück zu {source}',
 	'migrate.confirm_title': 'Bestätige die Übertragung',
-	'migrate.confirm_body': 'Du sendest gleich deine epilepc-Daten an folgende ciphra-Instanz. Bitte prüfe in der Adressleiste deines Browsers, dass die URL ciphra.ch lautet.',
-	'migrate.confirm_target_label': 'Ziel (diese ciphra-Instanz)',
+	'migrate.confirm_body': 'Prüfe in der Adressleiste deines Browsers: Du bist auf ciphra.ch. Falls dort etwas anderes steht, brich ab.',
+	'migrate.confirm_target_label': 'Adresse (dieses ciphra-Konto)',
 	'migrate.confirm_source_label': 'Quelle',
 	'migrate.confirm_checkbox': 'Ich habe die URL bestätigt',
 	'migrate.confirm_button': 'Daten übertragen',
+	'migrate.date_range': 'Zeitraum: {start} bis {end}',
+	'migrate.importing_status': 'Letzter gesicherter Eintrag: Nr. {done} von {total}. Bei Unterbruch wird ab hier weitergemacht.',
+	'migrate.tour_title': 'Deine alten Tagebucheinträge sind privat.',
+	'migrate.tour_body': 'Wir haben deine persönlichen Notizen aus epilepc in den Tagebuch-Tab übernommen. Diese Einträge bleiben immer privat — sie werden nie geteilt, exportiert oder in Berichten gezeigt.',
+	'migrate.tour_continue': 'Verstanden, zur Startseite',
+	'entry.original_type_label': 'Original: {value}',
 } as Record<string, string>;

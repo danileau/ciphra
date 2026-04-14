@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: frontend / vitest + svelte-check + playwright
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: svelte-check
+        run: npm run check
+
+      - name: Vitest unit tests
+        run: npm test
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # The api is not spun up in CI yet. All e2e specs that require it are
+      # marked `test.fixme()` / `test.skip()` so this step still gates the
+      # workflow (it will fail on unexpected e2e failures) without being
+      # blocked by unavailable services. When the api container is wired
+      # into CI, flip the fixmes off per story (see CIPH-740 etc.).
+      - name: Playwright e2e
+        run: npm run test:e2e
+        env:
+          PLAYWRIGHT_NO_WEBSERVER: ""

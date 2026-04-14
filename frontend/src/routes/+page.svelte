@@ -118,11 +118,11 @@
 				<!-- Named-chips row: answers the "does it work for mine?"
 					 bounce. Each chip is a real link into the condition detail
 					 page. Keeps the "build your own" promise concrete. -->
-				<div class="mb-14 text-sm" style="color: var(--text-muted);">
+				<div class="mb-12 text-sm" style="color: var(--text-muted);">
 					<p class="font-medium mb-3" style="color: var(--text-secondary);">{$t('landing.chips_prefix')}</p>
 					<!-- Group chips: one per group, auto-derived from conditionGroups.
 						 Mobile: horizontal scroll. Desktop: 4-col grid. -->
-					<div class="flex gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0">
+					<div class="flex gap-2 overflow-x-auto pb-2 sm:flex-wrap sm:overflow-visible sm:pb-0">
 						{#each conditionGroups as group}
 							{@const firstInfo = conditionInfoMap[group.conditionIds[0]]}
 							<a
@@ -284,7 +284,7 @@
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--ochre);"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
 						<h3 class="font-bold" style="color: var(--text-primary);">{$t('landing.security_server_sees')}</h3>
 					</div>
-					<ul class="space-y-2.5 text-sm" style="color: var(--text-secondary);">
+					<ul class="space-y-3 text-sm" style="color: var(--text-secondary);">
 						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_1')}</li>
 						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_2')}</li>
 						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_3')}</li>
@@ -296,7 +296,7 @@
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="1" y1="1" x2="23" y2="23" stroke-width="2" stroke-linecap="round"/></svg>
 						<h3 class="font-bold" style="color: var(--text-primary);">{$t('landing.security_server_not')}</h3>
 					</div>
-					<ul class="space-y-2.5 text-sm" style="color: var(--text-secondary);">
+					<ul class="space-y-3 text-sm" style="color: var(--text-secondary);">
 						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_1')}</li>
 						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_2')}</li>
 						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_3')}</li>

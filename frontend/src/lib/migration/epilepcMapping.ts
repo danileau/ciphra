@@ -88,11 +88,11 @@ export function mapSeizureType(typeName: string | null | undefined): string {
 	if (!typeName) return 'unknown';
 	const n = typeName.toLowerCase();
 	if (n.includes('focal') || n.includes('fokal')) return 'focal';
+	if (n.includes('myoclonic') || n.includes('myoklon')) return 'myoclonic';
 	if (n.includes('generalized') || n.includes('generalisiert') ||
 		n.includes('gtc') || n.includes('tonic') || n.includes('clonic') ||
 		n.includes('tonisch') || n.includes('klonisch')) return 'generalized';
 	if (n.includes('absence') || n.includes('absenz')) return 'absence';
-	if (n.includes('myoclonic') || n.includes('myoklon')) return 'myoclonic';
 	return 'unknown';
 }
 
@@ -115,9 +115,16 @@ export function mapBundle(b: EpilepcBundle): MappedDocs {
 		};
 		if (s.time) doc.time = s.time;
 		if (s.notes) doc.notes = s.notes;
+		// CIPH-760 — preserve raw epilepc type_name alongside the coarse
+		// ciphra episode key so granularity ("Fokal rechts", "Absence mit
+		// Sturz") isn't lost. Surfaced by EntryPreview as a subtitle.
+		if (s.type_name) doc.epilepc_original_type = s.type_name;
 		return doc;
 	});
 
+	// CIPH-760 — keep epilepc `name` (title) and `description` (notes)
+	// separate. Previously callers had concatenated them, losing the
+	// distinction. Ciphra's event doc has both fields; we map 1:1.
 	const events = b.events.map((e) => ({
 		type: 'event',
 		date: e.date,

@@ -6,4 +6,7 @@ build/
 .env
 *.log
 .claude/
-api/seed_marco.py
+api/seed_*.py
+api/fixtures/
+pdfs
+frontend/test-results

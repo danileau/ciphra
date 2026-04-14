@@ -47,6 +47,30 @@
 		--success-light: var(--olive-light);
 		--warning: var(--ochre);
 		--warning-light: var(--ochre-light);
+
+		/* ── Data viz palette (CIPH-801) ──
+		   Used for chart series, condition accents, episode-type markers.
+		   Keep small (≤6) so charts stay scannable. Pull from --data-N
+		   rather than raw hex. The TS mirror lives in
+		   `src/lib/dataPalette.ts` and MUST stay in sync — both files
+		   update together when the palette changes. Vitest enforces
+		   that presets use only these six values. */
+		--data-1: #b23c2c;  /* brand rust — primary, mirrors --brand */
+		--data-2: #8a2a1f;  /* deep brick — darker brand-adjacent */
+		--data-3: #9f630b;  /* ochre — information / warmth */
+		--data-4: #7f821b;  /* olive — calm / logged */
+		--data-5: #5c6b73;  /* anchor slate — cool neutral for separation */
+		--data-6: #a87559;  /* clay terracotta — warm tertiary */
+		--data-1-rgb: 178, 60, 44;
+		--data-2-rgb: 138, 42, 31;
+		--data-3-rgb: 159, 99, 11;
+		--data-4-rgb: 127, 130, 27;
+		--data-5-rgb: 92, 107, 115;
+		--data-6-rgb: 168, 117, 89;
+
+		/* Tint aliases for existing ochre/olive rgba() call sites */
+		--ochre-rgb: 159, 99, 11;
+		--olive-rgb: 127, 130, 27;
 	}
 
 	/* Warm overrides for Tailwind's cold slate palette */
@@ -188,7 +212,7 @@
 	/* ═══ BADGES ═══ */
 
 	.badge {
-		@apply text-xs px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1;
+		@apply text-xs px-2 py-1 rounded-full font-medium inline-flex items-center gap-1;
 	}
 	.badge-ochre {
 		background: var(--ochre-light);
@@ -227,7 +251,7 @@
 	/* ═══ INPUTS ═══ */
 
 	.input {
-		@apply w-full px-3 py-2.5 text-sm outline-none min-h-[44px];
+		@apply w-full px-3 py-2 text-sm outline-none min-h-[44px];
 		background: var(--surface-muted);
 		border: 1px solid var(--border);
 		border-radius: 12px;
@@ -329,6 +353,26 @@
 		color: var(--danger) !important;
 		background: rgba(220, 38, 38, 0.06);
 	}
+}
+
+@layer components {
+	/* ═══════════════════════════════════════════════════════════
+	   LAYOUT WIDTH TOKENS (CIPH-746)
+
+	   A small, opinionated set of page-container widths. Apply on
+	   the outermost page wrapper; never nest these inside each
+	   other. All tokens collapse to full width below 640px — mobile
+	   behavior is unchanged.
+
+	   Hard ceiling is 1280px (`layout-data-wide`) so text columns
+	   never exceed ~80ch, and sidebars absorb remaining viewport
+	   width on ultrawides.
+	   ═══════════════════════════════════════════════════════════ */
+	.layout-narrow    { @apply w-full max-w-xl  mx-auto px-4 sm:px-6; } /* 576 — auth/migrate forms */
+	.layout-reading   { @apply w-full max-w-3xl mx-auto px-4 sm:px-6; } /* 768 — prose, dashboard main col */
+	.layout-default   { @apply w-full max-w-4xl mx-auto px-4 sm:px-6; } /* 896 — settings, conditions */
+	.layout-data      { @apply w-full max-w-6xl mx-auto px-4 sm:px-6; } /* 1152 — journal, calendar, admin, dashboard */
+	.layout-data-wide { @apply w-full max-w-7xl mx-auto px-4 sm:px-6; } /* 1280 — reports tables */
 }
 
 @layer utilities {

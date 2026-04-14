@@ -5,11 +5,17 @@
 	import { blueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
-	import EntryPreview from '$lib/components/EntryPreview.svelte';
+	import CompanionMain from '$lib/components/CompanionMain.svelte';
+	import CompanionRail from '$lib/components/CompanionRail.svelte';
+
+	// CIPH-764 reverted post senior review — country-specific helplines
+	// without explicit user country selection conflict with zero-knowledge.
+	// Replaced by CIPH-790 (settings-based opt-in help section).
 	import { familyLinks } from '$lib/stores/familyLinks';
 	import { generateDoctorPdf } from '$lib/pdf';
+	import { DATA_1, DATA_3, DATA_4, DATA_5 } from '$lib/dataPalette';
+	import { cohortOf } from '$lib/blueprint/cohort';
 
 	function exportForDoctor() {
 		if (!bp) return;
@@ -28,6 +34,89 @@
 	$: allDocs = $documents;
 	$: todayStr = new Date().toISOString().slice(0, 10);
 	$: todayEntries = allDocs.filter(d => String(d.data.date || '').startsWith(todayStr));
+
+	// CIPH-854 — Cohort drives home card ordering + which extra context
+	// cards render. `cohortOf` reads blueprint.conditionId.
+	$: cohort = cohortOf(bp);
+
+	// CIPH-854 — Active multi-day phase. For phase-band cohort only: find
+	// the most-recent entry-streak where any multiDay episode type has
+	// value > 0 on each consecutive day ending at today (or yesterday —
+	// a user who hasn't logged yet today is still in the phase). Returns
+	// the episode type + start date + day count. Null when no phase active.
+	$: activePhase = (() => {
+		if (cohort !== 'phase' || !bp?.episodeTypes?.length) return null;
+		const multiDayTypes = bp.episodeTypes.filter(e => e.multiDay);
+		if (!multiDayTypes.length) return null;
+
+		// Index entries by YYYY-MM-DD → episodes map.
+		const byDate = new Map<string, Record<string, number>>();
+		for (const d of allDocs) {
+			if (d.data.type !== 'entry') continue;
+			const ds = String(d.data.date || '').slice(0, 10);
+			if (!ds) continue;
+			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+			// Merge if multiple entries same day.
+			const prior = byDate.get(ds) || {};
+			for (const [k, v] of Object.entries(eps)) {
+				prior[k] = Math.max(Number(prior[k] || 0), Number(v || 0));
+			}
+			byDate.set(ds, prior);
+		}
+
+		// Today or yesterday as anchor. If today unlogged, fall back to
+		// yesterday so the card doesn't flicker while the user hasn't
+		// opened /log/today yet.
+		const today = new Date();
+		today.setHours(12, 0, 0, 0);
+		const todayKey = today.toISOString().slice(0, 10);
+		const y = new Date(today);
+		y.setDate(y.getDate() - 1);
+		const yKey = y.toISOString().slice(0, 10);
+
+		// For each multiDay type, walk back consecutive days.
+		let best: { ep: typeof multiDayTypes[0]; startedOn: string; dayN: number } | null = null;
+		for (const ep of multiDayTypes) {
+			let anchorKey: string | null = null;
+			if ((byDate.get(todayKey)?.[ep.id] || 0) > 0) anchorKey = todayKey;
+			else if ((byDate.get(yKey)?.[ep.id] || 0) > 0) anchorKey = yKey;
+			if (!anchorKey) continue;
+
+			// Walk backwards
+			let started = anchorKey;
+			let cursor = new Date(anchorKey + 'T12:00:00');
+			while (true) {
+				const prev = new Date(cursor);
+				prev.setDate(prev.getDate() - 1);
+				const prevKey = prev.toISOString().slice(0, 10);
+				if ((byDate.get(prevKey)?.[ep.id] || 0) > 0) {
+					started = prevKey;
+					cursor = prev;
+				} else {
+					break;
+				}
+			}
+			// dayN = days from started to anchor inclusive
+			const startedD = new Date(started + 'T12:00:00');
+			const anchorD = new Date(anchorKey + 'T12:00:00');
+			const dayN = Math.max(
+				1,
+				Math.round((anchorD.getTime() - startedD.getTime()) / 86400000) + 1,
+			);
+			// Prefer the phase with the most recent start (longer ongoing beats older)
+			if (!best || dayN > best.dayN) {
+				best = { ep, startedOn: started, dayN };
+			}
+		}
+		if (!best) return null;
+		return {
+			id: best.ep.id,
+			label: best.ep.label,
+			color: best.ep.color,
+			dayN: best.dayN,
+			startedOn: best.startedOn,
+		};
+	})();
 
 	// Compliance metric: unique days logged in the last 30, framed as
 	// data-reliability (not a streak). Klara / QA called out streak framing
@@ -48,7 +137,7 @@
 	})();
 	$: complianceTotal = 30;
 	$: complianceRatio = complianceLogged / complianceTotal;
-	$: complianceTone = complianceRatio >= 0.8 ? 'high' : complianceRatio >= 0.5 ? 'mid' : 'low';
+	$: complianceTone = (complianceRatio >= 0.8 ? 'high' : complianceRatio >= 0.5 ? 'mid' : 'low') as 'high' | 'mid' | 'low';
 	$: complianceMessage = $t(
 		complianceTone === 'high' ? 'companion.compliance_high'
 			: complianceTone === 'mid' ? 'companion.compliance_mid'
@@ -146,11 +235,14 @@
 		} as const;
 	})();
 
+	// CIPH-801 — cycle phase colors pulled to the data palette. Purple
+	// luteal replaced by anchor slate so the cycle ring stays inside
+	// the warm brand family.
 	const PHASE_COLORS: Record<string, string> = {
-		menstrual: '#c0392b',
-		follicular: '#e4a853',
-		ovulation: '#7ba05b',
-		luteal: '#8e7cc3',
+		menstrual: DATA_1,
+		follicular: DATA_3,
+		ovulation: DATA_4,
+		luteal: DATA_5,
 	};
 
 	// Today's status
@@ -273,6 +365,7 @@
 				pointRadius: 2.5,
 				pointBackgroundColor: '#DC2626',
 				fill: false,
+				yAxisID: 'y',
 			},
 			{
 				label: $t('companion.how_symptom_days'),
@@ -285,6 +378,7 @@
 				pointRadius: 1.5,
 				pointBackgroundColor: 'rgba(120,113,108,0.55)',
 				fill: false,
+				yAxisID: 'y1',
 			},
 		],
 	} : null;
@@ -305,13 +399,33 @@
 			},
 		},
 		scales: {
-			y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+			// CIPH-762 — dual y-axis so the primary episodes line stays
+			// visible even when symptom-days (typically an order of
+			// magnitude larger) would otherwise dominate the scale.
+			// Left axis = episodes (brick), right axis = symptom-days (muted).
+			y: {
+				type: 'linear' as const,
+				position: 'left' as const,
+				beginAtZero: true,
+				ticks: { precision: 0, font: { size: 10 }, color: '#DC2626' },
+				grid: { color: 'rgba(0,0,0,0.04)' },
+			},
+			y1: {
+				type: 'linear' as const,
+				position: 'right' as const,
+				beginAtZero: true,
+				ticks: { precision: 0, font: { size: 10 }, color: 'rgba(120,113,108,0.85)' },
+				grid: { display: false },
+			},
 			x: { ticks: { font: { size: 10 } }, grid: { display: false } },
 		},
 	};
 
-	$: howAreYouHeadline = (() => {
-		if (!howAreYouTrend) return '';
+	// CIPH-763a — split arrow from text so the decorative unicode glyph can
+	// be `aria-hidden`. VoiceOver reads ↗ as "north-east arrow" which is
+	// noise — the text itself already says "weniger/mehr als letzten Monat".
+	$: howAreYouHeadlineParts = (() => {
+		if (!howAreYouTrend) return null;
 		const { epTrend, last, prev } = howAreYouTrend;
 		const arrow = epTrend === 'up' ? '↗' : epTrend === 'down' ? '↘' : '→';
 		const key = epTrend === 'up'
@@ -319,7 +433,11 @@
 			: epTrend === 'down'
 				? 'companion.how_headline_down'
 				: 'companion.how_headline_flat';
-		return `${arrow} ${$t(key, { last, prev, noun: episodeNoun })}`;
+		let text = $t(key, { last, prev, noun: episodeNoun });
+		if (epTrend === 'up' && (last > prev * 1.5 || last - prev >= 3)) {
+			text += ` ${$t('companion.how_softener_up')}`;
+		}
+		return { arrow, text };
 	})();
 
 	$: episodeChartData = (() => {
@@ -474,312 +592,123 @@
 		</div>
 	</div>
 {:else}
-<div class="max-w-3xl mx-auto px-4 py-6 space-y-6 fade-in">
-
-	<!-- ═══ GREETING ═══ -->
-	<section>
-		<div class="flex items-center justify-between">
-			<div>
-				<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('companion.greeting', { name: $auth.username || '' })}</h1>
-				<p class="text-sm mt-0.5" style="color: var(--text-secondary)">{new Date().toLocaleDateString($locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-			</div>
-			<span class="badge badge-olive">{$t(bp.conditionLabel)}</span>
-		</div>
-	</section>
-
-	<!-- ═══ TODAY'S STATUS ═══ -->
-	{#if !todayLog}
-		<!-- Not yet logged — warm CTA -->
-		<section class="card-brand p-6">
-			<div class="flex items-center gap-4">
-				<div class="w-14 h-14 rounded-2xl bg-white/60 flex items-center justify-center shrink-0">
-					<Asterisk size={28} color="brand" />
+	<!-- CIPH-750: dashboard right-rail at ≥1024px.
+		 layout-data (1152) stays as the overall shell. At `lg:` we switch
+		 to a 2-column grid (main ~1fr, rail 340px) with secondary content
+		 (trend chart, quick-action CTA, encryption badge) moved to the rail
+		 so the main column can stay focused on today-first flow. Below lg
+		 both components render as a single stacked stream — identical to
+		 the pre-split layout. All reactive state (bp, cycle, compliance,
+		 charts, confirm-delete) stays in this shell; the two subcomponents
+		 are thin render-only wrappers to de-risk the split that was
+		 deferred twice by keeping the reactive cascade in one place. -->
+	<div class="layout-data py-6 fade-in space-y-6">
+		<!-- Full-width header: greeting + today-status span both columns
+		     (CIPH-781 follow-up — was cramped in the 2/3 column). -->
+		<section>
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('companion.greeting', { name: $auth.username || '' })}</h1>
+					<p class="text-sm mt-0.5" style="color: var(--text-secondary)">{new Date().toLocaleDateString($locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
 				</div>
-				<div class="flex-1">
-					<p class="font-medium" style="color: var(--brand)">{$t('companion.today_not_filled')}</p>
-					<p class="text-sm mt-0.5" style="color: var(--text-secondary)">~3 min</p>
-				</div>
-				<a href="/log/today" class="btn-primary px-5 py-2.5 text-sm shrink-0">
-					{$t('companion.fill_today')}
-				</a>
+				{#if bp}<span class="badge badge-olive">{$t(bp.conditionLabel)}</span>{/if}
 			</div>
 		</section>
-	{:else}
-		<!-- Today logged — summary with olive checkmark -->
-		<section class="card-olive p-5">
-			<div class="flex items-center justify-between mb-3">
-				<div class="flex items-center gap-2">
-					<div class="w-6 h-6 rounded-full flex items-center justify-center" style="background: var(--olive)">
-						<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</div>
-					<span class="text-sm font-medium" style="color: var(--olive)">{$t('companion.today_filled')}</span>
-				</div>
-				<a href="/log/today" class="text-xs font-medium hover:underline" style="color: var(--brand)">{$t('common.edit')}</a>
-			</div>
-			<div class="flex flex-wrap gap-2">
-				{#if todaySymptomCount > 0}
-					<span class="badge badge-ochre">{$t('companion.symptoms_count', { count: todaySymptomCount })}</span>
-				{/if}
-				{#if todayEpisodeCount > 0}
-					<span class="badge badge-danger">{$t('companion.episodes_count', { count: todayEpisodeCount })}</span>
-				{/if}
-			</div>
-		</section>
-	{/if}
 
-	<!-- ═══ COMPLIANCE (data-reliability) ═══ -->
-	<!-- Replaces the old streak card. Streak framing ("X days without an
-		 episode") gamified symptom-free days and shamed people during chronic
-		 flares. The compliance card reframes the same slot as data-reliability
-		 for the next appointment: how many of the last 30 days you logged. -->
-	<section class="card-anchor">
-		<div class="flex items-center gap-4">
-			<div class="text-center shrink-0">
-				<p class="text-3xl font-bold num-data" style="color: {complianceAccent}">{Math.round(complianceRatio * 100)}%</p>
-				<p class="text-[10px] uppercase tracking-wider font-medium" style="color: var(--text-muted)">{complianceLogged}/{complianceTotal} {$t('common.days')}</p>
-			</div>
-			<div class="flex-1 min-w-0">
-				<p class="text-sm font-medium" style="color: var(--text-primary)">{complianceMessage}</p>
-				{#if complianceTone === 'low'}
-					<p class="text-xs mt-1" style="color: var(--text-muted)">{$t('companion.compliance_subtitle')}</p>
-				{/if}
-				<div class="mt-2 w-full rounded-full h-1.5" style="background: var(--surface-inset)">
-					<div class="h-1.5 rounded-full transition-all duration-500" style="background: {complianceAccent}; width: {Math.round(complianceRatio * 100)}%"></div>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<!-- ═══ CYCLE PHASE (CIPH-401) — only for cycle-tracking blueprints ═══ -->
-	{#if hasCycleVital && cycleState}
-		<section class="card-anchor">
-			{#if !cycleState.hasData}
-				<a href="/log/today" class="flex items-center gap-3 no-underline">
-					<div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background: var(--ochre-light); color: var(--ochre)">
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2"/><path d="M12 7v5l3 2" stroke-width="2" stroke-linecap="round"/></svg>
-					</div>
-					<div class="flex-1 min-w-0">
-						<p class="text-sm font-semibold" style="color: var(--text-primary)">{$t('cycle.title')}</p>
-						<p class="text-xs mt-0.5" style="color: var(--text-muted)">{$t('cycle.first_entry_prompt')}</p>
-					</div>
-				</a>
-			{:else}
-				{@const cs = cycleState}
+		{#if !todayLog}
+			<section class="card-brand p-6">
 				<div class="flex items-center gap-4">
-					<div class="text-center shrink-0">
-						<p class="text-3xl font-bold num-data" style="color: {PHASE_COLORS[cs.phase]}">{$t('cycle.day_n', { n: cs.day })}</p>
-						<p class="text-[10px] uppercase tracking-wider font-medium" style="color: var(--text-muted)">/ {cs.cycleLength}</p>
+					<div class="w-14 h-14 rounded-2xl bg-white/60 flex items-center justify-center shrink-0">
+						<Asterisk size={28} color="brand" />
 					</div>
-					<div class="flex-1 min-w-0">
-						<div class="flex items-center gap-2 flex-wrap">
-							<p class="text-sm font-semibold" style="color: var(--text-primary)">{$t('cycle.title')}</p>
-							<span class="text-xs px-2 py-0.5 rounded-full" style="background: {PHASE_COLORS[cs.phase]}20; color: {PHASE_COLORS[cs.phase]}">{$t('cycle.phase_' + cs.phase)}</span>
-							{#if cs.irregular}
-								<span class="text-[10px] px-2 py-0.5 rounded-full font-medium" style="background: var(--ochre-light); color: var(--ochre)">{$t('cycle.irregular')}</span>
-							{/if}
-						</div>
-						<!-- Segmented progress bar -->
-						<div class="mt-2 relative w-full rounded-full h-2 overflow-hidden flex" style="background: var(--surface-inset)">
-							<div style="width: {(cs.endMenstrual / cs.cycleLength) * 100}%; background: {PHASE_COLORS.menstrual}40"></div>
-							<div style="width: {((cs.endFollicular - cs.endMenstrual) / cs.cycleLength) * 100}%; background: {PHASE_COLORS.follicular}40"></div>
-							<div style="width: {((cs.endOvulation - cs.endFollicular) / cs.cycleLength) * 100}%; background: {PHASE_COLORS.ovulation}40"></div>
-							<div style="flex: 1; background: {PHASE_COLORS.luteal}40"></div>
-							<!-- Position marker -->
-							<div class="absolute top-0 bottom-0" style="left: {cs.progressPct}%; width: 2px; background: var(--text-primary); transform: translateX(-1px);"></div>
-						</div>
+					<div class="flex-1">
+						<p class="font-medium" style="color: var(--brand)">{$t('companion.today_not_filled')}</p>
+						<p class="text-sm mt-0.5" style="color: var(--text-secondary)">~3 min</p>
 					</div>
+					<a href="/log/today" class="btn-primary px-5 py-2 text-sm shrink-0">
+						{$t('companion.fill_today')}
+					</a>
 				</div>
-			{/if}
-		</section>
-	{/if}
-
-	<!-- ═══ REPORTS & EXPORT ═══ -->
-	<section class="card p-5">
-		<div class="flex items-center gap-3 mb-3">
-			<div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background: var(--ochre-light)">
-				<svg class="w-5 h-5" style="color: var(--ochre)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,2 14,8 20,8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-			</div>
-			<div class="flex-1 min-w-0">
-				<p class="text-sm font-semibold" style="color: var(--text-primary)">{$t('reports.title')}</p>
-				<p class="text-xs" style="color: var(--text-muted)">{$t('reports.analytics_desc')}</p>
-			</div>
-		</div>
-		<div class="flex flex-wrap gap-2">
-			<button
-				type="button"
-				on:click={exportForDoctor}
-				disabled={!bp || allDocs.length === 0}
-				class="btn-primary text-sm px-4 min-h-[44px] flex items-center gap-2"
-			>
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				{$t('companion.export_for_doctor')}
-			</button>
-			<a href="/reports" class="btn-secondary text-sm px-4 min-h-[44px] flex items-center gap-2">
-				{$t('companion.open_reports')}
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-			</a>
-		</div>
-	</section>
-
-	<!-- ═══ "WIE GEHT'S DIR?" — 12-month combined trend (CIPH-715) ═══ -->
-	{#if howAreYouChartData && howAreYouTrend}
-	<section class="card p-5" aria-label={$t('companion.how_aria')}>
-		<h2 class="text-sm font-semibold mb-1" style="color: var(--text-primary)">{$t('companion.how_title')}</h2>
-		<p class="text-base font-medium mb-3" style="color: var(--text-primary)">{howAreYouHeadline}</p>
-		<div class="h-44">
-			<ChartWrapper type="line" data={howAreYouChartData} options={howAreYouChartOptions} />
-		</div>
-		<p class="sr-only">
-			{$t('companion.how_sr_caption', {
-				last: howAreYouTrend.last,
-				prev: howAreYouTrend.prev,
-				total: howAreYouTrend.episodes.reduce((a, b) => a + b, 0),
-				symptomDays: howAreYouTrend.symptomDays.reduce((a, b) => a + b, 0),
-				noun: episodeNoun,
-			})}
-		</p>
-	</section>
-	{/if}
-
-	<!-- ═══ EPISODE TREND — month / year / max ═══ -->
-	{#if episodeChartData}
-	<section class="card p-5">
-		<div class="flex items-center justify-between mb-3 gap-2">
-			<h2 class="text-sm font-semibold" style="color: var(--text-primary)">
-				{companionChartScope === 'month'
-					? $t('companion.episodes_this_month')
-					: companionChartScope === 'year'
-						? $t('companion.episodes_year')
-						: $t('companion.episodes_max')}
-			</h2>
-			<div class="flex gap-1 text-xs" style="color: var(--text-muted)">
-				<button
-					class="px-2 py-1 rounded"
-					class:font-semibold={companionChartScope === 'month'}
-					style="{companionChartScope === 'month' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-					on:click={() => companionChartScope = 'month'}
-				>{$t('pdf.scope_month_label')}</button>
-				<button
-					class="px-2 py-1 rounded"
-					class:font-semibold={companionChartScope === 'year'}
-					class:opacity-40={!yearChartAvailable}
-					disabled={!yearChartAvailable}
-					style="{companionChartScope === 'year' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-					on:click={() => companionChartScope = 'year'}
-				>{$t('pdf.scope_year_label')}</button>
-				<button
-					class="px-2 py-1 rounded"
-					class:font-semibold={companionChartScope === 'max'}
-					class:opacity-40={!maxChartAvailable}
-					disabled={!maxChartAvailable}
-					style="{companionChartScope === 'max' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-					on:click={() => companionChartScope = 'max'}
-				>{$t('companion.scope_max_label')}</button>
-			</div>
-		</div>
-		<div class="h-48">
-			<ChartWrapper type="bar" data={episodeChartData} options={episodeChartOptions} />
-		</div>
-	</section>
-	{/if}
-
-	<!-- ═══ TOP SYMPTOMS — scope switcher ═══ -->
-	{#if symptomChartData}
-	<section class="card p-5">
-		<div class="flex items-center justify-between mb-3 gap-2">
-			<h2 class="text-sm font-semibold" style="color: var(--text-primary)">
-				{symptomChartScope === 'month'
-					? $t('companion.top_symptoms_month')
-					: symptomChartScope === 'year'
-						? $t('companion.top_symptoms_year')
-						: $t('companion.top_symptoms_max')}
-			</h2>
-			<div class="flex gap-1 text-xs" style="color: var(--text-muted)">
-				<button
-					class="px-2 py-1 rounded"
-					class:font-semibold={symptomChartScope === 'month'}
-					style="{symptomChartScope === 'month' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-					on:click={() => symptomChartScope = 'month'}
-				>{$t('pdf.scope_month_label')}</button>
-				<button
-					class="px-2 py-1 rounded"
-					class:font-semibold={symptomChartScope === 'year'}
-					class:opacity-40={!symptomYearAvailable}
-					disabled={!symptomYearAvailable}
-					style="{symptomChartScope === 'year' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-					on:click={() => symptomChartScope = 'year'}
-				>{$t('pdf.scope_year_label')}</button>
-				<button
-					class="px-2 py-1 rounded"
-					class:font-semibold={symptomChartScope === 'max'}
-					class:opacity-40={!symptomMaxAvailable}
-					disabled={!symptomMaxAvailable}
-					style="{symptomChartScope === 'max' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-					on:click={() => symptomChartScope = 'max'}
-				>{$t('companion.scope_max_label')}</button>
-			</div>
-		</div>
-		<div class="h-48">
-			<ChartWrapper type="bar" data={symptomChartData} options={symptomChartOptions} />
-		</div>
-	</section>
-	{/if}
-
-	<!-- ═══ TODAY'S ENTRIES ═══ -->
-	{#if todayEntries.length > 0}
-	<section>
-		<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('companion.todays_entries')}</h2>
-		<div class="space-y-2">
-			{#each todayEntries as entry, i}
-				{@const epEntries = Object.entries(entry.data.episodes || entry.data.seizures || {}).filter(([, n]) => Number(n) > 0)}
-				<div
-					class="card p-4 stagger-in"
-					style="animation-delay: {i * 50}ms; border-left: 3px solid {epEntries.length > 0 ? 'var(--danger)' : 'var(--olive)'}"
-				>
-					<div class="flex justify-between items-start gap-2">
-						<div class="flex-1 min-w-0">
-							<EntryPreview {entry} {bp} showDate={false} recentDocs={$documents} />
+			</section>
+		{:else}
+			<section class="card-olive p-5">
+				<div class="flex items-center justify-between mb-3">
+					<div class="flex items-center gap-2">
+						<div class="w-6 h-6 rounded-full flex items-center justify-center" style="background: var(--olive)">
+							<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 						</div>
-						<div class="flex items-center gap-0.5 shrink-0">
-							<button
-								on:click={() => handleEditEntry(entry)}
-								class="p-1.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-[var(--surface-muted)]"
-								style="color: var(--text-muted)"
-								aria-label={$t('common.edit')}
-							>
-								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-							</button>
-							{#if confirmDeleteId === entry.id}
-								<button on:click={() => handleDeleteEntry(entry.id)}
-									class="p-1.5 rounded-lg text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-medium"
-									style="background: var(--danger)"
-								>{$t('common.yes_delete')}</button>
-								<button on:click={() => { confirmDeleteId = null; }}
-									class="p-1.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-medium"
-									style="background: var(--surface-muted); color: var(--text-secondary)"
-								>{$t('common.cancel')}</button>
-							{:else}
-								<button
-									on:click={() => { confirmDeleteId = entry.id; }}
-									class="p-1.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center hover-danger"
-									style="color: var(--text-muted)"
-									aria-label={$t('common.delete')}
-								>
-									<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6" stroke-width="2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2"/></svg>
-								</button>
-							{/if}
-						</div>
+						<span class="text-sm font-medium" style="color: var(--olive)">{$t('companion.today_filled')}</span>
 					</div>
+					<a href="/log/today" class="text-xs font-medium hover:underline" style="color: var(--brand)">{$t('common.edit')}</a>
 				</div>
-			{/each}
-		</div>
-	</section>
-	{/if}
+				<div class="flex flex-wrap gap-2">
+					{#if todaySymptomCount > 0}
+						<span class="badge badge-ochre">{$t('companion.symptoms_count', { count: todaySymptomCount })}</span>
+					{/if}
+					{#if todayEpisodeCount > 0}
+						<span class="badge badge-danger">{$t('companion.episodes_count', { count: todayEpisodeCount })}</span>
+					{/if}
+				</div>
+			</section>
+		{/if}
 
-	<!-- ═══ ENCRYPTION BADGE ═══ -->
-	<div class="asterisk-divider py-4">
-		<Asterisk size={14} color="muted" />
+		<!-- 2/3 + 1/3 grid begins below the full-width header -->
+		<div class="lg:grid lg:grid-cols-[1fr_340px] lg:gap-8 lg:items-start space-y-6 lg:space-y-0">
+		<div class="space-y-6 min-w-0">
+			<CompanionMain
+				{cohort}
+				{activePhase}
+				{hasCycleVital}
+				{cycleState}
+				{PHASE_COLORS}
+				{episodeChartData}
+				{episodeChartOptions}
+				{symptomChartData}
+				{symptomChartOptions}
+				{companionChartScope}
+				{yearChartAvailable}
+				{maxChartAvailable}
+				{symptomChartScope}
+				{symptomYearAvailable}
+				{symptomMaxAvailable}
+				{howAreYouChartData}
+				{howAreYouChartOptions}
+				{howAreYouTrend}
+				{howAreYouHeadlineParts}
+				{episodeNoun}
+				onSetEpisodeScope={(s) => (companionChartScope = s)}
+				onSetSymptomScope={(s) => (symptomChartScope = s)}
+			/>
+		</div>
+		<aside class="min-w-0">
+			<CompanionRail
+				todayLogged={!!todayLog}
+				{complianceLogged}
+				{complianceTotal}
+				{complianceRatio}
+				{complianceTone}
+				{complianceMessage}
+				{complianceAccent}
+				canExport={!!bp && allDocs.length > 0}
+				onExportForDoctor={exportForDoctor}
+				{todayEntries}
+				{bp}
+				allDocsStore={$documents}
+				{confirmDeleteId}
+				onEditEntry={handleEditEntry}
+				onDeleteEntry={handleDeleteEntry}
+				onRequestDelete={(id) => (confirmDeleteId = id)}
+				onCancelDelete={() => (confirmDeleteId = null)}
+			/>
+		</aside>
+		</div>
+
+		<!-- Full-width encryption badge below the grid (1/1) -->
+		<div class="pt-2">
+			<div class="asterisk-divider py-3">
+				<Asterisk size={14} color="muted" />
+			</div>
+			<p class="text-center text-xs" style="color: var(--text-muted)">{$t('encryption.badge')}</p>
+		</div>
 	</div>
-	<p class="text-center text-xs" style="color: var(--text-muted)">{$t('encryption.badge')}</p>
-</div>
 {/if}
