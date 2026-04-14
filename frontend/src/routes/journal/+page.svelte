@@ -13,6 +13,13 @@
 	let searchOpen = false;
 	let searchInputEl: HTMLInputElement | null = null;
 
+	// CIPH-711 / CIPH-725 — soft clarification banner shown until the user
+	// has authored at least one diary entry OR has visited the Tagebuch tab
+	// N≥3 times. No dismiss button; the hint fades on its own.
+	let diaryViews = 0;
+	$: diaryDocCount = $documents.filter((d) => d.data?.type === 'diary').length;
+	$: showDiaryHint = filter === 'diary' && diaryDocCount === 0 && diaryViews < 3;
+
 	async function openSearch() {
 		searchOpen = true;
 		await tick();
@@ -31,14 +38,28 @@
 	let confirmDeleteId: number | null = null;
 	let editingId: number | null = null;
 	let editNotes = '';
-	let editEpisodeType = '';
-	let editTime = '';
+	let editPrivate = false;
 	let editSaving = false;
 
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
 		documents.load();
+		try {
+			diaryViews = parseInt(localStorage.getItem('ciphra_tagebuch_views') || '0', 10) || 0;
+		} catch {}
 	});
+
+	// CIPH-725 — increment view count each time the user selects the Tagebuch
+	// tab (not on every reactive recompute). Guards against runaway writes by
+	// only firing on the transition into `filter === 'diary'`.
+	let lastCountedFilter = '';
+	$: if (filter === 'diary' && lastCountedFilter !== 'diary') {
+		lastCountedFilter = 'diary';
+		diaryViews += 1;
+		try { localStorage.setItem('ciphra_tagebuch_views', String(diaryViews)); } catch {}
+	} else if (filter !== 'diary') {
+		lastCountedFilter = filter;
+	}
 
 	$: bp = $blueprint;
 
@@ -59,15 +80,13 @@
 		});
 
 	function typeBorderColor(type: string): string {
-		if (type === 'daily_log') return 'var(--olive)';
-		if (type === 'episode') return 'var(--danger)';
+		if (type === 'entry') return 'var(--olive)';
 		if (type === 'event') return 'var(--ochre)';
 		return 'var(--border)';
 	}
 
 	function typeBadgeClass(type: string): string {
-		if (type === 'daily_log') return 'badge badge-olive';
-		if (type === 'episode') return 'badge badge-danger';
+		if (type === 'entry') return 'badge badge-olive';
 		if (type === 'event') return 'badge badge-ochre';
 		return 'badge';
 	}
@@ -82,8 +101,7 @@
 	}
 
 	function typeLabel(type: string): string {
-		if (type === 'daily_log') return $t('protocol.title');
-		if (type === 'episode') return $t('quickadd.episode');
+		if (type === 'entry') return $t('protocol.title');
 		if (type === 'event') return $t('stream.events');
 		return type;
 	}
@@ -94,34 +112,30 @@
 	}
 
 	function startEdit(doc: CiphraDocument) {
-		if (doc.data.type === 'daily_log') {
+		if (doc.data.type === 'entry') {
 			const date = String(doc.data.date || '');
-			goto(`/protocol?date=${date}`);
+			goto(`/log/${date}`);
 			return;
 		}
 		editingId = doc.id;
 		editNotes = doc.data.notes || '';
-		editEpisodeType = doc.data.episodeType || '';
-		editTime = doc.data.time || '';
+		editPrivate = doc.data.private === true;
 	}
 
 	function cancelEdit() {
 		editingId = null;
 		editNotes = '';
-		editEpisodeType = '';
-		editTime = '';
+		editPrivate = false;
 	}
 
 	async function saveEdit(doc: CiphraDocument) {
 		editSaving = true;
 		const updatedData = { ...doc.data };
-		if (doc.data.type === 'episode') {
-			updatedData.episodeType = editEpisodeType;
-			updatedData.time = editTime;
-			updatedData.notes = editNotes;
-		} else {
-			updatedData.notes = editNotes;
-		}
+		updatedData.notes = editNotes;
+		// CIPH-713 — preserve absence of `private` rather than writing `false`,
+		// so re-encryption diffs stay minimal.
+		if (editPrivate) updatedData.private = true;
+		else delete updatedData.private;
 		await documents.updateDoc(doc.id, updatedData);
 		editSaving = false;
 		editingId = null;
@@ -188,17 +202,36 @@
 		{/if}
 	</div>
 
+	<!-- CIPH-711 — Tagebuch first-view soft clarification -->
+	{#if showDiaryHint}
+		<div
+			class="mb-4 p-3 rounded-lg flex items-start gap-2 text-sm"
+			style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border)"
+			role="status"
+		>
+			<svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+				<rect x="4" y="11" width="16" height="10" rx="2" />
+				<path d="M8 11V7a4 4 0 1 1 8 0v4" />
+			</svg>
+			<span class="flex-1">{$t('journal.diary_hint')}</span>
+		</div>
+	{/if}
+
 	<!-- Entries -->
 	{#if filteredDocs.length === 0}
 		<div class="text-center py-12">
 			<div class="mb-3 flex justify-center">
 				<Asterisk size={48} mode="empty" color="muted" />
 			</div>
-			<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('stream.no_entries')}</p>
-			<a href="/log/today" class="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm">
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2"/></svg>
-				{$t('companion.fill_today')}
-			</a>
+			{#if filter === 'diary'}
+				<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('journal.diary_empty')}</p>
+			{:else}
+				<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('stream.no_entries')}</p>
+				<a href="/log/today" class="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2"/></svg>
+					{$t('companion.fill_today')}
+				</a>
+			{/if}
 		</div>
 	{:else}
 		<div class="space-y-2">
@@ -214,40 +247,25 @@
 								<span class={typeBadgeClass(doc.data.type || '')}>{typeLabel(doc.data.type || '')}</span>
 								<span class="text-xs" style="color: var(--text-muted)">{formatDate(doc)}</span>
 							</div>
-							{#if doc.data.type === 'episode' && bp}
-								<div class="space-y-2">
-									<label class="text-xs" style="color: var(--text-secondary)">{$t('quickadd.episode')}</label>
-									<div class="flex flex-wrap gap-2">
-										{#each bp.episodeTypes as ep}
-											<button
-												type="button"
-												on:click={() => { editEpisodeType = ep.id; }}
-												class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors min-h-[36px]"
-												style="{editEpisodeType === ep.id
-													? 'background: rgba(220,38,38,0.1); color: var(--danger); box-shadow: inset 0 0 0 1px rgba(220,38,38,0.3);'
-													: 'background: var(--surface-muted); color: var(--text-secondary);'}"
-											>
-												<span class="inline-block w-2 h-2 rounded-full mr-1" style="background: {ep.color}"></span>
-												{$t(ep.label)}
-											</button>
-										{/each}
-									</div>
-									<label class="text-xs" style="color: var(--text-secondary)">{$t('common.today')}</label>
-									<input
-										type="time"
-										bind:value={editTime}
-										class="input"
-									/>
-								</div>
-							{/if}
 							<div>
-								<label class="text-xs" style="color: var(--text-secondary)">{$t('common.notes')}</label>
+								<label class="text-xs" style="color: var(--text-secondary)" for="journal-edit-notes-{doc.id}">{$t('common.notes')}</label>
 								<textarea
+									id="journal-edit-notes-{doc.id}"
 									bind:value={editNotes}
 									rows="2"
 									class="input resize-y mt-1"
 								></textarea>
 							</div>
+							<!-- CIPH-713 — private toggle -->
+							<label class="flex items-center gap-2 text-xs" style="color: var(--text-secondary)">
+								<input type="checkbox" bind:checked={editPrivate} class="w-4 h-4" />
+								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<rect x="4" y="11" width="16" height="10" rx="2" />
+									<path d="M8 11V7a4 4 0 1 1 8 0v4" />
+								</svg>
+								{$t('private.label')}
+								<span style="color: var(--text-muted)">— {$t('private.tooltip')}</span>
+							</label>
 							<div class="flex gap-2 justify-end">
 								<button
 									on:click={cancelEdit}

@@ -46,10 +46,9 @@
 	function dayHasEpisode(day: number): boolean {
 		// Counter-style episodes only — multiDay episodes are shown as bars below
 		const docs = getDocsForDay(day);
-		if (docs.some(d => d.data.type === 'episode')) return true;
 		const multiDayIds = new Set((bp?.episodeTypes || []).filter(e => e.multiDay).map(e => e.id));
 		return docs.some(d =>
-			d.data.type === 'daily_log' &&
+			d.data.type === 'entry' &&
 			Object.entries((d.data.episodes || d.data.seizures || {}) as Record<string, number>)
 				.some(([id, v]) => v > 0 && !multiDayIds.has(id))
 		);
@@ -63,7 +62,7 @@
 		for (const ep of bp.episodeTypes) {
 			if (!ep.multiDay) continue;
 			const active = docs.some(d =>
-				d.data.type === 'daily_log' && (((d.data.episodes || d.data.seizures || {}) as Record<string, number>)[ep.id] || 0) > 0
+				d.data.type === 'entry' && (((d.data.episodes || d.data.seizures || {}) as Record<string, number>)[ep.id] || 0) > 0
 			);
 			if (active) result.push({ id: ep.id, color: ep.color, label: ep.label });
 		}
@@ -71,15 +70,15 @@
 	}
 
 	function dayHasLog(day: number): boolean {
-		return getDocsForDay(day).some(d => d.data.type === 'daily_log');
+		return getDocsForDay(day).some(d => d.data.type === 'entry');
 	}
 
-	/** Count active symptoms across all daily_log docs on this day. */
+	/** Count active symptoms across all entry docs on this day. */
 	function countSymptomsForDay(day: number): number {
 		const docs = getDocsForDay(day);
 		let sum = 0;
 		for (const d of docs) {
-			if (d.data.type !== 'daily_log') continue;
+			if (d.data.type !== 'entry') continue;
 			const syms = (d.data.symptoms || {}) as Record<string, boolean>;
 			for (const k of Object.keys(syms)) if (syms[k]) sum++;
 		}
@@ -92,15 +91,9 @@
 		const multiDayIds = new Set((bp?.episodeTypes || []).filter(e => e.multiDay).map(e => e.id));
 		let sum = 0;
 		for (const d of docs) {
-			if (d.data.type === 'episode') {
-				const eps = (d.data.episodes || {}) as Record<string, number>;
-				let added = 0;
-				for (const [id, v] of Object.entries(eps)) if (!multiDayIds.has(id)) { sum += Number(v) || 0; added++; }
-				if (added === 0) sum += 1;
-			} else if (d.data.type === 'daily_log') {
-				const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
-				for (const [id, v] of Object.entries(eps)) if (!multiDayIds.has(id)) sum += Number(v) || 0;
-			}
+			if (d.data.type !== 'entry') continue;
+			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+			for (const [id, v] of Object.entries(eps)) if (!multiDayIds.has(id)) sum += Number(v) || 0;
 		}
 		return sum;
 	}
@@ -126,7 +119,7 @@
 
 	function handleEditEntry(doc: CiphraDocument) {
 		const date = String(doc.data.date || selectedDate || '');
-		if (doc.data.type === 'daily_log') {
+		if (doc.data.type === 'entry') {
 			goto(`/log/${date}`);
 		} else {
 			goto(`/journal`);
@@ -144,7 +137,7 @@
 	});
 
 	$: totalEpisodes = monthDocs.reduce((sum: number, d: CiphraDocument) => {
-		if (d.data.type === 'daily_log' && (d.data.episodes || d.data.seizures)) {
+		if (d.data.type === 'entry' && (d.data.episodes || d.data.seizures)) {
 			return sum + (Object.values(d.data.episodes || d.data.seizures || {}) as number[]).reduce((a, b) => a + b, 0);
 		}
 		return sum;
@@ -361,7 +354,7 @@
 					{#each selectedDayDocs as doc}
 						<div
 							class="pl-3 py-2 rounded-r-lg"
-							style="border-left: 4px solid {doc.data.type === 'daily_log' ? 'var(--olive)' : doc.data.type === 'episode' ? 'var(--danger)' : 'var(--ochre)'}; background: var(--surface-muted)"
+							style="border-left: 4px solid {doc.data.type === 'entry' ? 'var(--olive)' : 'var(--ochre)'}; background: var(--surface-muted)"
 						>
 							<div class="flex items-start justify-between gap-2">
 								<div class="flex-1 min-w-0">

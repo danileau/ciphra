@@ -134,7 +134,7 @@ describe('encryptDocument / decryptDocument', () => {
 
     it('roundtrips a JSON object', async () => {
         const doc = {
-            type: 'daily_log',
+            type: 'entry',
             date: '2026-04-04',
             symptoms: ['tired', 'headache'],
             episodes: [{ type: 'focal', count: 1 }],

@@ -10,7 +10,7 @@
 	 * Full blueprint customisation remains reachable via /settings (old 7-step
 	 * wizard — not replaced here).
 	 */
-	import { t } from '$lib/i18n';
+	import { t, translateUnit } from '$lib/i18n';
 	import { isAuthenticated, auth } from '$lib/stores/auth';
 	import { blueprint, presets } from '$lib/blueprint';
 	import type { Blueprint, MedicationSlot } from '$lib/blueprint';
@@ -187,7 +187,7 @@
 	$: if (step) { tick().then(() => headingEl?.focus()); }
 </script>
 
-<div class="min-h-screen pb-12" style="background: var(--surface)">
+<main class="min-h-screen pb-12" style="background: var(--surface)">
 	<!-- Header with step progress + skip -->
 	<div style="background: var(--surface-card); border-bottom: 1px solid var(--border)">
 		<div class="max-w-2xl mx-auto px-4 py-5 flex items-center justify-between gap-3">
@@ -264,7 +264,7 @@
 							<div class="flex-1 min-w-0">
 								<p class="text-sm font-medium" style="color: var(--text-primary)">{$t(group.label)}</p>
 								<p class="text-xs mt-0.5" style="color: var(--text-muted)">
-									{group.items.length} {$t('protocol.symptoms').toLowerCase()}
+									{group.items.length} {$t('protocol.symptoms')}
 								</p>
 							</div>
 							<input
@@ -313,7 +313,7 @@
 							<label class="flex items-center justify-between min-h-[32px] cursor-pointer">
 								<div class="flex-1 min-w-0">
 									<span class="text-sm font-medium" style="color: var(--text-primary)">{$t(vital.label)}</span>
-									{#if vital.unit}<span class="text-xs ml-1" style="color: var(--text-muted)">({vital.unit})</span>{/if}
+									{#if vital.unit}<span class="text-xs ml-1" style="color: var(--text-muted)">({translateUnit($t, vital.unit)})</span>{/if}
 								</div>
 								<input
 									type="checkbox"
@@ -426,4 +426,4 @@
 			</div>
 		{/if}
 	</div>
-</div>
+</main>

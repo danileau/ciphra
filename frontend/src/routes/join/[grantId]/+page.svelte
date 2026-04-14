@@ -26,8 +26,8 @@
 
 	// SvelteKit passes route params as a component prop. Declare it to silence
 	// "unknown prop 'params'" warnings; we still read via $page.params.
-	export let params: Record<string, string> | undefined = undefined;
-	export let data: unknown = undefined;
+	export const params: Record<string, string> | undefined = undefined;
+	export const data: unknown = undefined;
 	void params; void data;
 
 	const PENDING_KEY = 'ciphra_pending_family_claim';
@@ -153,7 +153,7 @@
 	});
 </script>
 
-<div class="min-h-screen flex items-center justify-center p-4" style="background: var(--surface)">
+<main class="min-h-screen flex items-center justify-center p-4" style="background: var(--surface)">
 	<div class="w-full max-w-md card p-6">
 		<div class="flex flex-col items-center mb-4">
 			<Asterisk size={28} />
@@ -193,4 +193,4 @@
 			<a href="/settings" class="btn-secondary w-full min-h-[44px] block text-center">{$t('common.back')}</a>
 		{/if}
 	</div>
-</div>
+</main>

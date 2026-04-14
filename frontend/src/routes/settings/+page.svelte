@@ -286,8 +286,9 @@
 		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.appearance')}</h3>
 		<div class="space-y-4">
 			<div>
-				<label class="text-sm mb-1.5 block" style="color: var(--text-secondary)">{$t('common.language')}</label>
+				<label class="text-sm mb-1.5 block" style="color: var(--text-secondary)" for="settings-language-select">{$t('common.language')}</label>
 				<select
+					id="settings-language-select"
 					class="input cursor-pointer"
 					value={$locale}
 					on:change={(e) => locale.set(e.currentTarget.value)}
@@ -577,7 +578,16 @@
 
 <!-- Confirm switch modal -->
 {#if showConfirmSwitch && selectedPreset}
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.4); backdrop-filter: blur(4px)" on:click|self={() => { showConfirmSwitch = false; }}>
+<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+<div
+	class="fixed inset-0 z-50 flex items-center justify-center p-4"
+	style="background: rgba(0,0,0,0.4); backdrop-filter: blur(4px)"
+	on:click|self={() => { showConfirmSwitch = false; }}
+	on:keydown={(e) => { if (e.key === 'Escape') showConfirmSwitch = false; }}
+	role="dialog"
+	aria-modal="true"
+	tabindex="-1"
+>
 	<div class="rounded-2xl p-6 max-w-sm w-full" style="background: var(--surface-card); border: 1px solid var(--border); box-shadow: 0 25px 50px -12px rgba(44,37,32,0.15)">
 		<h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">{$t('settings.switch_confirm_title')}</h3>
 		<p class="text-sm mb-4" style="color: var(--text-secondary)">
@@ -603,7 +613,16 @@
 
 <!-- Delete account modal -->
 {#if showDeleteModal}
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.4); backdrop-filter: blur(4px)" on:click|self={() => { showDeleteModal = false; }}>
+<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+<div
+	class="fixed inset-0 z-50 flex items-center justify-center p-4"
+	style="background: rgba(0,0,0,0.4); backdrop-filter: blur(4px)"
+	on:click|self={() => { showDeleteModal = false; }}
+	on:keydown={(e) => { if (e.key === 'Escape') showDeleteModal = false; }}
+	role="dialog"
+	aria-modal="true"
+	tabindex="-1"
+>
 	<div class="rounded-2xl p-6 max-w-sm w-full" style="background: var(--surface-card); border: 1px solid var(--border); box-shadow: 0 25px 50px -12px rgba(44,37,32,0.15)">
 		<h3 class="text-lg font-semibold mb-2" style="color: var(--danger)">{$t('settings.delete_account')}</h3>
 		<p class="text-sm mb-4" style="color: var(--text-secondary)">

@@ -49,7 +49,7 @@
 		<p class="text-lg mt-2 mb-10" style="color: var(--text-muted);">{$t('condition.index_subtitle')}</p>
 
 		{#each conditionGroups as group}
-			<section class="mb-10">
+			<section id="group-{group.id}" class="mb-10 scroll-mt-20">
 				<header class="mb-4">
 					<h2 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">{$t(group.titleKey)}</h2>
 					<p class="text-sm mt-1" style="color: var(--text-secondary);">{$t(group.descriptionKey)}</p>

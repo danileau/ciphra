@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 
-	export let type: 'daily_log' | 'episode' | 'event' = 'daily_log';
+	export let type: 'entry' | 'event' = 'entry';
 	export let title: string = '';
 	export let subtitle: string | undefined = undefined;
 	export let notes: string | undefined = undefined;
@@ -11,8 +11,7 @@
 	let confirmingDelete = false;
 
 	const borderColors: Record<string, string> = {
-		daily_log: 'var(--olive)',
-		episode: 'var(--danger)',
+		entry: 'var(--olive)',
 		event: 'var(--ochre)'
 	};
 
@@ -120,6 +119,7 @@
 		margin: 4px 0 0;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 		line-height: 1.5;

@@ -451,6 +451,30 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 		forDoctorKey: 'condition.ibd.for_doctor',
 		relatedConditions: ['ibs', 'chronic_pain'],
 	},
+
+	pcos: {
+		id: 'pcos',
+		icon: 'flower2',
+		color: '#D946EF',
+		titleKey: 'condition.pcos.title',
+		subtitleKey: 'condition.pcos.subtitle',
+		introKey: 'condition.pcos.intro',
+		symptomGroups: [
+			{ labelKey: 'symptom_group.menstrual', rationaleKey: 'condition.pcos.rationale_menstrual', items: ['symptom.irregular_periods', 'symptom.heavy_bleeding', 'symptom.absent_periods', 'symptom.spotting', 'symptom.painful_periods'] },
+			{ labelKey: 'symptom_group.androgen', rationaleKey: 'condition.pcos.rationale_androgen', items: ['symptom.hirsutism', 'symptom.acne', 'symptom.hair_loss', 'symptom.oily_skin'] },
+			{ labelKey: 'symptom_group.metabolic', rationaleKey: 'condition.pcos.rationale_metabolic', items: ['symptom.weight_gain', 'symptom.hungry', 'symptom.sugar_cravings', 'symptom.tired', 'symptom.brain_fog'] },
+			{ labelKey: 'symptom_group.mood', rationaleKey: 'condition.pcos.rationale_mood', items: ['symptom.mood_swings', 'symptom.anxious', 'symptom.low_mood', 'symptom.irritable'] },
+		],
+		episodesKey: 'condition.pcos.episodes_rationale',
+		triggersKey: 'condition.pcos.triggers_rationale',
+		vitalsKey: 'condition.pcos.vitals_rationale',
+		scales: [
+			{ nameKey: 'condition.scale.mfg', descriptionKey: 'condition.scale.mfg_desc', url: 'https://pubmed.ncbi.nlm.nih.gov/18394615/' },
+			{ nameKey: 'condition.scale.fai', descriptionKey: 'condition.scale.fai_desc', url: 'https://pubmed.ncbi.nlm.nih.gov/22065709/' },
+		],
+		forDoctorKey: 'condition.pcos.for_doctor',
+		relatedConditions: ['endometriosis', 'anxiety_depression', 'diabetes'],
+	},
 };
 
 export const conditionIds = Object.keys(conditionInfoMap);

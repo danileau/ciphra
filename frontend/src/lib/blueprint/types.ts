@@ -86,6 +86,12 @@ export interface Blueprint {
 	/** Display theme color */
 	accentColor: string;
 
+	/** CIPH-723 — i18n key for the condition-specific episode noun used
+	 *  in dashboard headlines / chart legends / SR captions. E.g.
+	 *  `episode_noun.seizure` for epilepsy, `episode_noun.tremor` for
+	 *  parkinson. Optional — defaults to "Episoden" / "Episodes". */
+	episodeNoun?: string;
+
 	/** Symptom/sign groups (rendered as toggle chips) */
 	symptomGroups: BlueprintGroup[];
 
@@ -127,4 +133,36 @@ export interface Blueprint {
 		hiddenTriggers?: string[];   // BlueprintItem.id from triggers[]
 		hiddenVitals?: string[];     // VitalField.id
 	};
+}
+
+/* ────────────────────────────────────────────────────────────────
+ * Document-data shapes (CIPH-710 / CIPH-713).
+ * The actual `CiphraDocument.data` is typed `any` for backwards-compat,
+ * but these interfaces document the shapes consumers should expect and
+ * write. Two flags govern export eligibility (see `utils/exportable.ts`):
+ *   - `type === 'diary'` is always excluded.
+ *   - `private === true` on Entry/Event is excluded.
+ * ──────────────────────────────────────────────────────────────── */
+
+export interface DiaryDoc {
+	type: 'diary';
+	date: string;          // YYYY-MM-DD
+	time?: string;         // HH:MM, optional
+	text: string;
+	/** Always implicitly true; included for explicitness. */
+	private?: boolean;
+}
+
+export interface EntryDoc {
+	type: 'entry';
+	date: string;
+	private?: boolean;
+	[k: string]: unknown;
+}
+
+export interface EventDoc {
+	type: 'event';
+	date: string;
+	private?: boolean;
+	[k: string]: unknown;
 }

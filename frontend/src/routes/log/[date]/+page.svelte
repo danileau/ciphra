@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t, locale } from '$lib/i18n';
+	import { t, locale, translateUnit } from '$lib/i18n';
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { blueprint } from '$lib/blueprint';
@@ -71,6 +71,9 @@
 	let vitals: Record<string, string> = {};
 	let medications: Record<string, boolean> = {};
 	let notes = '';
+	// CIPH-713 — per-entry private flag. When true, this entry is hard-
+	// excluded from every export (PDF/CSV/reports/share) via isExportable().
+	let isPrivate = false;
 
 	// Multi-entry vitals: stores parsed arrays for multiEntry fields
 	let multiEntryVitals: Record<string, Array<{time: string, value: string}>> = {};
@@ -128,7 +131,7 @@
 		const prev = new Date(currentDate + 'T12:00:00');
 		prev.setDate(prev.getDate() - 1);
 		const prevStr = prev.toISOString().slice(0, 10);
-		const prevDoc = $documents.find(d => d.data.type === 'daily_log' && d.data.date === prevStr);
+		const prevDoc = $documents.find(d => d.data.type === 'entry' && d.data.date === prevStr);
 		if (prevDoc) {
 			if (prevDoc.data.symptoms) symptoms = { ...symptoms, ...prevDoc.data.symptoms };
 			if (prevDoc.data.episodes) episodes = { ...episodes, ...prevDoc.data.episodes };
@@ -141,7 +144,7 @@
 	$: hasPreviousDay = $documents.some(d => {
 		const prev = new Date(currentDate + 'T12:00:00');
 		prev.setDate(prev.getDate() - 1);
-		return d.data.type === 'daily_log' && d.data.date === prev.toISOString().slice(0, 10);
+		return d.data.type === 'entry' && d.data.date === prev.toISOString().slice(0, 10);
 	});
 
 	$: bp = $blueprint;
@@ -202,18 +205,7 @@
 		}
 	}
 
-	$: existingDoc = $documents.find(d => d.data.type === 'daily_log' && d.data.date === currentDate) || null;
-
-	// Pre-populate episodes from quick-captured episode docs for this date
-	function mergeQuickCapturedEpisodes() {
-		const quickEpisodes = $documents.filter(d => d.data.type === 'episode' && d.data.date === currentDate);
-		for (const qe of quickEpisodes) {
-			const epType = qe.data.episodeType as string;
-			if (epType && episodes[epType] !== undefined) {
-				episodes[epType] = (episodes[epType] || 0) + (Number(qe.data.episodes?.[epType]) || 1);
-			}
-		}
-	}
+	$: existingDoc = $documents.find(d => d.data.type === 'entry' && d.data.date === currentDate) || null;
 
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
@@ -226,7 +218,6 @@
 		}
 		documents.load().then(() => {
 			loadExistingLog();
-			mergeQuickCapturedEpisodes();
 			tick().then(() => setupSectionObserver());
 		});
 	});
@@ -241,7 +232,7 @@
 	}
 
 	function loadExistingLog() {
-		const existing = $documents.find(d => d.data.type === 'daily_log' && d.data.date === currentDate);
+		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === currentDate);
 		if (existing) {
 			const d = existing.data;
 			if (d.symptoms) symptoms = { ...symptoms, ...d.symptoms };
@@ -254,6 +245,7 @@
 			if (d.episodeDurations) episodeDurations = { ...episodeDurations, ...d.episodeDurations };
 			if (d.episodeNotes) episodeNotes = { ...episodeNotes, ...d.episodeNotes };
 			if (d.notes) notes = d.notes;
+			isPrivate = d.private === true;
 			parseMultiEntryVitals();
 		}
 	}
@@ -261,7 +253,7 @@
 	async function saveLog() {
 		saving = true;
 		const data: any = {
-			type: 'daily_log',
+			type: 'entry',
 			date: currentDate,
 			symptoms,
 			episodes,
@@ -272,13 +264,14 @@
 			vitals,
 			medications,
 			notes,
+			private: isPrivate || undefined,
 		};
 
-		const existing = $documents.find(d => d.data.type === 'daily_log' && d.data.date === currentDate);
+		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === currentDate);
 		// Detect "this is the very first daily_log" BEFORE the save completes,
 		// so we can fire a one-time onboarding event (CIPH-103) pointing the
 		// user at the quick-add FAB / event-line feature.
-		const priorDailyLogCount = $documents.filter(d => d.data.type === 'daily_log').length;
+		const priorDailyLogCount = $documents.filter(d => d.data.type === 'entry').length;
 		const wasFirstDailyLog = !existing && priorDailyLogCount === 0;
 		if (existing) {
 			await documents.updateDoc(existing.id, data);
@@ -312,13 +305,13 @@
 		vitals = {};
 		medications = {};
 		notes = '';
+		isPrivate = false;
 		multiEntryVitals = {};
 		multiEntryNewTime = {};
 		multiEntryNewValue = {};
 		hasChanges = false;
 		if (bp) initFromBlueprint(bp);
 		loadExistingLog();
-		mergeQuickCapturedEpisodes();
 	}
 
 	function goToToday() {
@@ -334,13 +327,13 @@
 		vitals = {};
 		medications = {};
 		notes = '';
+		isPrivate = false;
 		multiEntryVitals = {};
 		multiEntryNewTime = {};
 		multiEntryNewValue = {};
 		hasChanges = false;
 		if (bp) initFromBlueprint(bp);
 		loadExistingLog();
-		mergeQuickCapturedEpisodes();
 	}
 
 	function formatDisplayDate(dateStr: string): string {
@@ -381,7 +374,7 @@
 	$: typicalFields = (() => {
 		if (!bp) return [] as { kind: 'vital' | 'trigger'; id: string; label: string }[];
 		const logs = $documents
-			.filter((d) => d.data.type === 'daily_log' && d.data.date !== currentDate)
+			.filter((d) => d.data.type === 'entry' && d.data.date !== currentDate)
 			.sort((a, b) => String(b.data.date).localeCompare(String(a.data.date)))
 			.slice(0, 30);
 		if (logs.length < 3) return [];
@@ -465,6 +458,30 @@
 				{#if isToday}
 					<span class="log-today-badge">{$t('common.today')}</span>
 				{/if}
+				<!-- CIPH-713 — per-entry private toggle. Locked entries are
+					 hard-excluded from every export (PDF/CSV/reports/share). -->
+				<button
+					type="button"
+					on:click={() => { isPrivate = !isPrivate; markChanged(); }}
+					class="ml-2 inline-flex items-center justify-center gap-1 px-2 h-8 rounded-full transition-colors text-xs"
+					style="background: {isPrivate ? 'var(--surface-muted)' : 'transparent'}; color: {isPrivate ? 'var(--text-primary)' : 'var(--text-muted)'}"
+					aria-pressed={isPrivate}
+					aria-label={$t('private.label')}
+					title={isPrivate ? $t('private.tooltip') : $t('private.toggle_make_private')}
+				>
+					{#if isPrivate}
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<rect x="4" y="11" width="16" height="10" rx="2" />
+							<path d="M8 11V7a4 4 0 1 1 8 0v4" />
+						</svg>
+					{:else}
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<rect x="4" y="11" width="16" height="10" rx="2" />
+							<path d="M8 11V7a4 4 0 0 1 7 1" />
+						</svg>
+					{/if}
+					<span>{$t('private.label')}</span>
+				</button>
 			</div>
 
 			<button on:click={() => changeDate(1)} class="log-nav-btn" aria-label={$t("common.next_day")}>
@@ -700,7 +717,7 @@
 						<div class="log-vital">
 							<label class="log-vital-label" for="vital-{vital.id}">
 								{$t(vital.label)}
-								{#if vital.unit}<span class="log-vital-unit">({vital.unit})</span>{/if}
+								{#if vital.unit}<span class="log-vital-unit">({translateUnit($t, vital.unit)})</span>{/if}
 							</label>
 							{#if vital.min !== undefined && vital.max !== undefined}
 								<input
@@ -738,14 +755,14 @@
 								<div class="log-multi-entry log-multi-entry--paired">
 									<p class="log-vital-label" style="margin-bottom: 8px">
 										{$t(vital.label)}
-										{#if vital.unit}<span class="log-vital-unit">({vital.unit})</span>{/if}
+										{#if vital.unit}<span class="log-vital-unit">({translateUnit($t, vital.unit)})</span>{/if}
 									</p>
 									{#if multiEntryVitals[vital.id]?.length > 0}
 										<div class="log-multi-list">
 											{#each multiEntryVitals[vital.id] as entry, i}
 												<div class="log-multi-item">
 													<span class="log-multi-time">{entry.time || '--:--'}</span>
-													<span class="log-multi-value">{entry.value} {vital.unit}</span>
+													<span class="log-multi-value">{entry.value} {translateUnit($t, vital.unit)}</span>
 													<button type="button" class="log-multi-remove"
 														on:click={() => removeMultiEntry(vital.id, i)}
 														aria-label={$t('vital.remove_entry')}>
@@ -778,7 +795,7 @@
 					<div class="log-multi-entry">
 						<p class="log-vital-label" style="margin-bottom: 8px">
 							{$t(vital.label)}
-							{#if vital.unit}<span class="log-vital-unit">({vital.unit})</span>{/if}
+							{#if vital.unit}<span class="log-vital-unit">({translateUnit($t, vital.unit)})</span>{/if}
 						</p>
 
 						<!-- Existing entries -->
@@ -787,7 +804,7 @@
 								{#each multiEntryVitals[vital.id] as entry, i}
 									<div class="log-multi-item">
 										<span class="log-multi-time">{entry.time || '--:--'}</span>
-										<span class="log-multi-value">{entry.value} {vital.unit}</span>
+										<span class="log-multi-value">{entry.value} {translateUnit($t, vital.unit)}</span>
 										<button
 											type="button"
 											class="log-multi-remove"

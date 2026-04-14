@@ -6,7 +6,7 @@
 	<title>{$t('terms.title')} — ciphra</title>
 </svelte:head>
 
-<div class="max-w-3xl mx-auto px-4 py-8 space-y-6">
+<main class="max-w-3xl mx-auto px-4 py-8 space-y-6">
 	<header class="space-y-1">
 		<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('terms.title')}</h1>
 		<p class="text-sm" style="color: var(--text-muted)">{$t('privacy.last_updated')}: 2026-04-12</p>
@@ -71,4 +71,4 @@
 		<h2 class="text-lg font-semibold" style="color: var(--text-primary)">{$t('terms.contact_heading')}</h2>
 		<p class="text-sm leading-relaxed" style="color: var(--text-secondary)">{$t('terms.contact_body')}</p>
 	</section>
-</div>
+</main>

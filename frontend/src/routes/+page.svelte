@@ -6,7 +6,9 @@
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import { presets } from '$lib/blueprint/presets';
 	import EncryptionDemo from '$lib/components/EncryptionDemo.svelte';
-	import { iconPaths } from '$lib/conditionIcons';
+	import { iconPaths, iconPath } from '$lib/conditionIcons';
+	import { conditionGroups } from '$lib/conditionGroups';
+	import { conditionInfoMap } from '$lib/conditionInfo';
 
 	let showTechnicalDetails = false;
 
@@ -116,18 +118,29 @@
 				<!-- Named-chips row: answers the "does it work for mine?"
 					 bounce. Each chip is a real link into the condition detail
 					 page. Keeps the "build your own" promise concrete. -->
-				<div class="flex flex-wrap items-center gap-2 mb-14 text-sm" style="color: var(--text-muted);">
-					<span class="font-medium" style="color: var(--text-secondary);">{$t('landing.chips_prefix')}</span>
-					{#each ['epilepsy', 'migraine', 'diabetes', 'adhd', 'endometriosis', 'long_covid'] as cid}
-						<a
-							href="/conditions/{cid}"
-							class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors hover:underline"
-							style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-secondary);"
-						>
-							{$t(`landing.template_${cid}`)}
-						</a>
-					{/each}
-					<span style="color: var(--text-muted);">— {$t('landing.chips_custom')}</span>
+				<div class="mb-14 text-sm" style="color: var(--text-muted);">
+					<p class="font-medium mb-3" style="color: var(--text-secondary);">{$t('landing.chips_prefix')}</p>
+					<!-- Group chips: one per group, auto-derived from conditionGroups.
+						 Mobile: horizontal scroll. Desktop: 4-col grid. -->
+					<div class="flex gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0">
+						{#each conditionGroups as group}
+							{@const firstInfo = conditionInfoMap[group.conditionIds[0]]}
+							<a
+								href="/conditions#group-{group.id}"
+								title={$t(group.descriptionKey)}
+								class="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-colors hover:underline shrink-0 whitespace-nowrap sm:whitespace-normal"
+								style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-secondary);"
+							>
+								{#if firstInfo}
+									<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: {firstInfo.color}" aria-hidden="true">
+										<path d={iconPath(firstInfo.icon)} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+									</svg>
+								{/if}
+								<span>{$t(group.titleKey)}</span>
+							</a>
+						{/each}
+					</div>
+					<p class="mt-2" style="color: var(--text-muted);">— {$t('landing.chips_custom')}</p>
 				</div>
 
 				<!-- Encryption badges -->

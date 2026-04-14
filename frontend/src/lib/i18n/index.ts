@@ -48,3 +48,19 @@ export const t = derived(locale, ($locale) => {
 		return str;
 	};
 });
+
+/**
+ * Translate a vital's unit string if a `vital.unit_<unit>` key exists,
+ * else pass the raw unit through. Lets preset units like `'day'`/`'days'`
+ * render in the active locale while keeping `kg`, `mmHg`, `%`, etc. as-is.
+ */
+export function translateUnit(
+	translator: (key: string, params?: Record<string, string | number>) => string,
+	unit: string | undefined
+): string {
+	if (!unit) return '';
+	const key = `vital.unit_${unit}`;
+	const translated = translator(key);
+	// t() returns the key verbatim on miss — fall back to the raw unit.
+	return translated === key ? unit : translated;
+}

@@ -34,6 +34,16 @@
 	let quickAddSelectedEpisode: string | null = null;
 	let quickAddSaving = false;
 	let quickAddSaved = false;
+	// CIPH-710 — third quick-add mode: a private diary entry. Default 'log'
+	// preserves the existing flow (episode chip + note → entry/event); 'diary'
+	// switches to a date+time+text form that writes a `type: 'diary'` doc,
+	// hard-excluded from every export.
+	let quickAddMode: 'log' | 'diary' = 'log';
+	let diaryDate = '';
+	let diaryTime = '';
+	let diaryText = '';
+	// CIPH-713 — private toggle on quick-add log/event flow.
+	let quickAddPrivate = false;
 
 	// FAB onboarding (CIPH-102): pulse + tooltip for the first 3 sessions so
 	// the quick-add affordance isn't invisible. Klara missed it for 3 min in
@@ -92,25 +102,54 @@
 	}
 
 	async function quickAddSave() {
-		if (!quickAddSelectedEpisode && !quickAddNote.trim()) return;
-		quickAddSaving = true;
 		const now = new Date();
 		const todayStr = now.toISOString().slice(0, 10);
 
+		// CIPH-710 — diary mode writes a `type: 'diary'` doc that is hard-
+		// excluded from every export surface (PDF/CSV/reports/share).
+		if (quickAddMode === 'diary') {
+			if (!diaryText.trim()) return;
+			quickAddSaving = true;
+			await documents.save({
+				type: 'diary',
+				date: diaryDate || todayStr,
+				time: diaryTime || undefined,
+				text: diaryText.trim(),
+				private: true,
+			});
+			quickAddSaving = false;
+			quickAddSaved = true;
+			setTimeout(() => {
+				quickAddSaved = false;
+				diaryDate = '';
+				diaryTime = '';
+				diaryText = '';
+				quickAddMode = 'log';
+				showQuickAdd = false;
+				quickAddOpen.set(false);
+			}, 1200);
+			return;
+		}
+
+		if (!quickAddSelectedEpisode && !quickAddNote.trim()) return;
+		quickAddSaving = true;
+
 		if (quickAddSelectedEpisode) {
 			await documents.save({
-				type: 'episode',
+				type: 'entry',
 				date: todayStr,
 				episodeType: quickAddSelectedEpisode,
 				time: now.toTimeString().slice(0, 5),
 				episodes: { [quickAddSelectedEpisode]: 1 },
 				notes: quickAddNote.trim() || undefined,
+				private: quickAddPrivate || undefined,
 			});
 		} else if (quickAddNote.trim()) {
 			await documents.save({
 				type: 'event',
 				date: todayStr,
 				notes: quickAddNote.trim(),
+				private: quickAddPrivate || undefined,
 			});
 		}
 
@@ -120,6 +159,7 @@
 			quickAddSaved = false;
 			quickAddSelectedEpisode = null;
 			quickAddNote = '';
+			quickAddPrivate = false;
 			showQuickAdd = false;
 			quickAddOpen.set(false);
 		}, 1200);
@@ -130,6 +170,11 @@
 		quickAddOpen.set(false);
 		quickAddSelectedEpisode = null;
 		quickAddNote = '';
+		quickAddMode = 'log';
+		diaryDate = '';
+		diaryTime = '';
+		diaryText = '';
+		quickAddPrivate = false;
 	}
 
 	// Load documents and blueprint when authenticated
@@ -153,7 +198,8 @@
 	// app. They can always run /setup later if they want their own tracking.
 	$: if (browser && $authReady && $isAuthenticated && docsLoaded && !$hasBlueprint
 		&& $familyLinks.length === 0
-		&& currentPath !== '/setup' && currentPath !== '/login' && currentPath !== '/settings' && currentPath !== '/admin') {
+		&& currentPath !== '/setup' && currentPath !== '/login' && currentPath !== '/settings' && currentPath !== '/admin'
+		&& currentPath !== '/migrate') {
 		goto('/setup');
 	}
 
@@ -213,6 +259,7 @@
 	$: if (browser && $authReady && !$isAuthenticated
 		&& currentPath !== '/login' && currentPath !== '/'
 		&& currentPath !== '/setup' && currentPath !== '/privacy' && currentPath !== '/terms'
+		&& currentPath !== '/migrate'
 		&& !currentPath.startsWith('/conditions')
 		&& !currentPath.startsWith('/join/')) {
 		goto('/login');
@@ -401,6 +448,7 @@
 
 	{#if $activeVault}
 		{@const activeLink = $familyLinks.find(l => l.sourceUserId === $activeVault)}
+		{@const hiddenCount = $documents.filter(d => d.data?.type === 'diary' || d.data?.private === true).length}
 		<div class="border-b px-4 py-2" style="background: rgba(159, 99, 11, 0.08); border-color: rgba(159, 99, 11, 0.2)">
 			<div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
 				<p class="text-sm" style="color: var(--ochre)">
@@ -416,6 +464,14 @@
 					{$t('family.banner_switch_back')}
 				</button>
 			</div>
+			{#if hiddenCount > 0}
+				<!-- CIPH-726 — caregivers need to know they are not seeing the
+					 private/diary entries. Muted, lock-iconed, non-alarmist. -->
+				<div class="max-w-6xl mx-auto mt-1 flex items-center gap-1.5 text-xs" style="color: var(--text-muted)">
+					<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke-width="2"/><path d="M8 11V8a4 4 0 018 0v3" stroke-width="2" stroke-linecap="round"/></svg>
+					<span>{$t('family.private_hidden', { count: String(hiddenCount) })}</span>
+				</div>
+			{/if}
 		</div>
 	{/if}
 
@@ -505,12 +561,64 @@
 						</div>
 					{:else}
 						<h3 class="text-lg font-semibold mb-1" style="color: var(--text-primary)">{$t('quickadd.title')}</h3>
-						<p class="text-sm mb-5" style="color: var(--text-muted)">{$t('quickadd.what_happened')}</p>
+						<p class="text-sm mb-4" style="color: var(--text-muted)">{$t('quickadd.what_happened')}</p>
+
+						<!-- CIPH-710 — top-level mode switch: log entry vs private diary. -->
+						<div class="flex gap-2 mb-4 p-1 rounded-lg" style="background: var(--surface-muted)">
+							<button
+								type="button"
+								on:click={() => { quickAddMode = 'log'; }}
+								class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px]"
+								style="background: {quickAddMode === 'log' ? 'white' : 'transparent'}; color: {quickAddMode === 'log' ? 'var(--text-primary)' : 'var(--text-muted)'}"
+							>{$t('quickadd.mode_entry')} / {$t('quickadd.mode_event')}</button>
+							<button
+								type="button"
+								on:click={() => { quickAddMode = 'diary'; if (!diaryDate) diaryDate = new Date().toISOString().slice(0, 10); }}
+								class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px] inline-flex items-center justify-center gap-1.5"
+								style="background: {quickAddMode === 'diary' ? 'white' : 'transparent'}; color: {quickAddMode === 'diary' ? 'var(--text-primary)' : 'var(--text-muted)'}"
+							>
+								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<rect x="4" y="11" width="16" height="10" rx="2" />
+									<path d="M8 11V7a4 4 0 1 1 8 0v4" />
+								</svg>
+								{$t('quickadd.mode_diary')}
+							</button>
+						</div>
+
+						{#if quickAddMode === 'diary'}
+							<p class="text-[11px] mb-3" style="color: var(--text-muted)">{$t('quickadd.diary_hint')}</p>
+							<div class="grid grid-cols-2 gap-2 mb-3">
+								<div>
+									<label class="text-xs" style="color: var(--text-secondary)" for="qa-diary-date">{$t('common.date')}</label>
+									<input id="qa-diary-date" type="date" bind:value={diaryDate} class="input mt-1" />
+								</div>
+								<div>
+									<label class="text-xs" style="color: var(--text-secondary)" for="qa-diary-time">{$t('common.time')} <span style="color: var(--text-muted)">({$t('common.optional')})</span></label>
+									<input id="qa-diary-time" type="time" bind:value={diaryTime} class="input mt-1" />
+								</div>
+							</div>
+							<div class="mb-4">
+								<label class="text-xs" style="color: var(--text-secondary)" for="qa-diary-text">{$t('quickadd.diary_text_label')}</label>
+								<textarea id="qa-diary-text" bind:value={diaryText} rows="5" class="input mt-1 resize-y" placeholder={$t('quickadd.diary_placeholder')}></textarea>
+							</div>
+							<button
+								on:click={quickAddSave}
+								disabled={quickAddSaving || !diaryText.trim()}
+								class="btn-primary w-full py-3 text-sm mb-3"
+							>{quickAddSaving ? $t('common.loading') : $t('quickadd.save')}</button>
+						{:else}
+
+						<!-- Mode heading — two entry kinds coexist here:
+							 1) Episode (tap a chip) — recurring clinical event, counted.
+							 2) Note marker (leave chips alone, fill the note) — singular
+							    narrative marker that renders as a vertical line on the
+							    trend chart. Users couldn't discover (2) without a label. -->
+						<p class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('quickadd.mode_heading')}</p>
 
 						<!-- Episode type selection (tap to select, not instant-save) -->
 						{#if bp.episodeTypes.length > 0}
 							<div class="mb-5">
-								<p class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('quickadd.episode')}</p>
+								<p class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">1. {$t('quickadd.mode_entry')}</p>
 								<div class="flex flex-wrap gap-2">
 									{#each bp.episodeTypes as ep}
 										<button
@@ -526,9 +634,11 @@
 							</div>
 						{/if}
 
-						<!-- Note (optional) -->
+						<!-- Note (optional) — doubles as the text for a stand-alone
+							 "note marker" event when no episode chip is selected. -->
 						<div class="mb-5">
-							<p class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('quickadd.note')}</p>
+							<p class="text-xs font-medium uppercase tracking-wider mb-1" style="color: var(--text-muted)">2. {$t('quickadd.mode_event')} / {$t('quickadd.note')}</p>
+							<p class="text-[11px] mb-2" style="color: var(--text-muted)">{$t('quickadd.mode_event_hint')}</p>
 							<input
 								type="text"
 								bind:value={quickAddNote}
@@ -539,6 +649,17 @@
 							/>
 						</div>
 
+						<!-- CIPH-713 — private toggle for the resulting entry/event -->
+						<label class="flex items-center gap-2 text-xs mb-3" style="color: var(--text-secondary)">
+							<input type="checkbox" bind:checked={quickAddPrivate} class="w-4 h-4" />
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<rect x="4" y="11" width="16" height="10" rx="2" />
+								<path d="M8 11V7a4 4 0 1 1 8 0v4" />
+							</svg>
+							{$t('private.label')}
+							<span style="color: var(--text-muted)">— {$t('private.tooltip')}</span>
+						</label>
+
 						<!-- Save button -->
 						<button
 							on:click={quickAddSave}
@@ -547,6 +668,7 @@
 						>
 							{quickAddSaving ? $t('common.loading') : $t('quickadd.save')}
 						</button>
+						{/if}
 
 						<!-- Full daily log link -->
 						<a

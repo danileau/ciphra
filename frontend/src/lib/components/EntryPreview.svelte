@@ -11,7 +11,7 @@
 	 * line; chips collapsible when dense; ranked by 30-day frequency; single-
 	 * axis pill style with left-edge severity stripe.
 	 */
-	import { t, locale } from '$lib/i18n';
+	import { t, locale, translateUnit } from '$lib/i18n';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint, VitalField } from '$lib/blueprint/types';
 
@@ -121,11 +121,17 @@
 	}
 
 	function typeLabel(type: string): string {
-		if (type === 'daily_log') return $t('protocol.title');
-		if (type === 'episode') return $t('quickadd.episode');
+		if (type === 'entry') return $t('protocol.title');
 		if (type === 'event') return $t('stream.events');
+		if (type === 'diary') return $t('quickadd.mode_diary');
 		return type;
 	}
+
+	// CIPH-713 — diary docs are always private; entries/events become private
+	// when the user toggles the lock. Either way, render a small lock icon
+	// next to the type badge so the UI matches what's been excluded from any
+	// export.
+	$: isPrivate = entry.data?.type === 'diary' || entry.data?.private === true;
 
 	$: symIdsRaw = bp ? Object.entries(entry.data.symptoms || {}).filter(([k, v]) => v && !POSITIVE_MARKERS.has(k)).map(([k]) => k) : [];
 	$: epEntries = bp ? Object.entries(entry.data.episodes || entry.data.seizures || {}).filter(([, n]) => Number(n) > 0) : [];
@@ -217,7 +223,7 @@
 	}
 
 	// CIPH-412 — collapse chips for daily_log entries with many chips
-	$: needsCollapse = entry.data.type === 'daily_log' && (symIds.length > 3 || trigIds.length > 2);
+	$: needsCollapse = entry.data.type === 'entry' && (symIds.length > 3 || trigIds.length > 2);
 	let expanded = false;
 	$: showChips = !needsCollapse || expanded;
 
@@ -233,24 +239,39 @@
 
 <p class="text-sm font-medium" style="color: var(--text-primary)">
 	{typeLabel(entry.data.type || '')}
+	{#if isPrivate}
+		<span
+			class="inline-flex items-center align-middle ml-1 gap-1 text-xs"
+			style="color: var(--text-muted)"
+			title={$t('private.tooltip')}
+		>
+			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<rect x="4" y="11" width="16" height="10" rx="2" />
+				<path d="M8 11V7a4 4 0 1 1 8 0v4" />
+			</svg>
+			<span>{$t('private.label')}</span>
+		</span>
+	{/if}
 	{#if showDate}
 		<span class="text-xs font-normal" style="color: var(--text-muted)"> · {formatDate(entry)}</span>
 	{/if}
-	{#if !compact && entry.data.type === 'daily_log'}
+	{#if !compact && entry.data.type === 'entry' && (symIds.length > 0 || epEntries.length > 0 || vitalEntries.length > 0)}
 		<span class="text-xs font-normal" style="color: var(--text-muted)">
-			· {symIds.length} {$t('protocol.symptoms').toLowerCase()}
+			{#if symIds.length > 0}
+				· {symIds.length} {$t('protocol.symptoms')}
+			{/if}
 			{#if epEntries.length > 0}
-				· {epEntries.reduce((s, [, n]) => s + Number(n), 0)} {$t('protocol.episodes').toLowerCase()}
+				· {epEntries.reduce((s, [, n]) => s + Number(n), 0)} {$t('protocol.episodes')}
 			{/if}
 			{#if vitalEntries.length > 0}
-				· {vitalEntries.length} {$t('protocol.vitals').toLowerCase()}
+				· {vitalEntries.length} {$t('protocol.vitals')}
 			{/if}
 		</span>
 	{/if}
 </p>
 
 {#if bp}
-	{#if entry.data.episodeType && bp.episodeTypes && entry.data.type === 'episode'}
+	{#if entry.data.episodeType && bp.episodeTypes}
 		<p class="text-xs mt-0.5" style="color: var(--text-muted)">{epLabelFor(entry.data.episodeType)}</p>
 	{/if}
 
@@ -323,13 +344,13 @@
 	{/if}
 
 	<!-- Vital snippets — paired cards, lab pills, then daily-mean line (CIPH-410/414) -->
-	{#if entry.data.type === 'daily_log' && (groupedVitals.paired.length > 0 || groupedVitals.labs.length > 0 || groupedVitals.means.length > 0)}
+	{#if entry.data.type === 'entry' && (groupedVitals.paired.length > 0 || groupedVitals.labs.length > 0 || groupedVitals.means.length > 0)}
 		{#if groupedVitals.paired.length > 0}
 			<div class="flex flex-col gap-1 mt-2">
 				{#each groupedVitals.paired as p}
 					<div class="px-2 py-1 rounded-md" style="background: var(--surface-muted)">
 						<div class="text-[11px] font-medium" style="color: var(--text-primary)">
-							{pairTitle(p.pairLabel, $t(p.vitalA.label))}{p.vitalA.unit ? ` (${p.vitalA.unit})` : ''}
+							{pairTitle(p.pairLabel, $t(p.vitalA.label))}{p.vitalA.unit ? ` (${translateUnit($t, p.vitalA.unit)})` : ''}
 						</div>
 						<div class="{chipSize}" style="color: var(--text-secondary)">
 							{formatPairedVitals(p.valA, p.valB)}
@@ -344,7 +365,7 @@
 				{#each groupedVitals.labs as l}
 					<span class="{chipSize} px-2 py-0.5 rounded-md"
 						style="background: var(--surface-muted); color: var(--text-primary); border-left: 3px solid var(--success);"
-					>{$t(l.vital.label)}: {formatVitalValue(l.value)}{l.vital.unit ? ' ' + l.vital.unit : ''}</span>
+					>{$t(l.vital.label)}: {formatVitalValue(l.value)}{l.vital.unit ? ' ' + translateUnit($t, l.vital.unit) : ''}</span>
 				{/each}
 			</div>
 		{/if}
@@ -352,11 +373,15 @@
 		{#if groupedVitals.means.length > 0}
 			<p class="{chipSize} mt-1.5" style="color: var(--text-muted)">
 				{#each groupedVitals.means.slice(0, 6) as m, j}
-					{j > 0 ? ' · ' : ''}{$t(m.vital.label)}: {formatVitalValue(m.value)}{m.vital.unit ? ' ' + m.vital.unit : ''}
+					{j > 0 ? ' · ' : ''}{$t(m.vital.label)}: {formatVitalValue(m.value)}{m.vital.unit ? ' ' + translateUnit($t, m.vital.unit) : ''}
 				{/each}
 			</p>
 		{/if}
 	{/if}
+{/if}
+
+{#if entry.data.type === 'diary' && entry.data.text}
+	<p class="text-xs mt-1.5 line-clamp-3 whitespace-pre-wrap" style="color: var(--text-secondary)">{entry.data.text}</p>
 {/if}
 
 {#if entry.data.notes}

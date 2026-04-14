@@ -9,6 +9,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { generateDoctorPdf, generateCompactPdf, exportCsv, type ReportScope } from '$lib/pdf';
+	import { isEpisodeBearing } from '$lib/utils/episodeCounts';
+	import { isExportable } from '$lib/utils/exportable';
 
 	let currentDate = new Date().toISOString().slice(0, 10);
 	let pdfScope: ReportScope = 'month';
@@ -32,8 +34,8 @@
 	// generous — even a partial year is more useful than re-running the
 	// monthly export 12 times.
 	$: dataSpanDays = (() => {
-		const dates = $documents
-			.filter(d => d.data?.type === 'daily_log')
+		const dates = exportableDocs
+			.filter(d => d.data?.type === 'entry')
 			.map(d => String(d.data.date || ''))
 			.filter(s => s.length === 10);
 		if (dates.length === 0) return 0;
@@ -60,14 +62,34 @@
 	$: bp = $blueprint;
 	$: liveLinks = $familyLinks.filter(l => !l.revoked);
 
+	// CIPH-710 / CIPH-713 — every aggregation, summary, and export below uses
+	// `exportableDocs` (diary excluded, private excluded). `$documents` is
+	// only used for editing actions where we DO need to find private entries.
+	$: exportableDocs = $documents.filter(isExportable);
+
 	onMount(async () => {
 		if (!$isAuthenticated) { goto('/login'); return; }
 		await documents.load();
 		initialLoadDone = true;
 	});
 
+	// Recent note-marker events (type === 'event') — shown on Reports so
+	// users can verify the vertical lines that appear on the 24-month chart.
+	// Scope-aware: month view shows only that month; year view shows the full
+	// visible year. Cap at 8 to keep the card compact.
+	$: recentEvents = (() => {
+		const inScope = (dateStr: string) => {
+			if (viewMode === 'month') return dateStr.startsWith(currentDate.slice(0, 7));
+			return dateStr.startsWith(String(currentYear));
+		};
+		return exportableDocs
+			.filter(d => d.data?.type === 'event' && typeof d.data.date === 'string' && inScope(String(d.data.date)))
+			.sort((a, b) => String(b.data.date).localeCompare(String(a.data.date)))
+			.slice(0, 8);
+	})();
+
 	// Monthly grid helpers
-	$: monthDocs = getMonthDocs($documents, currentDate);
+	$: monthDocs = getMonthDocs(exportableDocs, currentDate);
 
 	function getMonthDocs(docs: CiphraDocument[], refDate: string) {
 		const d = new Date(refDate + 'T12:00:00');
@@ -75,7 +97,7 @@
 		const month = d.getMonth();
 		const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
 		return docs.filter(doc =>
-			doc.data.type === 'daily_log' && String(doc.data.date || '').startsWith(prefix)
+			doc.data.type === 'entry' && String(doc.data.date || '').startsWith(prefix)
 		);
 	}
 
@@ -94,7 +116,13 @@
 		return monthDocs.filter(d => d.data.symptoms?.[col]).length;
 	}
 	function episodeSum(col: string): number {
-		return monthDocs.reduce((sum: number, d: any) => sum + (d.data.episodes?.[col] || d.data.seizures?.[col] || 0), 0);
+		// Includes both daily_log and standalone `episode` docs in the month.
+		const prefix = currentDate.slice(0, 7);
+		return exportableDocs.reduce((sum: number, d: any) => {
+			if (!isEpisodeBearing(d)) return sum;
+			if (!String(d.data?.date || '').startsWith(prefix)) return sum;
+			return sum + (d.data.episodes?.[col] || d.data.seizures?.[col] || 0);
+		}, 0);
 	}
 
 	function itemLabel(id: string): string {
@@ -123,23 +151,28 @@
 	function exportForDoctor() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
-		generateDoctorPdf(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
+		generateDoctorPdf(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
 	}
 
 	function exportCompactForDoctor() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
-		generateCompactPdf(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
+		generateCompactPdf(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
 	}
 
 	function exportCsvFile() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
-		exportCsv(bp, $documents, d.getFullYear(), d.getMonth(), $t, $locale, pdfScope);
+		exportCsv(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, pdfScope);
 	}
 
 	// Stats
-	$: totalEpisodes = bp ? bp.episodeTypes.reduce((sum, ep) => sum + episodeSum(ep.id), 0) : 0;
+	// Reference currentDate + exportableDocs so Svelte recomputes when the
+	// month changes or docs reload — episodeSum reads them via closure.
+	$: totalEpisodes = (() => {
+		void currentDate; void exportableDocs;
+		return bp ? bp.episodeTypes.reduce((sum, ep) => sum + episodeSum(ep.id), 0) : 0;
+	})();
 	$: daysLogged = monthDocs.length;
 	$: daysInMonth = getDaysInMonth(currentDate);
 
@@ -147,11 +180,11 @@
 	function getYearDocs(docs: CiphraDocument[], year: number) {
 		const prefix = `${year}-`;
 		return docs.filter(doc =>
-			doc.data.type === 'daily_log' && String(doc.data.date || '').startsWith(prefix)
+			doc.data.type === 'entry' && String(doc.data.date || '').startsWith(prefix)
 		);
 	}
 
-	$: yearDocs = getYearDocs($documents, currentYear);
+	$: yearDocs = getYearDocs(exportableDocs, currentYear);
 
 	function getYearMonthDays(year: number, month: number): number {
 		return new Date(year, month + 1, 0).getDate();
@@ -176,18 +209,20 @@
 			// Count active symptoms
 			const symCount = bp.symptomGroups.reduce((sum, g) =>
 				sum + g.items.filter(i => doc.data.symptoms?.[i.id]).length, 0);
-			if (symCount > 0) parts.push(`${symCount} ${$t('protocol.symptoms').toLowerCase()}`);
+			if (symCount > 0) parts.push(`${symCount} ${$t('protocol.symptoms')}`);
 			// Count episodes
 			const epCount = bp.episodeTypes.reduce((sum, ep) =>
 				sum + (doc.data.episodes?.[ep.id] || doc.data.seizures?.[ep.id] || 0), 0);
-			if (epCount > 0) parts.push(`${epCount} ${$t('protocol.episodes').toLowerCase()}`);
+			if (epCount > 0) parts.push(`${epCount} ${$t('protocol.episodes')}`);
 		}
 		if (doc.data.notes) parts.push($t('common.notes'));
 		return parts.join(', ') || $t('pdf.days_logged');
 	}
 
+	// Year episode total includes both daily_log and standalone `episode` docs.
+	$: yearEpisodeBearingDocs = exportableDocs.filter(d => isEpisodeBearing(d) && String(d.data?.date || '').startsWith(`${currentYear}-`));
 	$: yearTotalEpisodes = bp ? bp.episodeTypes.reduce((sum, ep) =>
-		sum + yearDocs.reduce((s: number, d: any) => s + (d.data.episodes?.[ep.id] || d.data.seizures?.[ep.id] || 0), 0), 0) : 0;
+		sum + yearEpisodeBearingDocs.reduce((s: number, d: any) => s + (d.data.episodes?.[ep.id] || d.data.seizures?.[ep.id] || 0), 0), 0) : 0;
 
 	$: yearDaysLogged = yearDocs.length;
 
@@ -213,23 +248,23 @@
 	}
 
 	async function toggleGridSymptom(dayStr: string, symptomId: string) {
-		const existing = $documents.find(d => d.data.type === 'daily_log' && d.data.date === dayStr);
+		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
 		if (existing) {
 			const symptoms = { ...existing.data.symptoms, [symptomId]: !existing.data.symptoms?.[symptomId] };
 			await documents.updateDoc(existing.id, { ...existing.data, symptoms });
 		} else {
-			const data: any = { type: 'daily_log', date: dayStr, symptoms: { [symptomId]: true }, episodes: {}, triggers: {}, vitals: {}, medications: {}, notes: '' };
+			const data: any = { type: 'entry', date: dayStr, symptoms: { [symptomId]: true }, episodes: {}, triggers: {}, vitals: {}, medications: {}, notes: '' };
 			await documents.save(data);
 		}
 	}
 
 	async function incrementGridEpisode(dayStr: string, episodeId: string) {
-		const existing = $documents.find(d => d.data.type === 'daily_log' && d.data.date === dayStr);
+		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
 		if (existing) {
 			const episodes = { ...existing.data.episodes, [episodeId]: (existing.data.episodes?.[episodeId] || 0) + 1 };
 			await documents.updateDoc(existing.id, { ...existing.data, episodes });
 		} else {
-			const data: any = { type: 'daily_log', date: dayStr, symptoms: {}, episodes: { [episodeId]: 1 }, triggers: {}, vitals: {}, medications: {}, notes: '' };
+			const data: any = { type: 'entry', date: dayStr, symptoms: {}, episodes: { [episodeId]: 1 }, triggers: {}, vitals: {}, medications: {}, notes: '' };
 			await documents.save(data);
 		}
 	}
@@ -320,6 +355,25 @@
 			<p class="text-2xl font-bold text-brand">{daysInMonth > 0 ? Math.round(daysLogged / daysInMonth * 100) : 0}%</p>
 			<p class="text-xs text-slate-500 mt-1">{$t('reports.coverage')}</p>
 		</div>
+	</div>
+
+	<!-- Recent note-marker events — closes the visibility gap. Users who
+		 create "Treatment adjusted" style markers couldn't see them anywhere
+		 in the UI before, only as vertical lines on the PDF trend chart. -->
+	<div class="card-inline mb-4">
+		<p class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('reports.recent_events_title')}</p>
+		{#if recentEvents.length === 0}
+			<p class="text-xs" style="color: var(--text-muted)">{$t('reports.no_events_yet')}</p>
+		{:else}
+			<ul class="flex flex-col gap-1.5">
+				{#each recentEvents as ev}
+					<li class="flex items-baseline gap-2 text-sm">
+						<span class="font-mono text-xs shrink-0" style="color: var(--text-muted)">{ev.data.date}</span>
+						<span class="truncate" style="color: var(--text-primary)">{ev.data.notes || ''}</span>
+					</li>
+				{/each}
+			</ul>
+		{/if}
 	</div>
 
 	<!-- CIPH-423 — Combined scope+export dropdown: scope only matters with

@@ -18,12 +18,12 @@ describe('CiphraDocument interface', () => {
         const doc: CiphraDocument = {
             id: 1,
             serverCreatedAt: '2026-04-04T12:00:00Z',
-            data: { type: 'daily_log', date: '2026-04-04', symptoms: ['tired'] },
+            data: { type: 'entry', date: '2026-04-04', symptoms: ['tired'] },
         };
         expect(doc.id).toBe(1);
         expect(doc.serverCreatedAt).toBe('2026-04-04T12:00:00Z');
         expect(doc.data).toBeDefined();
-        expect(doc.data.type).toBe('daily_log');
+        expect(doc.data.type).toBe('entry');
     });
 
     it('data field accepts any shape (opaque encrypted blob)', () => {

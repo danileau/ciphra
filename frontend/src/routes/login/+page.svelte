@@ -5,10 +5,9 @@
 	import * as api from '$lib/api';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { createVault, decryptMasterKey, decryptMasterKeyWithRecovery, deriveAuthKey, rewrapMasterKey } from '$lib/crypto';
+	import { decryptMasterKey, decryptMasterKeyWithRecovery, deriveAuthKey, rewrapMasterKey } from '$lib/crypto';
 	import { validateRecoveryCode } from '$lib/wordlist';
-	import { generateRecoveryPdf } from '$lib/pdf';
-	import Asterisk from '$lib/components/Asterisk.svelte';
+	import SignupFlow from '$lib/components/SignupFlow.svelte';
 
 	function setLocale(e: Event) {
 		const val = (e.currentTarget as HTMLSelectElement).value;
@@ -38,15 +37,6 @@
 	// Login
 	let loginUser = '';
 	let loginPass = '';
-
-	// Register
-	let regUser = '';
-	let regPass = '';
-	let regPassConfirm = '';
-	const enableRecovery = true;
-	let recoveryCode = '';
-	let recoveryConfirmed = false;
-	let showRecovery = false;
 
 	// Validation
 	let touched: Record<string, boolean> = {};
@@ -115,38 +105,24 @@
 		}
 	}
 
-	async function handleRegister() {
-		error = '';
-		if (regPass !== regPassConfirm) {
-			error = $t('auth.error_password_match');
-			return;
-		}
-		loading = true;
-		phase = $t('auth.phase_building_vault');
-		try {
-			// All crypto runs in the browser. Server only sees hashes + ciphertext.
-			const bundle = await createVault(regUser.trim().toLowerCase(), regPass, enableRecovery);
-			const res = await api.register(bundle);
-			if (res.ok) {
-				if (bundle.recovery_code) {
-					recoveryCode = bundle.recovery_code;
-					showRecovery = true;
-				} else {
-					tab = 'login';
-					loginUser = regUser;
-				}
-			} else {
-				setError($t('auth.error_exists'), res.data.error as string);
-			}
-		} catch (e) {
-			setError($t('auth.error_exists'), e instanceof Error ? e.message : String(e));
-		} finally {
-			loading = false;
-			phase = '';
-		}
-	}
-
 	let recSuccess = '';
+
+	function handleSignupComplete() {
+		// SignupFlow has already auto-logged-in and set the auth store.
+		// Resume a pending family-join if one was stashed before redirect.
+		let dest = '/';
+		try {
+			const pending = sessionStorage.getItem('ciphra_pending_family_claim');
+			if (pending) {
+				const { grantId, familyCode } = JSON.parse(pending);
+				if (grantId && familyCode) {
+					dest = `/join/${grantId}#${encodeURIComponent(familyCode)}`;
+				}
+				sessionStorage.removeItem('ciphra_pending_family_claim');
+			}
+		} catch { /* ignore */ }
+		goto(dest);
+	}
 
 	async function handleRecover() {
 		error = '';
@@ -202,50 +178,15 @@
 		}
 	}
 
-	function proceedAfterRecovery() {
-		showRecovery = false;
-		tab = 'login';
-		loginUser = regUser;
-	}
 </script>
 
-<div class="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4" style="background: var(--surface)">
+<main class="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4" style="background: var(--surface)">
 	<div class="w-full max-w-md">
 		<!-- Logo lives in the sticky layout header; only keep the tagline here -->
 		<p class="text-sm text-center mb-6" style="color: var(--text-muted)">{$t('encryption.badge')}</p>
 
 		<div class="rounded-2xl overflow-hidden" style="background: var(--surface-card); border: 1px solid var(--border)">
-			{#if showRecovery}
-				<!-- Recovery Code Display -->
-				<div class="p-6">
-					<div class="rounded-xl p-4 mb-4" style="background: var(--olive-light); border: 1px solid rgba(127,130,27,0.15)">
-						<p class="text-sm font-medium" style="color: var(--olive)">{$t('auth.recovery_save_warning')}</p>
-					</div>
-					<div class="rounded-xl p-4 mb-4" style="background: var(--surface-muted)">
-						<p class="font-mono text-base select-all leading-relaxed" style="color: var(--text-primary)">{recoveryCode}</p>
-					</div>
-					<button
-						type="button"
-						on:click={() => generateRecoveryPdf(regUser.trim().toLowerCase(), recoveryCode, $t, $locale)}
-						class="btn-secondary w-full px-4 min-h-[44px] mb-4 flex items-center justify-center gap-2"
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-						{$t('auth.download_recovery_pdf')}
-					</button>
-					<label class="flex items-center gap-3 mb-4 cursor-pointer min-h-[44px]">
-						<input type="checkbox" bind:checked={recoveryConfirmed} class="w-5 h-5 rounded" style="border-color: var(--border)" />
-						<span class="text-sm" style="color: var(--text-secondary)">{$t('auth.recovery_confirm')}</span>
-					</label>
-					<button
-						on:click={proceedAfterRecovery}
-						disabled={!recoveryConfirmed}
-						class="btn-primary w-full px-4 min-h-[48px]"
-					>
-						{$t('auth.proceed')}
-					</button>
-				</div>
-			{:else}
-				<!-- Tabs -->
+			<!-- Tabs -->
 				<div class="flex" style="border-bottom: 1px solid var(--border)">
 					<button
 						class="flex-1 py-3 text-sm font-medium transition-colors min-h-[48px]"
@@ -309,45 +250,7 @@
 							</button>
 						</form>
 					{:else if tab === 'register'}
-						<form on:submit|preventDefault={handleRegister} class="space-y-4">
-							<div>
-								<label for="reg-user" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.username')}</label>
-								<input id="reg-user" type="text" bind:value={regUser} required minlength="3" pattern="[a-z0-9_]+"
-									on:blur={() => { touched.regUser = true; }}
-									class="input" />
-								{#if touched.regUser && regUser.length > 0 && regUser.length < 3}
-									<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_username_short')}</p>
-								{/if}
-							</div>
-							<div>
-								<label for="reg-pass" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.password')}</label>
-								<input id="reg-pass" type="password" bind:value={regPass} required minlength="8"
-									on:blur={() => { touched.regPass = true; }}
-									class="input" />
-								{#if touched.regPass && regPass.length > 0 && regPass.length < 8}
-									<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_short')}</p>
-								{/if}
-							</div>
-							<div>
-								<label for="reg-pass2" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.password_confirm')}</label>
-								<input id="reg-pass2" type="password" bind:value={regPassConfirm} required minlength="8"
-									on:blur={() => { touched.regPassConfirm = true; }}
-									class="input" />
-								{#if touched.regPassConfirm && regPassConfirm.length > 0 && regPass !== regPassConfirm}
-									<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_match')}</p>
-								{/if}
-							</div>
-							<div class="rounded-xl p-3" style="background: var(--olive-light); border: 1px solid rgba(127,130,27,0.15)">
-								<div class="flex items-center gap-2">
-									<svg class="w-4 h-4 shrink-0" style="color: var(--olive)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-									<p class="text-xs" style="color: var(--olive)">{$t('auth.recovery_mandatory')}</p>
-								</div>
-							</div>
-							<button type="submit" disabled={loading}
-								class="btn-primary w-full px-4 min-h-[48px]">
-								{loading ? (phase || $t('common.loading')) : $t('auth.register')}
-							</button>
-						</form>
+						<SignupFlow on:signup-complete={handleSignupComplete} />
 					{:else if tab === 'recovery'}
 						<form on:submit|preventDefault={handleRecover} class="space-y-4">
 							<div>
@@ -378,7 +281,6 @@
 						</form>
 					{/if}
 				</div>
-			{/if}
 		</div>
 
 		<!-- Footer controls -->
@@ -402,4 +304,4 @@
 			<a href="/privacy" class="underline" style="color: var(--text-muted)">{$t('privacy.title')}</a>
 		</p>
 	</div>
-</div>
+</main>

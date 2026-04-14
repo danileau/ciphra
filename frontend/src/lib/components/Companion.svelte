@@ -40,7 +40,7 @@
 		const cutoffStr = cutoff.toISOString().slice(0, 10);
 		const days = new Set<string>();
 		for (const d of allDocs) {
-			if (d.data.type !== 'daily_log') continue;
+			if (d.data.type !== 'entry') continue;
 			const ds = String(d.data.date || '').slice(0, 10);
 			if (ds && ds >= cutoffStr && ds <= todayStr) days.add(ds);
 		}
@@ -57,8 +57,104 @@
 	);
 	$: complianceAccent = complianceTone === 'high' ? 'var(--olive)' : complianceTone === 'mid' ? 'var(--ochre)' : 'var(--text-muted)';
 
+	// ─── Cycle-phase card (CIPH-401) ────────────────────────────────────────
+	// Only rendered for blueprints that track `cycle_day` (endometriosis,
+	// menopause, PCOS). Computes current cycle day from the most recent logged
+	// cycle_day, advances by elapsed calendar days, then wraps modulo
+	// cycle_length. Irregular-cycle badge shown for PCOS or when variance of
+	// recent cycle_length values exceeds 5 days.
+	$: hasCycleVital = !!bp?.vitals?.some(v => v.id === 'cycle_day');
+
+	$: cycleState = (() => {
+		if (!hasCycleVital) return null;
+		const logs = allDocs
+			.filter(d => d.data.type === 'entry' && d.data.date)
+			.sort((a, b) => String(a.data.date).localeCompare(String(b.data.date)));
+
+		// Most recent cycle_day value
+		let anchorDate: string | null = null;
+		let anchorDay: number | null = null;
+		for (let i = logs.length - 1; i >= 0; i--) {
+			const v = Number((logs[i].data.vitals || {}).cycle_day);
+			if (Number.isFinite(v) && v > 0) {
+				anchorDate = String(logs[i].data.date).slice(0, 10);
+				anchorDay = v;
+				break;
+			}
+		}
+
+		// Most recent cycle_length (fallback 28)
+		let cycleLength = 28;
+		for (let i = logs.length - 1; i >= 0; i--) {
+			const v = Number((logs[i].data.vitals || {}).cycle_length);
+			if (Number.isFinite(v) && v > 0) {
+				cycleLength = v;
+				break;
+			}
+		}
+		if (cycleLength < 1) cycleLength = 28;
+
+		// Collect last 6 cycle_length values for variance
+		const lengths: number[] = [];
+		for (let i = logs.length - 1; i >= 0 && lengths.length < 6; i--) {
+			const v = Number((logs[i].data.vitals || {}).cycle_length);
+			if (Number.isFinite(v) && v > 0) lengths.push(v);
+		}
+		let variance = 0;
+		if (lengths.length >= 2) {
+			const mean = lengths.reduce((s, n) => s + n, 0) / lengths.length;
+			variance = Math.sqrt(lengths.reduce((s, n) => s + (n - mean) ** 2, 0) / lengths.length);
+		}
+		const irregular = variance > 5 || bp?.conditionId === 'pcos';
+
+		if (!anchorDate || anchorDay == null) {
+			return { hasData: false, irregular, cycleLength } as const;
+		}
+
+		// Elapsed calendar days since the anchor log
+		const a = new Date(anchorDate + 'T12:00:00');
+		const now = new Date();
+		now.setHours(12, 0, 0, 0);
+		const elapsed = Math.max(0, Math.round((now.getTime() - a.getTime()) / 86400000));
+		let day = anchorDay + elapsed;
+		// Wrap modulo cycle_length; guard against day 0 / negatives
+		day = ((day - 1) % cycleLength + cycleLength) % cycleLength + 1;
+
+		// Phase thresholds scale proportionally to cycle_length from the
+		// 28-day canonical (menstrual 1-5 / follicular 6-13 / ovulation 14-16 / luteal 17+).
+		const scale = cycleLength / 28;
+		const endMenstrual = Math.max(1, Math.round(5 * scale));
+		const endFollicular = Math.max(endMenstrual + 1, Math.round(13 * scale));
+		const endOvulation = Math.max(endFollicular + 1, Math.round(16 * scale));
+
+		let phase: 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
+		if (day <= endMenstrual) phase = 'menstrual';
+		else if (day <= endFollicular) phase = 'follicular';
+		else if (day <= endOvulation) phase = 'ovulation';
+		else phase = 'luteal';
+
+		return {
+			hasData: true,
+			day,
+			cycleLength,
+			phase,
+			irregular,
+			endMenstrual,
+			endFollicular,
+			endOvulation,
+			progressPct: Math.max(0, Math.min(100, ((day - 1) / cycleLength) * 100)),
+		} as const;
+	})();
+
+	const PHASE_COLORS: Record<string, string> = {
+		menstrual: '#c0392b',
+		follicular: '#e4a853',
+		ovulation: '#7ba05b',
+		luteal: '#8e7cc3',
+	};
+
 	// Today's status
-	$: todayLog = todayEntries.find(d => d.data.type === 'daily_log');
+	$: todayLog = todayEntries.find(d => d.data.type === 'entry');
 	$: todaySymptomCount = todayEntries.reduce((sum, d) => {
 		const syms = d.data.symptoms || {};
 		return sum + Object.values(syms).filter(v => v).length;
@@ -75,7 +171,7 @@
 	let companionChartScope: ChartScope = 'month';
 
 	function dataSpanMonths(docs: CiphraDocument[]): number {
-		const dates = docs.filter(d => d.data?.type === 'daily_log')
+		const dates = docs.filter(d => d.data?.type === 'entry')
 			.map(d => String(d.data.date || ''))
 			.filter(s => s.length >= 7);
 		if (dates.length === 0) return 0;
@@ -115,6 +211,115 @@
 			labels.push(d.toLocaleDateString($locale, { month: 'short', year: monthCount > 12 || d.getMonth() === 0 ? '2-digit' : undefined }));
 		}
 		return { labels, keys, mode: 'month' as const };
+	})();
+
+	// ─── "Wie geht's dir?" — 12-month combined trend (CIPH-715) ─────────────
+	// Team-designed: one headline answer + one shared-axis line chart (no
+	// double-y-axis, no normalization). Episodes bold + brand, symptom-days
+	// faint + secondary. Linus's veto: text caption for SR users.
+	$: howAreYouTrend = (() => {
+		if (!bp?.episodeTypes?.length) return null;
+		const epIds = bp.episodeTypes.map((e) => e.id);
+		const now = new Date();
+		const months: { y: number; m: number; key: string; label: string }[] = [];
+		for (let i = 11; i >= 0; i--) {
+			const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+			months.push({
+				y: d.getFullYear(),
+				m: d.getMonth(),
+				key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+				label: d.toLocaleDateString($locale, { month: 'short' }),
+			});
+		}
+		const episodes = months.map(() => 0);
+		const symptomDays = months.map(() => 0);
+		for (const doc of allDocs) {
+			if (doc.data?.type !== 'entry') continue;
+			const ds = String(doc.data.date || '');
+			const idx = months.findIndex((mo) => ds.startsWith(mo.key));
+			if (idx < 0) continue;
+			const eps = (doc.data.episodes || doc.data.seizures || {}) as Record<string, number>;
+			let epCount = 0;
+			for (const id of epIds) epCount += Number(eps[id] || 0);
+			episodes[idx] += epCount;
+			const syms = (doc.data.symptoms || {}) as Record<string, unknown>;
+			if (Object.values(syms).some((v) => v)) symptomDays[idx] += 1;
+		}
+		const totalEpisodes = episodes.reduce((a, b) => a + b, 0);
+		const totalSymptomDays = symptomDays.reduce((a, b) => a + b, 0);
+		if (totalEpisodes === 0 && totalSymptomDays === 0) return null;
+		const last = episodes[11];
+		const prev = episodes[10];
+		const epDelta = last - prev;
+		const epTrend = epDelta > 0 ? 'up' : epDelta < 0 ? 'down' : 'flat';
+		return { months, episodes, symptomDays, epTrend, epDelta, last, prev };
+	})();
+
+	// CIPH-723 — condition-specific noun for episodes (e.g. "Anfall", "Tremor",
+	// "IOP-Spitze"). Falls back to the generic "Episoden" when the blueprint
+	// doesn't override.
+	$: episodeNoun = bp?.episodeNoun ? $t(bp.episodeNoun) : $t('companion.how_episodes');
+
+	$: howAreYouChartData = howAreYouTrend ? {
+		labels: howAreYouTrend.months.map((m) => m.label),
+		datasets: [
+			{
+				label: episodeNoun,
+				data: howAreYouTrend.episodes,
+				borderColor: '#DC2626',
+				backgroundColor: 'rgba(220,38,38,0.08)',
+				borderWidth: 2.5,
+				tension: 0.3,
+				pointRadius: 2.5,
+				pointBackgroundColor: '#DC2626',
+				fill: false,
+			},
+			{
+				label: $t('companion.how_symptom_days'),
+				data: howAreYouTrend.symptomDays,
+				borderColor: 'rgba(120,113,108,0.55)',
+				backgroundColor: 'transparent',
+				borderWidth: 1.5,
+				borderDash: [3, 3],
+				tension: 0.3,
+				pointRadius: 1.5,
+				pointBackgroundColor: 'rgba(120,113,108,0.55)',
+				fill: false,
+			},
+		],
+	} : null;
+
+	$: howAreYouChartOptions = {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: {
+			legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
+			tooltip: {
+				callbacks: {
+					title: (items: Array<{ dataIndex: number }>) => {
+						if (!howAreYouTrend || !items.length) return '';
+						const mo = howAreYouTrend.months[items[0].dataIndex];
+						return new Date(mo.y, mo.m, 1).toLocaleDateString($locale, { month: 'long', year: 'numeric' });
+					},
+				},
+			},
+		},
+		scales: {
+			y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+			x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+		},
+	};
+
+	$: howAreYouHeadline = (() => {
+		if (!howAreYouTrend) return '';
+		const { epTrend, last, prev } = howAreYouTrend;
+		const arrow = epTrend === 'up' ? '↗' : epTrend === 'down' ? '↘' : '→';
+		const key = epTrend === 'up'
+			? 'companion.how_headline_up'
+			: epTrend === 'down'
+				? 'companion.how_headline_down'
+				: 'companion.how_headline_flat';
+		return `${arrow} ${$t(key, { last, prev, noun: episodeNoun })}`;
 	})();
 
 	$: episodeChartData = (() => {
@@ -193,7 +398,7 @@
 	};
 
 	function handleEditEntry(entry: CiphraDocument) {
-		goto(entry.data.type === 'daily_log' ? `/log/${entry.data.date}` : '/journal');
+		goto(entry.data.type === 'entry' ? `/log/${entry.data.date}` : '/journal');
 	}
 
 	async function handleDeleteEntry(id: number) {
@@ -345,6 +550,49 @@
 		</div>
 	</section>
 
+	<!-- ═══ CYCLE PHASE (CIPH-401) — only for cycle-tracking blueprints ═══ -->
+	{#if hasCycleVital && cycleState}
+		<section class="card-anchor">
+			{#if !cycleState.hasData}
+				<a href="/log/today" class="flex items-center gap-3 no-underline">
+					<div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background: var(--ochre-light); color: var(--ochre)">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2"/><path d="M12 7v5l3 2" stroke-width="2" stroke-linecap="round"/></svg>
+					</div>
+					<div class="flex-1 min-w-0">
+						<p class="text-sm font-semibold" style="color: var(--text-primary)">{$t('cycle.title')}</p>
+						<p class="text-xs mt-0.5" style="color: var(--text-muted)">{$t('cycle.first_entry_prompt')}</p>
+					</div>
+				</a>
+			{:else}
+				{@const cs = cycleState}
+				<div class="flex items-center gap-4">
+					<div class="text-center shrink-0">
+						<p class="text-3xl font-bold num-data" style="color: {PHASE_COLORS[cs.phase]}">{$t('cycle.day_n', { n: cs.day })}</p>
+						<p class="text-[10px] uppercase tracking-wider font-medium" style="color: var(--text-muted)">/ {cs.cycleLength}</p>
+					</div>
+					<div class="flex-1 min-w-0">
+						<div class="flex items-center gap-2 flex-wrap">
+							<p class="text-sm font-semibold" style="color: var(--text-primary)">{$t('cycle.title')}</p>
+							<span class="text-xs px-2 py-0.5 rounded-full" style="background: {PHASE_COLORS[cs.phase]}20; color: {PHASE_COLORS[cs.phase]}">{$t('cycle.phase_' + cs.phase)}</span>
+							{#if cs.irregular}
+								<span class="text-[10px] px-2 py-0.5 rounded-full font-medium" style="background: var(--ochre-light); color: var(--ochre)">{$t('cycle.irregular')}</span>
+							{/if}
+						</div>
+						<!-- Segmented progress bar -->
+						<div class="mt-2 relative w-full rounded-full h-2 overflow-hidden flex" style="background: var(--surface-inset)">
+							<div style="width: {(cs.endMenstrual / cs.cycleLength) * 100}%; background: {PHASE_COLORS.menstrual}40"></div>
+							<div style="width: {((cs.endFollicular - cs.endMenstrual) / cs.cycleLength) * 100}%; background: {PHASE_COLORS.follicular}40"></div>
+							<div style="width: {((cs.endOvulation - cs.endFollicular) / cs.cycleLength) * 100}%; background: {PHASE_COLORS.ovulation}40"></div>
+							<div style="flex: 1; background: {PHASE_COLORS.luteal}40"></div>
+							<!-- Position marker -->
+							<div class="absolute top-0 bottom-0" style="left: {cs.progressPct}%; width: 2px; background: var(--text-primary); transform: translateX(-1px);"></div>
+						</div>
+					</div>
+				</div>
+			{/if}
+		</section>
+	{/if}
+
 	<!-- ═══ REPORTS & EXPORT ═══ -->
 	<section class="card p-5">
 		<div class="flex items-center gap-3 mb-3">
@@ -372,6 +620,26 @@
 			</a>
 		</div>
 	</section>
+
+	<!-- ═══ "WIE GEHT'S DIR?" — 12-month combined trend (CIPH-715) ═══ -->
+	{#if howAreYouChartData && howAreYouTrend}
+	<section class="card p-5" aria-label={$t('companion.how_aria')}>
+		<h2 class="text-sm font-semibold mb-1" style="color: var(--text-primary)">{$t('companion.how_title')}</h2>
+		<p class="text-base font-medium mb-3" style="color: var(--text-primary)">{howAreYouHeadline}</p>
+		<div class="h-44">
+			<ChartWrapper type="line" data={howAreYouChartData} options={howAreYouChartOptions} />
+		</div>
+		<p class="sr-only">
+			{$t('companion.how_sr_caption', {
+				last: howAreYouTrend.last,
+				prev: howAreYouTrend.prev,
+				total: howAreYouTrend.episodes.reduce((a, b) => a + b, 0),
+				symptomDays: howAreYouTrend.symptomDays.reduce((a, b) => a + b, 0),
+				noun: episodeNoun,
+			})}
+		</p>
+	</section>
+	{/if}
 
 	<!-- ═══ EPISODE TREND — month / year / max ═══ -->
 	{#if episodeChartData}
@@ -466,7 +734,7 @@
 				{@const epEntries = Object.entries(entry.data.episodes || entry.data.seizures || {}).filter(([, n]) => Number(n) > 0)}
 				<div
 					class="card p-4 stagger-in"
-					style="animation-delay: {i * 50}ms; border-left: 3px solid {entry.data.type === 'episode' || epEntries.length > 0 ? 'var(--danger)' : 'var(--olive)'}"
+					style="animation-delay: {i * 50}ms; border-left: 3px solid {epEntries.length > 0 ? 'var(--danger)' : 'var(--olive)'}"
 				>
 					<div class="flex justify-between items-start gap-2">
 						<div class="flex-1 min-w-0">

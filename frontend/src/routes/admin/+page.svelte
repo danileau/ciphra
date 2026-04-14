@@ -365,7 +365,16 @@
 
 <!-- Delete confirmation modal -->
 {#if showDeleteModal && deleteTarget}
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);" on:click|self={() => { showDeleteModal = false; }}>
+<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+<div
+	class="fixed inset-0 z-50 flex items-center justify-center p-4"
+	style="background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);"
+	on:click|self={() => { showDeleteModal = false; }}
+	on:keydown={(e) => { if (e.key === 'Escape') showDeleteModal = false; }}
+	role="dialog"
+	aria-modal="true"
+	tabindex="-1"
+>
 	<div class="card rounded-2xl p-6 max-w-sm w-full" style="box-shadow: 0 20px 60px rgba(44,37,32,0.15);">
 		<h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary);">{$t('admin.delete_user')}</h3>
 		<p class="text-sm mb-4" style="color: var(--text-muted);">

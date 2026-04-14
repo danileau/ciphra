@@ -1502,6 +1502,70 @@ def admin_run_retention():
     return jsonify({'success': True}), 200
 
 
+# ───────────────────────────────────────────────────────────────────────────
+# CIPH-714 — DEV-ONLY mock epilepc endpoint.
+#
+# Pretends to be an epilepc instance serving a `ciphra-export` bundle. Used
+# to validate the receive-side migration flow (CIPH-712) without depending
+# on the real epilepc service being deployed.
+#
+# Only registered when CIPHRA_DEV_MOCKS=1. MUST NOT ship to production.
+# ───────────────────────────────────────────────────────────────────────────
+if os.environ.get('CIPHRA_DEV_MOCKS') == '1':
+    from pathlib import Path as _Path
+
+    _FIXTURES_DIR = _Path(__file__).parent / 'fixtures' / 'epilepc'
+
+    _DEV_ALLOWED_ORIGINS = {
+        'https://ciphra.ch',
+        'http://localhost:5173',
+        'http://localhost:8080',
+        'http://127.0.0.1:5173',
+    }
+
+    def _dev_cors_headers():
+        origin = request.headers.get('Origin', '')
+        if origin in _DEV_ALLOWED_ORIGINS:
+            return {
+                'Access-Control-Allow-Origin': origin,
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Vary': 'Origin',
+            }
+        return {'Access-Control-Allow-Origin': 'http://localhost:5173'}
+
+    @app.route('/api/ciphra-export/<token>', methods=['GET', 'OPTIONS'])
+    def mock_epilepc_export(token):
+        # DEV ONLY — do not ship.
+        headers = _dev_cors_headers()
+        if request.method == 'OPTIONS':
+            return ('', 204, headers)
+
+        if token == 'dev-expired':
+            return jsonify({'error': 'token_expired'}), 401, headers
+        if token == 'dev-used':
+            return jsonify({'error': 'token_already_used'}), 410, headers
+        if token == 'dev-malformed':
+            return ('{"schema_version": "1.1", "seizures": [   <-- not JSON', 200, {
+                **headers, 'Content-Type': 'application/json'
+            })
+        if token == 'dev-wrong-version':
+            path = _FIXTURES_DIR / 'edge-wrong-version.json'
+        elif token.startswith('dev-'):
+            name = token[len('dev-'):]
+            path = _FIXTURES_DIR / f'{name}.json'
+        else:
+            return jsonify({'error': 'unknown_token'}), 404, headers
+
+        if not path.exists():
+            return jsonify({'error': 'fixture_missing', 'fixture': path.name}), 404, headers
+
+        body = path.read_text()
+        return (body, 200, {**headers, 'Content-Type': 'application/json'})
+
+    logger.warning("CIPHRA_DEV_MOCKS=1 — mock epilepc endpoint registered. DO NOT enable in production.")
+
+
 if __name__ == '__main__':
     init_db()
     apply_audit_retention()

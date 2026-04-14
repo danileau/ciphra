@@ -48,7 +48,7 @@ export const conditionGroups: ConditionGroup[] = [
 		id: 'womens_health',
 		titleKey: 'condition_group.womens_health.title',
 		descriptionKey: 'condition_group.womens_health.description',
-		conditionIds: ['endometriosis', 'menopause'],
+		conditionIds: ['endometriosis', 'menopause', 'pcos'],
 	},
 	{
 		id: 'vision',

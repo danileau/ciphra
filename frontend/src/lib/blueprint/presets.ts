@@ -7,6 +7,7 @@ export const epilepsy: Blueprint = {
 	conditionId: 'epilepsy',
 	conditionLabel: 'landing.template_epilepsy',
 	accentColor: '#6366F1',
+	episodeNoun: 'episode_noun.seizure',
 	symptomGroups: [
 		{
 			id: 'behavior', label: 'symptom_group.behavior', items: [
@@ -58,9 +59,9 @@ export const epilepsy: Blueprint = {
 	gridEpisodeColumns: ['focal', 'generalized'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -135,9 +136,9 @@ export const adhd: Blueprint = {
 	gridEpisodeColumns: ['meltdown', 'shutdown'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -205,9 +206,9 @@ export const diabetes: Blueprint = {
 	gridEpisodeColumns: ['hypoglycemia', 'hyperglycemia'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -279,9 +280,9 @@ export const burnout: Blueprint = {
 	gridEpisodeColumns: ['breakdown', 'panic_attack'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -293,6 +294,7 @@ export const migraine: Blueprint = {
 	conditionId: 'migraine',
 	conditionLabel: 'landing.template_migraine',
 	accentColor: '#EC4899',
+	episodeNoun: 'episode_noun.attack',
 	symptomGroups: [
 		{
 			id: 'prodrome', label: 'symptom_group.prodrome', items: [
@@ -354,9 +356,9 @@ export const migraine: Blueprint = {
 	gridEpisodeColumns: ['migraine_with_aura', 'migraine_without_aura', 'tension_headache'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -379,8 +381,9 @@ export const custom: Blueprint = {
 	gridEpisodeColumns: [],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -459,9 +462,9 @@ export const chronic_pain: Blueprint = {
 	gridEpisodeColumns: ['flare', 'breakthrough_pain'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -538,9 +541,9 @@ export const ms: Blueprint = {
 	gridEpisodeColumns: ['relapse', 'pseudo_relapse'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -624,9 +627,9 @@ export const anxiety_depression: Blueprint = {
 	gridEpisodeColumns: ['panic_attack', 'depressive_episode'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -695,9 +698,9 @@ export const ibs: Blueprint = {
 	gridEpisodeColumns: ['flare', 'urgency_crisis'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -766,9 +769,9 @@ export const asthma: Blueprint = {
 	gridEpisodeColumns: ['asthma_attack', 'copd_exacerbation'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -840,9 +843,9 @@ export const endometriosis: Blueprint = {
 	gridEpisodeColumns: ['flare', 'missed_work_school'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -926,9 +929,9 @@ export const cancer_treatment: Blueprint = {
 	gridEpisodeColumns: ['febrile_neutropenia', 'er_visit', 'dose_reduction'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -997,9 +1000,9 @@ export const dermatology: Blueprint = {
 	gridEpisodeColumns: ['flare', 'skin_infection'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -1084,9 +1087,9 @@ export const autism: Blueprint = {
 	gridEpisodeColumns: ['meltdown', 'shutdown', 'sensory_crisis'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -1162,9 +1165,9 @@ export const cardiovascular: Blueprint = {
 	gridEpisodeColumns: ['afib_episode', 'angina', 'hf_decompensation'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -1224,9 +1227,9 @@ export const hypertension: Blueprint = {
 	gridEpisodeColumns: ['hypertensive_crisis', 'orthostatic_drop'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -1302,9 +1305,9 @@ export const long_covid: Blueprint = {
 	gridEpisodeColumns: ['crash', 'flare'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -1382,9 +1385,9 @@ export const menopause: Blueprint = {
 	gridEpisodeColumns: ['hot_flash_severe'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -1459,9 +1462,9 @@ export const bipolar: Blueprint = {
 	gridEpisodeColumns: ['manic', 'depressive'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -1473,6 +1476,7 @@ export const glaucoma: Blueprint = {
 	conditionId: 'glaucoma',
 	conditionLabel: 'landing.template_glaucoma',
 	accentColor: '#0891B2',
+	episodeNoun: 'episode_noun.iop_spike',
 	symptomGroups: [
 		{
 			id: 'vision', label: 'symptom_group.vision', items: [
@@ -1519,9 +1523,9 @@ export const glaucoma: Blueprint = {
 	gridEpisodeColumns: ['iop_spike'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -1533,6 +1537,7 @@ export const parkinson: Blueprint = {
 	conditionId: 'parkinson',
 	conditionLabel: 'landing.template_parkinson',
 	accentColor: '#4F46E5',
+	episodeNoun: 'episode_noun.tremor',
 	symptomGroups: [
 		{
 			id: 'motor', label: 'symptom_group.motor', items: [
@@ -1593,9 +1598,9 @@ export const parkinson: Blueprint = {
 	gridEpisodeColumns: ['off_period', 'freezing'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -1659,9 +1664,86 @@ export const ibd: Blueprint = {
 	gridEpisodeColumns: ['flare'],
 	streamFilters: [
 		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'daily_log', label: 'stream_filter.daily_log' },
-		{ key: 'episode', label: 'stream_filter.episode' },
+		{ key: 'entry', label: 'stream_filter.entry' },
 		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
+	],
+	reportPreference: 'both',
+};
+
+// ─── PCOS (Polycystic Ovary Syndrome) ───────────────────────
+
+export const pcos: Blueprint = {
+	version: 1,
+	conditionId: 'pcos',
+	conditionLabel: 'landing.template_pcos',
+	accentColor: '#D946EF',
+	symptomGroups: [
+		{
+			id: 'menstrual', label: 'symptom_group.menstrual', items: [
+				{ id: 'irregular_periods', label: 'symptom.irregular_periods' },
+				{ id: 'heavy_bleeding', label: 'symptom.heavy_bleeding' },
+				{ id: 'absent_periods', label: 'symptom.absent_periods' },
+				{ id: 'spotting', label: 'symptom.spotting' },
+				{ id: 'painful_periods', label: 'symptom.painful_periods' },
+			]
+		},
+		{
+			id: 'androgen', label: 'symptom_group.androgen', items: [
+				{ id: 'hirsutism', label: 'symptom.hirsutism' },
+				{ id: 'acne', label: 'symptom.acne' },
+				{ id: 'hair_loss', label: 'symptom.hair_loss' },
+				{ id: 'oily_skin', label: 'symptom.oily_skin' },
+			]
+		},
+		{
+			id: 'metabolic', label: 'symptom_group.metabolic', items: [
+				{ id: 'weight_gain', label: 'symptom.weight_gain' },
+				{ id: 'hungry', label: 'symptom.hungry' },
+				{ id: 'sugar_cravings', label: 'symptom.sugar_cravings' },
+				{ id: 'tired', label: 'symptom.tired' },
+				{ id: 'brain_fog', label: 'symptom.brain_fog' },
+			]
+		},
+		{
+			id: 'mood', label: 'symptom_group.mood', items: [
+				{ id: 'mood_swings', label: 'symptom.mood_swings' },
+				{ id: 'anxious', label: 'symptom.anxious' },
+				{ id: 'low_mood', label: 'symptom.low_mood' },
+				{ id: 'irritable', label: 'symptom.irritable' },
+			]
+		},
+	],
+	episodeTypes: [
+		{ id: 'fertility_concern', label: 'seizure.fertility_concern', color: '#D946EF', trackTimeOfDay: false, trackDuration: false },
+		{ id: 'skin_flare', label: 'seizure.skin_flare', color: '#F472B6' },
+	],
+	triggers: [
+		{ id: 'high_carb_meal', label: 'trigger.high_carb_meal' },
+		{ id: 'stress', label: 'trigger.stress' },
+		{ id: 'sleep_deprivation', label: 'trigger.sleep_deprivation' },
+		{ id: 'missed_meds', label: 'trigger.missed_meds' },
+		{ id: 'alcohol', label: 'trigger.alcohol' },
+		{ id: 'high_glycemic_snack', label: 'trigger.high_glycemic_snack' },
+		{ id: 'skipped_meal', label: 'trigger.skipped_meal' },
+	],
+	vitals: [
+		{ id: 'cycle_day', label: 'vital.cycle_day', unit: 'day', placeholder: '14', excludeFromTrends: true },
+		{ id: 'cycle_length', label: 'vital.cycle_length', unit: 'days', placeholder: '35', excludeFromTrends: true },
+		{ id: 'bleeding_intensity', label: 'vital.bleeding_intensity', unit: '0-5', placeholder: '0', min: 0, max: 5 },
+		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
+		{ id: 'waist_circumference', label: 'vital.waist_circumference', unit: 'cm', placeholder: '85' },
+		{ id: 'hba1c', label: 'vital.hba1c', unit: '%', placeholder: '5.7', referenceLine: { value: 7.0, labelKey: 'vital.target_hba1c' } },
+		{ id: 'mood', label: 'vital.mood', unit: '1-10', placeholder: '5' },
+	],
+	medications: [],
+	gridSymptomColumns: ['irregular_periods', 'hirsutism', 'acne', 'weight_gain', 'tired', 'mood_swings'],
+	gridEpisodeColumns: ['fertility_concern', 'skin_flare'],
+	streamFilters: [
+		{ key: 'all', label: 'stream_filter.all' },
+		{ key: 'entry', label: 'stream_filter.entry' },
+		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
 	],
 	reportPreference: 'both',
 };
@@ -1707,6 +1789,7 @@ export const presets: PresetInfo[] = [
 	// { id: 'dermatology', labelKey: 'landing.template_dermatology', descriptionKey: 'landing.template_dermatology_desc', icon: 'scan', color: '#F43F5E', blueprint: dermatology },
 	{ id: 'endometriosis', labelKey: 'landing.template_endometriosis', descriptionKey: 'landing.template_endometriosis_desc', icon: 'flower', color: '#E11D48', blueprint: endometriosis },
 	{ id: 'menopause', labelKey: 'landing.template_menopause', descriptionKey: 'landing.template_menopause_desc', icon: 'scan', color: '#DB2777', blueprint: menopause },
+	{ id: 'pcos', labelKey: 'landing.template_pcos', descriptionKey: 'landing.template_pcos_desc', icon: 'flower2', color: '#D946EF', blueprint: pcos },
 	// New presets (wave 1)
 	{ id: 'bipolar', labelKey: 'landing.template_bipolar', descriptionKey: 'landing.template_bipolar_desc', icon: 'activity', color: '#A855F7', blueprint: bipolar },
 	{ id: 'glaucoma', labelKey: 'landing.template_glaucoma', descriptionKey: 'landing.template_glaucoma_desc', icon: 'eye', color: '#0891B2', blueprint: glaucoma },
