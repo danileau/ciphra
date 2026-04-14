@@ -24,15 +24,25 @@
 	$: hidden =
 		pathname === '/login' ||
 		pathname === '/setup' ||
-		pathname.startsWith('/join/');
+		pathname.startsWith('/join/') ||
+		pathname === '/migrate' ||
+		pathname.startsWith('/migrate/');
 
-	// CIPH-785 — active state must follow the real current route.
-	// "Heute" owns both `/` (dashboard) and any `/log/...` (daily entry).
-	// Other tabs match their route prefix. The FAB has no active state.
-	function isActive(path: string): boolean {
-		if (path === '/') return pathname === '/' || pathname.startsWith('/log');
-		return pathname === path || pathname.startsWith(path + '/');
-	}
+	// CIPH-870 — Active-state must be reactive. Previous version used an
+	// isActive(path) function closing over `pathname`; Svelte's template
+	// dependency tracking cannot see through a function body, so the
+	// class binding never re-evaluated when $page.url.pathname changed.
+	// Mobile nav appeared stuck on the first-rendered tab — the user hit
+	// this as "Heute stays lit after I navigate".
+	//
+	// Fix: reactive declarations per tab. Each references `pathname`
+	// directly so Svelte tracks it. Also tightens the /log match to `===`
+	// + `startsWith('/log/')` so it no longer shadows /login.
+	$: p = pathname as string;
+	$: isHomeActive = p === '/' || p === '/log' || p.startsWith('/log/');
+	$: isCalendarActive = p === '/calendar' || p.startsWith('/calendar/');
+	$: isJournalActive = p === '/journal' || p.startsWith('/journal/');
+	$: isReportsActive = p === '/reports' || p.startsWith('/reports/');
 
 	function openQuickAdd() {
 		quickAddOpen.set(true);
@@ -49,8 +59,8 @@
 			<a
 				href="/"
 				class="bn-tab"
-				class:bn-tab--active={isActive('/')}
-				aria-current={isActive('/') ? 'page' : undefined}
+				class:bn-tab--active={isHomeActive}
+				aria-current={isHomeActive ? 'page' : undefined}
 			>
 				<svg class="bn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 					<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -63,8 +73,8 @@
 			<a
 				href="/calendar"
 				class="bn-tab"
-				class:bn-tab--active={isActive('/calendar')}
-				aria-current={isActive('/calendar') ? 'page' : undefined}
+				class:bn-tab--active={isCalendarActive}
+				aria-current={isCalendarActive ? 'page' : undefined}
 			>
 				<svg class="bn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 					<rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
@@ -95,8 +105,8 @@
 			<a
 				href="/journal"
 				class="bn-tab"
-				class:bn-tab--active={isActive('/journal')}
-				aria-current={isActive('/journal') ? 'page' : undefined}
+				class:bn-tab--active={isJournalActive}
+				aria-current={isJournalActive ? 'page' : undefined}
 			>
 				<svg class="bn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 					<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -109,8 +119,8 @@
 			<a
 				href="/reports"
 				class="bn-tab"
-				class:bn-tab--active={isActive('/reports')}
-				aria-current={isActive('/reports') ? 'page' : undefined}
+				class:bn-tab--active={isReportsActive}
+				aria-current={isReportsActive ? 'page' : undefined}
 			>
 				<svg class="bn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 					<line x1="18" y1="20" x2="18" y2="10" stroke-width="2" stroke-linecap="round"/>

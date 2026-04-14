@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ciphra-v3';
+const CACHE_VERSION = 'ciphra-v4';
 
 self.addEventListener('install', () => self.skipWaiting());
 
