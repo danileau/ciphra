@@ -1027,6 +1027,8 @@ export default {
 
 	// Quick-add
 	'quickadd.title': 'Schnelleintrag',
+	'quickadd.last_used': 'zuletzt',
+	'reports.col_auto_tooltip': 'Wird angezeigt, weil du dies im ausgewählten Monat erfasst hast. In Monaten ohne Daten erscheint diese Spalte ggf. nicht.',
 	'quickadd.what_happened': 'Was ist passiert?',
 	'quickadd.episode': 'Episoden',
 	'quickadd.symptom': 'Symptom',

@@ -157,6 +157,17 @@
 		return [...curated, ...extras];
 	})();
 
+	// CIPH-885 — Per-month "auto-added" ID sets, used to decorate column
+	// headers so a user seeing a column appear this month but not next month
+	// understands it reflects their data, not a bug. Purely additive — the
+	// column is already rendering; this is just typography.
+	$: autoAddedSymptomSet = new Set<string>(
+		effectiveSymptomColumns.filter((id) => !(bp?.gridSymptomColumns || []).includes(id))
+	);
+	$: autoAddedEpisodeSet = new Set<string>(
+		effectiveEpisodeColumns.filter((id) => !(bp?.gridEpisodeColumns || []).includes(id))
+	);
+
 	function getMonthDocs(docs: CiphraDocument[], refDate: string) {
 		const d = new Date(refDate + 'T12:00:00');
 		const year = d.getFullYear();
@@ -208,6 +219,18 @@
 		d.setDate(1);
 		currentDate = d.toISOString().slice(0, 10);
 	}
+	// CIPH-883 — jump-to-today mirror of calendar/+page.svelte CIPH-878.
+	// Reports is the most-deep-linked surface after PDFs; users scroll months
+	// back to compare and need a cheap way home.
+	function jumpToCurrentMonth() {
+		const now = new Date();
+		currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+	}
+	$: todayMonthStr = (() => {
+		const n = new Date();
+		return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+	})();
+	$: isOnCurrentMonth = currentDate.slice(0, 7) === todayMonthStr;
 
 	function formatMonth(dateStr: string): string {
 		const d = new Date(dateStr + 'T12:00:00');
@@ -414,7 +437,16 @@
 		<button on:click={() => changeMonth(-1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 		</button>
-		<span class="text-base font-semibold text-slate-900 min-w-[180px] text-center">{formatMonth(currentDate)}</span>
+		<div class="flex items-center gap-2 min-w-[180px] justify-center">
+			<span class="text-base font-semibold text-slate-900 text-center">{formatMonth(currentDate)}</span>
+			{#if !isOnCurrentMonth}
+				<button
+					on:click={jumpToCurrentMonth}
+					class="rpt-today-btn"
+					aria-label={$t('common.today')}
+				>{$t('common.today')}</button>
+			{/if}
+		</div>
 		<button on:click={() => changeMonth(1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 		</button>
@@ -597,10 +629,10 @@
 					<tr class="bg-slate-50">
 						<th class="bg-slate-50 px-3 py-2 text-left font-medium text-slate-500 border-b border-slate-200">{$t('common.day')}</th>
 						{#each effectiveSymptomColumns as col}
-							<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200 whitespace-nowrap">{itemLabel(col)}</th>
+							<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200 whitespace-nowrap" class:rpt-col--auto={autoAddedSymptomSet.has(col)} title={autoAddedSymptomSet.has(col) ? $t('reports.col_auto_tooltip') : ''}>{itemLabel(col)}{#if autoAddedSymptomSet.has(col)}<span class="rpt-col-auto-dot" aria-label={$t('reports.col_auto_tooltip')}>·</span>{/if}</th>
 						{/each}
 						{#each effectiveEpisodeColumns as col}
-							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{itemLabel(col)}</th>
+							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" class:rpt-col--auto={autoAddedEpisodeSet.has(col)} title={autoAddedEpisodeSet.has(col) ? $t('reports.col_auto_tooltip') : ''} style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{itemLabel(col)}{#if autoAddedEpisodeSet.has(col)}<span class="rpt-col-auto-dot" aria-label={$t('reports.col_auto_tooltip')}>·</span>{/if}</th>
 						{/each}
 						<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200">{$t('common.notes')}</th>
 					</tr>
@@ -763,6 +795,32 @@
 	:global(.grid-table--compact th) { padding-top: 6px !important; padding-bottom: 6px !important; }
 	:global(.grid-table--compact td) { padding-top: 4px !important; padding-bottom: 4px !important; }
 	:global(.grid-table--ultra) { font-size: 9.5px; }
+	/* CIPH-885 — subtle indicator on auto-added grid columns. Dotted
+	   underline + middot after the label. Tooltip explains the semantics,
+	   so a user seeing a column appear/disappear across months reads it
+	   as data-driven, not a bug. */
+	:global(.rpt-col--auto) { text-decoration: underline dotted rgba(0,0,0,0.35); text-underline-offset: 3px; }
+	:global(.rpt-col-auto-dot) { margin-left: 2px; color: rgba(0,0,0,0.35); font-weight: 700; }
+	/* CIPH-883 — jump-to-current-month pill, mirror of .cal-today-btn */
+	.rpt-today-btn {
+		font-size: 11px;
+		font-weight: 500;
+		padding: 2px 8px;
+		border-radius: 9999px;
+		border: 1px solid var(--border-subtle, rgba(0,0,0,0.1));
+		background: transparent;
+		color: var(--text-secondary);
+		line-height: 1.4;
+		white-space: nowrap;
+		cursor: pointer;
+		transition: color .15s, background .15s, border-color .15s;
+	}
+	.rpt-today-btn:hover,
+	.rpt-today-btn:focus-visible {
+		color: var(--brand);
+		border-color: var(--brand);
+		background: rgba(var(--brand-rgb, 99,102,241), 0.08);
+	}
 	:global(.grid-table--ultra th),
 	:global(.grid-table--ultra td) { padding-left: 2px !important; padding-right: 2px !important; }
 	.rpt-page {

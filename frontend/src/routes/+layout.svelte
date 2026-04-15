@@ -68,6 +68,11 @@
 	// directly into the user's most-recently-used quick-add mode, persisted
 	// in localStorage. Normal tap behavior is unchanged (picker shown).
 	const QUICKADD_LAST_MODE_KEY = 'ciphra_quickadd_last_mode';
+	// CIPH-884 — remember the most-recently-selected FAB episode type so
+	// subsequent quick-adds float it to the front of the picker. Persists
+	// across sessions. One value per user (per-device).
+	const QUICKADD_LAST_EP_KEY = 'ciphra_quickadd_last_episode';
+	let lastEpisodeId: string | null = null;
 	let fabPressTimer: ReturnType<typeof setTimeout> | null = null;
 	let fabLongPressed = false;
 
@@ -140,6 +145,7 @@
 			fabSeenCount = Number.isFinite(n) ? n + 1 : 1;
 			localStorage.setItem('ciphra_fab_seen_count', String(fabSeenCount));
 			fabTooltipDismissed = localStorage.getItem('ciphra_fab_tooltip_dismissed') === 'true';
+			lastEpisodeId = localStorage.getItem(QUICKADD_LAST_EP_KEY);
 		} catch {
 			fabSeenCount = 3; // fail-safe: suppress rather than spam
 			fabTooltipDismissed = true;
@@ -216,7 +222,21 @@
 
 	function selectEpisodeType(id: string) {
 		quickAddSelectedEpisode = quickAddSelectedEpisode === id ? null : id;
+		if (quickAddSelectedEpisode && browser) {
+			lastEpisodeId = id;
+			try { localStorage.setItem(QUICKADD_LAST_EP_KEY, id); } catch {}
+		}
 	}
+	// Reorder so the last-used episode is the first chip. Non-destructive —
+	// the full list is preserved, we just sort the last-used to index 0.
+	$: episodeTypesOrdered = bp
+		? (lastEpisodeId && bp.episodeTypes.some((e) => e.id === lastEpisodeId)
+			? [
+				bp.episodeTypes.find((e) => e.id === lastEpisodeId)!,
+				...bp.episodeTypes.filter((e) => e.id !== lastEpisodeId),
+			]
+			: bp.episodeTypes)
+		: [];
 
 	async function quickAddSave() {
 		const now = new Date();
@@ -781,7 +801,7 @@
 							<div class="mb-5">
 								<p class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">1. {$t('quickadd.mode_entry')}</p>
 								<div class="flex flex-wrap gap-2">
-									{#each bp.episodeTypes as ep}
+									{#each episodeTypesOrdered as ep, epIdx}
 										<button
 											on:click={() => selectEpisodeType(ep.id)}
 											data-testid="quickadd-episode-{ep.id}"
@@ -790,6 +810,9 @@
 										>
 											<span class="w-3 h-3 rounded-full shrink-0" style="background: {ep.color}"></span>
 											<span class="text-sm font-medium" style="color: {quickAddSelectedEpisode === ep.id ? ep.color : 'var(--text-primary)'}">{$t(ep.label)}</span>
+											{#if epIdx === 0 && lastEpisodeId === ep.id && bp.episodeTypes.length > 1}
+												<span class="text-[10px] px-1.5 py-0.5 rounded-full" style="background: var(--surface-inset); color: var(--text-muted)">{$t('quickadd.last_used')}</span>
+											{/if}
 										</button>
 									{/each}
 								</div>

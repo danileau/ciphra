@@ -68,3 +68,17 @@ describe('CIPH-877 effectiveSymptomColumns + grid scale', () => {
 		expect(SOURCE).toMatch(/grid-table--ultra[^}]*>= 18/);
 	});
 });
+
+describe('CIPH-885 auto-added column indicator', () => {
+	it('derives autoAddedSymptomSet / autoAddedEpisodeSet reactively', () => {
+		expect(SOURCE).toMatch(/\$:\s*autoAddedSymptomSet\s*=/);
+		expect(SOURCE).toMatch(/\$:\s*autoAddedEpisodeSet\s*=/);
+	});
+	it('tags headers with rpt-col--auto for auto-added ids', () => {
+		expect(SOURCE).toMatch(/class:rpt-col--auto=\{autoAddedSymptomSet\.has\(col\)\}/);
+		expect(SOURCE).toMatch(/class:rpt-col--auto=\{autoAddedEpisodeSet\.has\(col\)\}/);
+	});
+	it('uses i18n tooltip reports.col_auto_tooltip', () => {
+		expect(SOURCE).toMatch(/\$t\('reports\.col_auto_tooltip'\)/);
+	});
+});

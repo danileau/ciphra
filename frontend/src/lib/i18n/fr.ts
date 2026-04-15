@@ -1005,6 +1005,8 @@ export default {
 
 	// Quick-add
 	'quickadd.title': 'Saisie rapide',
+	'quickadd.last_used': 'récent',
+	'reports.col_auto_tooltip': 'Affiché car vous avez enregistré ceci dans le mois sélectionné. Peut ne pas apparaître dans les mois sans données.',
 	'quickadd.what_happened': 'Que s\'est-il passé?',
 	'quickadd.episode': 'Épisode',
 	'quickadd.symptom': 'Symptôme',

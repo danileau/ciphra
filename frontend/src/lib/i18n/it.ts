@@ -1006,6 +1006,8 @@ export default {
 
 	// Quick-add
 	'quickadd.title': 'Inserimento rapido',
+	'quickadd.last_used': 'recente',
+	'reports.col_auto_tooltip': 'Mostrato perché hai registrato questo nel mese selezionato. Potrebbe non apparire nei mesi senza dati.',
 	'quickadd.what_happened': 'Cosa è successo?',
 	'quickadd.episode': 'Episodio',
 	'quickadd.symptom': 'Sintomo',

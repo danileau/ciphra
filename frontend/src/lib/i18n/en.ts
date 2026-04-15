@@ -1005,6 +1005,8 @@ export default {
 
 	// Quick-add
 	'quickadd.title': 'Quick entry',
+	'quickadd.last_used': 'last',
+	'reports.col_auto_tooltip': 'Shown because you logged this in the selected month. It may not appear in months without data.',
 	'quickadd.what_happened': 'What happened?',
 	'quickadd.episode': 'Episode',
 	'quickadd.symptom': 'Symptom',
