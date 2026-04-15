@@ -21,6 +21,8 @@
 		color: string;
 		dayN: number;
 		startedOn: string;
+		/** CIPH-855b — total number of multiDay phases active on anchor day. */
+		activeCount?: number;
 	} | null;
 
 	$: startedLabel = phase
@@ -51,6 +53,15 @@
 				<span class="text-xs px-2 py-0.5 rounded-full" style="background: {phase.color}20; color: {phase.color}">
 					{$t(phase.label)}
 				</span>
+				{#if phase.activeCount && phase.activeCount > 1}
+					<!-- CIPH-855b — neutral count-based pill for overlapping phases
+						 (bipolar mixed states, long-covid PEM overlap, IBD with 2
+						 flare types). Clinically honest without forcing DSM
+						 terminology into the home UI. -->
+					<span class="text-[10px] px-2 py-0.5 rounded-full font-medium" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border)">
+						{$t('phase.n_active', { n: phase.activeCount })}
+					</span>
+				{/if}
 			</div>
 			<p class="text-xs mt-1" style="color: var(--text-muted)">
 				{$t('phase.started_on', { date: startedLabel })}

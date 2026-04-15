@@ -122,7 +122,7 @@ Short version: we can provide what the server holds — username, account dates,
 
 ## Reporting a vulnerability
 
-If you find a security issue, please email `security@ciphra.example` (placeholder — update before launch). We commit to:
+If you find a security issue, please email `security@ciphra.ch`. We commit to:
 
 - Acknowledging within 5 working days.
 - Coordinating a fix and disclosure timeline.

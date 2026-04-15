@@ -978,7 +978,7 @@ export default {
 	'terms.changes_heading': 'Modifiche',
 	'terms.changes_body': "Potremmo aggiornare questi termini occasionalmente. Le modifiche sostanziali saranno indicate nella data \"ultimo aggiornamento\" in alto. L'uso continuato costituisce accettazione.",
 	'terms.contact_heading': 'Contatto',
-	'terms.contact_body': 'Richieste legali e segnalazioni di abusi: abuse@ciphra.example (segnaposto — aggiornare prima del lancio).',
+	'terms.contact_body': 'Richieste legali e segnalazioni di abusi: abuse@ciphra.ch.',
 	'landing.footer_register': 'Registrati',
 	'landing.footer_domains': 'Domini',
 
@@ -1835,6 +1835,7 @@ export default {
 	'phase.day_n': 'Giorno {n}',
 	'phase.day_label': 'della fase',
 	'phase.started_on': 'Iniziata il {date}',
+	'phase.n_active': '{n} fasi attive',
 
 	// CIPH-857 — Schede impostazioni
 	'settings.tab_account': 'Account',
@@ -1919,6 +1920,13 @@ export default {
 	'cycle.phase_follicular': 'Follicolare',
 	'cycle.phase_ovulation': 'Ovulazione',
 	'cycle.phase_luteal': 'Luteale',
+	'cycle.phase_legend': 'Fase del ciclo',
+	'cycle.anchor_hint': 'Basato sulle tue ultime mestruazioni registrate ({date}).',
+	'cycle.anchor_fix': 'Correggi la data di inizio',
+	'cycle.anchor_none': 'Nessuna mestruazione registrata — annotala il giorno in cui inizia per calibrare le fasi.',
+	'cycle.phase_legend_aria': 'Legenda delle fasi del ciclo',
+	'calendar.band_legend': 'Fasi attive',
+	'calendar.band_legend_aria': 'Legenda delle fasce degli episodi pluriennali',
 	'cycle.irregular': 'Irregolare',
 	'cycle.first_entry_prompt': 'Registra il tuo primo giorno del ciclo',
 

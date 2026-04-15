@@ -977,7 +977,7 @@ export default {
 	'terms.changes_heading': 'Modifications',
 	'terms.changes_body': "Nous pouvons mettre à jour ces conditions occasionnellement. Les modifications substantielles seront reflétées dans la date « dernière mise à jour » en haut. L'utilisation continue vaut acceptation.",
 	'terms.contact_heading': 'Contact',
-	'terms.contact_body': "Questions légales et signalements d'abus : abuse@ciphra.example (placeholder — à remplacer avant le lancement).",
+	'terms.contact_body': "Questions légales et signalements d'abus : abuse@ciphra.ch.",
 	'landing.footer_register': 'S\'inscrire',
 	'landing.footer_domains': 'Domaines',
 
@@ -1834,6 +1834,7 @@ export default {
 	'phase.day_n': 'Jour {n}',
 	'phase.day_label': 'de la phase',
 	'phase.started_on': 'Commencée le {date}',
+	'phase.n_active': '{n} phases actives',
 
 	// CIPH-857 — Onglets paramètres
 	'settings.tab_account': 'Compte',
@@ -1918,6 +1919,13 @@ export default {
 	'cycle.phase_follicular': 'Folliculaire',
 	'cycle.phase_ovulation': 'Ovulation',
 	'cycle.phase_luteal': 'Lutéale',
+	'cycle.phase_legend': 'Phase du cycle',
+	'cycle.anchor_hint': 'Basé sur vos dernières règles enregistrées ({date}).',
+	'cycle.anchor_fix': 'Corriger la date de début',
+	'cycle.anchor_none': 'Aucune période enregistrée — notez-la le jour où elle commence pour calibrer les phases.',
+	'cycle.phase_legend_aria': 'Légende des phases du cycle',
+	'calendar.band_legend': 'Phases actives',
+	'calendar.band_legend_aria': 'Légende des bandes d\'épisodes multi-jours',
 	'cycle.irregular': 'Irrégulier',
 	'cycle.first_entry_prompt': 'Notez votre premier jour de cycle',
 

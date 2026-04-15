@@ -109,6 +109,54 @@
 	// Monthly grid helpers
 	$: monthDocs = getMonthDocs(exportableDocs, currentDate);
 
+	// CIPH-876 — Auto-expand the monthly episode-columns list to include any
+	// non-curated episode type that has ≥1 occurrence in the visible month.
+	// Curated `gridEpisodeColumns` always render (even at zero) so the grid
+	// stays stable month-to-month; extras appear only when they have data.
+	// Order preserved from `bp.episodeTypes` for deterministic layout.
+	// CIPH-877 — mirrored symptom auto-expand. Curated `gridSymptomColumns`
+	// always render; symptoms from any `symptomGroups.items` with ≥1 logged
+	// occurrence in the visible month get appended. Keeps the grid in sync
+	// with what the user is actually tracking, so no data we save is
+	// orphaned from the monthly export.
+	$: effectiveSymptomColumns = ((): string[] => {
+		if (!bp) return [];
+		const curated: string[] = bp.gridSymptomColumns || [];
+		const curatedSet = new Set<string>(curated);
+		const prefix = currentDate.slice(0, 7);
+		const extras: string[] = [];
+		for (const g of bp.symptomGroups) {
+			for (const item of g.items) {
+				if (curatedSet.has(item.id)) continue;
+				const hasData = exportableDocs.some((d: any) => {
+					if (d.data?.type !== 'entry') return false;
+					if (!String(d.data?.date || '').startsWith(prefix)) return false;
+					return !!d.data.symptoms?.[item.id];
+				});
+				if (hasData) extras.push(item.id);
+			}
+		}
+		return [...curated, ...extras];
+	})();
+
+	$: effectiveEpisodeColumns = ((): string[] => {
+		if (!bp) return [];
+		const curated: string[] = bp.gridEpisodeColumns || [];
+		const curatedSet = new Set<string>(curated);
+			const prefix = currentDate.slice(0, 7);
+			const extras: string[] = [];
+			for (const ep of bp.episodeTypes) {
+				if (curatedSet.has(ep.id)) continue;
+				const hasData = exportableDocs.some((d: any) => {
+					if (!isEpisodeBearing(d)) return false;
+					if (!String(d.data?.date || '').startsWith(prefix)) return false;
+					return (d.data.episodes?.[ep.id] || d.data.seizures?.[ep.id] || 0) > 0;
+				});
+				if (hasData) extras.push(ep.id);
+		}
+		return [...curated, ...extras];
+	})();
+
 	function getMonthDocs(docs: CiphraDocument[], refDate: string) {
 		const d = new Date(refDate + 'T12:00:00');
 		const year = d.getFullYear();
@@ -544,14 +592,14 @@
 	{#if monthDocs.length > 0}
 	<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
 		<div class="overflow-x-auto">
-			<table class="grid-table w-full text-xs">
+			<table class="grid-table w-full text-xs" class:grid-table--compact={effectiveSymptomColumns.length + effectiveEpisodeColumns.length >= 12} class:grid-table--ultra={effectiveSymptomColumns.length + effectiveEpisodeColumns.length >= 18}>
 				<thead>
 					<tr class="bg-slate-50">
 						<th class="bg-slate-50 px-3 py-2 text-left font-medium text-slate-500 border-b border-slate-200">{$t('common.day')}</th>
-						{#each bp.gridSymptomColumns as col}
+						{#each effectiveSymptomColumns as col}
 							<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200 whitespace-nowrap">{itemLabel(col)}</th>
 						{/each}
-						{#each bp.gridEpisodeColumns as col}
+						{#each effectiveEpisodeColumns as col}
 							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{itemLabel(col)}</th>
 						{/each}
 						<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200">{$t('common.notes')}</th>
@@ -565,7 +613,7 @@
 							<td class="bg-white px-3 py-1.5 font-medium whitespace-nowrap">
 								<a href="/log/{dayStr}" class="grid-day-link">{day}</a>
 							</td>
-							{#each bp.gridSymptomColumns as col}
+							{#each effectiveSymptomColumns as col}
 								<td
 									class="px-2 py-1.5 text-center grid-symptom-cell"
 									on:click|stopPropagation={() => toggleGridSymptom(dayStr, col)}
@@ -580,7 +628,7 @@
 									{/if}
 								</td>
 							{/each}
-							{#each bp.gridEpisodeColumns as col}
+							{#each effectiveEpisodeColumns as col}
 								<td
 									class="px-2 py-1.5 text-center font-mono grid-episode-cell"
 									on:click|stopPropagation={() => incrementGridEpisode(dayStr, col)}
@@ -604,22 +652,22 @@
 				<tfoot>
 					<tr class="bg-slate-50 font-medium">
 						<td class="bg-slate-50 px-3 py-2 text-slate-700">{$t('protocol.sum')}</td>
-						{#each bp.gridSymptomColumns as col}
+						{#each effectiveSymptomColumns as col}
 							<td class="px-2 py-2 text-center text-slate-700">{symptomSum(col)}</td>
 						{/each}
-						{#each bp.gridEpisodeColumns as col}
+						{#each effectiveEpisodeColumns as col}
 							<td class="px-2 py-2 text-center font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{episodeSum(col)}</td>
 						{/each}
 						<td></td>
 					</tr>
 					<tr class="bg-slate-50 text-slate-500">
 						<td class="bg-slate-50 px-3 py-2">{$t('protocol.percent')}</td>
-						{#each bp.gridSymptomColumns as col}
+						{#each effectiveSymptomColumns as col}
 							{@const total = daysInMonth}
 							{@const count = symptomSum(col)}
 							<td class="px-2 py-2 text-center text-xs">{total > 0 ? Math.round(count / total * 100) : 0}%</td>
 						{/each}
-						{#each bp.gridEpisodeColumns as _}
+						{#each effectiveEpisodeColumns as _}
 							<td></td>
 						{/each}
 						<td></td>
@@ -705,6 +753,18 @@
 {/if}
 
 <style>
+	/* CIPH-877 — When auto-expanded columns make the grid wide, scale the
+	   typography and cell padding down so the whole table stays on-page
+	   without horizontal scroll on desktop. Two steps: compact (≥12 cols)
+	   and ultra (≥18 cols). */
+	:global(.grid-table--compact) { font-size: 10.5px; }
+	:global(.grid-table--compact th),
+	:global(.grid-table--compact td) { padding-left: 4px !important; padding-right: 4px !important; }
+	:global(.grid-table--compact th) { padding-top: 6px !important; padding-bottom: 6px !important; }
+	:global(.grid-table--compact td) { padding-top: 4px !important; padding-bottom: 4px !important; }
+	:global(.grid-table--ultra) { font-size: 9.5px; }
+	:global(.grid-table--ultra th),
+	:global(.grid-table--ultra td) { padding-left: 2px !important; padding-right: 2px !important; }
 	.rpt-page {
 		/* CIPH-746: widened to 1280 so data tables stop truncating cells
 		   on desktop. Below 640 the percentage-free padding keeps the

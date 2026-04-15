@@ -999,7 +999,7 @@ export default {
 	'terms.changes_heading': 'Änderungen dieser Bedingungen',
 	'terms.changes_body': 'Wir können diese Bedingungen gelegentlich aktualisieren. Wesentliche Änderungen werden im „zuletzt aktualisiert"-Datum oben angezeigt. Weitere Nutzung nach einer Änderung bedeutet Zustimmung.',
 	'terms.contact_heading': 'Kontakt',
-	'terms.contact_body': 'Rechtliches und Missbrauchsmeldungen: abuse@ciphra.example (Platzhalter — vor Launch anpassen).',
+	'terms.contact_body': 'Rechtliches und Missbrauchsmeldungen: abuse@ciphra.ch.',
 	'landing.footer_register': 'Registrieren',
 	'landing.footer_domains': 'Domains',
 
@@ -1857,6 +1857,7 @@ export default {
 	'phase.day_n': 'Tag {n}',
 	'phase.day_label': 'der Phase',
 	'phase.started_on': 'Begonnen am {date}',
+	'phase.n_active': '{n} Phasen aktiv',
 
 	// CIPH-857 — Settings-Tabs
 	'settings.tab_account': 'Konto',
@@ -1941,6 +1942,13 @@ export default {
 	'cycle.phase_follicular': 'Follikelphase',
 	'cycle.phase_ovulation': 'Eisprung',
 	'cycle.phase_luteal': 'Lutealphase',
+	'cycle.phase_legend': 'Zyklusphase',
+	'cycle.anchor_hint': 'Basierend auf deiner letzten erfassten Periode ({date}).',
+	'cycle.anchor_fix': 'Periodenstart korrigieren',
+	'cycle.anchor_none': 'Noch keine Periode erfasst — trage sie am Starttag ein, um die Phasen zu kalibrieren.',
+	'cycle.phase_legend_aria': 'Legende der Zyklusphasen',
+	'calendar.band_legend': 'Aktive Phasen',
+	'calendar.band_legend_aria': 'Legende der Mehrtages-Phasenbänder',
 	'cycle.irregular': 'Unregelmässig',
 	'cycle.first_entry_prompt': 'Trage deinen ersten Zyklustag ein',
 

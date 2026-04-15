@@ -25,6 +25,12 @@ const SRC_ROOT = join(__dirname, '..');
 const REPO_ROOT = join(__dirname, '..', '..');
 
 const SPACING_PREFIXES = [
+	// Axis-specific gap variants must come before the generic `gap`
+	// because the regex alternation is sorted longest-first and we want
+	// `gap-x-3` to parse as prefix=`gap-x` value=`3`, not
+	// prefix=`gap` value=`x`.
+	'gap-x',
+	'gap-y',
 	'gap',
 	'px',
 	'py',

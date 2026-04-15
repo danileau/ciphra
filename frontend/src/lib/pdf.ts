@@ -180,6 +180,54 @@ export function applyVitalTargetOverrides(blueprint: Blueprint, username: string
  *  otherwise still reserve a column for a hidden symptom and just print
  *  blanks for it. `gridEpisodeColumns` is left untouched — episodes are not
  *  customizable in the wizard. */
+// CIPH-877 — Effective grid columns: curated + any blueprint item with ≥1
+// occurrence in the visible range. Mirrors the on-screen report (reports/
+// +page.svelte) so PDFs and CSVs never hide data the user actually logged.
+// `datePrefix` is "YYYY-MM" for monthly, "YYYY" for yearly scope — pass the
+// empty string to consider all docs unfiltered.
+export function effectiveSymptomColumns(
+	blueprint: Blueprint,
+	docs: CiphraDocument[],
+	datePrefix: string,
+	excludeIds: ReadonlySet<string> = new Set(),
+): string[] {
+	const curated = blueprint.gridSymptomColumns.filter((id) => !excludeIds.has(id));
+	const curatedSet = new Set<string>(curated);
+	const extras: string[] = [];
+	for (const g of blueprint.symptomGroups) {
+		for (const item of g.items) {
+			if (curatedSet.has(item.id) || excludeIds.has(item.id)) continue;
+			const hasData = docs.some((d: any) => {
+				if (d.data?.type !== 'entry') return false;
+				if (datePrefix && !String(d.data?.date || '').startsWith(datePrefix)) return false;
+				return !!d.data.symptoms?.[item.id];
+			});
+			if (hasData) extras.push(item.id);
+		}
+	}
+	return [...curated, ...extras];
+}
+
+export function effectiveEpisodeColumns(
+	blueprint: Blueprint,
+	docs: CiphraDocument[],
+	datePrefix: string,
+): string[] {
+	const curated = blueprint.gridEpisodeColumns;
+	const curatedSet = new Set<string>(curated);
+	const extras: string[] = [];
+	for (const ep of blueprint.episodeTypes) {
+		if (curatedSet.has(ep.id)) continue;
+		const hasData = docs.some((d: any) => {
+			if (d.data?.type !== 'entry') return false;
+			if (datePrefix && !String(d.data?.date || '').startsWith(datePrefix)) return false;
+			return ((d.data.episodes?.[ep.id] || d.data.seizures?.[ep.id] || 0) as number) > 0;
+		});
+		if (hasData) extras.push(ep.id);
+	}
+	return [...curated, ...extras];
+}
+
 export function applyBlueprintCustomizations(blueprint: Blueprint): Blueprint {
 	const cz = blueprint.customizations;
 	if (!cz) return blueprint;
@@ -415,8 +463,8 @@ function drawGridSection(
 	// in generateDoctorPdf for the rationale. Hard denylist as a safety net
 	// for legacy stored blueprints that still carry these IDs.
 	const POSITIVE_MARKERS = new Set(['slept_well']);
-	const symptomCols = blueprint.gridSymptomColumns.filter((id) => !POSITIVE_MARKERS.has(id));
-	const episodeCols = blueprint.gridEpisodeColumns;
+	const symptomCols = effectiveSymptomColumns(blueprint, documents, monthPrefix, POSITIVE_MARKERS);
+	const episodeCols = effectiveEpisodeColumns(blueprint, documents, monthPrefix);
 
 	const symptomLabels = symptomCols.map((id) => {
 		for (const g of blueprint.symptomGroups) {
@@ -999,7 +1047,8 @@ export function generateDoctorPdf(
 
 	// ── Compute stats ──
 	const daysLogged = monthDocs.length;
-	const episodeCols = blueprint.gridEpisodeColumns;
+	// Totals iterate ALL episodeTypes so non-curated logged data isn't dropped.
+	const episodeCols = blueprint.episodeTypes.map((ep) => ep.id);
 	// dailyEpisodes: only meaningful for 'month' scope (used by cluster-day
 	// analysis). For year/2years scope we compute totals from monthDocs directly.
 	const dailyEpisodes: number[] = [];
@@ -2901,7 +2950,8 @@ export function generateCompactPdf(
 	});
 	const totalDaysInScope = Math.round((scopeEndDate.getTime() - scopeStartDate.getTime()) / 86400000) + 1;
 	const daysLogged = scopeDocs.length;
-	const episodeCols = blueprint.gridEpisodeColumns;
+	// Totals iterate ALL episodeTypes so non-curated logged data isn't dropped.
+	const episodeCols = blueprint.episodeTypes.map((ep) => ep.id);
 	let totalEpisodes = 0;
 	for (const d of scopeEpisodeDocs) {
 		for (const col of episodeCols) {

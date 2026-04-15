@@ -13,8 +13,8 @@
 	// without explicit user country selection conflict with zero-knowledge.
 	// Replaced by CIPH-790 (settings-based opt-in help section).
 	import { familyLinks } from '$lib/stores/familyLinks';
-	import { DATA_1, DATA_3, DATA_4, DATA_5 } from '$lib/dataPalette';
 	import { cohortOf } from '$lib/blueprint/cohort';
+	import { computeCycleStateToday, hasCycleTracking, PHASE_COLORS } from '$lib/cycleState';
 
 	// CIPH-873 — exportForDoctor() helper + generateDoctorPdf import removed.
 	// The "Export for doctor" rail button now deep-links to
@@ -71,8 +71,12 @@
 		y.setDate(y.getDate() - 1);
 		const yKey = y.toISOString().slice(0, 10);
 
-		// For each multiDay type, walk back consecutive days.
-		let best: { ep: typeof multiDayTypes[0]; startedOn: string; dayN: number } | null = null;
+		// For each multiDay type, walk back consecutive days. Collect all
+		// active phases so CIPH-855b can show "N phases active" when
+		// multiple overlap (bipolar mixed states, long-covid + PEM, IBD
+		// with two flare types).
+		type ActivePhase = { ep: typeof multiDayTypes[0]; startedOn: string; dayN: number };
+		const activePhases: ActivePhase[] = [];
 		for (const ep of multiDayTypes) {
 			let anchorKey: string | null = null;
 			if ((byDate.get(todayKey)?.[ep.id] || 0) > 0) anchorKey = todayKey;
@@ -93,25 +97,24 @@
 					break;
 				}
 			}
-			// dayN = days from started to anchor inclusive
 			const startedD = new Date(started + 'T12:00:00');
 			const anchorD = new Date(anchorKey + 'T12:00:00');
 			const dayN = Math.max(
 				1,
 				Math.round((anchorD.getTime() - startedD.getTime()) / 86400000) + 1,
 			);
-			// Prefer the phase with the most recent start (longer ongoing beats older)
-			if (!best || dayN > best.dayN) {
-				best = { ep, startedOn: started, dayN };
-			}
+			activePhases.push({ ep, startedOn: started, dayN });
 		}
-		if (!best) return null;
+		if (!activePhases.length) return null;
+		// Primary display = longest ongoing.
+		const primary = activePhases.reduce((a, b) => (b.dayN > a.dayN ? b : a));
 		return {
-			id: best.ep.id,
-			label: best.ep.label,
-			color: best.ep.color,
-			dayN: best.dayN,
-			startedOn: best.startedOn,
+			id: primary.ep.id,
+			label: primary.ep.label,
+			color: primary.ep.color,
+			dayN: primary.dayN,
+			startedOn: primary.startedOn,
+			activeCount: activePhases.length,
 		};
 	})();
 
@@ -143,104 +146,14 @@
 	);
 	$: complianceAccent = complianceTone === 'high' ? 'var(--olive)' : complianceTone === 'mid' ? 'var(--ochre)' : 'var(--text-muted)';
 
-	// ─── Cycle-phase card (CIPH-401) ────────────────────────────────────────
+	// ─── Cycle-phase card (CIPH-401 / CIPH-855a) ───────────────────────────
 	// Only rendered for blueprints that track `cycle_day` (endometriosis,
-	// menopause, PCOS). Computes current cycle day from the most recent logged
-	// cycle_day, advances by elapsed calendar days, then wraps modulo
-	// cycle_length. Irregular-cycle badge shown for PCOS or when variance of
-	// recent cycle_length values exceeds 5 days.
-	$: hasCycleVital = !!bp?.vitals?.some(v => v.id === 'cycle_day');
-
-	$: cycleState = (() => {
-		if (!hasCycleVital) return null;
-		const logs = allDocs
-			.filter(d => d.data.type === 'entry' && d.data.date)
-			.sort((a, b) => String(a.data.date).localeCompare(String(b.data.date)));
-
-		// Most recent cycle_day value
-		let anchorDate: string | null = null;
-		let anchorDay: number | null = null;
-		for (let i = logs.length - 1; i >= 0; i--) {
-			const v = Number((logs[i].data.vitals || {}).cycle_day);
-			if (Number.isFinite(v) && v > 0) {
-				anchorDate = String(logs[i].data.date).slice(0, 10);
-				anchorDay = v;
-				break;
-			}
-		}
-
-		// Most recent cycle_length (fallback 28)
-		let cycleLength = 28;
-		for (let i = logs.length - 1; i >= 0; i--) {
-			const v = Number((logs[i].data.vitals || {}).cycle_length);
-			if (Number.isFinite(v) && v > 0) {
-				cycleLength = v;
-				break;
-			}
-		}
-		if (cycleLength < 1) cycleLength = 28;
-
-		// Collect last 6 cycle_length values for variance
-		const lengths: number[] = [];
-		for (let i = logs.length - 1; i >= 0 && lengths.length < 6; i--) {
-			const v = Number((logs[i].data.vitals || {}).cycle_length);
-			if (Number.isFinite(v) && v > 0) lengths.push(v);
-		}
-		let variance = 0;
-		if (lengths.length >= 2) {
-			const mean = lengths.reduce((s, n) => s + n, 0) / lengths.length;
-			variance = Math.sqrt(lengths.reduce((s, n) => s + (n - mean) ** 2, 0) / lengths.length);
-		}
-		const irregular = variance > 5 || bp?.conditionId === 'pcos';
-
-		if (!anchorDate || anchorDay == null) {
-			return { hasData: false, irregular, cycleLength } as const;
-		}
-
-		// Elapsed calendar days since the anchor log
-		const a = new Date(anchorDate + 'T12:00:00');
-		const now = new Date();
-		now.setHours(12, 0, 0, 0);
-		const elapsed = Math.max(0, Math.round((now.getTime() - a.getTime()) / 86400000));
-		let day = anchorDay + elapsed;
-		// Wrap modulo cycle_length; guard against day 0 / negatives
-		day = ((day - 1) % cycleLength + cycleLength) % cycleLength + 1;
-
-		// Phase thresholds scale proportionally to cycle_length from the
-		// 28-day canonical (menstrual 1-5 / follicular 6-13 / ovulation 14-16 / luteal 17+).
-		const scale = cycleLength / 28;
-		const endMenstrual = Math.max(1, Math.round(5 * scale));
-		const endFollicular = Math.max(endMenstrual + 1, Math.round(13 * scale));
-		const endOvulation = Math.max(endFollicular + 1, Math.round(16 * scale));
-
-		let phase: 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
-		if (day <= endMenstrual) phase = 'menstrual';
-		else if (day <= endFollicular) phase = 'follicular';
-		else if (day <= endOvulation) phase = 'ovulation';
-		else phase = 'luteal';
-
-		return {
-			hasData: true,
-			day,
-			cycleLength,
-			phase,
-			irregular,
-			endMenstrual,
-			endFollicular,
-			endOvulation,
-			progressPct: Math.max(0, Math.min(100, ((day - 1) / cycleLength) * 100)),
-		} as const;
-	})();
-
-	// CIPH-801 — cycle phase colors pulled to the data palette. Purple
-	// luteal replaced by anchor slate so the cycle ring stays inside
-	// the warm brand family.
-	const PHASE_COLORS: Record<string, string> = {
-		menstrual: DATA_1,
-		follicular: DATA_3,
-		ovulation: DATA_4,
-		luteal: DATA_5,
-	};
+	// menopause, PCOS). Heavy lifting lives in `$lib/cycleState.ts` so the
+	// Calendar route can reuse the anchor + phase math to render its
+	// phase-colored day-cell overlay. PHASE_COLORS comes from the same
+	// module (still pulled from data palette — CIPH-801).
+	$: hasCycleVital = hasCycleTracking(bp);
+	$: cycleState = hasCycleVital ? computeCycleStateToday(bp, allDocs) : null;
 
 	// Today's status
 	$: todayLog = todayEntries.find(d => d.data.type === 'entry');

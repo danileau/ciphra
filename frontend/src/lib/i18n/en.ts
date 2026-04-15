@@ -977,7 +977,7 @@ export default {
 	'terms.changes_heading': 'Changes to these terms',
 	'terms.changes_body': 'We may update these terms occasionally. Material changes will be reflected in the "last updated" date at the top. Continued use after a change constitutes acceptance.',
 	'terms.contact_heading': 'Contact',
-	'terms.contact_body': 'Legal and abuse reports: abuse@ciphra.example (placeholder — update before launch).',
+	'terms.contact_body': 'Legal and abuse reports: abuse@ciphra.ch.',
 	'landing.footer_register': 'Register',
 	'landing.footer_domains': 'Domains',
 
@@ -1541,7 +1541,7 @@ export default {
 	'privacy.authority_heading': 'Supervisory authority',
 	'privacy.authority_body': 'You may lodge a complaint with your national data protection authority. In Switzerland: Federal Data Protection and Information Commissioner (FDPIC), Feldeggweg 1, 3003 Bern. In the EU: the authority of your member state.',
 	'privacy.contact_heading': 'Contact',
-	'privacy.contact_body': 'Data protection requests: privacy@ciphra.example (placeholder — update before launch).',
+	'privacy.contact_body': 'Data protection requests: privacy@ciphra.ch.',
 
 	// New presets — hypertension, long_covid, menopause
 	'landing.template_hypertension': 'Hypertension',
@@ -1847,6 +1847,7 @@ export default {
 	'phase.day_n': 'Day {n}',
 	'phase.day_label': 'of phase',
 	'phase.started_on': 'Started {date}',
+	'phase.n_active': '{n} phases active',
 
 	// CIPH-857 — Settings tabs
 	'settings.tab_account': 'Account',
@@ -1931,6 +1932,13 @@ export default {
 	'cycle.phase_follicular': 'Follicular',
 	'cycle.phase_ovulation': 'Ovulation',
 	'cycle.phase_luteal': 'Luteal',
+	'cycle.phase_legend': 'Cycle phase',
+	'cycle.anchor_hint': 'Based on your last logged period ({date}).',
+	'cycle.anchor_fix': 'Fix start date',
+	'cycle.anchor_none': 'No period logged yet — log it on the day it starts to calibrate phases.',
+	'cycle.phase_legend_aria': 'Cycle phase legend',
+	'calendar.band_legend': 'Active phases',
+	'calendar.band_legend_aria': 'Multi-day episode band legend',
 	'cycle.irregular': 'Irregular',
 	'cycle.first_entry_prompt': 'Log your first cycle day',
 

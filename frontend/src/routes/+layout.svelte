@@ -9,6 +9,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { documents, documentsError } from '$lib/stores/documents';
+	import { get } from 'svelte/store';
 	import { blueprint, hasBlueprint } from '$lib/blueprint';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
@@ -251,15 +252,45 @@
 		quickAddSaving = true;
 
 		if (quickAddSelectedEpisode) {
-			await documents.save({
-				type: 'entry',
-				date: todayStr,
-				episodeType: quickAddSelectedEpisode,
-				time: now.toTimeString().slice(0, 5),
-				episodes: { [quickAddSelectedEpisode]: 1 },
-				notes: quickAddNote.trim() || undefined,
-				private: quickAddPrivate || undefined,
-			});
+			// Merge into today's existing `type:'entry'` if one exists — otherwise
+			// `/log/[date]` and FAB quick-add each mint separate rows for the same
+			// date, doubling journal and confusing reports/PDF.
+			const nowTime = now.toTimeString().slice(0, 5);
+			const note = quickAddNote.trim();
+			const existing = get(documents).find(
+				(d: any) => d.data?.type === 'entry' && d.data?.date === todayStr
+			);
+			if (existing) {
+				const cur: any = existing.data;
+				const prevCount = Number(cur.episodes?.[quickAddSelectedEpisode] || 0);
+				const prevNote = cur.episodeNotes?.[quickAddSelectedEpisode] || '';
+				const appendedNote = note
+					? (prevNote ? `${prevNote}\n${nowTime}: ${note}` : `${nowTime}: ${note}`)
+					: prevNote || undefined;
+				await documents.updateDoc(existing.id, {
+					...cur,
+					episodes: { ...(cur.episodes || {}), [quickAddSelectedEpisode]: prevCount + 1 },
+					episodeTimes: {
+						...(cur.episodeTimes || {}),
+						[quickAddSelectedEpisode]: cur.episodeTimes?.[quickAddSelectedEpisode] || nowTime,
+					},
+					episodeNotes: {
+						...(cur.episodeNotes || {}),
+						...(appendedNote !== undefined ? { [quickAddSelectedEpisode]: appendedNote } : {}),
+					},
+				});
+			} else {
+				await documents.save({
+					type: 'entry',
+					date: todayStr,
+					episodeType: quickAddSelectedEpisode,
+					time: nowTime,
+					episodes: { [quickAddSelectedEpisode]: 1 },
+					episodeTimes: { [quickAddSelectedEpisode]: nowTime },
+					episodeNotes: note ? { [quickAddSelectedEpisode]: `${nowTime}: ${note}` } : undefined,
+					private: quickAddPrivate || undefined,
+				});
+			}
 		} else if (quickAddNote.trim()) {
 			await documents.save({
 				type: 'event',

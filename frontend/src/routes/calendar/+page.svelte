@@ -9,6 +9,13 @@
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import EntryPreview from '$lib/components/EntryPreview.svelte';
 	import ConfirmDelete from '$lib/components/ConfirmDelete.svelte';
+	import { cohortOf } from '$lib/blueprint/cohort';
+	import {
+		computeCycleAnchor,
+		cycleStateForDate,
+		PHASE_COLORS,
+		type Phase,
+	} from '$lib/cycleState';
 
 	let selectedDate: string | null = null;
 	let currentYear = new Date().getFullYear();
@@ -16,6 +23,34 @@
 	let confirmDeleteId: number | null = null;
 
 	$: bp = $blueprint;
+
+	// CIPH-855a — Cycle-overlay mode. For cycle-cohort blueprints
+	// (endometriosis / menopause / PCOS) the calendar renders a soft
+	// phase-colored background on each day cell so the monthly phase
+	// pattern is readable at a glance. Starts at 15% opacity — can be
+	// tuned up to 20% or down to 10% post-persona dry-run.
+	$: cohort = cohortOf(bp);
+	$: cycleOverlayActive = cohort === 'cycle';
+	$: cycleAnchor = cycleOverlayActive ? computeCycleAnchor(bp, $documents) : null;
+
+	// CIPH-855b — Phase-bands polish. For phase-cohort blueprints
+	// (bipolar/MS/long-covid/IBD/IBS/chronic_pain/anx_dep/burnout) the
+	// multiDay bands are the clinical unit. Render them at 6px (vs 3px
+	// default) and dim the counter-dots on days that also have a phase
+	// band so the band reads first. Legend above the grid exposes the
+	// multiDay types so users know what each color means.
+	$: phaseBandEmphasis = cohort === 'phase';
+	$: multiDayTypes = (bp?.episodeTypes || []).filter((e) => e.multiDay);
+	$: bandLegendVisible = phaseBandEmphasis && multiDayTypes.length > 0;
+
+	function dayPhase(day: number): Phase | null {
+		if (!cycleOverlayActive || !cycleAnchor) return null;
+		const dateStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+		const state = cycleStateForDate(cycleAnchor, dateStr);
+		return state?.phase ?? null;
+	}
+
+	const PHASES: Phase[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
 
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
@@ -37,6 +72,20 @@
 		else currentMonth++;
 		selectedDate = null;
 	}
+	// CIPH-878 — "go back to now" shortcut. Jumps to today's month and puts
+	// keyboard focus on today's cell, but does NOT set `selectedDate` —
+	// otherwise the day-detail sheet would pop open and feel like a dialog
+	// the user didn't ask for. The user can still tap today to open details.
+	function jumpToToday() {
+		const now = new Date();
+		currentYear = now.getFullYear();
+		currentMonth = now.getMonth();
+		selectedDate = null;
+		focusedDay = now.getDate();
+	}
+	$: todayYear = new Date().getFullYear();
+	$: todayMonth = new Date().getMonth();
+	$: isOnCurrentMonth = currentYear === todayYear && currentMonth === todayMonth;
 
 	function getDocsForDay(day: number): CiphraDocument[] {
 		const ds = `${monthPrefix}-${String(day).padStart(2, '0')}`;
@@ -214,7 +263,16 @@
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
-				<h1 class="text-base md:text-base font-bold capitalize" style="color: var(--text-primary)">{monthName}</h1>
+				<div class="flex items-center gap-2 min-w-0">
+					<h1 class="text-base md:text-base font-bold capitalize truncate" style="color: var(--text-primary)">{monthName}</h1>
+					{#if !isOnCurrentMonth}
+						<button
+							on:click={jumpToToday}
+							class="cal-today-btn"
+							aria-label={$t('common.today')}
+						>{$t('common.today')}</button>
+					{/if}
+				</div>
 				<button
 					on:click={nextMonth}
 					class="p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
@@ -223,6 +281,48 @@
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
 			</div>
+
+			<!-- CIPH-855a — Cycle-phase legend. Shown only for the cycle
+				 cohort so non-cycle users don't see unused chrome. Day-cell
+				 background color at 15% opacity maps 1:1 to these swatches. -->
+			{#if cycleOverlayActive}
+				<div class="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]" aria-label={$t('cycle.phase_legend_aria')}>
+					<span class="uppercase tracking-wider font-medium" style="color: var(--text-muted)">{$t('cycle.phase_legend')}</span>
+					{#each PHASES as ph}
+						<span class="inline-flex items-center gap-1.5">
+							<span class="w-3 h-3 rounded" style="background: {PHASE_COLORS[ph]}26; border: 1px solid {PHASE_COLORS[ph]}"></span>
+							<span style="color: var(--text-secondary)">{$t('cycle.phase_' + ph)}</span>
+						</span>
+					{/each}
+				</div>
+				<!-- CIPH-879 — anchor correction hint. Shows which logged day the
+					 calculated phases are pivoting on, and one-tap links the user
+					 to that date's log so she can correct the period start if the
+					 calculation doesn't match reality. -->
+				<div class="mb-3 text-[11px]" style="color: var(--text-muted)">
+					{#if cycleAnchor}
+						<span>{$t('cycle.anchor_hint').replace('{date}', new Date(cycleAnchor.anchorDate + 'T12:00:00').toLocaleDateString($locale, { day: 'numeric', month: 'short', year: 'numeric' }))}</span>
+						<a href="/log/{cycleAnchor.anchorDate}" class="ml-1 underline" style="color: var(--brand)">{$t('cycle.anchor_fix')}</a>
+					{:else}
+						<span>{$t('cycle.anchor_none')}</span>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- CIPH-855b — MultiDay-band legend. Shown only for phase cohort
+				 with declared multiDay episode types. Each swatch mirrors the
+				 6px band color at the bottom of the day cells. -->
+			{#if bandLegendVisible}
+				<div class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]" aria-label={$t('calendar.band_legend_aria')}>
+					<span class="uppercase tracking-wider font-medium" style="color: var(--text-muted)">{$t('calendar.band_legend')}</span>
+					{#each multiDayTypes as ep}
+						<span class="inline-flex items-center gap-1.5">
+							<span class="block w-4 h-[6px] rounded-sm" style="background: {ep.color}"></span>
+							<span style="color: var(--text-secondary)">{$t(ep.label)}</span>
+						</span>
+					{/each}
+				</div>
+			{/if}
 
 			<!-- Weekday headers -->
 			<div class="grid grid-cols-7 gap-1 md:gap-0.5 mb-1" role="row">
@@ -245,6 +345,7 @@
 					{@const hasEpisode = dayHasEpisode(day)}
 					{@const hasLog = dayHasLog(day)}
 					{@const bands = dayMultiDayBands(day)}
+					{@const phase = dayPhase(day)}
 					<button
 						on:click={() => { selectedDate = dayStr; focusedDay = day; }}
 						on:keydown={(e) => handleGridKey(e, day)}
@@ -255,16 +356,25 @@
 						tabindex={day === focusedDay ? 0 : -1}
 						class="relative aspect-square md:aspect-auto md:h-12 lg:h-14 rounded-xl md:rounded-lg flex flex-col items-center justify-center transition-colors min-h-[44px] overflow-hidden"
 						style="{isSelected
-							? 'background: var(--olive-light); box-shadow: inset 0 0 0 2px var(--olive);'
+							? (phase
+								? `background: ${PHASE_COLORS[phase]}59; box-shadow: inset 0 0 0 2px ${PHASE_COLORS[phase]};`
+								: 'background: var(--olive-light); box-shadow: inset 0 0 0 2px var(--olive);')
 							: isToday
-								? 'background: var(--olive-light);'
-								: ''}"
+								? (phase
+									? `background: ${PHASE_COLORS[phase]}59; box-shadow: inset 0 0 0 2px ${PHASE_COLORS[phase]};`
+									: 'box-shadow: inset 0 0 0 2px var(--brand);')
+								: phase
+									? `background: ${PHASE_COLORS[phase]}26;`
+									: ''}"
 					>
 						<span
 							class="text-sm font-medium"
-							style="color: {isToday ? 'var(--olive)' : 'var(--text-primary)'}"
+							style="color: var(--text-primary)"
 						>{day}</span>
-						<div class="flex gap-0.5 mt-0.5">
+						<!-- CIPH-855b — counter-dots dim to 40% when a phase band is
+							 active on this cell AND the blueprint is a phase cohort,
+							 so the band reads as the primary signal. -->
+						<div class="flex gap-0.5 mt-0.5" style="opacity: {phaseBandEmphasis && bands.length > 0 ? 0.4 : 1}">
 							{#if hasEpisode}
 								<span class="w-1.5 h-1.5 rounded-full" style="background: var(--danger)"></span>
 							{/if}
@@ -273,9 +383,15 @@
 							{/if}
 						</div>
 						{#if bands.length > 0}
+							<!-- CIPH-855b — 6px bands for phase cohort (foreground),
+								 3px default for everyone else (backward-compat). -->
 							<div class="absolute bottom-0 left-0 right-0 flex flex-col">
 								{#each bands as band}
-									<span class="block h-[3px] w-full" style="background: {band.color}" title={$t(band.label)}></span>
+									<span
+										class="block w-full"
+										style="background: {band.color}; height: {phaseBandEmphasis ? '6px' : '3px'}"
+										title={$t(band.label)}
+									></span>
 								{/each}
 							</div>
 						{/if}
@@ -428,5 +544,26 @@
 	}
 	a[style*="--brand"]:hover {
 		text-decoration: underline;
+	}
+	/* CIPH-878 — jump-to-today pill next to month name. Subtle by default,
+	   brand-tinted on hover. Only rendered when off the current month. */
+	.cal-today-btn {
+		font-size: 11px;
+		font-weight: 500;
+		padding: 2px 8px;
+		border-radius: 9999px;
+		border: 1px solid var(--border-subtle, rgba(0,0,0,0.1));
+		background: transparent;
+		color: var(--text-secondary);
+		line-height: 1.4;
+		white-space: nowrap;
+		cursor: pointer;
+		transition: color .15s, background .15s, border-color .15s;
+	}
+	.cal-today-btn:hover,
+	.cal-today-btn:focus-visible {
+		color: var(--brand);
+		border-color: var(--brand);
+		background: rgba(var(--brand-rgb, 99,102,241), 0.08);
 	}
 </style>
