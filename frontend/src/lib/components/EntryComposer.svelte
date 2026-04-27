@@ -10,6 +10,8 @@
 	 calendar rows; merging the two variants would regress this surface's
 	 visual. Candidate for a future banner-variant addition. -->
 <script context="module" lang="ts">
+	import type { Phase as CyclePhase } from '$lib/cycleState';
+
 	export type EntryData = {
 		type: 'entry';
 		date: string;
@@ -23,6 +25,10 @@
 		medications: Record<string, boolean>;
 		notes: string;
 		private?: true;
+		// CIPH-886 — per-day phase override for the cycle cohort. When present,
+		// calendar.dayPhase() prefers it over the derived phase. Undefined =
+		// "Automatisch" (use derivation).
+		phaseOverride?: CyclePhase;
 	};
 </script>
 
@@ -30,6 +36,8 @@
 	import { t, locale, translateUnit } from '$lib/i18n';
 	import type { Blueprint } from '$lib/blueprint';
 	import type { CiphraDocument } from '$lib/stores/documents';
+	import { cohortOf } from '$lib/blueprint/cohort';
+	import type { Phase } from '$lib/cycleState';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import { fade } from 'svelte/transition';
@@ -109,6 +117,12 @@
 	// CIPH-713 — per-entry private flag. When true, this entry is hard-
 	// excluded from every export (PDF/CSV/reports/share) via isExportable().
 	let isPrivate = false;
+	// CIPH-886 — phase override (cycle cohort). Empty string means "Automatisch"
+	// (use derivation). Stored on the doc as `phaseOverride: Phase | undefined`.
+	let phaseOverride: Phase | '' = '';
+	const PHASES_FOR_OVERRIDE: Phase[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
+	$: cohort = cohortOf(bp);
+	$: showPhaseOverride = cohort === 'cycle';
 
 	let multiEntryVitals: Record<string, Array<{time: string, value: string}>> = {};
 	let multiEntryNewTime: Record<string, string> = {};
@@ -243,6 +257,12 @@
 		if (d.episodeNotes) episodeNotes = { ...episodeNotes, ...d.episodeNotes };
 		if (d.notes) notes = d.notes;
 		isPrivate = d.private === true;
+		// CIPH-886 — hydrate phase override if present (cycle cohort only).
+		if (d.phaseOverride && PHASES_FOR_OVERRIDE.includes(d.phaseOverride as Phase)) {
+			phaseOverride = d.phaseOverride as Phase;
+		} else {
+			phaseOverride = '';
+		}
 		parseMultiEntryVitals();
 	}
 
@@ -261,6 +281,7 @@
 			medications,
 			notes,
 			private: isPrivate ? true : undefined,
+			phaseOverride: phaseOverride || undefined,
 		};
 		await onSave(data);
 		saving = false;
@@ -786,6 +807,43 @@
 				{/each}
 				{/if}
 			</section>
+			{/if}
+
+			<!-- ─── CIPH-886 Phase-override card (cycle cohort only) ─── -->
+			{#if showPhaseOverride}
+				<section class="log-card log-card--ochre">
+					<button class="log-section-toggle" on:click={() => toggleSection('phaseOverride')}>
+						<h2 class="log-section-header">{$t('cycle.phase_override_title')}</h2>
+						<svg class="log-section-chevron" class:log-section-chevron--open={!collapsed['phaseOverride']} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</button>
+					{#if !collapsed['phaseOverride']}
+						<p class="log-group-label" style="margin-top: 0">{$t('cycle.phase_override_hint')}</p>
+						<div class="log-chip-wrap" role="radiogroup" aria-label={$t('cycle.phase_override_title')}>
+							<button
+								type="button"
+								role="radio"
+								aria-checked={phaseOverride === ''}
+								on:click={() => { phaseOverride = ''; markChanged(); }}
+								class="log-chip {phaseOverride === '' ? 'log-chip--ochre-active' : ''}"
+							>
+								{#if phaseOverride === ''}<svg class="log-chip-check" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>{/if}
+								{$t('cycle.phase_override_auto')}
+							</button>
+							{#each PHASES_FOR_OVERRIDE as ph}
+								<button
+									type="button"
+									role="radio"
+									aria-checked={phaseOverride === ph}
+									on:click={() => { phaseOverride = ph; markChanged(); }}
+									class="log-chip {phaseOverride === ph ? 'log-chip--ochre-active' : ''}"
+								>
+									{#if phaseOverride === ph}<svg class="log-chip-check" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>{/if}
+									{$t(`cycle.phase_${ph}`)}
+								</button>
+							{/each}
+						</div>
+					{/if}
+				</section>
 			{/if}
 
 			<!-- ─── Notes card ─── -->

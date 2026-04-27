@@ -44,11 +44,39 @@
 	$: bandLegendVisible = phaseBandEmphasis && multiDayTypes.length > 0;
 
 	function dayPhase(day: number): Phase | null {
-		if (!cycleOverlayActive || !cycleAnchor) return null;
+		if (!cycleOverlayActive) return null;
 		const dateStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+		// CIPH-886 — manual override on the entry doc takes precedence over the
+		// derived phase. Used when the user knows their actual phase on a given
+		// day differs from the cycle-length-based derivation.
+		const override = dayPhaseOverride(day);
+		if (override) return override;
+		if (!cycleAnchor) return null;
 		const state = cycleStateForDate(cycleAnchor, dateStr);
 		return state?.phase ?? null;
 	}
+
+	// CIPH-886 — return the explicit phase override on the entry for `day`, if
+	// one was set in /log/[date]'s phase-override section. Used by both
+	// dayPhase() (precedence) and the day-cell template (triangle indicator).
+	function dayPhaseOverride(day: number): Phase | null {
+		const dateStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+		const doc = $documents.find((d) => d.data?.type === 'entry' && d.data?.date === dateStr);
+		const v = (doc?.data as any)?.phaseOverride;
+		if (v === 'menstrual' || v === 'follicular' || v === 'ovulation' || v === 'luteal') return v;
+		return null;
+	}
+
+	// CIPH-886 — number of overridden days in the visible month, used to
+	// extend the anchor hint with "N days manually overridden".
+	$: overrideCountThisMonth = (() => {
+		if (!cycleOverlayActive) return 0;
+		let n = 0;
+		for (let d = 1; d <= daysInMonth; d++) {
+			if (dayPhaseOverride(d)) n++;
+		}
+		return n;
+	})();
 
 	const PHASES: Phase[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
 
@@ -353,6 +381,12 @@
 					{:else}
 						<span>{$t('cycle.anchor_none')}</span>
 					{/if}
+					<!-- CIPH-886 — show how many days in this month have manual phase
+						 overrides, so the user understands the calendar isn't fully
+						 derived. Hidden when zero (no clutter). -->
+					{#if overrideCountThisMonth > 0}
+						<span class="ml-1">· {$t('cycle.anchor_overrides_count').replace('{count}', String(overrideCountThisMonth))}</span>
+					{/if}
 				</div>
 			{/if}
 
@@ -393,6 +427,7 @@
 					{@const hasLog = dayHasLog(day)}
 					{@const bands = dayMultiDayBands(day)}
 					{@const phase = dayPhase(day)}
+					{@const phaseIsOverridden = dayPhaseOverride(day) !== null}
 					<button
 						on:click={() => { selectedDate = dayStr; focusedDay = day; }}
 						on:keydown={(e) => handleGridKey(e, day)}
@@ -441,6 +476,20 @@
 									></span>
 								{/each}
 							</div>
+						{/if}
+						{#if phaseIsOverridden && phase}
+							<!-- CIPH-886 — triangle indicator on days where the user
+								 set an explicit phaseOverride. Distinguishes manually-
+								 set days from derived days. -->
+							<svg
+								class="absolute top-0.5 right-0.5"
+								width="8"
+								height="8"
+								viewBox="0 0 8 8"
+								aria-hidden="true"
+							>
+								<polygon points="0,8 8,8 8,0" fill={PHASE_COLORS[phase]} />
+							</svg>
 						{/if}
 					</button>
 				{/each}

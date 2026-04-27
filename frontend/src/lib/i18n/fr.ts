@@ -1990,4 +1990,10 @@ export default {
 	'rescue_med.quetiapine': 'Quétiapine',
 	'rescue_med.prednisone': 'Prednisone',
 	'rescue_med.loperamide': 'Lopéramide',
+
+	// CIPH-886 — ajustement manuel de la phase (cohorte cycle uniquement)
+	'cycle.phase_override_title': 'Ajustement de phase',
+	'cycle.phase_override_hint': 'Définir manuellement la phase de ce jour si le calcul automatique est incorrect. Affecte ce jour uniquement.',
+	'cycle.phase_override_auto': 'Automatique',
+	'cycle.anchor_overrides_count': '{count} jours ajustés manuellement',
 } as Record<string, string>;

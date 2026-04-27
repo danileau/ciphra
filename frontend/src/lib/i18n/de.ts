@@ -2013,4 +2013,10 @@ export default {
 	'rescue_med.quetiapine': 'Quetiapin',
 	'rescue_med.prednisone': 'Prednison',
 	'rescue_med.loperamide': 'Loperamid',
+
+	// CIPH-886 — per-day phase override (cycle cohort only)
+	'cycle.phase_override_title': 'Phase-Anpassung',
+	'cycle.phase_override_hint': 'Hier die Phase manuell setzen, falls die automatische Berechnung nicht stimmt. Wirkt nur für diesen Tag.',
+	'cycle.phase_override_auto': 'Automatisch',
+	'cycle.anchor_overrides_count': '{count} Tage manuell angepasst',
 } as Record<string, string>;
