@@ -166,6 +166,53 @@
 	$: selectedDayDocs = selectedDate ? $documents.filter(d => String(d.data.date || '') === selectedDate) : [];
 	$: monthName = new Date(currentYear, currentMonth).toLocaleDateString($locale, { month: 'long', year: 'numeric' });
 
+	// CIPH-880 — Cohort-aware sheet header. Cycle cohort gets a phase chip
+	// (matches the day-cell ring colour from CIPH-879). Phase cohort gets
+	// pills for any multiDay band active on the selected day.
+	$: selectedDayPhase = (cycleOverlayActive && selectedDate && cycleAnchor)
+		? (cycleStateForDate(cycleAnchor, selectedDate)?.phase ?? null)
+		: null;
+	$: selectedDayBands = (() => {
+		if (cohort !== 'phase' || !selectedDate || !bp?.episodeTypes) return [];
+		const docs = $documents.filter(d => String(d.data.date || '') === selectedDate);
+		const out: { id: string; color: string; label: string }[] = [];
+		for (const ep of bp.episodeTypes) {
+			if (!ep.multiDay) continue;
+			const active = docs.some(d =>
+				d.data.type === 'entry' &&
+				(((d.data.episodes || d.data.seizures || {}) as Record<string, number>)[ep.id] || 0) > 0,
+			);
+			if (active) out.push({ id: ep.id, color: ep.color, label: ep.label });
+		}
+		return out;
+	})();
+	// CIPH-880 — Surface the "Copy previous day" affordance in the empty-state.
+	// Routes the user to /log/{date} where the existing copy-previous button
+	// from EntryComposer (CIPH-850) handles the actual merge.
+	$: previousDayHasEntry = (() => {
+		if (!selectedDate) return false;
+		const prev = new Date(selectedDate + 'T12:00:00');
+		prev.setDate(prev.getDate() - 1);
+		const prevStr = prev.toISOString().slice(0, 10);
+		return $documents.some(d => d.data.type === 'entry' && d.data.date === prevStr);
+	})();
+
+	function adjustSelectedDate(delta: number) {
+		if (!selectedDate) return;
+		const d = new Date(selectedDate + 'T12:00:00');
+		d.setDate(d.getDate() + delta);
+		const newDate = d.toISOString().slice(0, 10);
+		selectedDate = newDate;
+		const newY = d.getFullYear();
+		const newM = d.getMonth();
+		if (newY !== currentYear || newM !== currentMonth) {
+			currentYear = newY;
+			currentMonth = newM;
+			focusedDay = d.getDate();
+		}
+		confirmDeleteId = null;
+	}
+
 	function handleEditEntry(doc: CiphraDocument) {
 		const date = String(doc.data.date || selectedDate || '');
 		if (doc.data.type === 'entry') {
@@ -459,19 +506,63 @@
 				<div class="w-10 h-1 rounded-full" style="background: var(--border)"></div>
 			</div>
 
-			<div class="flex items-center justify-between mb-4">
-				<h2 class="text-base font-semibold" style="color: var(--text-primary)">
+			<!-- CIPH-880 — Header: prev arrow, date, next arrow, edit-link.
+				 The edit-link is a stable affordance to the form for this day,
+				 distinct from the per-doc edit buttons rendered below. -->
+			<div class="flex items-center justify-between gap-2 mb-2">
+				<button
+					on:click={() => adjustSelectedDate(-1)}
+					class="cal-sheet-nav"
+					aria-label={$t('common.previous_day')}
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				</button>
+				<h2 class="text-base font-semibold flex-1 text-center min-w-0 truncate" style="color: var(--text-primary)">
 					{new Date(selectedDate + 'T12:00:00').toLocaleDateString($locale, { weekday: 'long', day: 'numeric', month: 'long' })}
 				</h2>
+				<button
+					on:click={() => adjustSelectedDate(1)}
+					class="cal-sheet-nav"
+					aria-label={$t('common.next_day')}
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				</button>
 				<a
 					href="/log/{selectedDate}"
-					class="text-sm font-medium flex items-center gap-1"
+					class="text-sm font-medium flex items-center gap-1 ml-1"
 					style="color: var(--brand)"
 				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					{$t('common.edit')}
 				</a>
 			</div>
+
+			<!-- CIPH-880 — Cohort-aware framing. Cycle cohort: phase chip
+				 matching the day-cell ring colour. Phase cohort: active band
+				 pills. Discrete / narrative cohorts get nothing here. -->
+			{#if selectedDayPhase}
+				<div class="flex justify-center mb-3">
+					<span
+						class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
+						style="background: {PHASE_COLORS[selectedDayPhase]}26; color: {PHASE_COLORS[selectedDayPhase]}; border: 1px solid {PHASE_COLORS[selectedDayPhase]}"
+					>
+						<span class="w-1.5 h-1.5 rounded-full" style="background: {PHASE_COLORS[selectedDayPhase]}"></span>
+						{$t(`cycle.phase_${selectedDayPhase}`)}
+					</span>
+				</div>
+			{:else if selectedDayBands.length > 0}
+				<div class="flex flex-wrap justify-center gap-2 mb-3">
+					{#each selectedDayBands as band}
+						<span
+							class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
+							style="background: {band.color}1f; color: {band.color}; border: 1px solid {band.color}"
+						>
+							<span class="w-1.5 h-1.5 rounded-full" style="background: {band.color}"></span>
+							{$t(band.label)}
+						</span>
+					{/each}
+				</div>
+			{/if}
 
 			{#if selectedDayDocs.length > 0}
 				<div class="space-y-3">
@@ -520,13 +611,27 @@
 						<Asterisk size={48} muted color="muted" />
 					</div>
 					<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('calendar.no_entries')}</p>
-					<a
-						href="/log/{selectedDate}"
-						class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2"/></svg>
-						{$t('companion.fill_today')}
-					</a>
+					<div class="flex flex-wrap justify-center gap-2">
+						<a
+							href="/log/{selectedDate}"
+							class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2"/></svg>
+							{$t('companion.fill_today')}
+						</a>
+						{#if previousDayHasEntry}
+							<!-- CIPH-880 — Routes to the form; EntryComposer's existing
+								 copy-previous-day button (CIPH-850) finishes the merge. -->
+							<a
+								href="/log/{selectedDate}"
+								class="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg"
+								style="border: 1px dashed var(--border); color: var(--text-secondary)"
+							>
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke-width="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-width="2"/></svg>
+								{$t('protocol.copy_previous')}
+							</a>
+						{/if}
+					</div>
 				</div>
 			{/if}
 		</div>
@@ -545,6 +650,30 @@
 	a[style*="--brand"]:hover {
 		text-decoration: underline;
 	}
+	/* CIPH-880 — sheet-header arrow nav (prev/next day). Mirrors the
+	   `.log-nav-btn` rhythm from /log/[date] so the two surfaces feel like
+	   the same surface. */
+	.cal-sheet-nav {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 44px;
+		min-height: 44px;
+		border-radius: 12px;
+		color: var(--text-secondary);
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		transition: background 0.15s ease-out;
+		flex-shrink: 0;
+	}
+	.cal-sheet-nav:hover { background: var(--surface-muted); }
+	.cal-sheet-nav:active { transform: scale(0.97); }
+	.cal-sheet-nav:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
+	}
+
 	/* CIPH-878 — jump-to-today pill next to month name. Subtle by default,
 	   brand-tinted on hover. Only rendered when off the current month. */
 	.cal-today-btn {
