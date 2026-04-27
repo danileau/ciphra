@@ -206,6 +206,19 @@ route kind.
 
 ### Forms
 
+- **EntryComposer.svelte** (CIPH-850) — full-form entry surface
+  for `/log/[date]`. Prop contract: `date`, `bp`, `existingDoc`,
+  `previousDoc`, `isToday`, `recentDocs`, `onSave`, `onDelete`,
+  `onDateChange`, `onJumpToToday`. Owns auto-save (3s debounce),
+  section-jump nav, mobile IntersectionObserver, multi-entry
+  vitals JSON round-trip, copy-previous-day, delete-confirm
+  banner (primitive-exempt — see ConfirmDelete entry below),
+  keyboard shortcuts (Ctrl+S, arrow keys for date nav), CIPH-302
+  incomplete-CTA, CIPH-713 private toggle. Route wraps in
+  `{#key date}` for fresh-instance-per-date semantics.
+  `density='quick'` is reserved for PI v13 FAB consolidation.
+  Contract enforced by `EntryComposer.test.ts`; route line-count
+  guarded by `routes/log/[date]/line-count.test.ts`.
 - **SignupFlow.svelte** — multi-step signup (username →
   passphrase → recovery code → condition presets). Used on
   `/login` and `/migrate`. Covered by `SignupFlow.test.ts`.
@@ -231,7 +244,7 @@ route kind.
   "Cancel" button pair shown next to a just-tapped delete icon
   on an entry card. Used on `routes/journal/+page.svelte` and
   `routes/calendar/+page.svelte`. Compact sibling variants
-  (CompanionRail 40px pair, `/log/[date]` full-width banner)
+  (CompanionRail 40px pair, `EntryComposer` full-width banner)
   keep their inline markup and declare a
   `<!-- primitive-exempt: ConfirmDelete … -->` comment.
 - **Modal.svelte** (CIPH-834) — centred dialog over a
