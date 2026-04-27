@@ -7,7 +7,7 @@
 <script lang="ts">
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents } from '$lib/stores/documents';
-	import { blueprint } from '$lib/blueprint';
+	import { resolvedBlueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -17,7 +17,7 @@
 
 	let currentDate = new Date().toISOString().slice(0, 10);
 
-	$: bp = $blueprint;
+	$: bp = $resolvedBlueprint;
 	$: isToday = currentDate === new Date().toISOString().slice(0, 10);
 	$: existingDoc = $documents.find(d => d.data.type === 'entry' && d.data.date === currentDate) || null;
 	$: previousDoc = (() => {

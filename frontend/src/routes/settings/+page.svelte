@@ -3,7 +3,7 @@
 	import type { Locale } from '$lib/i18n';
 	import { auth, isAuthenticated } from '$lib/stores/auth';
 	import { documents } from '$lib/stores/documents';
-	import { blueprint, hasBlueprint, presets } from '$lib/blueprint';
+	import { blueprint, hasBlueprint, presets, resolvedBlueprint } from '$lib/blueprint';
 	import type { Blueprint, MedicationSlot } from '$lib/blueprint';
 	import type { PresetInfo } from '$lib/blueprint';
 	import { changePassword, deleteAccount } from '$lib/api';
@@ -165,7 +165,13 @@
 		documents.load();
 	});
 
+	// Settings reads BOTH stores: `bp` is the raw blueprint (so the
+	// per-section custom-item lists can mutate `bp.customizations.custom*`
+	// and persist via `blueprint.save(bp)`); `bpResolved` is the merged
+	// view used for any count or rendering that should include user-added
+	// items (profile card stats, etc.).
 	$: bp = $blueprint;
+	$: bpResolved = $resolvedBlueprint;
 
 	function startSwitch(preset: PresetInfo) {
 		selectedPreset = preset;
@@ -444,10 +450,10 @@
 					<span class="badge badge-olive">{bp.conditionId}</span>
 				</div>
 				<p class="text-sm mt-0.5" style="color: var(--text-secondary)">
-					{$t('settings.symptoms_count', { count: String(bp.symptomGroups.reduce((n, g) => n + g.items.length, 0)) })} ·
-					{$t('settings.episode_types_count', { count: String(bp.episodeTypes.length) })} ·
-					{$t('settings.triggers_count', { count: String(bp.triggers.length) })} ·
-					{$t('settings.vitals_count', { count: String(bp.vitals.length) })}
+					{$t('settings.symptoms_count', { count: String((bpResolved ?? bp).symptomGroups.reduce((n, g) => n + g.items.length, 0)) })} ·
+					{$t('settings.episode_types_count', { count: String((bpResolved ?? bp).episodeTypes.length) })} ·
+					{$t('settings.triggers_count', { count: String((bpResolved ?? bp).triggers.length) })} ·
+					{$t('settings.vitals_count', { count: String((bpResolved ?? bp).vitals.length) })}
 				</p>
 			</div>
 			{#if currentPreset}

@@ -10,7 +10,7 @@
 	import { browser } from '$app/environment';
 	import { documents, documentsError } from '$lib/stores/documents';
 	import { get } from 'svelte/store';
-	import { blueprint, hasBlueprint } from '$lib/blueprint';
+	import { blueprint, hasBlueprint, resolvedBlueprint } from '$lib/blueprint';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Toast from '$lib/components/Toast.svelte';
@@ -228,7 +228,7 @@
 		}
 	}
 
-	$: bp = $blueprint;
+	$: bp = $resolvedBlueprint;
 
 	function selectEpisodeType(id: string) {
 		quickAddSelectedEpisode = quickAddSelectedEpisode === id ? null : id;

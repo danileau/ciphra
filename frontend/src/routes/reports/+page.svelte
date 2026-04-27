@@ -2,7 +2,7 @@
 	import { t, locale } from '$lib/i18n';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { blueprint } from '$lib/blueprint';
+	import { resolvedBlueprint } from '$lib/blueprint';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import type { Blueprint } from '$lib/blueprint';
@@ -60,7 +60,7 @@
 	// caregivers without their own blueprint.
 	let initialLoadDone = false;
 
-	$: bp = $blueprint;
+	$: bp = $resolvedBlueprint;
 	$: liveLinks = $familyLinks.filter(l => !l.revoked);
 
 	// CIPH-710 / CIPH-713 — every aggregation, summary, and export below uses

@@ -2,7 +2,7 @@
 	import { t, locale } from '$lib/i18n';
 	import { auth } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { blueprint } from '$lib/blueprint';
+	import { resolvedBlueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Asterisk from '$lib/components/Asterisk.svelte';
@@ -27,7 +27,7 @@
 		documents.load().then(() => { loaded = true; });
 	});
 
-	$: bp = $blueprint;
+	$: bp = $resolvedBlueprint;
 	$: allDocs = $documents;
 	$: todayStr = new Date().toISOString().slice(0, 10);
 	$: todayEntries = allDocs.filter(d => String(d.data.date || '').startsWith(todayStr));
