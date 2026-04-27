@@ -7,6 +7,7 @@
 	import { validateRecoveryCode } from '$lib/wordlist';
 	import SignupFlow from '$lib/components/SignupFlow.svelte';
 	import LoginForm from '$lib/components/LoginForm.svelte';
+	import PasswordField from '$lib/components/PasswordField.svelte';
 
 	function setLocale(e: Event) {
 		const val = (e.currentTarget as HTMLSelectElement).value;
@@ -195,13 +196,23 @@
 							</div>
 							<div>
 								<label for="rec-new-pass" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.new_password')}</label>
-								<input id="rec-new-pass" type="password" bind:value={recNewPass} required minlength="8"
-									class="input" />
+								<PasswordField
+									id="rec-new-pass"
+									bind:value={recNewPass}
+									required
+									minlength={8}
+									class="input"
+								/>
 							</div>
 							<div>
 								<label for="rec-new-pass2" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.password_confirm')}</label>
-								<input id="rec-new-pass2" type="password" bind:value={recNewPassConfirm} required minlength="8"
-									class="input" />
+								<PasswordField
+									id="rec-new-pass2"
+									bind:value={recNewPassConfirm}
+									required
+									minlength={8}
+									class="input"
+								/>
 							</div>
 							<button type="submit" disabled={loading}
 								class="btn-primary w-full px-4 min-h-[48px]">

@@ -1997,4 +1997,8 @@ export default {
 	'cycle.phase_override_hint': 'Imposta manualmente la fase di questo giorno se il calcolo automatico non è corretto. Vale solo per questo giorno.',
 	'cycle.phase_override_auto': 'Automatica',
 	'cycle.anchor_overrides_count': '{count} giorni modificati manualmente',
+
+	// CIPH-887 — Visibilità della password
+	'password.show': 'Mostra password',
+	'password.hide': 'Nascondi password',
 } as Record<string, string>;

@@ -219,6 +219,15 @@ route kind.
   `density='quick'` is reserved for PI v13 FAB consolidation.
   Contract enforced by `EntryComposer.test.ts`; route line-count
   guarded by `routes/log/[date]/line-count.test.ts`.
+- **PasswordField.svelte** (CIPH-887) — wraps a native password
+  input with an eye-icon toggle. Tap flips `type` between
+  `password` and `text` for the current session only — visibility
+  is never persisted to localStorage (security). Used wherever a
+  passphrase is entered: `LoginForm`, `SignupFlow` (×2), the
+  recovery flow on `/login`, and the generic `Input.svelte`
+  delegates to it for `type="password"`. Audit guard in
+  `PasswordField.test.ts` asserts no other `.svelte` renders a
+  bare `<input type="password">`.
 - **SignupFlow.svelte** — multi-step signup (username →
   passphrase → recovery code → condition presets). Used on
   `/login` and `/migrate`. Covered by `SignupFlow.test.ts`.

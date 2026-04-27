@@ -2009,4 +2009,8 @@ export default {
 	'cycle.phase_override_hint': 'Manually set the phase for this day if the auto-calculation is off. Affects this day only.',
 	'cycle.phase_override_auto': 'Automatic',
 	'cycle.anchor_overrides_count': '{count} days manually overridden',
+
+	// CIPH-887 — Password visibility toggle
+	'password.show': 'Show password',
+	'password.hide': 'Hide password',
 } as Record<string, string>;

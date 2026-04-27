@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PasswordField from '$lib/components/PasswordField.svelte';
+
 	export let type: 'text' | 'password' | 'email' = 'text';
 	export let placeholder: string = '';
 	export let value: string = '';
@@ -13,9 +15,19 @@
 		<label for={id} class="input-label">{label}</label>
 	{/if}
 	{#if type === 'password'}
-		<input {id} type="password" {placeholder} bind:value class="input-field" class:input-error={error}
-			aria-invalid={error ? 'true' : undefined} aria-describedby={error ? `${id}-error` : undefined}
-			on:blur on:focus on:input />
+		<!-- CIPH-887 — delegate to PasswordField so the show/hide toggle is
+			 available everywhere a password input is rendered. -->
+		<PasswordField
+			{id}
+			{placeholder}
+			bind:value
+			class="input-field {error ? 'input-error' : ''}"
+			ariaInvalid={error ? true : undefined}
+			ariaDescribedby={error ? `${id}-error` : undefined}
+			on:blur
+			on:focus
+			on:input
+		/>
 	{:else if type === 'email'}
 		<input {id} type="email" {placeholder} bind:value class="input-field" class:input-error={error}
 			aria-invalid={error ? 'true' : undefined} aria-describedby={error ? `${id}-error` : undefined}

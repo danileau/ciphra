@@ -2019,4 +2019,8 @@ export default {
 	'cycle.phase_override_hint': 'Hier die Phase manuell setzen, falls die automatische Berechnung nicht stimmt. Wirkt nur für diesen Tag.',
 	'cycle.phase_override_auto': 'Automatisch',
 	'cycle.anchor_overrides_count': '{count} Tage manuell angepasst',
+
+	// CIPH-887 — Passwort-Sichtbarkeit umschalten
+	'password.show': 'Passwort anzeigen',
+	'password.hide': 'Passwort verbergen',
 } as Record<string, string>;

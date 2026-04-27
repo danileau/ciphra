@@ -21,6 +21,7 @@
 	import { auth } from '$lib/stores/auth';
 	import { createVault, decryptMasterKey, deriveAuthKey } from '$lib/crypto';
 	import { generateRecoveryPdf } from '$lib/pdf';
+	import PasswordField from '$lib/components/PasswordField.svelte';
 
 	const dispatch = createEventDispatcher<{ 'signup-complete': void }>();
 
@@ -162,20 +163,30 @@
 		</div>
 		<div>
 			<label for="signup-pass" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.password')}</label>
-			<input id="signup-pass" type="password" bind:value={password} required minlength="8"
+			<PasswordField
+				id="signup-pass"
+				bind:value={password}
+				required
+				minlength={8}
 				autocomplete="new-password"
 				on:blur={() => { touched.pass = true; }}
-				class="input" />
+				class="input"
+			/>
 			{#if touched.pass && password.length > 0 && password.length < 8}
 				<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_short')}</p>
 			{/if}
 		</div>
 		<div>
 			<label for="signup-pass2" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.password_confirm')}</label>
-			<input id="signup-pass2" type="password" bind:value={confirm} required minlength="8"
+			<PasswordField
+				id="signup-pass2"
+				bind:value={confirm}
+				required
+				minlength={8}
 				autocomplete="new-password"
 				on:blur={() => { touched.pass2 = true; }}
-				class="input" />
+				class="input"
+			/>
 			{#if touched.pass2 && confirm.length > 0 && password !== confirm}
 				<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_match')}</p>
 			{/if}

@@ -10,6 +10,7 @@
 	import { t } from '$lib/i18n';
 	import * as api from '$lib/api';
 	import { auth } from '$lib/stores/auth';
+	import PasswordField from '$lib/components/PasswordField.svelte';
 	import { decryptMasterKey, deriveAuthKey } from '$lib/crypto';
 
 	const dispatch = createEventDispatcher<{ 'login-complete': void }>();
@@ -100,9 +101,14 @@
 	</div>
 	<div>
 		<label for="login-pass" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.password')}</label>
-		<input id="login-pass" type="password" bind:value={loginPass} required minlength="8"
+		<PasswordField
+			id="login-pass"
+			bind:value={loginPass}
+			required
+			minlength={8}
 			on:blur={() => { touched.loginPass = true; }}
-			class="input" />
+			class="input"
+		/>
 		{#if touched.loginPass && loginPass.length > 0 && loginPass.length < 8}
 			<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_short')}</p>
 		{/if}

@@ -9,6 +9,7 @@
 	import { changePassword, deleteAccount } from '$lib/api';
 	import { get } from 'svelte/store';
 	import { deriveAuthKey, rewrapMasterKey } from '$lib/crypto';
+	import PasswordField from '$lib/components/PasswordField.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
@@ -331,24 +332,23 @@
 				</button>
 			{:else}
 				<form on:submit|preventDefault={handleChangePassword} class="space-y-3">
-					<input
-						type="password"
+					<PasswordField
 						bind:value={currentPassword}
 						placeholder={$t('settings.current_password')}
 						class="input"
 						required
 					/>
-					<input
-						type="password"
+					<PasswordField
 						bind:value={newPassword}
 						placeholder={$t('settings.new_password')}
+						autocomplete="new-password"
 						class="input"
 						required
 					/>
-					<input
-						type="password"
+					<PasswordField
 						bind:value={confirmNewPassword}
 						placeholder={$t('settings.confirm_new_password')}
+						autocomplete="new-password"
 						class="input"
 						required
 					/>
@@ -721,14 +721,13 @@
 			class="w-full px-4 py-2 min-h-[44px] rounded-xl text-sm mb-3 outline-none"
 			style="background: var(--surface-muted); border: 1px solid var(--border); color: var(--text-primary)"
 		/>
-		<input
-			type="password"
-			bind:value={deletePassword}
-			placeholder={$t('auth.password')}
-			disabled={!deleteUsernameMatches}
-			class="w-full px-4 py-2 min-h-[44px] rounded-xl text-sm mb-3 outline-none disabled:opacity-50"
-			style="background: var(--surface-muted); border: 1px solid var(--border); color: var(--text-primary)"
-		/>
+		<div class="mb-3 {!deleteUsernameMatches ? 'opacity-50 pointer-events-none' : ''}">
+			<PasswordField
+				bind:value={deletePassword}
+				placeholder={$t('auth.password')}
+				class="w-full px-4 py-2 min-h-[44px] rounded-xl text-sm outline-none"
+			/>
+		</div>
 		{#if deleteError}
 			<p class="text-sm mb-3" style="color: var(--danger)">{deleteError}</p>
 		{/if}
