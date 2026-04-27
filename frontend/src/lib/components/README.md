@@ -185,9 +185,16 @@ route kind.
   render-only right rail of the dashboard (`lg:` and up).
   Shows compliance, doctor-export CTA, today's entries. Zero
   reactive declarations — pure render.
-- **BottomNav.svelte** — mobile bottom tab bar (Heute /
+- **BottomNav.svelte** — mobile bottom tab bar (Dashboard /
   Journal / Kalender / Reports / Settings). Auth-aware via its
   own store subscription; renders nothing when signed out.
+  Active-state pattern (CIPH-870): each tab uses a reactive
+  declaration (`$: isXActive = …`) rather than a function called
+  from the template. Svelte's template dependency tracking can't
+  see through function bodies — inline a call like
+  `class:active={isActive('/x')}` stops re-evaluating on
+  navigation, so the first-rendered tab stays lit forever.
+  12 regression tests in `BottomNav.test.ts` enforce this.
 
 ### Cards
 
@@ -244,11 +251,15 @@ route kind.
   URL (passes `current` + `onSelect`). Used on
   `routes/settings/+page.svelte` for the Account / Tracking /
   Sharing split.
-- **PhaseContextCard.svelte** (CIPH-854) — home-dashboard card
-  shown only for the phase-band cohort (bipolar / MS / long-covid
-  / IBD / IBS / chronic_pain / anxiety_depression / burnout) when
-  a multiDay episode is ongoing. Renders "Day N of <phase>,
-  started <date>". Used in `CompanionMain.svelte`.
+- **PhaseContextCard.svelte** (CIPH-854; extended CIPH-855b) —
+  home-dashboard card shown only for the phase-band cohort
+  (bipolar / MS / long-covid / IBD / IBS / chronic_pain /
+  anxiety_depression / burnout) when a multiDay episode is
+  ongoing. Renders "Day N of <phase>, started <date>". Accepts an
+  optional `activeCount` prop (added PI v11 / CIPH-855b): when > 1
+  the card renders a neutral "N Phasen aktiv / N phases active"
+  pill for bipolar mixed states, long-covid + PEM overlap, IBD
+  with two simultaneous flare types. Used in `CompanionMain.svelte`.
 
 ### Feature-specific
 
@@ -304,6 +315,35 @@ to the top of the file. The heuristic is a soft fence: it
 catches drift, it does not enforce style. `EmptyState.svelte`
 remains un-swept; adoption is deferred to a future PI because
 every "nothing here yet" site has bespoke iconography.
+
+## Shared math / helper modules
+
+Modules that are not components but have the same "single source of
+truth" status. When a consumer needs cycle math, effective column
+derivation, or condition-cohort resolution, it imports from here
+rather than re-implementing. Drift is structural — catch it at PR
+review, not at runtime.
+
+- **`$lib/cycleState.ts`** (CIPH-855a) — Cycle-phase math. Exports
+  `Phase` type, `computeCycleAnchor(bp, docs)`,
+  `cycleStateForDate(anchor, date)`, `phaseBoundaries(cycleLength)`,
+  `phaseForDay(day, cycleLength)`, `computeCycleStateToday(…)`,
+  `PHASE_COLORS`. Consumed by `Companion.svelte` and
+  `routes/calendar/+page.svelte`. **Do not re-implement cycle-day
+  math at a call site** — extend this module. 17 unit tests pin
+  the extraction parity.
+- **`$lib/pdf.ts` effective-column helpers** (CIPH-877) —
+  `effectiveSymptomColumns(bp, docs, datePrefix, excludeIds?)` and
+  `effectiveEpisodeColumns(bp, docs, datePrefix)`. Both return
+  `curated ∪ items-with-data-in-range`. Used by the doctor PDF
+  (`drawGridSection`) and by `routes/reports/+page.svelte`. Keeps
+  the on-screen grid and the exported PDF/CSV aligned so users
+  never see a logged symptom missing from the export.
+- **`$lib/blueprint/cohort.ts`** (CIPH-854 / PI v10) — Resolves a
+  blueprint to one of `discrete` / `cycle` / `phase` / `narrative`
+  / `custom` via `cohortOf(blueprint)`. Used by Companion + route
+  shells + Calendar to decide which cohort-specific surfaces to
+  render.
 
 ## Card CSS variants
 
