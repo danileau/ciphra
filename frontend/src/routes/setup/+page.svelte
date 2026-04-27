@@ -13,8 +13,16 @@
 	import { t, translateUnit } from '$lib/i18n';
 	import { isAuthenticated, auth } from '$lib/stores/auth';
 	import { blueprint, presets, isCustomItem, resolveBlueprint } from '$lib/blueprint';
-	import type { Blueprint, MedicationSlot } from '$lib/blueprint';
-	import type { PresetInfo } from '$lib/blueprint';
+	import type {
+		Blueprint,
+		BlueprintItem,
+		CustomSymptomItem,
+		EpisodeType,
+		MedicationSlot,
+		VitalField,
+	} from '$lib/blueprint';
+	import type { PresetInfo, CustomKind } from '$lib/blueprint';
+	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
 	import { get } from 'svelte/store';
@@ -71,6 +79,10 @@
 
 	let step: 1 | 2 | 3 | 4 = 1;
 	let working: Blueprint | null = null;
+	// CIPH-882 — Resolved view for step-2/3 iteration so user-added
+	// custom items render alongside preset ones. `working` stays the
+	// source of truth that gets persisted at finishAndSave.
+	$: workingResolved = working ? resolveBlueprint(working) : null;
 	let saving = false;
 
 	// Session-only overrides — not persisted to the blueprint. Document keys
@@ -120,6 +132,59 @@
 	function removeMed(id: string) {
 		if (!working) return;
 		working.medications = working.medications.filter(m => m.id !== id);
+	}
+
+	// CIPH-882 — custom-item modal in the wizard. Mutates `working`
+	// directly so step-2/3 previews show just-added items. Iteration in
+	// the templates uses `workingResolved.symptomGroups` etc. so custom
+	// items appear without changing the toggle handlers.
+	let customModalOpen = false;
+	let customModalKind: CustomKind = 'symptom';
+	let customModalEditing:
+		| CustomSymptomItem
+		| BlueprintItem
+		| VitalField
+		| EpisodeType
+		| null = null;
+
+	function openCustomModal(kind: CustomKind) {
+		customModalKind = kind;
+		customModalEditing = null;
+		customModalOpen = true;
+	}
+	function closeCustomModal() {
+		customModalOpen = false;
+		customModalEditing = null;
+	}
+
+	function handleCustomSave(
+		event: CustomEvent<
+			| { kind: 'symptom'; item: CustomSymptomItem }
+			| { kind: 'trigger'; item: BlueprintItem }
+			| { kind: 'vital'; item: VitalField }
+			| { kind: 'episode'; item: EpisodeType }
+		>,
+	) {
+		if (!working) return;
+		const { kind, item } = event.detail;
+		const cz = working.customizations || (working.customizations = {});
+		if (kind === 'symptom') {
+			cz.customSymptoms = [...(cz.customSymptoms || []), item];
+			// Default new custom symptoms ON.
+			symptomItemOn[item.id] = true;
+		} else if (kind === 'trigger') {
+			cz.customTriggers = [...(cz.customTriggers || []), item];
+			triggerOn[item.id] = true;
+		} else if (kind === 'vital') {
+			cz.customVitals = [...(cz.customVitals || []), item];
+			vitalOn[item.id] = true;
+		} else {
+			cz.customEpisodes = [...(cz.customEpisodes || []), item];
+		}
+		// Force the reactive cascade — assignments to nested fields don't
+		// re-trigger Svelte's `$:` blocks otherwise.
+		working = working;
+		closeCustomModal();
 	}
 
 	onMount(() => {
@@ -180,30 +245,33 @@
 		// CIPH-740 — symptoms are now toggled per item in the drill-in UI.
 		// `symptomItemOn[item.id] === false` → hide that item. Triggers +
 		// vitals remain per-item already.
+		// CIPH-882 — iterate the resolved view so custom items the user
+		// added in the wizard are included in the toggle-state walk.
+		const merged = resolveBlueprint(working);
 		const hiddenSymptoms: string[] = [];
-		for (const g of working.symptomGroups) {
+		for (const g of merged.symptomGroups) {
 			for (const item of g.items) {
 				if (symptomItemOn[item.id] === false) hiddenSymptoms.push(item.id);
 			}
 		}
 		const hiddenTriggers: string[] = [];
-		for (const tr of working.triggers) {
+		for (const tr of merged.triggers) {
 			if (triggerOn[tr.id] === false) hiddenTriggers.push(tr.id);
 		}
 		const hiddenVitals: string[] = [];
-		for (const v of working.vitals) {
+		for (const v of merged.vitals) {
 			if (vitalOn[v.id] === false) hiddenVitals.push(v.id);
 		}
-		// Only attach `customizations` when something was actually hidden,
-		// so blueprints stay clean for users who toggled nothing off.
-		if (hiddenSymptoms.length || hiddenTriggers.length || hiddenVitals.length) {
-			working.customizations = {
-				...(working.customizations || {}),
-				hiddenSymptoms,
-				hiddenTriggers,
-				hiddenVitals,
-			};
-		}
+		// Always (re)write `customizations.hidden*` so re-entry into the
+		// wizard with a fresh "all on" state correctly clears stale hides.
+		// `working.customizations.custom*` (the additive arrays) survive
+		// because we spread the existing object first.
+		working.customizations = {
+			...(working.customizations || {}),
+			hiddenSymptoms,
+			hiddenTriggers,
+			hiddenVitals,
+		};
 
 		await blueprint.save(working);
 		// Persist per-user vital target overrides (spec: CIPH-301 screen 3).
@@ -336,7 +404,7 @@
 			</section>
 
 		<!-- ─── SCREEN 2: Symptom group review ─── -->
-		{:else if step === 2 && working}
+		{:else if step === 2 && working && workingResolved}
 			<section aria-labelledby="wizard-step2-heading" class="space-y-5">
 				<div>
 					<h2 id="wizard-step2-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.symptoms_title')}</h2>
@@ -344,7 +412,7 @@
 				</div>
 
 				<div class="space-y-2">
-					{#each working.symptomGroups as group (group.id)}
+					{#each workingResolved.symptomGroups as group (group.id)}
 						{@const onCount = countItemsOn(group.items)}
 						{@const total = group.items.length}
 						{@const isOpen = expandedGroup === group.id}
@@ -425,19 +493,41 @@
 						</div>
 					{/each}
 				</div>
+
+				<!-- CIPH-882 — Add your own symptom or episode-type. -->
+				<div class="flex flex-wrap gap-2 pt-2">
+					<button
+						type="button"
+						on:click={() => openCustomModal('symptom')}
+						class="text-sm font-medium px-3 py-2 min-h-[44px] rounded-lg"
+						style="color: var(--olive); background: var(--surface-muted); border: 1px dashed var(--border)"
+						data-testid="setup-add-custom-symptom"
+					>
+						+ {$t('customization.add_symptom')}
+					</button>
+					<button
+						type="button"
+						on:click={() => openCustomModal('episode')}
+						class="text-sm font-medium px-3 py-2 min-h-[44px] rounded-lg"
+						style="color: var(--olive); background: var(--surface-muted); border: 1px dashed var(--border)"
+						data-testid="setup-add-custom-episode"
+					>
+						+ {$t('customization.add_episode')}
+					</button>
+				</div>
 			</section>
 
 		<!-- ─── SCREEN 3: Triggers + vitals (with optional targets) ─── -->
-		{:else if step === 3 && working}
+		{:else if step === 3 && working && workingResolved}
 			<section aria-labelledby="wizard-step3-heading" class="space-y-6">
 				<div>
 					<h2 id="wizard-step3-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.triggers_title')}</h2>
 					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.wizard_triggers_caption')}</p>
 				</div>
 
-				{#if working.triggers.length > 0}
+				{#if workingResolved.triggers.length > 0}
 					<div class="flex flex-wrap gap-2">
-						{#each working.triggers as trig}
+						{#each workingResolved.triggers as trig}
 							<button
 								type="button"
 								on:click={() => { triggerOn[trig.id] = !triggerOn[trig.id]; triggerOn = triggerOn; }}
@@ -457,7 +547,7 @@
 				</div>
 
 				<div class="space-y-2">
-					{#each working.vitals as vital}
+					{#each workingResolved.vitals as vital}
 						<div class="p-4 rounded-xl" style="background: var(--surface-card); border: 1px solid var(--border)">
 							<label class="flex items-center justify-between min-h-[32px] cursor-pointer">
 								<div class="flex-1 min-w-0">
@@ -488,9 +578,31 @@
 							{/if}
 						</div>
 					{/each}
-					{#if targetableVitals.length === 0 && working.vitals.length === 0}
+					{#if targetableVitals.length === 0 && workingResolved.vitals.length === 0}
 						<p class="text-sm text-center py-4" style="color: var(--text-muted)">—</p>
 					{/if}
+				</div>
+
+				<!-- CIPH-882 — Add your own trigger or measurement. -->
+				<div class="flex flex-wrap gap-2 pt-2">
+					<button
+						type="button"
+						on:click={() => openCustomModal('trigger')}
+						class="text-sm font-medium px-3 py-2 min-h-[44px] rounded-lg"
+						style="color: var(--olive); background: var(--surface-muted); border: 1px dashed var(--border)"
+						data-testid="setup-add-custom-trigger"
+					>
+						+ {$t('customization.add_trigger')}
+					</button>
+					<button
+						type="button"
+						on:click={() => openCustomModal('vital')}
+						class="text-sm font-medium px-3 py-2 min-h-[44px] rounded-lg"
+						style="color: var(--olive); background: var(--surface-muted); border: 1px dashed var(--border)"
+						data-testid="setup-add-custom-vital"
+					>
+						+ {$t('customization.add_vital')}
+					</button>
 				</div>
 			</section>
 
@@ -578,3 +690,16 @@
 		{/if}
 	</div>
 </main>
+
+<!-- CIPH-882 — Add-your-own-item modal. Mounts at the end of the page
+	so it's outside any conditional `{#if step === N}` block. The wizard
+	mutates `working.customizations.custom*` directly and the resolved
+	view (workingResolved) shows the new items immediately. -->
+<CustomItemModal
+	open={customModalOpen}
+	kind={customModalKind}
+	editing={customModalEditing}
+	groups={working?.symptomGroups ?? []}
+	on:save={handleCustomSave}
+	on:close={closeCustomModal}
+/>

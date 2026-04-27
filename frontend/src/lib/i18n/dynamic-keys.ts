@@ -88,6 +88,12 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 	// Quick-action labels composed from preset metadata.
 	'quick_action.',
 	'quickadd.',
+
+	// CIPH-882 — Custom-item modal/section labels are looked up
+	// dynamically via `$t(section.titleKey)`, `$t(errorKey)`, etc.
+	// Static `$t('customization.label')` calls are still detected;
+	// only the dynamic add/edit/section/error families need this.
+	'customization.',
 ];
 
 /**

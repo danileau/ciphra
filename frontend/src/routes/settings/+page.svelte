@@ -3,9 +3,17 @@
 	import type { Locale } from '$lib/i18n';
 	import { auth, isAuthenticated } from '$lib/stores/auth';
 	import { documents } from '$lib/stores/documents';
-	import { blueprint, hasBlueprint, presets, resolvedBlueprint } from '$lib/blueprint';
-	import type { Blueprint, MedicationSlot } from '$lib/blueprint';
-	import type { PresetInfo } from '$lib/blueprint';
+	import { blueprint, hasBlueprint, presets, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
+	import type {
+		Blueprint,
+		BlueprintItem,
+		CustomSymptomItem,
+		EpisodeType,
+		MedicationSlot,
+		VitalField,
+	} from '$lib/blueprint';
+	import type { PresetInfo, CustomKind } from '$lib/blueprint';
+	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
 	import { changePassword, deleteAccount } from '$lib/api';
 	import { get } from 'svelte/store';
 	import { deriveAuthKey, rewrapMasterKey } from '$lib/crypto';
@@ -150,6 +158,144 @@
 		const next: Blueprint = JSON.parse(JSON.stringify(bp));
 		next.medications = next.medications.filter(m => m.id !== id);
 		await blueprint.save(next);
+	}
+
+	// CIPH-882 — Custom blueprint items: add/edit/hide/delete
+	const CUSTOM_SECTIONS: ReadonlyArray<{ kind: CustomKind; titleKey: string; addKey: string }> = [
+		{ kind: 'symptom', titleKey: 'customization.section_custom_symptoms', addKey: 'customization.add_symptom' },
+		{ kind: 'trigger', titleKey: 'customization.section_custom_triggers', addKey: 'customization.add_trigger' },
+		{ kind: 'vital', titleKey: 'customization.section_custom_vitals', addKey: 'customization.add_vital' },
+		{ kind: 'episode', titleKey: 'customization.section_custom_episodes', addKey: 'customization.add_episode' },
+	];
+	let customModalOpen = false;
+	let customModalKind: CustomKind = 'symptom';
+	let customModalEditing:
+		| CustomSymptomItem
+		| BlueprintItem
+		| VitalField
+		| EpisodeType
+		| null = null;
+
+	function openCustomModal(kind: CustomKind, editing: typeof customModalEditing = null) {
+		customModalKind = kind;
+		customModalEditing = editing;
+		customModalOpen = true;
+	}
+	function closeCustomModal() {
+		customModalOpen = false;
+		customModalEditing = null;
+	}
+
+	async function handleCustomSave(
+		event: CustomEvent<
+			| { kind: 'symptom'; item: CustomSymptomItem }
+			| { kind: 'trigger'; item: BlueprintItem }
+			| { kind: 'vital'; item: VitalField }
+			| { kind: 'episode'; item: EpisodeType }
+		>,
+	) {
+		if (!bp) return;
+		const { kind, item } = event.detail;
+		const next: Blueprint = JSON.parse(JSON.stringify(bp));
+		const cz = next.customizations || (next.customizations = {});
+		const arrayKey = (
+			{
+				symptom: 'customSymptoms',
+				trigger: 'customTriggers',
+				vital: 'customVitals',
+				episode: 'customEpisodes',
+			} as const
+		)[kind];
+		const arr = (cz[arrayKey] = (cz[arrayKey] || []) as never[]);
+		const existing = (arr as { id: string }[]).findIndex((x) => x.id === item.id);
+		if (existing >= 0) {
+			(arr as unknown as { id: string }[])[existing] = item as never;
+		} else {
+			(arr as unknown as { id: string }[]).push(item as never);
+		}
+		await blueprint.save(next);
+		closeCustomModal();
+	}
+
+	async function toggleCustomHidden(kind: CustomKind, id: string) {
+		if (!bp) return;
+		const next: Blueprint = JSON.parse(JSON.stringify(bp));
+		const cz = next.customizations || (next.customizations = {});
+		const hideKey = (
+			{
+				symptom: 'hiddenSymptoms',
+				trigger: 'hiddenTriggers',
+				vital: 'hiddenVitals',
+				episode: 'hiddenSymptoms', // episodes don't have a dedicated hide list yet — fall through to symptoms is wrong; skip
+			} as const
+		)[kind];
+		// Episodes are not part of the existing hide-filter set (cf.
+		// `applyBlueprintCustomizations`). Hide-toggle only applies to the
+		// three pre-301b kinds; for episodes, the only affordance is delete.
+		if (kind === 'episode') return;
+		const list = ((cz as Record<string, string[] | undefined>)[hideKey] = (
+			(cz as Record<string, string[] | undefined>)[hideKey] || []
+		) as string[]);
+		const idx = list.indexOf(id);
+		if (idx >= 0) list.splice(idx, 1);
+		else list.push(id);
+		await blueprint.save(next);
+	}
+
+	function isCustomHidden(kind: CustomKind, id: string): boolean {
+		if (!bp?.customizations) return false;
+		if (kind === 'symptom') return (bp.customizations.hiddenSymptoms || []).includes(id);
+		if (kind === 'trigger') return (bp.customizations.hiddenTriggers || []).includes(id);
+		if (kind === 'vital') return (bp.customizations.hiddenVitals || []).includes(id);
+		return false;
+	}
+
+	async function deleteCustom(kind: CustomKind, item: { id: string; label: string }) {
+		if (!bp) return;
+		const msg = $t('customization.delete_confirm_title', { label: item.label }) +
+			'\n\n' + $t('customization.delete_confirm_body');
+		if (!confirm(msg)) return;
+		const next: Blueprint = JSON.parse(JSON.stringify(bp));
+		const cz = next.customizations || (next.customizations = {});
+		const arrayKey = (
+			{
+				symptom: 'customSymptoms',
+				trigger: 'customTriggers',
+				vital: 'customVitals',
+				episode: 'customEpisodes',
+			} as const
+		)[kind];
+		const arr = (cz as Record<string, { id: string }[] | undefined>)[arrayKey];
+		if (arr) {
+			(cz as Record<string, { id: string }[]>)[arrayKey] = arr.filter((x) => x.id !== item.id);
+		}
+		// Strip from hide lists too — orphan ids would be confusing if the
+		// user re-adds an item with the same label later (it will get a
+		// fresh id but a leftover hide entry would do nothing).
+		for (const k of ['hiddenSymptoms', 'hiddenTriggers', 'hiddenVitals'] as const) {
+			const list = (cz as Record<string, string[] | undefined>)[k];
+			if (list) (cz as Record<string, string[]>)[k] = list.filter((x) => x !== item.id);
+		}
+		// Strip from grid columns so deleted symptoms / episodes don't
+		// reserve a column in PDF / report grids.
+		next.gridSymptomColumns = next.gridSymptomColumns.filter((x) => x !== item.id);
+		next.gridEpisodeColumns = next.gridEpisodeColumns.filter((x) => x !== item.id);
+		await blueprint.save(next);
+	}
+
+	function customsForKind(kind: CustomKind): { id: string; label: string }[] {
+		if (!bp?.customizations) return [];
+		if (kind === 'symptom') return bp.customizations.customSymptoms || [];
+		if (kind === 'trigger') return bp.customizations.customTriggers || [];
+		if (kind === 'vital') return bp.customizations.customVitals || [];
+		return bp.customizations.customEpisodes || [];
+	}
+
+	/** Type-narrowing helper: when section.kind is 'episode' the item
+	 *  has a .color field (it's an EpisodeType). Inline type assertions
+	 *  aren't valid in Svelte templates so this stays in the script. */
+	function episodeColor(item: { id: string; label: string }): string {
+		return (item as EpisodeType).color || '#5c6b73';
 	}
 
 	// Delete account state
@@ -472,6 +618,86 @@
 		</button>
 	</section>
 	{/if}
+
+	<!-- CIPH-882 — Custom blueprint items (per-kind sections). Sits above
+	     the Profil-anpassen / template-switcher blocks so users discover
+	     additive customization before navigating away. Episodes have no
+	     hide-toggle (they're not part of the pre-301b hide-filter set);
+	     all four kinds share the same delete affordance. -->
+	{#if bp}
+	{#each CUSTOM_SECTIONS as section}
+		{@const items = customsForKind(section.kind)}
+		<section class="card p-5">
+			<div class="flex items-center justify-between mb-3">
+				<h3 class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted)">{$t(section.titleKey)}</h3>
+				<button
+					type="button"
+					class="btn-secondary text-sm font-medium px-3 py-2 min-h-[40px]"
+					on:click={() => openCustomModal(section.kind)}
+					data-testid="add-custom-{section.kind}"
+				>
+					+ {$t(section.addKey)}
+				</button>
+			</div>
+			{#if items.length === 0}
+				<p class="text-sm" style="color: var(--text-muted)">{$t('customization.empty')}</p>
+			{:else}
+				<ul class="space-y-2">
+					{#each items as item (item.id)}
+						<li class="flex items-center justify-between gap-3 p-3 rounded-lg" style="background: var(--surface-muted)">
+							<div class="flex items-center gap-2 flex-1 min-w-0">
+								{#if section.kind === 'episode'}
+									<span class="w-3 h-3 rounded-full shrink-0" style="background: {episodeColor(item)}"></span>
+								{/if}
+								<span class="text-sm truncate" style="color: var(--text-primary); {isCustomHidden(section.kind, item.id) ? 'opacity: 0.5; text-decoration: line-through;' : ''}">{item.label}</span>
+							</div>
+							<div class="flex items-center gap-1 shrink-0">
+								{#if section.kind !== 'episode'}
+									<button
+										type="button"
+										class="text-xs px-2 py-1 rounded min-h-[36px]"
+										style="color: var(--text-secondary); background: var(--surface-card); border: 1px solid var(--border)"
+										on:click={() => toggleCustomHidden(section.kind, item.id)}
+										data-testid="toggle-custom-{section.kind}-{item.id}"
+									>
+										{isCustomHidden(section.kind, item.id) ? $t('common.show') : $t('common.hide')}
+									</button>
+								{/if}
+								<button
+									type="button"
+									class="text-xs px-2 py-1 rounded min-h-[36px]"
+									style="color: var(--text-secondary); background: var(--surface-card); border: 1px solid var(--border)"
+									on:click={() => openCustomModal(section.kind, item)}
+									data-testid="edit-custom-{section.kind}-{item.id}"
+								>
+									{$t('common.edit')}
+								</button>
+								<button
+									type="button"
+									class="text-xs px-2 py-1 rounded min-h-[36px]"
+									style="color: var(--brand); background: var(--surface-card); border: 1px solid var(--border)"
+									on:click={() => deleteCustom(section.kind, item)}
+									data-testid="delete-custom-{section.kind}-{item.id}"
+								>
+									{$t('common.delete')}
+								</button>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+	{/each}
+	{/if}
+
+	<CustomItemModal
+		open={customModalOpen}
+		kind={customModalKind}
+		editing={customModalEditing}
+		groups={bp?.symptomGroups ?? []}
+		on:save={handleCustomSave}
+		on:close={closeCustomModal}
+	/>
 
 	<!-- CIPH-852 — Home layout / primary browse surface override -->
 	{#if bp}

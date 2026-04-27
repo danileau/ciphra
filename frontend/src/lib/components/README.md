@@ -261,6 +261,23 @@ route kind.
   `dismissable`. Used for the `/migrate` post-import tour.
   Settings + admin keep their bespoke danger-chrome dialogs
   inline with `<!-- primitive-exempt: Modal … -->` comments.
+- **CustomItemModal.svelte** (CIPH-882) — kind-driven add/edit
+  form for user-added blueprint items: symptom, trigger, vital,
+  episode. Wraps `Modal.svelte`. Form fields branch on `kind`:
+  symptom (label + optional group select), trigger (label),
+  vital (label + unit + min + max), episode (label + 6-color
+  palette from `dataPalette`). Validation routed through
+  `validateCustomItem(kind, item)` so the modal and any future
+  caller surface the same error keys. On save, dispatches the
+  fully-typed item with a generated `custom_<slug>_<suffix>` id
+  (or the existing id when editing); callers persist via
+  `blueprint.save(next)` after appending to the right
+  `customizations.custom*` array. Custom items render across
+  every blueprint surface via the discriminator branch
+  enumerated in [`labels-audit.md`](../labels-audit.md).
+  Contract test: `CustomItemModal.test.ts`. Used in
+  `routes/settings/+page.svelte` (tracking tab) and the
+  `/setup` wizard.
 - **HelpHint.svelte** (CIPH-834) — dismissable inline info
   banner (NOT modal). Visually distinct from Toast (Toast is
   transient + floating, HelpHint is persistent + inline).
