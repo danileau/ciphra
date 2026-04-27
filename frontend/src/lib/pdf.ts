@@ -19,12 +19,25 @@
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Blueprint } from '$lib/blueprint';
+import type { Blueprint, VitalField } from '$lib/blueprint';
+import { isCustomItem, resolveBlueprint } from '$lib/blueprint';
 import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
 import { isExportable } from '$lib/utils/exportable';
 
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+
+/** CIPH-882 — Discriminator helper: custom items own a literal label string,
+ *  preset items own an i18n key. Centralizing this as `labelOf` collapses
+ *  the diff across the ~26 PDF/CSV label-rendering sites. */
+function labelOf(t: TranslateFn, item: { id: string; label: string }): string {
+	return isCustomItem(item.id) ? item.label : t(item.label);
+}
+
+/** CIPH-882 — Vital labels follow the same custom-vs-preset rule. */
+function vitalLabelOf(t: TranslateFn, v: VitalField): string {
+	return isCustomItem(v.id) ? v.label : t(v.label);
+}
 type RGB = [number, number, number];
 
 /* ────────────────────────────────────────────────────────────────
@@ -229,6 +242,10 @@ export function effectiveEpisodeColumns(
 }
 
 export function applyBlueprintCustomizations(blueprint: Blueprint): Blueprint {
+	// CIPH-882 — merge user-added custom items first, then apply hide-filter.
+	// Order matters: a user can hide a custom item the same way they hide
+	// a preset one, so the hide list filters the merged view.
+	blueprint = resolveBlueprint(blueprint);
 	const cz = blueprint.customizations;
 	if (!cz) return blueprint;
 	const hSym = new Set(cz.hiddenSymptoms || []);
@@ -469,13 +486,13 @@ function drawGridSection(
 	const symptomLabels = symptomCols.map((id) => {
 		for (const g of blueprint.symptomGroups) {
 			const item = g.items.find((i) => i.id === id);
-			if (item) return t(item.label);
+			if (item) return labelOf(t, item);
 		}
 		return id;
 	});
 	const episodeLabels = episodeCols.map((id) => {
 		const ep = blueprint.episodeTypes.find((e) => e.id === id);
-		return ep ? t(ep.label) : id;
+		return ep ? labelOf(t, ep) : id;
 	});
 
 	const allHeaders = [t('pdf.day'), ...symptomLabels, ...episodeLabels, t('pdf.notes')];
@@ -788,12 +805,12 @@ export function buildConditionAwareBullets(
 		if (activeDays > 0) {
 			bullets.push({
 				fact: t('pdf.for_doctor_fact_multiday', {
-					label: t(ep.label),
+					label: labelOf(t, ep),
 					days: String(activeDays),
 					weeks: (activeDays / 7).toFixed(1),
 					window: scopeWindowLabel,
 				}),
-				question: t('pdf.for_doctor_q_multiday', { label: t(ep.label) }),
+				question: t('pdf.for_doctor_q_multiday', { label: labelOf(t, ep) }),
 			});
 		}
 	}
@@ -1100,7 +1117,7 @@ export function generateDoctorPdf(
 			if (POSITIVE_MARKERS.has(item.id)) continue;
 			const count = monthDocs.filter((d) => d.data?.symptoms?.[item.id]).length;
 			if (count > 0 || blueprint.gridSymptomColumns.includes(item.id)) {
-				symptomFreq.push({ id: item.id, label: t(item.label), count });
+				symptomFreq.push({ id: item.id, label: labelOf(t, item), count });
 			}
 		}
 	}
@@ -1114,7 +1131,7 @@ export function generateDoctorPdf(
 	const triggerFreq: { label: string; count: number }[] = [];
 	for (const tr of blueprint.triggers) {
 		const count = monthDocs.filter((d) => d.data?.triggers?.[tr.id]).length;
-		if (count > 0) triggerFreq.push({ label: t(tr.label), count });
+		if (count > 0) triggerFreq.push({ label: labelOf(t, tr), count });
 	}
 	triggerFreq.sort((a, b) => b.count - a.count);
 	const mostFrequentTrigger = triggerFreq[0] ?? null;
@@ -1410,7 +1427,7 @@ export function generateDoctorPdf(
 			if (d.data.kind === 'medication') {
 				const medId = (d.data as any).medicationId;
 				const presetMed = blueprint.rescueMedications?.find((m) => m.id === medId);
-				const label = presetMed ? t(presetMed.label) : (medId || '');
+				const label = presetMed ? labelOf(t, presetMed) : (medId || '');
 				const dose = (d.data as any).dose;
 				const unitStr = presetMed?.unit ? ` ${translateUnit(t, presetMed.unit)}` : '';
 				raw = dose ? `${label} ${dose}${unitStr}` : label;
@@ -1711,7 +1728,7 @@ export function generateDoctorPdf(
 		if (seenVitalIds.has(v.id) || !v.pairLabel) continue;
 		const pair = chartableVitals.filter((x) => x.pairLabel === v.pairLabel);
 		const series: MiniSeries[] = pair.map((p, i) => ({
-			label: t(p.label),
+			label: vitalLabelOf(t, p),
 			color: PAIR_COLORS[i % PAIR_COLORS.length],
 			values: aggregateVitalMonthly(p.id, 'max'),
 		}));
@@ -1726,7 +1743,7 @@ export function generateDoctorPdf(
 					label: t(p.referenceLine!.labelKey),
 				}));
 			miniCharts.push({
-				title: (title === titleKey ? t(v.label) : title) + (v.unit ? ` (${translateUnit(t, v.unit)})` : ''),
+				title: (title === titleKey ? vitalLabelOf(t, v) : title) + (v.unit ? ` (${translateUnit(t, v.unit)})` : ''),
 				series,
 				referenceLines: refLines.length ? refLines : undefined,
 			});
@@ -1743,8 +1760,8 @@ export function generateDoctorPdf(
 			? [{ value: v.referenceLine.value, label: t(v.referenceLine.labelKey) }]
 			: [];
 		miniCharts.push({
-			title: `${t(v.label)}${v.unit ? ` (${translateUnit(t, v.unit)})` : ''}`,
-			series: [{ label: t(v.label), color: DATA_HEX.d1, values }],
+			title: `${vitalLabelOf(t, v)}${v.unit ? ` (${translateUnit(t, v.unit)})` : ''}`,
+			series: [{ label: vitalLabelOf(t, v), color: DATA_HEX.d1, values }],
 			referenceLines: refLines.length ? refLines : undefined,
 		});
 		seenVitalIds.add(v.id);
@@ -1762,7 +1779,7 @@ export function generateDoctorPdf(
 			? [{ value: v.referenceLine.value, label: t(v.referenceLine.labelKey) }]
 			: [];
 		miniCharts.push({
-			title: `${t(v.label)}${v.unit ? ` (${translateUnit(t, v.unit)})` : ''} — ${t('pdf.am_pm_split')}`,
+			title: `${vitalLabelOf(t, v)}${v.unit ? ` (${translateUnit(t, v.unit)})` : ''} — ${t('pdf.am_pm_split')}`,
 			series: [
 				{ label: t('pdf.am_label'), color: DATA_HEX.d1, values: am },
 				{ label: t('pdf.pm_label'), color: DATA_HEX.d5, values: pm },
@@ -1781,7 +1798,7 @@ export function generateDoctorPdf(
 		miniCharts.push({
 			title: t('pdf.episode_breakdown_title'),
 			series: breakdownEps.map(({ ep, values }) => ({
-				label: t(ep.label),
+				label: labelOf(t, ep),
 				color: ep.color,
 				values,
 			})),
@@ -1999,7 +2016,7 @@ export function generateDoctorPdf(
 				.map((ep) => {
 					const b = durBuckets[ep.id];
 					return [
-						t(ep.label),
+						labelOf(t, ep),
 						String(b.lt1),
 						String(b.m15),
 						String(b.gt5),
@@ -2250,7 +2267,7 @@ export function generateDoctorPdf(
 			if (POSITIVE_MARKERS.has(item.id)) continue;
 			const count = yearDocs.filter((d) => d.data?.symptoms?.[item.id]).length;
 			if (count > 0) {
-				yearSymptomFreq.push({ id: item.id, label: t(item.label), count });
+				yearSymptomFreq.push({ id: item.id, label: labelOf(t, item), count });
 			}
 		}
 	}
@@ -2265,7 +2282,7 @@ export function generateDoctorPdf(
 			return !!(trs && trs[trig.id]);
 		}).length;
 		if (count > 0) {
-			yearTriggerFreq.push({ id: trig.id, label: t(trig.label), count });
+			yearTriggerFreq.push({ id: trig.id, label: labelOf(t, trig), count });
 		}
 	}
 	yearTriggerFreq.sort((a, b) => b.count - a.count);
@@ -2771,26 +2788,26 @@ export function exportCsv(
 	const symptomCols: { id: string; label: string }[] = [];
 	for (const g of blueprint.symptomGroups) {
 		for (const item of g.items) {
-			symptomCols.push({ id: item.id, label: t(item.label) });
+			symptomCols.push({ id: item.id, label: labelOf(t, item) });
 		}
 	}
-	const episodeCols = blueprint.episodeTypes.map((ep) => ({ id: ep.id, label: t(ep.label) }));
-	const triggerCols = blueprint.triggers.map((tr) => ({ id: tr.id, label: t(tr.label) }));
-	const vitalCols = blueprint.vitals.map((v) => ({ id: v.id, label: `${t(v.label)} (${translateUnit(t, v.unit)})` }));
+	const episodeCols = blueprint.episodeTypes.map((ep) => ({ id: ep.id, label: labelOf(t, ep) }));
+	const triggerCols = blueprint.triggers.map((tr) => ({ id: tr.id, label: labelOf(t, tr) }));
+	const vitalCols = blueprint.vitals.map((v) => ({ id: v.id, label: `${vitalLabelOf(t, v)} (${translateUnit(t, v.unit)})` }));
 
 	const episodeDetailCols: { id: string; type: 'time' | 'duration'; label: string }[] = [];
 	for (const ep of blueprint.episodeTypes) {
 		if (ep.trackTimeOfDay) {
-			episodeDetailCols.push({ id: ep.id, type: 'time', label: `${t(ep.label)} — ${t('protocol.time_of_day')}` });
+			episodeDetailCols.push({ id: ep.id, type: 'time', label: `${labelOf(t, ep)} — ${t('protocol.time_of_day')}` });
 		}
 		if (ep.trackDuration) {
-			episodeDetailCols.push({ id: ep.id, type: 'duration', label: `${t(ep.label)} — ${t('protocol.duration')}` });
+			episodeDetailCols.push({ id: ep.id, type: 'duration', label: `${labelOf(t, ep)} — ${t('protocol.duration')}` });
 		}
 	}
 	// CIPH-881b — one column per rescue medication, count of doses on each day.
 	const rescueMedCols = (blueprint.rescueMedications || []).map((m) => ({
 		id: m.id,
-		label: `${t(m.label)}${m.unit ? ` (${translateUnit(t, m.unit)})` : ''}`,
+		label: `${labelOf(t, m)}${m.unit ? ` (${translateUnit(t, m.unit)})` : ''}`,
 	}));
 
 	const headers = [
@@ -3190,7 +3207,7 @@ export function generateCompactPdf(
 		for (const item of g.items) {
 			if (POSITIVE_MARKERS.has(item.id)) continue;
 			const c = yearDocs.filter((d) => d.data?.symptoms?.[item.id]).length;
-			if (c > 0) symptomFreq.push({ label: t(item.label), count: c });
+			if (c > 0) symptomFreq.push({ label: labelOf(t, item), count: c });
 		}
 	}
 	symptomFreq.sort((a, b) => b.count - a.count);

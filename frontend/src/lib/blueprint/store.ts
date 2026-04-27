@@ -1,5 +1,6 @@
 import { writable, derived, get } from 'svelte/store';
 import type { Blueprint } from './types';
+import { resolveBlueprint } from './customizations';
 import { auth } from '$lib/stores/auth';
 import { documents } from '$lib/stores/documents';
 import type { CiphraDocument } from '$lib/stores/documents';
@@ -55,3 +56,12 @@ export const blueprint = createBlueprintStore();
 
 /** Whether a blueprint has been set up */
 export const hasBlueprint = derived(blueprint, ($bp) => $bp !== null);
+
+/** CIPH-882 — blueprint with `customizations.custom*` arrays merged into
+ *  the primary collections. Most consumers should subscribe to this store
+ *  instead of `blueprint` so user-added items render automatically. The
+ *  setup wizard works on a local `working` variable and calls
+ *  `resolveBlueprint(working)` directly for the same effect. */
+export const resolvedBlueprint = derived(blueprint, ($bp) =>
+	$bp ? resolveBlueprint($bp) : null,
+);

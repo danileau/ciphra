@@ -17,6 +17,13 @@ export interface BlueprintItem {
 	icon?: string;       // optional icon name
 }
 
+/** CIPH-882 — A user-added custom symptom. Optional `groupId` lets the
+ *  user attach a custom symptom under an existing preset group; otherwise
+ *  it lands in a synthetic "Custom" group at render time. */
+export interface CustomSymptomItem extends BlueprintItem {
+	groupId?: string;
+}
+
 /** A group of related items (e.g. "Behavior", "Physical") */
 export interface BlueprintGroup {
 	id: string;
@@ -153,16 +160,35 @@ export interface Blueprint {
 	 *  which falls back to the cohort default. User can override in Settings. */
 	primaryBrowseSurface?: 'journal' | 'calendar' | 'trend';
 
-	/** CIPH-301b — User customizations from the setup wizard (or settings).
-	 *  IDs listed here are HIDDEN from the daily-log form and from PDF
-	 *  aggregations. Optional + backwards-compatible: a missing field means
-	 *  "show everything" (existing pre-301b blueprints). The blueprint
-	 *  itself is untouched — this is a filter layer on top of stock content
-	 *  so we can re-enable items without losing them. */
+	/** CIPH-301b / CIPH-882 — User customizations from the setup wizard
+	 *  or settings. Two layers:
+	 *
+	 *  - **Hide layer (CIPH-301b):** ids listed in `hidden*` are removed
+	 *    from render surfaces and PDF aggregations. The underlying preset
+	 *    is untouched so re-enabling resurfaces history.
+	 *
+	 *  - **Add layer (CIPH-882):** items in `custom*` are merged into the
+	 *    blueprint at read time via `resolveBlueprint(bp)`. Custom items
+	 *    own a literal `label` string (NOT an i18n key); render sites must
+	 *    branch via `isCustomItem(id) ? item.label : $t(item.label)`. Ids
+	 *    are auto-generated `custom_<slug>_<suffix>` so they cannot
+	 *    collide with preset ids. Hide-not-delete applies to custom items
+	 *    too — toggling a custom off keeps history; explicit Delete is
+	 *    needed to remove the item from `custom*`.
+	 *
+	 *  Both layers are optional + backwards-compatible — a missing field
+	 *  means "no customizations".
+	 */
 	customizations?: {
-		hiddenSymptoms?: string[];   // BlueprintItem.id from any symptomGroup
-		hiddenTriggers?: string[];   // BlueprintItem.id from triggers[]
-		hiddenVitals?: string[];     // VitalField.id
+		hiddenSymptoms?: string[];   // BlueprintItem.id from any symptomGroup or customSymptoms
+		hiddenTriggers?: string[];   // BlueprintItem.id from triggers[] or customTriggers
+		hiddenVitals?: string[];     // VitalField.id from vitals[] or customVitals
+
+		// CIPH-882 additive arrays
+		customSymptoms?: CustomSymptomItem[];
+		customTriggers?: BlueprintItem[];
+		customVitals?: VitalField[];
+		customEpisodes?: EpisodeType[];
 	};
 }
 
