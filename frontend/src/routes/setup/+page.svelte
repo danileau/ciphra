@@ -12,7 +12,7 @@
 	 */
 	import { t, translateUnit } from '$lib/i18n';
 	import { isAuthenticated, auth } from '$lib/stores/auth';
-	import { blueprint, presets } from '$lib/blueprint';
+	import { blueprint, presets, isCustomItem, resolveBlueprint } from '$lib/blueprint';
 	import type { Blueprint, MedicationSlot } from '$lib/blueprint';
 	import type { PresetInfo } from '$lib/blueprint';
 	import { goto } from '$app/navigation';
@@ -411,7 +411,7 @@
 											class="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer min-h-[44px]"
 											style="background: var(--surface-muted)"
 										>
-											<span class="text-sm flex-1 min-w-0" style="color: var(--text-primary)">{$t(item.label)}</span>
+											<span class="text-sm flex-1 min-w-0" style="color: var(--text-primary)">{isCustomItem(item.id) ? item.label : $t(item.label)}</span>
 											<input
 												type="checkbox"
 												bind:checked={symptomItemOn[item.id]}
@@ -445,7 +445,7 @@
 								style="background: {triggerOn[trig.id] ? 'var(--ochre-light)' : 'var(--surface-muted)'}; color: {triggerOn[trig.id] ? 'var(--ochre)' : 'var(--text-muted)'}; border: 1px solid {triggerOn[trig.id] ? 'var(--ochre)' : 'var(--border)'};"
 								aria-pressed={triggerOn[trig.id]}
 							>
-								{$t(trig.label)}
+								{isCustomItem(trig.id) ? trig.label : $t(trig.label)}
 							</button>
 						{/each}
 					</div>
@@ -461,7 +461,7 @@
 						<div class="p-4 rounded-xl" style="background: var(--surface-card); border: 1px solid var(--border)">
 							<label class="flex items-center justify-between min-h-[32px] cursor-pointer">
 								<div class="flex-1 min-w-0">
-									<span class="text-sm font-medium" style="color: var(--text-primary)">{$t(vital.label)}</span>
+									<span class="text-sm font-medium" style="color: var(--text-primary)">{isCustomItem(vital.id) ? vital.label : $t(vital.label)}</span>
 									{#if vital.unit}<span class="text-xs ml-1" style="color: var(--text-muted)">({translateUnit($t, vital.unit)})</span>{/if}
 								</div>
 								<input

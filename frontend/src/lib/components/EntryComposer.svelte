@@ -35,6 +35,7 @@
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
 	import type { Blueprint } from '$lib/blueprint';
+	import { isCustomItem } from '$lib/blueprint';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import type { Phase } from '$lib/cycleState';
@@ -349,11 +350,11 @@
 		const out: { kind: 'vital' | 'trigger'; id: string; label: string }[] = [];
 		for (const v of bp.vitals) {
 			const hits = logs.filter((d) => hasVitalValue(d, v.id)).length;
-			if (hits > threshold) out.push({ kind: 'vital', id: v.id, label: $t(v.label) });
+			if (hits > threshold) out.push({ kind: 'vital', id: v.id, label: isCustomItem(v.id) ? v.label : $t(v.label) });
 		}
 		for (const tr of bp.triggers) {
 			const hits = logs.filter((d) => hasTrigger(d, tr.id)).length;
-			if (hits > threshold) out.push({ kind: 'trigger', id: tr.id, label: $t(tr.label) });
+			if (hits > threshold) out.push({ kind: 'trigger', id: tr.id, label: isCustomItem(tr.id) ? tr.label : $t(tr.label) });
 		}
 		return out;
 	})();
@@ -490,7 +491,7 @@
 								aria-pressed={symptoms[item.id]}
 							>
 								{#if symptoms[item.id]}<svg class="log-chip-check" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>{/if}
-								{$t(item.label)}
+								{isCustomItem(item.id) ? item.label : $t(item.label)}
 							</button>
 						{/each}
 					</div>
@@ -517,7 +518,7 @@
 							aria-pressed={triggers[trig.id]}
 						>
 							{#if triggers[trig.id]}<svg class="log-chip-check" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>{/if}
-							{$t(trig.label)}
+							{isCustomItem(trig.id) ? trig.label : $t(trig.label)}
 						</button>
 					{/each}
 				</div>
@@ -587,10 +588,11 @@
 				{#if !collapsed['episodes']}
 				<div class="log-episodes">
 					{#each bp.episodeTypes as ep}
+						{@const epLabel = isCustomItem(ep.id) ? ep.label : $t(ep.label)}
 						<div class="log-episode-row">
 							<div class="log-episode-label">
 								<span class="log-episode-dot" style="background: {ep.color}"></span>
-								<span>{$t(ep.label)}</span>
+								<span>{epLabel}</span>
 							</div>
 							{#if ep.multiDay}
 								<button
@@ -606,7 +608,7 @@
 									<button
 										on:click={() => { if (episodes[ep.id] > 0) { episodes[ep.id]--; markChanged(); } }}
 										class="log-counter-btn"
-										aria-label="{$t('common.decrease')} {$t(ep.label)}"
+										aria-label="{$t('common.decrease')} {epLabel}"
 									>
 										<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/></svg>
 									</button>
@@ -614,7 +616,7 @@
 									<button
 										on:click={() => { episodes[ep.id] = (episodes[ep.id] || 0) + 1; markChanged(); }}
 										class="log-counter-btn"
-										aria-label="{$t('common.increase')} {$t(ep.label)}"
+										aria-label="{$t('common.increase')} {epLabel}"
 									>
 										<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/></svg>
 									</button>
@@ -678,7 +680,7 @@
 					{#each visibleVitals.filter(v => !v.multiEntry) as vital}
 						<div class="log-vital">
 							<label class="log-vital-label" for="vital-{vital.id}">
-								{$t(vital.label)}
+								{isCustomItem(vital.id) ? vital.label : $t(vital.label)}
 								{#if vital.unit}<span class="log-vital-unit">({translateUnit($t, vital.unit)})</span>{/if}
 							</label>
 							{#if vital.min !== undefined && vital.max !== undefined}
@@ -715,7 +717,7 @@
 							{#each group as vital}
 								<div class="log-multi-entry log-multi-entry--paired">
 									<p class="log-vital-label" style="margin-bottom: 8px">
-										{$t(vital.label)}
+										{isCustomItem(vital.id) ? vital.label : $t(vital.label)}
 										{#if vital.unit}<span class="log-vital-unit">({translateUnit($t, vital.unit)})</span>{/if}
 									</p>
 									{#if multiEntryVitals[vital.id]?.length > 0}
@@ -755,7 +757,7 @@
 				{#each unpairedMultiEntryVitals as vital}
 					<div class="log-multi-entry">
 						<p class="log-vital-label" style="margin-bottom: 8px">
-							{$t(vital.label)}
+							{isCustomItem(vital.id) ? vital.label : $t(vital.label)}
 							{#if vital.unit}<span class="log-vital-unit">({translateUnit($t, vital.unit)})</span>{/if}
 						</p>
 

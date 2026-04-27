@@ -14,6 +14,7 @@
 -->
 <script lang="ts">
 	import { t, locale } from '$lib/i18n';
+	import { isCustomItem } from '$lib/blueprint';
 
 	export let phase: {
 		id: string;
@@ -51,7 +52,7 @@
 					{$t('phase.active_title')}
 				</p>
 				<span class="text-xs px-2 py-0.5 rounded-full" style="background: {phase.color}20; color: {phase.color}">
-					{$t(phase.label)}
+					{isCustomItem(phase.id) ? phase.label : $t(phase.label)}
 				</span>
 				{#if phase.activeCount && phase.activeCount > 1}
 					<!-- CIPH-855b — neutral count-based pill for overlapping phases

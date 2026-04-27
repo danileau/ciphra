@@ -2,7 +2,7 @@
 	import { t, locale } from '$lib/i18n';
 	import { auth } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint } from '$lib/blueprint';
+	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Asterisk from '$lib/components/Asterisk.svelte';
@@ -368,7 +368,7 @@
 		if (!bp?.episodeTypes?.length) return null;
 		const { keys, labels, mode } = chartBuckets;
 		const datasets = bp.episodeTypes.map(et => ({
-			label: $t(et.label),
+			label: isCustomItem(et.id) ? et.label : $t(et.label),
 			data: keys.map(key =>
 				allDocs.filter(d => {
 					const ds = String(d.data.date || '');
@@ -422,7 +422,7 @@
 		for (const g of bp.symptomGroups) {
 			for (const item of g.items) {
 				if (POSITIVE_MARKERS.has(item.id)) continue;
-				labelMap[item.id] = $t(item.label);
+				labelMap[item.id] = isCustomItem(item.id) ? item.label : $t(item.label);
 			}
 		}
 		const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a).slice(0, 5);

@@ -2,7 +2,7 @@
 	import { t, locale } from '$lib/i18n';
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint } from '$lib/blueprint';
+	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { fade, fly } from 'svelte/transition';
@@ -399,7 +399,7 @@
 					{#each multiDayTypes as ep}
 						<span class="inline-flex items-center gap-1.5">
 							<span class="block w-4 h-[6px] rounded-sm" style="background: {ep.color}"></span>
-							<span style="color: var(--text-secondary)">{$t(ep.label)}</span>
+							<span style="color: var(--text-secondary)">{isCustomItem(ep.id) ? ep.label : $t(ep.label)}</span>
 						</span>
 					{/each}
 				</div>
@@ -472,7 +472,7 @@
 									<span
 										class="block w-full"
 										style="background: {band.color}; height: {phaseBandEmphasis ? '6px' : '3px'}"
-										title={$t(band.label)}
+										title={isCustomItem(band.id) ? band.label : $t(band.label)}
 									></span>
 								{/each}
 							</div>
@@ -607,7 +607,7 @@
 							style="background: {band.color}1f; color: {band.color}; border: 1px solid {band.color}"
 						>
 							<span class="w-1.5 h-1.5 rounded-full" style="background: {band.color}"></span>
-							{$t(band.label)}
+							{isCustomItem(band.id) ? band.label : $t(band.label)}
 						</span>
 					{/each}
 				</div>

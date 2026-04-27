@@ -14,6 +14,7 @@
 	import { t, locale, translateUnit } from '$lib/i18n';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint, VitalField } from '$lib/blueprint/types';
+	import { isCustomItem } from '$lib/blueprint';
 
 	export let entry: CiphraDocument;
 	export let bp: Blueprint | null = null;
@@ -31,17 +32,19 @@
 	function symptomLabelFor(id: string): string {
 		for (const g of bp?.symptomGroups || []) {
 			const it = g.items.find(x => x.id === id);
-			if (it) return $t(it.label);
+			if (it) return isCustomItem(it.id) ? it.label : $t(it.label);
 		}
 		return id;
 	}
 	function triggerLabelFor(id: string): string {
 		const tr = (bp?.triggers || []).find(x => x.id === id);
-		return tr ? $t(tr.label) : id;
+		if (!tr) return id;
+		return isCustomItem(tr.id) ? tr.label : $t(tr.label);
 	}
 	function epLabelFor(id: string): string {
 		const ep = (bp?.episodeTypes || []).find(e => e.id === id);
-		return ep ? $t(ep.label) : id;
+		if (!ep) return id;
+		return isCustomItem(ep.id) ? ep.label : $t(ep.label);
 	}
 	function vitalFor(id: string) {
 		return (bp?.vitals || []).find(v => v.id === id);
@@ -374,7 +377,7 @@
 				{#each groupedVitals.paired as p}
 					<div class="px-2 py-1 rounded-md" style="background: var(--surface-muted)">
 						<div class="text-[11px] font-medium" style="color: var(--text-primary)">
-							{pairTitle(p.pairLabel, $t(p.vitalA.label))}{p.vitalA.unit ? ` (${translateUnit($t, p.vitalA.unit)})` : ''}
+							{pairTitle(p.pairLabel, isCustomItem(p.vitalA.id) ? p.vitalA.label : $t(p.vitalA.label))}{p.vitalA.unit ? ` (${translateUnit($t, p.vitalA.unit)})` : ''}
 						</div>
 						<div class="{chipSize}" style="color: var(--text-secondary)">
 							{formatPairedVitals(p.valA, p.valB)}
@@ -389,7 +392,7 @@
 				{#each groupedVitals.labs as l}
 					<span class="{chipSize} px-2 py-0.5 rounded-md"
 						style="background: var(--surface-muted); color: var(--text-primary); border-left: 3px solid var(--success);"
-					>{$t(l.vital.label)}: {formatVitalValue(l.value)}{l.vital.unit ? ' ' + translateUnit($t, l.vital.unit) : ''}</span>
+					>{isCustomItem(l.vital.id) ? l.vital.label : $t(l.vital.label)}: {formatVitalValue(l.value)}{l.vital.unit ? ' ' + translateUnit($t, l.vital.unit) : ''}</span>
 				{/each}
 			</div>
 		{/if}
@@ -397,7 +400,7 @@
 		{#if groupedVitals.means.length > 0}
 			<p class="{chipSize} mt-1.5" style="color: var(--text-muted)">
 				{#each groupedVitals.means.slice(0, 6) as m, j}
-					{j > 0 ? ' · ' : ''}{$t(m.vital.label)}: {formatVitalValue(m.value)}{m.vital.unit ? ' ' + translateUnit($t, m.vital.unit) : ''}
+					{j > 0 ? ' · ' : ''}{isCustomItem(m.vital.id) ? m.vital.label : $t(m.vital.label)}: {formatVitalValue(m.value)}{m.vital.unit ? ' ' + translateUnit($t, m.vital.unit) : ''}
 				{/each}
 			</p>
 		{/if}

@@ -2,7 +2,7 @@
 	import { t, locale } from '$lib/i18n';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint } from '$lib/blueprint';
+	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import type { Blueprint } from '$lib/blueprint';
@@ -206,10 +206,10 @@
 		if (!bp) return id;
 		for (const g of bp.symptomGroups) {
 			const item = g.items.find(i => i.id === id);
-			if (item) return $t(item.label);
+			if (item) return isCustomItem(item.id) ? item.label : $t(item.label);
 		}
 		const ep = bp.episodeTypes.find(e => e.id === id);
-		if (ep) return $t(ep.label);
+		if (ep) return isCustomItem(ep.id) ? ep.label : $t(ep.label);
 		return id;
 	}
 
@@ -337,7 +337,7 @@
 				const count = yearDocs.filter(d => d.data.symptoms?.[item.id]).length;
 				if (count > maxCount) {
 					maxCount = count;
-					maxLabel = $t(item.label);
+					maxLabel = isCustomItem(item.id) ? item.label : $t(item.label);
 				}
 			}
 		}

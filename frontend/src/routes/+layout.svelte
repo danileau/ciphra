@@ -10,7 +10,7 @@
 	import { browser } from '$app/environment';
 	import { documents, documentsError } from '$lib/stores/documents';
 	import { get } from 'svelte/store';
-	import { blueprint, hasBlueprint, resolvedBlueprint } from '$lib/blueprint';
+	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Toast from '$lib/components/Toast.svelte';
@@ -928,7 +928,7 @@
 											style="border-color: {quickAddSelectedEpisode === ep.id ? ep.color : 'var(--border)'}; background: {quickAddSelectedEpisode === ep.id ? ep.color + '10' : 'var(--surface-muted)'}"
 										>
 											<span class="w-3 h-3 rounded-full shrink-0" style="background: {ep.color}"></span>
-											<span class="text-sm font-medium" style="color: {quickAddSelectedEpisode === ep.id ? ep.color : 'var(--text-primary)'}">{$t(ep.label)}</span>
+											<span class="text-sm font-medium" style="color: {quickAddSelectedEpisode === ep.id ? ep.color : 'var(--text-primary)'}">{isCustomItem(ep.id) ? ep.label : $t(ep.label)}</span>
 											{#if epIdx === 0 && lastEpisodeId === ep.id && bp.episodeTypes.length > 1}
 												<span class="text-[10px] px-1.5 py-0.5 rounded-full" style="background: var(--surface-inset); color: var(--text-muted)">{$t('quickadd.last_used')}</span>
 											{/if}
