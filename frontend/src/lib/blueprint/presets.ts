@@ -74,6 +74,10 @@ export const epilepsy: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
+	rescueMedications: [
+		{ id: 'midazolam_buccal', label: 'rescue_med.midazolam', unit: 'mg', defaultDose: '5' },
+		{ id: 'diazepam_rectal', label: 'rescue_med.diazepam', unit: 'mg', defaultDose: '10' },
+	],
 };
 
 // ─── ADHD ────────────────────────────────────────────────────
@@ -375,6 +379,10 @@ export const migraine: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'journal',
+	rescueMedications: [
+		{ id: 'sumatriptan', label: 'rescue_med.sumatriptan', unit: 'mg', defaultDose: '50' },
+		{ id: 'rizatriptan', label: 'rescue_med.rizatriptan', unit: 'mg', defaultDose: '10' },
+	],
 };
 
 // ─── Empty starter for fully custom blueprints ───────────────
@@ -794,6 +802,10 @@ export const asthma: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
+	rescueMedications: [
+		{ id: 'salbutamol_puff', label: 'rescue_med.salbutamol', unit: 'puff', defaultDose: '2' },
+		{ id: 'prednisolone', label: 'rescue_med.prednisolone', unit: 'mg', defaultDose: '30' },
+	],
 };
 
 // ─── Endometriosis ──────────────────────────────────────────
@@ -1496,6 +1508,10 @@ export const bipolar: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
+	rescueMedications: [
+		{ id: 'lorazepam', label: 'rescue_med.lorazepam', unit: 'mg', defaultDose: '1' },
+		{ id: 'quetiapine_prn', label: 'rescue_med.quetiapine', unit: 'mg', defaultDose: '25' },
+	],
 };
 
 // ─── Glaucoma ───────────────────────────────────────────────
@@ -1701,6 +1717,10 @@ export const ibd: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
+	rescueMedications: [
+		{ id: 'prednisone_burst', label: 'rescue_med.prednisone', unit: 'mg', defaultDose: '40' },
+		{ id: 'loperamide', label: 'rescue_med.loperamide', unit: 'mg', defaultDose: '4' },
+	],
 };
 
 // ─── PCOS (Polycystic Ovary Syndrome) ───────────────────────

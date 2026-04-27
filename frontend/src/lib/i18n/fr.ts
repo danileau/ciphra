@@ -1971,4 +1971,23 @@ export default {
 	'migrate.tour_body': 'Nous avons importé vos notes personnelles d\'epilepc dans l\'onglet Journal. Ces entrées restent privées — elles ne sont jamais partagées, exportées ni affichées dans les rapports.',
 	'migrate.tour_continue': 'Compris, aller à l\'accueil',
 	'entry.original_type_label': 'Original : {value}',
+
+	// CIPH-881 — Médication de secours via FAB
+	'quickadd.mode_med': 'Médic. de secours',
+	'quickadd.pick_med': 'Quelle médication de secours ?',
+	'quickadd.dose': 'Dose',
+	'quickadd.dose_optional': 'facultatif',
+	'quickadd.med_save_hint': 'L\'enregistrement capture l\'heure actuelle.',
+	'rescue_med.section_title': 'Médication de secours',
+	'rescue_med.dashboard_count': 'Médication de secours ce mois',
+	'rescue_med.midazolam': 'Midazolam',
+	'rescue_med.diazepam': 'Diazépam',
+	'rescue_med.sumatriptan': 'Sumatriptan',
+	'rescue_med.rizatriptan': 'Rizatriptan',
+	'rescue_med.salbutamol': 'Salbutamol',
+	'rescue_med.prednisolone': 'Prednisolone',
+	'rescue_med.lorazepam': 'Lorazépam',
+	'rescue_med.quetiapine': 'Quétiapine',
+	'rescue_med.prednisone': 'Prednisone',
+	'rescue_med.loperamide': 'Lopéramide',
 } as Record<string, string>;

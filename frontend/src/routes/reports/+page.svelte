@@ -480,7 +480,19 @@
 				{#each recentEvents as ev}
 					<li class="flex items-baseline gap-2 text-sm md:text-base">
 						<span class="font-mono text-xs shrink-0" style="color: var(--text-muted)">{ev.data.date}</span>
-						<span class="truncate" style="color: var(--text-primary)">{ev.data.notes || ''}</span>
+						{#if ev.data.kind === 'medication'}
+							<!-- CIPH-881b — rescue-medication events render with med
+								 name + dose + time, distinct from freeform notes. -->
+							{@const medId = ev.data.medicationId}
+							{@const presetMed = bp?.rescueMedications?.find(m => m.id === medId)}
+							{@const medLabel = presetMed ? $t(presetMed.label) : (medId || '')}
+							{@const unit = presetMed?.unit ? ` ${presetMed.unit}` : ''}
+							<span class="truncate" style="color: var(--brand)">
+								{medLabel}{ev.data.dose ? ` · ${ev.data.dose}${unit}` : ''}{ev.data.time ? ` · ${ev.data.time}` : ''}
+							</span>
+						{:else}
+							<span class="truncate" style="color: var(--text-primary)">{ev.data.notes || ''}</span>
+						{/if}
 					</li>
 				{/each}
 			</ul>

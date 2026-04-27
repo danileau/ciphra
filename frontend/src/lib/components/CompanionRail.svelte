@@ -36,6 +36,11 @@
 	export let complianceMessage: string;
 	export let complianceAccent: string;
 
+	// CIPH-881b — count of rescue-medication events this month. Renders only
+	// when the active blueprint declares rescueMedications AND count > 0,
+	// so the card stays out of presets without a clinical rescue protocol.
+	export let rescueMedsThisMonth: number = 0;
+
 	// Reports / export. Doctor PDF + Open reports. Moved in from CompanionMain.
 	export let canExport: boolean;
 	// CIPH-873 — `onExportForDoctor` prop removed. Export is now a deep-link
@@ -76,6 +81,30 @@
 		 main column when !todayLog and (b) the global + FAB that handles
 		 add-entry everywhere. Three entry points for the same action broke
 		 the "one canonical add affordance" rule from PI v6. -->
+
+	<!-- CIPH-881b — Rescue-medications counter. Only surfaced for blueprints
+		 that declare `rescueMedications` AND have at least one event in the
+		 current month, so presets without a clinical rescue protocol stay
+		 clean and the card stays out of empty months. -->
+	{#if bp?.rescueMedications && bp.rescueMedications.length > 0 && rescueMedsThisMonth > 0}
+		<section class="card p-4">
+			<div class="flex items-center gap-3">
+				<div
+					class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+					style="background: var(--brand-light, rgba(176,75,47,0.08))"
+				>
+					<svg class="w-4 h-4" style="color: var(--brand)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+						<path d="M19 14l-7 7-7-7a7 7 0 1 1 14 0z"/>
+						<circle cx="12" cy="11" r="3"/>
+					</svg>
+				</div>
+				<div class="flex-1 min-w-0">
+					<p class="text-2xl font-bold num-data" style="color: var(--brand)">{rescueMedsThisMonth}</p>
+					<p class="text-[11px]" style="color: var(--text-muted)">{$t('rescue_med.dashboard_count')}</p>
+				</div>
+			</div>
+		</section>
+	{/if}
 
 	<!-- ═══ REPORTS & EXPORT ═══ -->
 	<section class="card p-4">

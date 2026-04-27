@@ -1402,7 +1402,21 @@ export function generateDoctorPdf(
 			// late-month event in the last bucket sits just inside the edge.
 			const xRel = Math.min(0.999, (monthIdx + frac) / MONTHS);
 			const x = boxX + xRel * boxW;
-			const raw = String(d.data.notes || '').replace(/\s+/g, ' ').trim();
+			// CIPH-881b — medication events label with the rescue-med name +
+			// dose, not the notes field (which is undefined for these). The
+			// kind discriminator keeps freeform note-marker events on a
+			// separate visual track.
+			let raw: string;
+			if (d.data.kind === 'medication') {
+				const medId = (d.data as any).medicationId;
+				const presetMed = blueprint.rescueMedications?.find((m) => m.id === medId);
+				const label = presetMed ? t(presetMed.label) : (medId || '');
+				const dose = (d.data as any).dose;
+				const unitStr = presetMed?.unit ? ` ${translateUnit(t, presetMed.unit)}` : '';
+				raw = dose ? `${label} ${dose}${unitStr}` : label;
+			} else {
+				raw = String(d.data.notes || '').replace(/\s+/g, ' ').trim();
+			}
 			out.push({ x, label: raw.length > 22 ? raw.slice(0, 21) + '…' : raw });
 		}
 		return out;
@@ -2741,6 +2755,15 @@ export function exportCsv(
 		const ds = String(d.data.date || '');
 		return ds >= startISO && ds <= endISO;
 	});
+	// CIPH-881b — rescue medication events live as type:'event' kind:'medication'
+	// docs. Counted per-day per-medication into their own CSV columns so the
+	// doctor-side reader can correlate breakthrough doses with episode counts.
+	const medScopeDocs = documents.filter((d) => {
+		if (!isExportable(d)) return false;
+		if (d.data.type !== 'event' || d.data.kind !== 'medication') return false;
+		const ds = String(d.data.date || '');
+		return ds >= startISO && ds <= endISO;
+	});
 	const totalDays = Math.round(
 		(endDate.getTime() - startDate.getTime()) / 86400000
 	) + 1;
@@ -2764,6 +2787,11 @@ export function exportCsv(
 			episodeDetailCols.push({ id: ep.id, type: 'duration', label: `${t(ep.label)} — ${t('protocol.duration')}` });
 		}
 	}
+	// CIPH-881b — one column per rescue medication, count of doses on each day.
+	const rescueMedCols = (blueprint.rescueMedications || []).map((m) => ({
+		id: m.id,
+		label: `${t(m.label)}${m.unit ? ` (${translateUnit(t, m.unit)})` : ''}`,
+	}));
 
 	const headers = [
 		'date',
@@ -2772,6 +2800,7 @@ export function exportCsv(
 		...episodeDetailCols.map((c) => c.label),
 		...triggerCols.map((c) => c.label),
 		...vitalCols.map((c) => c.label),
+		...rescueMedCols.map((c) => c.label),
 		t('pdf.notes'),
 	];
 
@@ -2815,6 +2844,13 @@ export function exportCsv(
 		for (const col of vitalCols) {
 			const val = dayDoc?.data?.vitals?.[col.id];
 			row.push(val != null ? String(val) : '');
+		}
+		// CIPH-881b — count rescue-med events for this day per medication id.
+		for (const col of rescueMedCols) {
+			const count = medScopeDocs.filter(
+				(d) => d.data.date === dayStr && (d.data as any).medicationId === col.id,
+			).length;
+			row.push(String(count));
 		}
 		row.push(String(dayDoc?.data?.notes || ''));
 

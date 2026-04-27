@@ -146,6 +146,20 @@
 	);
 	$: complianceAccent = complianceTone === 'high' ? 'var(--olive)' : complianceTone === 'mid' ? 'var(--ochre)' : 'var(--text-muted)';
 
+	// CIPH-881b — Count rescue-medication events in the current month so the
+	// dashboard rail can render a "Rescue meds this month" counter card. Only
+	// surfaced when the active blueprint declares rescueMedications, so
+	// presets without a clinical rescue protocol stay clean.
+	$: rescueMedsThisMonth = (() => {
+		if (!bp?.rescueMedications || bp.rescueMedications.length === 0) return 0;
+		const monthPrefix = todayStr.slice(0, 7);
+		return allDocs.filter(
+			(d) => d.data?.type === 'event'
+				&& d.data?.kind === 'medication'
+				&& String(d.data.date || '').startsWith(monthPrefix),
+		).length;
+	})();
+
 	// ─── Cycle-phase card (CIPH-401 / CIPH-855a) ───────────────────────────
 	// Only rendered for blueprints that track `cycle_day` (endometriosis,
 	// menopause, PCOS). Heavy lifting lives in `$lib/cycleState.ts` so the
@@ -598,6 +612,7 @@
 				{complianceTone}
 				{complianceMessage}
 				{complianceAccent}
+				{rescueMedsThisMonth}
 				canExport={!!bp && allDocs.length > 0}
 				{todayEntries}
 				{bp}

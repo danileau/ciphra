@@ -127,6 +127,23 @@
 		return type;
 	}
 
+	// CIPH-881 — rescue-medication events are type:'event' + kind:'medication'.
+	// Render distinctly from freeform note-marker events so journal / calendar
+	// / dashboard never collapse them into a generic "Event" row.
+	$: isMedEvent = entry.data?.type === 'event' && entry.data?.kind === 'medication';
+	function rescueMedLabel(doc: CiphraDocument): string {
+		const id = (doc.data as any)?.medicationId;
+		if (!bp?.rescueMedications || !id) return id || '?';
+		const m = bp.rescueMedications.find((rm) => rm.id === id);
+		return m ? $t(m.label) : id;
+	}
+	function rescueMedUnit(doc: CiphraDocument): string {
+		const id = (doc.data as any)?.medicationId;
+		if (!bp?.rescueMedications || !id) return '';
+		const m = bp.rescueMedications.find((rm) => rm.id === id);
+		return m?.unit ? translateUnit($t, m.unit) : '';
+	}
+
 	// CIPH-713 — diary docs are always private; entries/events become private
 	// when the user toggles the lock. Either way, render a small lock icon
 	// next to the type badge so the UI matches what's been excluded from any
@@ -238,7 +255,7 @@
 </script>
 
 <p class="text-sm font-medium" style="color: var(--text-primary)">
-	{typeLabel(entry.data.type || '')}
+	{isMedEvent ? $t('rescue_med.section_title') : typeLabel(entry.data.type || '')}
 	{#if isPrivate}
 		<span
 			class="inline-flex items-center align-middle ml-1 gap-1 text-xs"
@@ -389,6 +406,30 @@
 
 {#if entry.data.type === 'diary' && entry.data.text}
 	<p class="text-xs mt-1.5 line-clamp-3 whitespace-pre-wrap" style="color: var(--text-secondary)">{entry.data.text}</p>
+{/if}
+
+<!-- CIPH-881b — rescue-medication pill: brand-tinted, distinct from
+	 freeform-event "Event" badge so journal / calendar / dashboard show
+	 the medication clearly. -->
+{#if isMedEvent}
+	<div class="flex flex-wrap items-center gap-2 mt-1.5">
+		<span
+			class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full"
+			style="background: var(--surface-muted); color: var(--brand); border: 1px solid var(--brand)"
+		>
+			<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M19 14l-7 7-7-7a7 7 0 1 1 14 0z"/>
+				<circle cx="12" cy="11" r="3"/>
+			</svg>
+			{rescueMedLabel(entry)}
+			{#if entry.data.dose}
+				<span style="color: var(--text-secondary)">· {entry.data.dose}{rescueMedUnit(entry) ? ' ' + rescueMedUnit(entry) : ''}</span>
+			{/if}
+			{#if entry.data.time}
+				<span style="color: var(--text-muted)">· {entry.data.time}</span>
+			{/if}
+		</span>
+	</div>
 {/if}
 
 {#if entry.data.notes}

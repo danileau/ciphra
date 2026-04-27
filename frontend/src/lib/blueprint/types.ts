@@ -74,6 +74,23 @@ export interface MedicationSlot {
 	asNeeded: boolean;
 }
 
+/** CIPH-881 — Rescue medication preset for the FAB quick-add "med" mode.
+ *  Distinct from MedicationSlot: rescue meds are taken episodically (during
+ *  a flare / crisis / breakthrough event), not on a schedule. Selecting one
+ *  in the FAB writes a `type:'event'` + `kind:'medication'` doc with the
+ *  current time; render coverage in CIPH-881b spans journal / reports /
+ *  PDF / CSV / dashboard. */
+export interface RescueMedication {
+	/** Stable identifier — used as the medicationId on event docs. */
+	id: string;
+	/** i18n key for the user-facing label, e.g. `rescue_med.midazolam`. */
+	label: string;
+	/** Optional unit i18n key (e.g. `unit.mg`, `unit.puff`). */
+	unit?: string;
+	/** Optional preset dose value (just the number / amount). */
+	defaultDose?: string;
+}
+
 /** The full Blueprint */
 export interface Blueprint {
 	/** Internal version for future migrations */
@@ -106,6 +123,11 @@ export interface Blueprint {
 
 	/** Default medications (user can add more) */
 	medications: MedicationSlot[];
+
+	/** CIPH-881 — Rescue / breakthrough medications surfaced as a third
+	 *  FAB quick-add mode. Optional + backwards compatible: when absent or
+	 *  empty, the FAB does not render the "med" mode chip. */
+	rescueMedications?: RescueMedication[];
 
 	/** Which symptom columns appear in the monthly grid */
 	gridSymptomColumns: string[];  // item IDs from symptomGroups

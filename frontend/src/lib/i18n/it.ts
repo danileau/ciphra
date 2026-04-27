@@ -1972,4 +1972,23 @@ export default {
 	'migrate.tour_body': 'Abbiamo importato le tue note personali da epilepc nella scheda Diario. Queste voci restano private — non vengono mai condivise, esportate né mostrate nei rapporti.',
 	'migrate.tour_continue': 'Capito, vai alla home',
 	'entry.original_type_label': 'Originale: {value}',
+
+	// CIPH-881 — Farmaco al bisogno via FAB
+	'quickadd.mode_med': 'Al bisogno',
+	'quickadd.pick_med': 'Quale farmaco al bisogno?',
+	'quickadd.dose': 'Dose',
+	'quickadd.dose_optional': 'opzionale',
+	'quickadd.med_save_hint': 'Il salvataggio cattura l\'ora attuale.',
+	'rescue_med.section_title': 'Farmaci al bisogno',
+	'rescue_med.dashboard_count': 'Farmaci al bisogno questo mese',
+	'rescue_med.midazolam': 'Midazolam',
+	'rescue_med.diazepam': 'Diazepam',
+	'rescue_med.sumatriptan': 'Sumatriptan',
+	'rescue_med.rizatriptan': 'Rizatriptan',
+	'rescue_med.salbutamol': 'Salbutamolo',
+	'rescue_med.prednisolone': 'Prednisolone',
+	'rescue_med.lorazepam': 'Lorazepam',
+	'rescue_med.quetiapine': 'Quetiapina',
+	'rescue_med.prednisone': 'Prednisone',
+	'rescue_med.loperamide': 'Loperamide',
 } as Record<string, string>;

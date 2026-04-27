@@ -1984,4 +1984,23 @@ export default {
 	'migrate.tour_body': 'We imported your personal notes from epilepc into the Diary tab. These entries stay private — they are never shared, exported, or shown in reports.',
 	'migrate.tour_continue': 'Got it, go to home',
 	'entry.original_type_label': 'Original: {value}',
+
+	// CIPH-881 — Rescue / breakthrough medication FAB mode
+	'quickadd.mode_med': 'Rescue dose',
+	'quickadd.pick_med': 'Which rescue medication?',
+	'quickadd.dose': 'Dose',
+	'quickadd.dose_optional': 'optional',
+	'quickadd.med_save_hint': 'Saving captures the current time.',
+	'rescue_med.section_title': 'Rescue medications',
+	'rescue_med.dashboard_count': 'Rescue meds this month',
+	'rescue_med.midazolam': 'Midazolam',
+	'rescue_med.diazepam': 'Diazepam',
+	'rescue_med.sumatriptan': 'Sumatriptan',
+	'rescue_med.rizatriptan': 'Rizatriptan',
+	'rescue_med.salbutamol': 'Salbutamol',
+	'rescue_med.prednisolone': 'Prednisolone',
+	'rescue_med.lorazepam': 'Lorazepam',
+	'rescue_med.quetiapine': 'Quetiapine',
+	'rescue_med.prednisone': 'Prednisone',
+	'rescue_med.loperamide': 'Loperamide',
 } as Record<string, string>;

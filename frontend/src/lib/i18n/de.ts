@@ -1994,4 +1994,23 @@ export default {
 	'migrate.tour_body': 'Wir haben deine persönlichen Notizen aus epilepc in den Tagebuch-Tab übernommen. Diese Einträge bleiben immer privat — sie werden nie geteilt, exportiert oder in Berichten gezeigt.',
 	'migrate.tour_continue': 'Verstanden, zur Startseite',
 	'entry.original_type_label': 'Original: {value}',
+
+	// CIPH-881 — Rescue / breakthrough medication FAB mode
+	'quickadd.mode_med': 'Bedarfsmed.',
+	'quickadd.pick_med': 'Welche Bedarfsmedikation?',
+	'quickadd.dose': 'Dosis',
+	'quickadd.dose_optional': 'optional',
+	'quickadd.med_save_hint': 'Beim Speichern wird die aktuelle Uhrzeit erfasst.',
+	'rescue_med.section_title': 'Bedarfsmedikation',
+	'rescue_med.dashboard_count': 'Bedarfsmedikation diesen Monat',
+	'rescue_med.midazolam': 'Midazolam',
+	'rescue_med.diazepam': 'Diazepam',
+	'rescue_med.sumatriptan': 'Sumatriptan',
+	'rescue_med.rizatriptan': 'Rizatriptan',
+	'rescue_med.salbutamol': 'Salbutamol',
+	'rescue_med.prednisolone': 'Prednisolon',
+	'rescue_med.lorazepam': 'Lorazepam',
+	'rescue_med.quetiapine': 'Quetiapin',
+	'rescue_med.prednisone': 'Prednison',
+	'rescue_med.loperamide': 'Loperamid',
 } as Record<string, string>;

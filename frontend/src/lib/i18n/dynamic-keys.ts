@@ -21,6 +21,12 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 	'landing.template_',
 	'landing.template_desc_',
 
+	// CIPH-881 — rescue medication labels are blueprint-driven; the FAB
+	// + journal + reports + PDF + CSV + dashboard all look them up via
+	// `$t(med.label)` where label is the i18n-key string on the
+	// blueprint preset's rescueMedications entry.
+	'rescue_med.',
+
 	// Condition-group titles/descriptions driven by `conditionGroups.ts`
 	// lookups: `$t(group.titleKey)`.
 	'condition_group.',

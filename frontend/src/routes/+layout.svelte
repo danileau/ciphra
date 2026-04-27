@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { isAuthenticated, authReady, auth, needsUnlock } from '$lib/stores/auth';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
-	import { t, locale, locales, localeNames } from '$lib/i18n';
+	import { t, locale, locales, localeNames, translateUnit } from '$lib/i18n';
 	import type { Locale } from '$lib/i18n';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -41,10 +41,15 @@
 	// preserves the existing flow (episode chip + note → entry/event); 'diary'
 	// switches to a date+time+text form that writes a `type: 'diary'` doc,
 	// hard-excluded from every export.
-	let quickAddMode: 'log' | 'diary' = 'log';
+	// CIPH-881 — fourth mode 'med' for rescue / breakthrough meds, surfaced
+	// only when the active blueprint declares `rescueMedications`. Writes a
+	// `type:'event'` + `kind:'medication'` doc with the current time.
+	let quickAddMode: 'log' | 'diary' | 'med' = 'log';
 	let diaryDate = '';
 	let diaryTime = '';
 	let diaryText = '';
+	let quickAddSelectedMedId: string | null = null;
+	let quickAddDose = '';
 	// CIPH-713 — private toggle on quick-add log/event flow.
 	let quickAddPrivate = false;
 
@@ -82,12 +87,17 @@
 		showQuickAdd = true;
 	}
 	function fabOpenLastMode() {
-		let last: 'log' | 'diary' = 'log';
+		let last: 'log' | 'diary' | 'med' = 'log';
 		if (browser) {
 			try {
 				const v = localStorage.getItem(QUICKADD_LAST_MODE_KEY);
-				if (v === 'diary' || v === 'log') last = v;
+				if (v === 'diary' || v === 'log' || v === 'med') last = v;
 			} catch {}
+		}
+		// CIPH-881 — if user previously used 'med' but switched to a blueprint
+		// without rescue meds, the third mode chip won't render. Fall back.
+		if (last === 'med' && !(bp?.rescueMedications && bp.rescueMedications.length > 0)) {
+			last = 'log';
 		}
 		quickAddMode = last;
 		if (last === 'diary' && !diaryDate) diaryDate = new Date().toISOString().slice(0, 10);
@@ -238,9 +248,51 @@
 			: bp.episodeTypes)
 		: [];
 
+	function selectRescueMed(id: string) {
+		quickAddSelectedMedId = quickAddSelectedMedId === id ? null : id;
+		// Pre-fill the dose input with the preset's defaultDose so the user
+		// can confirm by tapping save, or override before saving.
+		if (quickAddSelectedMedId) {
+			const m = bp?.rescueMedications?.find((r) => r.id === id);
+			if (m?.defaultDose && !quickAddDose.trim()) quickAddDose = m.defaultDose;
+		} else {
+			quickAddDose = '';
+		}
+	}
+
 	async function quickAddSave() {
 		const now = new Date();
 		const todayStr = now.toISOString().slice(0, 10);
+
+		// CIPH-881 — rescue medication writes a `type:'event' kind:'medication'`
+		// doc, distinct from the freeform note-marker event used by the log mode.
+		if (quickAddMode === 'med') {
+			if (!quickAddSelectedMedId) return;
+			quickAddSaving = true;
+			const nowTime = now.toTimeString().slice(0, 5);
+			const med = bp?.rescueMedications?.find((m) => m.id === quickAddSelectedMedId);
+			const dose = quickAddDose.trim() || med?.defaultDose || undefined;
+			await documents.save({
+				type: 'event',
+				kind: 'medication',
+				date: todayStr,
+				time: nowTime,
+				medicationId: quickAddSelectedMedId,
+				dose,
+				private: quickAddPrivate || undefined,
+			});
+			quickAddSaving = false;
+			quickAddSaved = true;
+			setTimeout(() => {
+				quickAddSaved = false;
+				quickAddSelectedMedId = null;
+				quickAddDose = '';
+				quickAddMode = 'log';
+				showQuickAdd = false;
+				quickAddOpen.set(false);
+			}, 1200);
+			return;
+		}
 
 		// CIPH-710 — diary mode writes a `type: 'diary'` doc that is hard-
 		// excluded from every export surface (PDF/CSV/reports/share).
@@ -342,6 +394,8 @@
 		diaryTime = '';
 		diaryText = '';
 		quickAddPrivate = false;
+		quickAddSelectedMedId = null;
+		quickAddDose = '';
 	}
 
 	// Load documents and blueprint when authenticated
@@ -741,7 +795,9 @@
 						<h3 class="text-lg font-semibold mb-1" style="color: var(--text-primary)">{$t('quickadd.title')}</h3>
 						<p class="text-sm mb-4" style="color: var(--text-muted)">{$t('quickadd.what_happened')}</p>
 
-						<!-- CIPH-710 — top-level mode switch: log entry vs private diary. -->
+						<!-- CIPH-710 — top-level mode switch: log entry vs private diary.
+							 CIPH-881 — third "med" chip surfaced only when the active
+							 blueprint declares rescueMedications. -->
 						<div class="flex gap-2 mb-4 p-1 rounded-lg" style="background: var(--surface-muted)">
 							<button
 								type="button"
@@ -763,9 +819,72 @@
 								</svg>
 								{$t('quickadd.mode_diary')}
 							</button>
+							{#if bp.rescueMedications && bp.rescueMedications.length > 0}
+								<button
+									type="button"
+									on:click={() => { quickAddMode = 'med'; }}
+									data-testid="quickadd-mode-med"
+									class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px] inline-flex items-center justify-center gap-1.5"
+									style="background: {quickAddMode === 'med' ? 'white' : 'transparent'}; color: {quickAddMode === 'med' ? 'var(--text-primary)' : 'var(--text-muted)'}"
+								>
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+										<path d="M19 14l-7 7-7-7a7 7 0 1 1 14 0z"/>
+										<circle cx="12" cy="11" r="3"/>
+									</svg>
+									{$t('quickadd.mode_med')}
+								</button>
+							{/if}
 						</div>
 
-						{#if quickAddMode === 'diary'}
+						{#if quickAddMode === 'med' && bp.rescueMedications && bp.rescueMedications.length > 0}
+							<!-- CIPH-881 — Rescue medication picker. Tap a chip to select;
+								 dose pre-fills from preset defaultDose, override if needed. -->
+							<p class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('quickadd.pick_med')}</p>
+							<div class="flex flex-wrap gap-2 mb-4">
+								{#each bp.rescueMedications as med}
+									<button
+										type="button"
+										on:click={() => selectRescueMed(med.id)}
+										data-testid="quickadd-med-{med.id}"
+										class="flex items-center gap-2 px-4 py-2 rounded-xl border transition-all min-h-[44px]"
+										style="border-color: {quickAddSelectedMedId === med.id ? 'var(--brand)' : 'var(--border)'}; background: {quickAddSelectedMedId === med.id ? 'var(--brand-light, rgba(176,75,47,0.08))' : 'var(--surface-muted)'}"
+									>
+										<span class="text-sm font-medium" style="color: {quickAddSelectedMedId === med.id ? 'var(--brand)' : 'var(--text-primary)'}">{$t(med.label)}</span>
+										{#if med.defaultDose}
+											<span class="text-[11px]" style="color: var(--text-muted)">{med.defaultDose}{med.unit ? ' ' + translateUnit($t, med.unit) : ''}</span>
+										{/if}
+									</button>
+								{/each}
+							</div>
+							{#if quickAddSelectedMedId}
+								{@const selectedMed = bp.rescueMedications.find(m => m.id === quickAddSelectedMedId)}
+								<div class="mb-3">
+									<label class="text-xs" style="color: var(--text-secondary)" for="qa-dose">
+										{$t('quickadd.dose')}
+										{#if selectedMed?.unit}
+											<span style="color: var(--text-muted)">({translateUnit($t, selectedMed.unit)})</span>
+										{/if}
+										<span style="color: var(--text-muted)">— {$t('quickadd.dose_optional')}</span>
+									</label>
+									<input
+										id="qa-dose"
+										type="text"
+										inputmode="decimal"
+										bind:value={quickAddDose}
+										placeholder={selectedMed?.defaultDose ?? ''}
+										data-testid="quickadd-dose"
+										class="input mt-1"
+									/>
+								</div>
+							{/if}
+							<p class="text-[11px] mb-3" style="color: var(--text-muted)">{$t('quickadd.med_save_hint')}</p>
+							<button
+								on:click={quickAddSave}
+								disabled={quickAddSaving || !quickAddSelectedMedId}
+								data-testid="quickadd-save-med"
+								class="btn-primary w-full py-3 text-sm mb-3"
+							>{quickAddSaving ? $t('common.loading') : $t('quickadd.save')}</button>
+						{:else if quickAddMode === 'diary'}
 							<p class="text-[11px] mb-3" style="color: var(--text-muted)">{$t('quickadd.diary_hint')}</p>
 							<div class="grid grid-cols-2 gap-2 mb-3">
 								<div>
