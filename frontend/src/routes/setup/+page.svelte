@@ -147,6 +147,34 @@
 		| EpisodeType
 		| null = null;
 
+	// CIPH-883 — Guided custom-preset wizard.
+	// When the user picks the `custom` preset, the standard toggle
+	// screens are empty (the preset has no symptoms / triggers / vitals
+	// to opt out of). Instead, route them through a narrative flow that
+	// pre-opens the CustomItemModal per kind. They walk away with their
+	// own blueprint built from scratch.
+	$: isCustomPreset = working?.conditionId === 'custom';
+
+	// Track whether we've already auto-opened the modal for the current
+	// step, so we don't re-trigger on every reactive recompute.
+	let autoOpenedForStep: number | null = null;
+	$: if (isCustomPreset && step === 2 && autoOpenedForStep !== 2) {
+		autoOpenedForStep = 2;
+		const hasCustoms =
+			(working?.customizations?.customSymptoms?.length ?? 0) > 0;
+		if (!hasCustoms) {
+			tick().then(() => openCustomModal('symptom'));
+		}
+	}
+	$: if (isCustomPreset && step === 3 && autoOpenedForStep !== 3) {
+		autoOpenedForStep = 3;
+		const hasCustoms =
+			(working?.customizations?.customTriggers?.length ?? 0) > 0;
+		if (!hasCustoms) {
+			tick().then(() => openCustomModal('trigger'));
+		}
+	}
+
 	function openCustomModal(kind: CustomKind) {
 		customModalKind = kind;
 		customModalEditing = null;
@@ -424,8 +452,14 @@
 		{:else if step === 2 && working && workingResolved}
 			<section aria-labelledby="wizard-step2-heading" class="space-y-5">
 				<div>
-					<h2 id="wizard-step2-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.symptoms_title')}</h2>
-					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.wizard_symptoms_caption')}</p>
+					<!-- CIPH-883 — narrative copy for the custom preset -->
+					{#if isCustomPreset}
+						<h2 id="wizard-step2-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.guided_symptoms_title')}</h2>
+						<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.guided_symptoms_caption')}</p>
+					{:else}
+						<h2 id="wizard-step2-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.symptoms_title')}</h2>
+						<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.wizard_symptoms_caption')}</p>
+					{/if}
 				</div>
 
 				<div class="space-y-2">
@@ -538,8 +572,14 @@
 		{:else if step === 3 && working && workingResolved}
 			<section aria-labelledby="wizard-step3-heading" class="space-y-6">
 				<div>
-					<h2 id="wizard-step3-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.triggers_title')}</h2>
-					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.wizard_triggers_caption')}</p>
+					<!-- CIPH-883 — narrative copy for the custom preset -->
+					{#if isCustomPreset}
+						<h2 id="wizard-step3-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.guided_triggers_title')}</h2>
+						<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.guided_triggers_caption')}</p>
+					{:else}
+						<h2 id="wizard-step3-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.triggers_title')}</h2>
+						<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.wizard_triggers_caption')}</p>
+					{/if}
 				</div>
 
 				{#if workingResolved.triggers.length > 0}

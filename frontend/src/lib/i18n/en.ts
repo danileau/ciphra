@@ -2053,4 +2053,10 @@ export default {
 	'customization.error_unit_required': 'Unit required',
 	'customization.error_color_required': 'Colour required',
 	'symptom_group.custom': 'Custom',
+
+	// CIPH-883 — Guided custom-preset wizard
+	'setup.guided_symptoms_title': 'What symptoms do you experience?',
+	'setup.guided_symptoms_caption': 'Add your own — you can edit any of them later.',
+	'setup.guided_triggers_title': 'What triggers them?',
+	'setup.guided_triggers_caption': 'Note what makes your symptoms worse. Editable later.',
 } as Record<string, string>;

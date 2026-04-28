@@ -5,6 +5,7 @@
 	import Companion from '$lib/components/Companion.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
+	import { inview } from '$lib/actions/inview';
 	import { presets } from '$lib/blueprint/presets';
 	import EncryptionDemo from '$lib/components/EncryptionDemo.svelte';
 	import { iconPaths, iconPath } from '$lib/conditionIcons';
@@ -69,9 +70,9 @@
 <main id="main-content" style="background: var(--surface);">
 
 	<!-- ===== HERO ===== -->
-	<section class="relative overflow-hidden" style="background: var(--surface);">
+	<section class="relative overflow-hidden hero-section" style="background: var(--surface);">
 		<div class="relative max-w-5xl mx-auto px-6 py-24 sm:py-32 md:py-40 lg:py-48">
-			<div class="max-w-2xl">
+			<div class="max-w-2xl hero-content">
 				<!-- Wordmark -->
 				<div class="mb-8">
 					<span class="sm:hidden"><Wordmark size={48} /></span>
@@ -159,7 +160,7 @@
 	</section>
 
 	<!-- ===== HOW IT WORKS ===== -->
-	<section class="py-20 md:py-28" id="how" style="background: var(--surface-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+	<section class="py-20 md:py-28 reveal" use:inview id="how" style="background: var(--surface-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
 		<div class="max-w-5xl mx-auto px-6">
 			<div class="text-center mb-16">
 				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">{$t('landing.how_title')}</h2>
@@ -192,7 +193,7 @@
 	</section>
 
 	<!-- ===== CONDITIONS GRID ===== -->
-	<section class="py-20 md:py-28" id="conditions" style="background: var(--surface); border-bottom: 1px solid var(--border);">
+	<section class="py-20 md:py-28 reveal" use:inview id="conditions" style="background: var(--surface); border-bottom: 1px solid var(--border);">
 		<div class="max-w-5xl mx-auto px-6">
 			<div class="text-center mb-16">
 				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">
@@ -237,7 +238,7 @@
 	</section>
 
 	<!-- ===== SECURITY ===== -->
-	<section class="py-20 md:py-28" id="security" style="background: var(--surface-card); border-bottom: 1px solid var(--border);">
+	<section class="py-20 md:py-28 reveal" use:inview id="security" style="background: var(--surface-card); border-bottom: 1px solid var(--border);">
 		<div class="max-w-5xl mx-auto px-6">
 			<div class="flex items-start gap-5 mb-12">
 				<div class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0" style="background: var(--ochre-light);">
@@ -298,7 +299,7 @@
 	</section>
 
 	<!-- ===== TECHNICAL DETAILS (expandable) ===== -->
-	<section class="py-20 md:py-28" id="technical" style="background: var(--surface); border-bottom: 1px solid var(--border);">
+	<section class="py-20 md:py-28 reveal" use:inview id="technical" style="background: var(--surface); border-bottom: 1px solid var(--border);">
 		<div class="max-w-5xl mx-auto px-6">
 			<!-- Toggle button -->
 			<div class="text-center">
@@ -454,7 +455,7 @@
 	</section>
 
 	<!-- ===== CTA FOOTER ===== -->
-	<section class="py-20 md:py-28 relative overflow-hidden" style="background: var(--surface-card); border-bottom: 1px solid var(--border);">
+	<section class="py-20 md:py-28 relative overflow-hidden reveal" use:inview style="background: var(--surface-card); border-bottom: 1px solid var(--border);">
 		<div class="relative max-w-5xl mx-auto px-6 text-center">
 			<!-- Watermark asterisk -->
 			<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -545,3 +546,48 @@
 </footer>
 
 {/if}
+
+<style>
+	/* CIPH-895 — Landing motion.
+	   Hero content fades up + asterisk wordmark settles on page mount.
+	   Sections marked `.reveal use:inview` fade up when scrolled into
+	   view. Trust-app motion budget: 500ms duration, 12px translate, no
+	   parallax, no scroll-linked transforms, no looping animations. The
+	   inview action handles `prefers-reduced-motion` — when reduced,
+	   the class is added immediately so content is visible without
+	   transition. */
+	.hero-content {
+		animation: heroEntrance 700ms ease-out both;
+	}
+	@keyframes heroEntrance {
+		from {
+			opacity: 0;
+			transform: translateY(16px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	.reveal {
+		opacity: 0;
+		transform: translateY(12px);
+		transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+	}
+	:global(.reveal.in-view) {
+		opacity: 1;
+		transform: none;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.hero-content {
+			animation: none;
+		}
+		.reveal {
+			opacity: 1;
+			transform: none;
+			transition: none;
+		}
+	}
+</style>
