@@ -99,7 +99,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	ms: {
 		id: 'ms',
 		icon: 'brain',
-		color: DATA_5,
+		color: DATA_6,
 		titleKey: 'condition.ms.title',
 		subtitleKey: 'condition.ms.subtitle',
 		introKey: 'condition.ms.intro',
@@ -234,7 +234,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	asthma: {
 		id: 'asthma',
 		icon: 'wind',
-		color: DATA_5,
+		color: DATA_4,
 		titleKey: 'condition.asthma.title',
 		subtitleKey: 'condition.asthma.subtitle',
 		introKey: 'condition.asthma.intro',
@@ -341,7 +341,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	endometriosis: {
 		id: 'endometriosis',
 		icon: 'flower',
-		color: DATA_1,
+		color: DATA_2,
 		titleKey: 'condition.endometriosis.title',
 		subtitleKey: 'condition.endometriosis.subtitle',
 		introKey: 'condition.endometriosis.intro',
@@ -387,7 +387,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 	glaucoma: {
 		id: 'glaucoma',
 		icon: 'eye',
-		color: DATA_5,
+		color: DATA_3,
 		titleKey: 'condition.glaucoma.title',
 		subtitleKey: 'condition.glaucoma.subtitle',
 		introKey: 'condition.glaucoma.intro',

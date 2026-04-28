@@ -58,10 +58,15 @@
 					{#each group.conditionIds as id}
 						{@const info = conditionInfoMap[id]}
 						{#if info}
-							<div class="card-interactive rounded-xl p-5 group flex flex-col">
+							<div class="card-interactive condition-card rounded-xl p-5 group flex flex-col">
 								<a href="/conditions/{id}" class="block flex-1">
-									<div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background: {info.color}15; color: {info.color}">
-										<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d={iconPath(info.icon)} stroke-width="2"/></svg>
+									<div
+										class="condition-icon-tile w-11 h-11 rounded-xl flex items-center justify-center mb-3"
+										style="background: linear-gradient(135deg, {info.color}26, {info.color}10);
+										       color: {info.color};
+										       border: 1px solid {info.color}40;"
+									>
+										<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d={iconPath(info.icon)} stroke-width="2.2"/></svg>
 									</div>
 									<h3 class="text-base font-semibold transition-colors" style="color: var(--text-primary);">{$t(info.titleKey)}</h3>
 									<p class="text-sm mt-1 line-clamp-2" style="color: var(--text-muted);">{$t(info.subtitleKey)}</p>
@@ -99,3 +104,20 @@
 		</div>
 	</main>
 </div>
+
+<style>
+	.condition-icon-tile {
+		transition: transform 200ms ease-out;
+	}
+	.condition-card:hover .condition-icon-tile {
+		transform: translateY(-1px);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.condition-icon-tile {
+			transition: none;
+		}
+		.condition-card:hover .condition-icon-tile {
+			transform: none;
+		}
+	}
+</style>

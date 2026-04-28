@@ -229,8 +229,12 @@
 					{:else}
 						<!-- Condition card -->
 						<a href="/conditions/{preset.id}" class="card-interactive rounded-xl p-5 min-h-[140px] block group">
-							<div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style="background: {preset.color}12">
-								<svg class="w-5 h-5" fill="none" stroke={preset.color} stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+							<div
+								class="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+								style="background: linear-gradient(135deg, {preset.color}26, {preset.color}10);
+								       border: 1px solid {preset.color}40;"
+							>
+								<svg class="w-5 h-5" fill="none" stroke={preset.color} stroke-width="2.2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
 									<path d="{iconPaths[preset.icon] || iconPaths['heart']}"/>
 								</svg>
 							</div>

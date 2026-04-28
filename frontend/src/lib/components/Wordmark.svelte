@@ -24,14 +24,19 @@
 	/** Optional `aria-label` override. Defaults to "ciphra". */
 	export let ariaLabel: string = 'ciphra';
 
-	// Geometry — empirically matched to the hand-rolled originals.
-	$: width = Math.round(size * 4.286);
-	$: viewBoxW = 150;
+	// Geometry — asterisk hugs the wordmark as a trailing glyph rather
+	// than floating with ~13 viewBox units of dead space (the original
+	// hand-rolled value of x=98 came from a 150-unit viewBox that was
+	// itself oversized). Tightening to x≈84 + viewBoxW=104 makes
+	// "ciphra*" read as one mark, and bumping astSize 5 → 5.6 gives
+	// the asterisk enough weight to sit confidently as the last glyph.
+	$: viewBoxW = 104;
 	$: viewBoxH = 36;
+	$: width = Math.round(size * (viewBoxW / viewBoxH));
 	$: textY = 27;
 	$: textSize = 26;
-	$: astTranslate = '98,8';
-	$: astSize = 5; // arm half-length in viewBox units
+	$: astTranslate = '84,8';
+	$: astSize = 5.6; // arm half-length in viewBox units
 	$: markStroke =
 		mark === 'muted' ? 'var(--text-muted)' : 'var(--brand)';
 </script>

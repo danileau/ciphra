@@ -89,8 +89,13 @@
 		<main class="layout-default py-8 sm:py-12">
 			<a href="/conditions" class="text-sm mb-6 inline-block transition-colors" style="color: var(--brand);">&larr; {$t('condition.index_title')}</a>
 			<div class="flex items-center gap-4 mb-4">
-				<div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style="background: {info.color}15; color: {info.color}">
-					<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d={iconPath(info.icon)} stroke-width="2"/></svg>
+				<div
+					class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+					style="background: linear-gradient(135deg, {info.color}26, {info.color}10);
+					       color: {info.color};
+					       border: 1px solid {info.color}40;"
+				>
+					<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d={iconPath(info.icon)} stroke-width="2.2"/></svg>
 				</div>
 				<div>
 					<h1 class="text-3xl sm:text-4xl font-bold" style="color: var(--text-primary);">{title}</h1>

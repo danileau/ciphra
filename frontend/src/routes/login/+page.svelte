@@ -126,11 +126,13 @@
 <main class="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4" style="background: var(--surface)">
 	<div class="w-full max-w-md">
 		<!-- Centered wordmark above the form — gives the auth flow its own
-		     identity instead of relying on the passive top-left nav logo. -->
-		<div class="flex justify-center mb-2">
-			<Wordmark size={40} />
+		     identity instead of relying on the passive top-left nav logo.
+		     Sized larger here than in chrome so it owns the page and
+		     reads as the moment of the brand, not a footer detail. -->
+		<div class="flex justify-center mb-3 mt-2">
+			<Wordmark size={56} />
 		</div>
-		<p class="text-sm text-center mb-6" style="color: var(--text-muted)">{$t('encryption.badge')}</p>
+		<p class="text-sm text-center mb-8" style="color: var(--text-muted)">{$t('encryption.badge')}</p>
 
 		<div class="rounded-2xl overflow-hidden" style="background: var(--surface-card); border: 1px solid var(--border)">
 			<!-- Tabs -->

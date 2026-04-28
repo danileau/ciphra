@@ -316,10 +316,10 @@
 >
 	<div class="w-full max-w-md">
 		<!-- Wordmark + tagline header — identical to /login -->
-		<div class="flex justify-center mb-2">
-			<Wordmark size={40} />
+		<div class="flex justify-center mb-3 mt-2">
+			<Wordmark size={56} />
 		</div>
-		<p class="text-sm text-center mb-6" style="color: var(--text-muted)">
+		<p class="text-sm text-center mb-8" style="color: var(--text-muted)">
 			{$t('encryption.badge')}
 		</p>
 

@@ -499,7 +499,7 @@ export const ms: Blueprint = {
 	version: 1,
 	conditionId: 'ms',
 	conditionLabel: 'landing.template_ms',
-	accentColor: DATA_5,
+	accentColor: DATA_6,
 	symptomGroups: [
 		{
 			id: 'motor', label: 'symptom_group.motor', items: [
@@ -738,7 +738,7 @@ export const asthma: Blueprint = {
 	version: 1,
 	conditionId: 'asthma',
 	conditionLabel: 'landing.template_asthma',
-	accentColor: DATA_5,
+	accentColor: DATA_4,
 	symptomGroups: [
 		{
 			id: 'respiratory', label: 'symptom_group.respiratory', items: [
@@ -814,7 +814,7 @@ export const endometriosis: Blueprint = {
 	version: 1,
 	conditionId: 'endometriosis',
 	conditionLabel: 'landing.template_endometriosis',
-	accentColor: DATA_1,
+	accentColor: DATA_2,
 	symptomGroups: [
 		{
 			id: 'pelvic_pain', label: 'symptom_group.pelvic_pain', items: [
@@ -1520,7 +1520,7 @@ export const glaucoma: Blueprint = {
 	version: 1,
 	conditionId: 'glaucoma',
 	conditionLabel: 'landing.template_glaucoma',
-	accentColor: DATA_5,
+	accentColor: DATA_3,
 	episodeNoun: 'episode_noun.iop_spike',
 	symptomGroups: [
 		{
@@ -1816,7 +1816,7 @@ export const presets: PresetInfo[] = [
 	// Neurology
 	{ id: 'epilepsy', labelKey: 'landing.template_epilepsy', descriptionKey: 'landing.template_epilepsy_desc', icon: 'zap', color: DATA_1, blueprint: epilepsy },
 	{ id: 'migraine', labelKey: 'landing.template_migraine', descriptionKey: 'landing.template_migraine_desc', icon: 'cloud-lightning', color: DATA_2, blueprint: migraine },
-	{ id: 'ms', labelKey: 'landing.template_ms', descriptionKey: 'landing.template_ms_desc', icon: 'brain', color: DATA_5, blueprint: ms },
+	{ id: 'ms', labelKey: 'landing.template_ms', descriptionKey: 'landing.template_ms_desc', icon: 'brain', color: DATA_6, blueprint: ms },
 	// Neurodivergence
 	{ id: 'adhd', labelKey: 'landing.template_adhd', descriptionKey: 'landing.template_adhd_desc', icon: 'focus', color: DATA_3, blueprint: adhd },
 	// Removed per product review — kept blueprint def above for potential future re-enable
@@ -1829,7 +1829,7 @@ export const presets: PresetInfo[] = [
 	{ id: 'chronic_pain', labelKey: 'landing.template_chronic_pain', descriptionKey: 'landing.template_chronic_pain_desc', icon: 'flame', color: DATA_1, blueprint: chronic_pain },
 	{ id: 'long_covid', labelKey: 'landing.template_long_covid', descriptionKey: 'landing.template_long_covid_desc', icon: 'shield-plus', color: DATA_4, blueprint: long_covid },
 	// Respiratory & Cardio
-	{ id: 'asthma', labelKey: 'landing.template_asthma', descriptionKey: 'landing.template_asthma_desc', icon: 'wind', color: DATA_5, blueprint: asthma },
+	{ id: 'asthma', labelKey: 'landing.template_asthma', descriptionKey: 'landing.template_asthma_desc', icon: 'wind', color: DATA_4, blueprint: asthma },
 	{ id: 'hypertension', labelKey: 'landing.template_hypertension', descriptionKey: 'landing.template_hypertension_desc', icon: 'heart-pulse', color: DATA_1, blueprint: hypertension },
 	// Removed per product review — kept blueprint def above for potential future re-enable
 	// { id: 'cardiovascular', labelKey: 'landing.template_cardiovascular', descriptionKey: 'landing.template_cardiovascular_desc', icon: 'heart-pulse', color: DATA_1, blueprint: cardiovascular },
@@ -1840,12 +1840,12 @@ export const presets: PresetInfo[] = [
 	// Dermatology & Gynecology
 	// Removed per product review — kept blueprint def above for potential future re-enable
 	// { id: 'dermatology', labelKey: 'landing.template_dermatology', descriptionKey: 'landing.template_dermatology_desc', icon: 'scan', color: DATA_6, blueprint: dermatology },
-	{ id: 'endometriosis', labelKey: 'landing.template_endometriosis', descriptionKey: 'landing.template_endometriosis_desc', icon: 'flower', color: DATA_1, blueprint: endometriosis },
+	{ id: 'endometriosis', labelKey: 'landing.template_endometriosis', descriptionKey: 'landing.template_endometriosis_desc', icon: 'flower', color: DATA_2, blueprint: endometriosis },
 	{ id: 'menopause', labelKey: 'landing.template_menopause', descriptionKey: 'landing.template_menopause_desc', icon: 'scan', color: DATA_6, blueprint: menopause },
 	{ id: 'pcos', labelKey: 'landing.template_pcos', descriptionKey: 'landing.template_pcos_desc', icon: 'flower2', color: DATA_6, blueprint: pcos },
 	// New presets (wave 1)
 	{ id: 'bipolar', labelKey: 'landing.template_bipolar', descriptionKey: 'landing.template_bipolar_desc', icon: 'activity', color: DATA_5, blueprint: bipolar },
-	{ id: 'glaucoma', labelKey: 'landing.template_glaucoma', descriptionKey: 'landing.template_glaucoma_desc', icon: 'eye', color: DATA_5, blueprint: glaucoma },
+	{ id: 'glaucoma', labelKey: 'landing.template_glaucoma', descriptionKey: 'landing.template_glaucoma_desc', icon: 'eye', color: DATA_3, blueprint: glaucoma },
 	{ id: 'parkinson', labelKey: 'landing.template_parkinson', descriptionKey: 'landing.template_parkinson_desc', icon: 'waves', color: DATA_3, blueprint: parkinson },
 	{ id: 'ibd', labelKey: 'landing.template_ibd', descriptionKey: 'landing.template_ibd_desc', icon: 'donut', color: DATA_6, blueprint: ibd },
 	// Custom
