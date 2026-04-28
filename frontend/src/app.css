@@ -71,6 +71,81 @@
 		/* Tint aliases for existing ochre/olive rgba() call sites */
 		--ochre-rgb: 159, 99, 11;
 		--olive-rgb: 127, 130, 27;
+
+		/* CIPH-890 — Cohort × Route palette.
+		   Source of truth: `src/lib/cohortPalette.ts`. The TS module
+		   and these CSS vars MUST stay in sync — vitest does not
+		   currently parse this file but `cohortPalette.test.ts`
+		   enforces the matrix on the JS side. Update both together.
+
+		   The route-shift variables below are applied via the CSS
+		   Color Level 5 relative-color syntax at consumer sites:
+		     hsl(from var(--cohort-cycle-1)
+		         h
+		         calc(s + var(--route-s-shift))
+		         calc(l + var(--route-l-shift)))
+		   Modern evergreen browsers only (Chrome 119+ / Safari 16.4+
+		   / Firefox 128+) — pre-launch decision, no production users.
+
+		   `data-route` is set by `+layout.svelte` based on the first
+		   path segment via `pathToRoute()`. `data-cohort` is set the
+		   same way from `cohortOf($resolvedBlueprint)`. CIPH-891 will
+		   migrate consumers to read these variables. */
+		--cohort-cycle-1: #a83a5b;
+		--cohort-cycle-2: #7a2845;
+		--cohort-cycle-3: #b06a4a;
+		--cohort-cycle-4: #7f821b;
+		--cohort-cycle-5: #5c6b73;
+		--cohort-cycle-6: #9a4f6b;
+		--cohort-phase-1: #3f4a8a;
+		--cohort-phase-2: #2d3563;
+		--cohort-phase-3: #9f630b;
+		--cohort-phase-4: #5c7a4a;
+		--cohort-phase-5: #5c6b73;
+		--cohort-phase-6: #6b6b9a;
+		--cohort-narrative-1: #4a6b3f;
+		--cohort-narrative-2: #2f4a28;
+		--cohort-narrative-3: #9f630b;
+		--cohort-narrative-4: #7f821b;
+		--cohort-narrative-5: #5c6b73;
+		--cohort-narrative-6: #6b8a5c;
+		--cohort-discrete-1: #b23c2c;
+		--cohort-discrete-2: #8a2a1f;
+		--cohort-discrete-3: #9f630b;
+		--cohort-discrete-4: #7f821b;
+		--cohort-discrete-5: #5c6b73;
+		--cohort-discrete-6: #a87559;
+		--cohort-custom-1: #475569;
+		--cohort-custom-2: #334155;
+		--cohort-custom-3: #a87559;
+		--cohort-custom-4: #7f821b;
+		--cohort-custom-5: #5c6b73;
+		--cohort-custom-6: #6b7b8a;
+
+		/* Default = dashboard baseline = zero shift. Route-specific
+		   selectors below override these. */
+		--route-l-shift: 0%;
+		--route-s-shift: 0%;
+	}
+
+	/* CIPH-890 — Per-route HSL modulation. Composes with cohort tones
+	   via `hsl(from var(--cohort-X-N) h calc(s + var(--route-s-shift))
+	   calc(l + var(--route-l-shift)))` at consumer sites. */
+	[data-route="calendar"] {
+		--route-l-shift: -8%;
+		--route-s-shift: 0%;
+	}
+	[data-route="journal"] {
+		--route-l-shift: 4%;
+		--route-s-shift: 0%;
+	}
+	[data-route="reports"] {
+		--route-l-shift: 0%;
+		--route-s-shift: -4%;
+	}
+	[data-route="dashboard"] {
+		--route-l-shift: 0%;
+		--route-s-shift: 0%;
 	}
 
 	/* Warm overrides for Tailwind's cold slate palette */

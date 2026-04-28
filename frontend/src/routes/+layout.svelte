@@ -11,6 +11,8 @@
 	import { documents, documentsError } from '$lib/stores/documents';
 	import { get } from 'svelte/store';
 	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
+	import { cohortOf } from '$lib/blueprint/cohort';
+	import { pathToRoute } from '$lib/cohortPalette';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Toast from '$lib/components/Toast.svelte';
@@ -480,6 +482,11 @@
 	// replacing the old multi-branch `currentPath !== '/X' && …`
 	// chains that each new route had to be patched into.
 	$: currentShell = shellFor(currentPath);
+	// CIPH-890 — `data-route` and `data-cohort` on <main> drive the
+	// cohort×route palette modulation in `app.css`. Pure attributes;
+	// CIPH-891 will migrate consumers to use the resulting CSS vars.
+	$: currentRoute = pathToRoute(currentPath);
+	$: currentCohort = cohortOf($resolvedBlueprint);
 
 	// Redirect to login when auth is ready but user is not authenticated
 	// and the current route requires auth. Public routes (landing,
@@ -716,7 +723,11 @@
 		</div>
 	{/if}
 
-	<main style="padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px))">
+	<main
+		data-route={currentRoute}
+		data-cohort={currentCohort}
+		style="padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px))"
+	>
 		<slot />
 	</main>
 
