@@ -121,6 +121,55 @@ export const ALL_COHORTS_PALETTE: readonly Cohort[] = [
 	'custom',
 ];
 
+/** RGB triples per cohort — mirrors `DATA_PALETTE_RGB`. Used by
+ *  `rgba(var(--cohort-X-N-rgb), alpha)` callers for alpha tinting
+ *  (selected-chip backgrounds, soft hover fills). The CSS layer
+ *  emits matching `--cohort-X-N-rgb` vars in `app.css`. */
+export const COHORT_PALETTE_RGB: Readonly<
+	Record<Cohort, readonly [number, number, number][]>
+> = {
+	cycle: [
+		[168, 58, 91],
+		[122, 40, 69],
+		[176, 106, 74],
+		[127, 130, 27],
+		[92, 107, 115],
+		[154, 79, 107],
+	],
+	phase: [
+		[63, 74, 138],
+		[45, 53, 99],
+		[159, 99, 11],
+		[92, 122, 74],
+		[92, 107, 115],
+		[107, 107, 154],
+	],
+	narrative: [
+		[74, 107, 63],
+		[47, 74, 40],
+		[159, 99, 11],
+		[127, 130, 27],
+		[92, 107, 115],
+		[107, 138, 92],
+	],
+	discrete: [
+		[178, 60, 44],
+		[138, 42, 31],
+		[159, 99, 11],
+		[127, 130, 27],
+		[92, 107, 115],
+		[168, 117, 89],
+	],
+	custom: [
+		[71, 85, 105],
+		[51, 65, 85],
+		[168, 117, 89],
+		[127, 130, 27],
+		[92, 107, 115],
+		[107, 123, 138],
+	],
+};
+
 /** Tones that pass the chart-use floor (3:1) but fail the text-use
  *  floor (4.5:1) against the cream surface. Document so future
  *  consumers don't accidentally use them for body text. The list is

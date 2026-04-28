@@ -122,10 +122,122 @@
 		--cohort-custom-5: #5c6b73;
 		--cohort-custom-6: #6b7b8a;
 
+		/* CIPH-891 — RGB triples for `rgba(var(--cohort-X-N-rgb), alpha)`
+		   alpha-tint use sites (selected-chip backgrounds, soft hover
+		   fills). Source of truth: `cohortPalette.ts:COHORT_PALETTE_RGB`. */
+		--cohort-cycle-1-rgb: 168, 58, 91;
+		--cohort-cycle-2-rgb: 122, 40, 69;
+		--cohort-cycle-3-rgb: 176, 106, 74;
+		--cohort-cycle-4-rgb: 127, 130, 27;
+		--cohort-cycle-5-rgb: 92, 107, 115;
+		--cohort-cycle-6-rgb: 154, 79, 107;
+		--cohort-phase-1-rgb: 63, 74, 138;
+		--cohort-phase-2-rgb: 45, 53, 99;
+		--cohort-phase-3-rgb: 159, 99, 11;
+		--cohort-phase-4-rgb: 92, 122, 74;
+		--cohort-phase-5-rgb: 92, 107, 115;
+		--cohort-phase-6-rgb: 107, 107, 154;
+		--cohort-narrative-1-rgb: 74, 107, 63;
+		--cohort-narrative-2-rgb: 47, 74, 40;
+		--cohort-narrative-3-rgb: 159, 99, 11;
+		--cohort-narrative-4-rgb: 127, 130, 27;
+		--cohort-narrative-5-rgb: 92, 107, 115;
+		--cohort-narrative-6-rgb: 107, 138, 92;
+		--cohort-discrete-1-rgb: 178, 60, 44;
+		--cohort-discrete-2-rgb: 138, 42, 31;
+		--cohort-discrete-3-rgb: 159, 99, 11;
+		--cohort-discrete-4-rgb: 127, 130, 27;
+		--cohort-discrete-5-rgb: 92, 107, 115;
+		--cohort-discrete-6-rgb: 168, 117, 89;
+		--cohort-custom-1-rgb: 71, 85, 105;
+		--cohort-custom-2-rgb: 51, 65, 85;
+		--cohort-custom-3-rgb: 168, 117, 89;
+		--cohort-custom-4-rgb: 127, 130, 27;
+		--cohort-custom-5-rgb: 92, 107, 115;
+		--cohort-custom-6-rgb: 107, 123, 138;
+
+		/* CIPH-891 — Cohort-aware semantic tokens.
+		   --accent          = cohort slot 1 (primary)         — replaces --brand for chrome
+		   --accent-info     = cohort slot 3 (information)     — replaces --ochre for chrome
+		   --accent-calm     = cohort slot 4 (success/calm)    — replaces --olive for chrome
+		   --accent-neutral  = cohort slot 5 (cool neutral)    — for separators/dividers
+
+		   Defaults below = discrete cohort = today's brand identity.
+		   `[data-cohort="X"]` overrides further down replace these per
+		   cohort. Route shifts compose at consumer sites via the same
+		   `hsl(from var(--accent) h calc(s + var(--route-s-shift))
+		   calc(l + var(--route-l-shift)))` pattern. The `--brand`,
+		   `--ochre`, `--olive` tokens above are NOT redirected — they
+		   stay invariant for brand-mark sites (wordmarks, landing CTAs). */
+		--accent: var(--cohort-discrete-1);
+		--accent-rgb: var(--cohort-discrete-1-rgb);
+		--accent-info: var(--cohort-discrete-3);
+		--accent-info-rgb: var(--cohort-discrete-3-rgb);
+		--accent-calm: var(--cohort-discrete-4);
+		--accent-calm-rgb: var(--cohort-discrete-4-rgb);
+		--accent-neutral: var(--cohort-discrete-5);
+		--accent-neutral-rgb: var(--cohort-discrete-5-rgb);
+
 		/* Default = dashboard baseline = zero shift. Route-specific
 		   selectors below override these. */
 		--route-l-shift: 0%;
 		--route-s-shift: 0%;
+	}
+
+	/* CIPH-891 — Per-cohort accent overrides. Scoped on `[data-cohort]`
+	   so chrome inside the authed app picks up cohort identity, while
+	   landing/login/migrate (which never get a meaningful blueprint)
+	   stay on the discrete-cohort defaults declared in `:root` above. */
+	[data-cohort="cycle"] {
+		--accent: var(--cohort-cycle-1);
+		--accent-rgb: var(--cohort-cycle-1-rgb);
+		--accent-info: var(--cohort-cycle-3);
+		--accent-info-rgb: var(--cohort-cycle-3-rgb);
+		--accent-calm: var(--cohort-cycle-4);
+		--accent-calm-rgb: var(--cohort-cycle-4-rgb);
+		--accent-neutral: var(--cohort-cycle-5);
+		--accent-neutral-rgb: var(--cohort-cycle-5-rgb);
+	}
+	[data-cohort="phase"] {
+		--accent: var(--cohort-phase-1);
+		--accent-rgb: var(--cohort-phase-1-rgb);
+		--accent-info: var(--cohort-phase-3);
+		--accent-info-rgb: var(--cohort-phase-3-rgb);
+		--accent-calm: var(--cohort-phase-4);
+		--accent-calm-rgb: var(--cohort-phase-4-rgb);
+		--accent-neutral: var(--cohort-phase-5);
+		--accent-neutral-rgb: var(--cohort-phase-5-rgb);
+	}
+	[data-cohort="narrative"] {
+		--accent: var(--cohort-narrative-1);
+		--accent-rgb: var(--cohort-narrative-1-rgb);
+		--accent-info: var(--cohort-narrative-3);
+		--accent-info-rgb: var(--cohort-narrative-3-rgb);
+		--accent-calm: var(--cohort-narrative-4);
+		--accent-calm-rgb: var(--cohort-narrative-4-rgb);
+		--accent-neutral: var(--cohort-narrative-5);
+		--accent-neutral-rgb: var(--cohort-narrative-5-rgb);
+	}
+	[data-cohort="custom"] {
+		--accent: var(--cohort-custom-1);
+		--accent-rgb: var(--cohort-custom-1-rgb);
+		--accent-info: var(--cohort-custom-3);
+		--accent-info-rgb: var(--cohort-custom-3-rgb);
+		--accent-calm: var(--cohort-custom-4);
+		--accent-calm-rgb: var(--cohort-custom-4-rgb);
+		--accent-neutral: var(--cohort-custom-5);
+		--accent-neutral-rgb: var(--cohort-custom-5-rgb);
+	}
+	/* Discrete cohort = defaults; explicit selector for symmetry + audit. */
+	[data-cohort="discrete"] {
+		--accent: var(--cohort-discrete-1);
+		--accent-rgb: var(--cohort-discrete-1-rgb);
+		--accent-info: var(--cohort-discrete-3);
+		--accent-info-rgb: var(--cohort-discrete-3-rgb);
+		--accent-calm: var(--cohort-discrete-4);
+		--accent-calm-rgb: var(--cohort-discrete-4-rgb);
+		--accent-neutral: var(--cohort-discrete-5);
+		--accent-neutral-rgb: var(--cohort-discrete-5-rgb);
 	}
 
 	/* CIPH-890 — Per-route HSL modulation. Composes with cohort tones
@@ -221,15 +333,16 @@
 	}
 
 	/* CIPH-202 — Card weight hierarchy: anchor / standard / inline.
-	   Anchor = the page's primary action card. Heavy 2px brand border,
-	   larger padding, slightly larger heading. One per page max. */
+	   Anchor = the page's primary action card. Heavy 2px accent border
+	   (cohort-aware via --accent in CIPH-891), larger padding, slightly
+	   larger heading. One per page max. */
 	.card-anchor {
 		background: var(--surface-card);
-		border: 2px solid var(--brand);
+		border: 2px solid var(--accent);
 		border-radius: 14px;
 		padding: 24px;
 		transition: all 0.2s ease-out;
-		box-shadow: 0 2px 10px rgba(178, 60, 44, 0.06);
+		box-shadow: 0 2px 10px rgba(var(--accent-rgb), 0.06);
 	}
 	.card-anchor > :global(h2),
 	.card-anchor :global(.card-anchor-title) {
@@ -309,10 +422,15 @@
 
 	.btn-primary {
 		@apply inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 rounded-xl min-h-[44px];
-		background: var(--brand);
+		/* CIPH-891 — cohort-aware. Discrete cohort = brand rust (no
+		   visual change for existing presets). hover uses HSL relative
+		   syntax to darken without per-cohort hover tokens. */
+		background: var(--accent);
 		color: white;
 	}
-	.btn-primary:hover { background: var(--brand-hover); }
+	.btn-primary:hover {
+		background: hsl(from var(--accent) h s calc(l - 8%));
+	}
 	.btn-primary:active { transform: scale(0.97); }
 	.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -334,8 +452,8 @@
 		transition: all 0.2s ease-out;
 	}
 	.input:focus {
-		border-color: var(--brand);
-		box-shadow: 0 0 0 3px rgba(178, 60, 44, 0.08);
+		border-color: var(--accent);
+		box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.08);
 	}
 	.input::placeholder {
 		color: var(--text-muted);
@@ -358,13 +476,13 @@
 
 	.fab {
 		@apply fixed z-[45] w-14 h-14 rounded-full flex items-center justify-center text-white;
-		background: var(--brand);
+		background: var(--accent);
 		transition: all 0.2s ease-out;
-		box-shadow: 0 4px 14px rgba(178, 60, 44, 0.3);
+		box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
 	}
 	.fab:hover {
-		background: var(--brand-hover);
-		box-shadow: 0 6px 20px rgba(178, 60, 44, 0.4);
+		background: hsl(from var(--accent) h s calc(l - 8%));
+		box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.4);
 		transform: scale(1.05);
 	}
 	.fab:active {
@@ -402,18 +520,18 @@
 		border-radius: 2px;
 	}
 	.fab-tooltip--event {
-		background: var(--brand);
+		background: var(--accent);
 	}
 	.fab-tooltip--event::after {
-		background: var(--brand);
+		background: var(--accent);
 	}
 
-	/* Focus visible for all interactive components */
+	/* Focus visible for all interactive components — cohort-aware. */
 	.btn-primary:focus-visible,
 	.btn-secondary:focus-visible,
 	.card-interactive:focus-visible,
 	.fab:focus-visible {
-		outline: 3px solid var(--brand);
+		outline: 3px solid var(--accent);
 		outline-offset: 2px;
 	}
 

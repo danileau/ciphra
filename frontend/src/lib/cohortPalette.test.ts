@@ -25,6 +25,7 @@ import { DATA_PALETTE } from './dataPalette';
 import { contrastRatio } from './contrast';
 import {
 	COHORT_PALETTES,
+	COHORT_PALETTE_RGB,
 	ALL_COHORTS_PALETTE,
 	CHART_ONLY_TONES,
 	CYCLE_1,
@@ -237,6 +238,20 @@ describe('CIPH-890 — named exports match the matrix', () => {
 	};
 	it.each(ALL_COHORTS_PALETTE)('cohort %s named exports match', (cohort) => {
 		expect(expected[cohort]).toEqual([...cohortPalette(cohort)]);
+	});
+});
+
+describe('CIPH-890 — COHORT_PALETTE_RGB matches the hex matrix', () => {
+	it.each(ALL_COHORTS_PALETTE)('cohort %s rgb triples decode to the hex tones', (cohort) => {
+		const hex = cohortPalette(cohort);
+		const rgb = COHORT_PALETTE_RGB[cohort];
+		expect(rgb).toHaveLength(6);
+		for (let i = 0; i < 6; i++) {
+			const [r, g, b] = rgb[i];
+			const expected = hex[i].toLowerCase();
+			const actual = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+			expect(actual).toBe(expected);
+		}
 	});
 });
 

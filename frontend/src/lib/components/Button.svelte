@@ -52,12 +52,13 @@
 	}
 
 	.btn-primary {
-		background: var(--brand);
+		/* CIPH-891 — cohort-aware via --accent. */
+		background: var(--accent);
 		color: #ffffff;
 	}
 
 	.btn-primary:hover {
-		background: var(--brand-hover);
+		background: hsl(from var(--accent) h s calc(l - 8%));
 	}
 
 	.btn-secondary {
@@ -71,11 +72,12 @@
 
 	.btn-ghost {
 		background: transparent;
-		color: var(--brand);
+		/* CIPH-891 — cohort-aware ghost text. */
+		color: var(--accent);
 	}
 
 	.btn-ghost:hover {
-		background: var(--brand-light);
+		background: rgba(var(--accent-rgb), 0.08);
 	}
 
 	.btn-danger {

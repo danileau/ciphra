@@ -163,7 +163,8 @@
 	   3. a 3px brand-colored pill sits at the very top of the tab as an
 	      indicator (mirrors iOS-style tab affordance) */
 	.bn-tab--active {
-		color: var(--brand);
+		/* CIPH-891 — cohort-aware nav active state. */
+		color: var(--accent);
 	}
 	.bn-tab--active .bn-label {
 		font-weight: 700;
@@ -176,7 +177,7 @@
 		transform: translateX(-50%);
 		width: 28px;
 		height: 3px;
-		background: var(--brand);
+		background: var(--accent);
 		border-radius: 0 0 3px 3px;
 	}
 
@@ -209,10 +210,11 @@
 		width: 52px;
 		height: 52px;
 		border-radius: 9999px;
-		background: var(--brand);
+		/* CIPH-891 — cohort-aware FAB. */
+		background: var(--accent);
 		color: #fff;
 		box-shadow:
-			0 4px 12px rgba(178, 60, 44, 0.3),
+			0 4px 12px rgba(var(--accent-rgb), 0.3),
 			0 0 0 4px var(--surface-card);
 		transform: translateY(-14px);
 		transition: transform 0.15s ease-out, background 0.15s ease-out, box-shadow 0.15s ease-out;
@@ -223,9 +225,9 @@
 		stroke-width: 3;
 	}
 	.bn-fab:hover {
-		background: var(--brand-hover);
+		background: hsl(from var(--accent) h s calc(l - 8%));
 		box-shadow:
-			0 6px 18px rgba(178, 60, 44, 0.42),
+			0 6px 18px rgba(var(--accent-rgb), 0.42),
 			0 0 0 4px var(--surface-card);
 	}
 	.bn-fab:active {
@@ -233,7 +235,7 @@
 	}
 	.bn-fab:focus-visible,
 	.bn-tab:focus-visible {
-		outline: 3px solid var(--brand);
+		outline: 3px solid var(--accent);
 		outline-offset: 2px;
 		border-radius: 8px;
 	}
