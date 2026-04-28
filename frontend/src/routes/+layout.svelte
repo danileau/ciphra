@@ -521,22 +521,22 @@
 {:else if !$authReady}
 	<!-- Stable background while auth hydrates — no content to prevent flashing -->
 	<div class="min-h-screen bg-surface"></div>
-{:else if !$isAuthenticated && (currentPath === '/login' || currentShell.shell === 'public-doc' || currentShell.shell === 'family-claim')}
-	<!-- Public-page chrome: the same nav as the landing page, not a reduced
-		 "lean" variant, so visitors see one identity across every
-		 unauthenticated view. Anchors like #how / #security point back to
-		 the landing page so they keep working from any sub-page. -->
+{:else if !$isAuthenticated && (currentShell.shell === 'landing' || currentShell.shell === 'auth-flow' || currentShell.shell === 'public-doc' || currentShell.shell === 'family-claim')}
+	<!-- Single unified public nav — covers landing, /login, /migrate,
+		 /conditions, /privacy, /terms, /join/*. One identity for every
+		 unauthenticated visitor; anchor links resolve back to the
+		 landing page so they keep working from any sub-page. The
+		 separate "Anmelden" text link was dropped — it was redundant
+		 with the primary CTA and visually competed with it. Returning
+		 users find the Login tab inside /login itself. -->
 	<nav class="sticky top-0 z-40 backdrop-blur-sm" style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.85);">
 		<div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
 			<a href="/" class="flex items-center gap-1">
 				<Wordmark size={28} />
 			</a>
 			<div class="flex items-center gap-3">
-				<!-- /conditions dropped from top nav per UX review — it remains
-					 discoverable from the landing page's Conditions section and
-					 the footer. #how + #security anchors cover the marketing
-					 narrative. -->
 				<div class="hidden md:flex items-center gap-1">
+					<a href="/#conditions" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('nav.conditions')}</a>
 					<a href="/#how" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_how')}</a>
 					<a href="/#security" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_security')}</a>
 				</div>
@@ -552,16 +552,10 @@
 						<option value={l}>{localeNames[l]}</option>
 					{/each}
 				</select>
-				<!-- On /login the CTA would just point at the page you're on —
-					 hide it entirely and show a "Log in" text link elsewhere if
-					 needed. Elsewhere: acquisition-first CTA ("Kostenlos
-					 starten") and a quieter Anmelden link for returning users. -->
-				{#if currentPath !== '/login'}
-					<a
-						href="/login"
-						class="hidden sm:inline-flex text-sm font-medium min-h-[44px] items-center px-3"
-						style="color: var(--text-secondary);"
-					>{$t('auth.login')}</a>
+				<!-- CTA hidden on auth-flow pages (/login, /migrate, /stream)
+					 — the user is already inside that funnel; pointing back
+					 to it would be a loop. -->
+				{#if currentShell.shell !== 'auth-flow'}
 					<a
 						href="/login?mode=register"
 						class="btn-primary min-h-[44px] px-5 text-sm font-semibold rounded-lg"

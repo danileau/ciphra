@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { isAuthenticated, authReady } from '$lib/stores/auth';
 	import { t, locale, locales, localeNames } from '$lib/i18n';
-	import type { Locale } from '$lib/i18n';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import { inview } from '$lib/actions/inview';
@@ -123,47 +122,10 @@
 	{$t('landing.skip_to_content')}
 </a>
 
-<!-- Navigation -->
-<nav class="sticky top-0 z-40 backdrop-blur-sm" style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.85);">
-	<div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-		<a href="/" class="flex items-center gap-1">
-			<Wordmark size={28} />
-		</a>
-		<div class="flex items-center gap-3">
-			<!-- Primary nav — three anchors that map 1:1 to the page's
-			     three argument moments: "is my condition here?" → "how
-			     does it work?" → "is it actually private?". Adding the
-			     Conditions link closes the gap where users could scroll
-			     past 18 condition tiles with no anchor to return. -->
-			<div class="hidden md:flex items-center gap-1">
-				<a href="#conditions" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('nav.conditions')}</a>
-				<a href="#how" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_how')}</a>
-				<a href="#security" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_security')}</a>
-			</div>
-			<div class="w-px h-6 hidden md:block" style="background: var(--border);"></div>
-			<select
-				class="text-xs rounded-lg px-2 py-1.5 min-h-[36px]"
-				style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-secondary);"
-				value={$locale}
-				on:change={setLocale}
-			>
-				{#each locales as l}
-					<option value={l}>{localeNames[l]}</option>
-				{/each}
-			</select>
-			<!-- Login demoted to a quiet text-link — landing traffic is
-			     dominated by first-time visitors; returning users still
-			     find it here but it no longer competes with the primary
-			     "Get started" CTA. -->
-			<a href="/login" class="hidden sm:inline-flex text-xs min-h-[36px] items-center px-1 transition-colors" style="color: var(--text-muted);">
-				{$t('auth.login')}
-			</a>
-			<a href="/login?mode=register" class="btn-primary min-h-[44px] px-5 text-sm font-semibold rounded-lg">
-				{$t('landing.hero_cta')}
-			</a>
-		</div>
-	</div>
-</nav>
+<!-- Top nav now lives in `+layout.svelte` (the unified public nav),
+     so every unauth public route — landing, /login, /migrate,
+     /conditions, /privacy, /terms, /join/* — renders the same
+     header. The previous local <nav> here was redundant. -->
 
 <main id="main-content" style="background: var(--surface);">
 

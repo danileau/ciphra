@@ -123,7 +123,7 @@
 
 </script>
 
-<main class="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-4" style="background: var(--surface)">
+<main class="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4" style="background: var(--surface)">
 	<div class="w-full max-w-md">
 		<!-- Centered wordmark above the form — gives the auth flow its own
 		     identity instead of relying on the passive top-left nav logo.
