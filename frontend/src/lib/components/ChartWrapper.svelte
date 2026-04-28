@@ -45,8 +45,18 @@
 
 	function mergeDefaults(opts: any): any {
 		const dark = isDarkMode();
+		// CIPH-891 follow-up — pull tick + grid colors from the live CSS
+		// vars so charts honour the cream/text-secondary brand tokens
+		// instead of cold Tailwind slate. Falls back to known brand
+		// values when running outside a DOM (SSR / vitest).
+		const root =
+			typeof document !== 'undefined'
+				? getComputedStyle(document.documentElement)
+				: null;
+		const textColor =
+			(root && root.getPropertyValue('--text-secondary').trim()) ||
+			(dark ? '#94a3b8' : '#64594e');
 		const gridColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
-		const textColor = dark ? '#94a3b8' : '#64748b';
 
 		const scales = Object.fromEntries(
 			Object.entries(opts.scales || {}).map(([key, scale]: [string, any]) => [

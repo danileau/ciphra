@@ -245,7 +245,7 @@
 		<div class="space-y-2" aria-live="polite" aria-relevant="additions" aria-atomic="false">
 			{#each filteredDocs as doc, i (doc.id)}
 				<div
-					class="card p-4 stagger-in"
+					class="card card-rhythmic stagger-in"
 					style="border-left: 4px solid {typeBorderColor(doc.data.type || '')}; animation-delay: {Math.min(i, 10) * 50}ms"
 				>
 					{#if editingId === doc.id}

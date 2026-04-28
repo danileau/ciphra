@@ -55,6 +55,31 @@ describe('CIPH-892 — per-route silhouette rhythm tokens', () => {
 		expect(APP_CSS).toMatch(/\.card\s*\{[\s\S]*?border-radius:\s*var\(--rhythm-card-radius/);
 	});
 
+	it('.card-rhythmic consumes --rhythm-card-padding (honest CIPH-892 fix)', () => {
+		// The frontend-designer critique flagged that --rhythm-card-padding
+		// was declared but never read. The .card-rhythmic opt-in modifier
+		// closes that gap. Tested separately from .card itself so existing
+		// Tailwind p-4/p-5 utility callers don't conflict.
+		expect(APP_CSS).toMatch(/\.card-rhythmic\s*\{[\s\S]*?padding:\s*var\(--rhythm-card-padding/);
+	});
+
+	it('at least two real consumers reference card-rhythmic', () => {
+		// Search the source tree for `card-rhythmic` references outside
+		// app.css + the test files themselves. The honest fix only counts
+		// if it's actually consumed at canonical surfaces.
+		const sources = [
+			'routes/journal/+page.svelte',
+			'lib/components/CompanionMain.svelte',
+		];
+		for (const rel of sources) {
+			const src = readFileSync(resolve(SRC_ROOT, rel), 'utf8');
+			expect(
+				src,
+				`${rel} should consume \`card-rhythmic\` so the rhythm tokens land visibly.`,
+			).toContain('card-rhythmic');
+		}
+	});
+
 	it('routes have distinct rhythm-card-radius values (no four-way tie)', () => {
 		const values: string[] = [];
 		for (const route of ROUTES) {

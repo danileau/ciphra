@@ -91,7 +91,7 @@
 		   path segment via `pathToRoute()`. `data-cohort` is set the
 		   same way from `cohortOf($resolvedBlueprint)`. CIPH-891 will
 		   migrate consumers to read these variables. */
-		--cohort-cycle-1: #a83a5b;
+		--cohort-cycle-1: #b6306a;
 		--cohort-cycle-2: #7a2845;
 		--cohort-cycle-3: #b06a4a;
 		--cohort-cycle-4: #7f821b;
@@ -125,7 +125,7 @@
 		/* CIPH-891 — RGB triples for `rgba(var(--cohort-X-N-rgb), alpha)`
 		   alpha-tint use sites (selected-chip backgrounds, soft hover
 		   fills). Source of truth: `cohortPalette.ts:COHORT_PALETTE_RGB`. */
-		--cohort-cycle-1-rgb: 168, 58, 91;
+		--cohort-cycle-1-rgb: 182, 48, 106;
 		--cohort-cycle-2-rgb: 122, 40, 69;
 		--cohort-cycle-3-rgb: 176, 106, 74;
 		--cohort-cycle-4-rgb: 127, 130, 27;
@@ -352,15 +352,34 @@
 
 	/* Primary card — white on warm surface (standard weight).
 	   CIPH-892: border-radius pulls from the per-route rhythm token so
-	   each surface gets a recognizable card silhouette. Padding is
-	   still controlled by Tailwind utility classes (p-4 / p-5) at the
-	   call site — rhythm tokens only adjust the radius for now to keep
-	   the migration surgical. */
+	   each surface gets a recognizable card silhouette. */
 	.card {
 		background: var(--surface-card);
 		border: 1px solid var(--border);
 		border-radius: var(--rhythm-card-radius, 12px);
 		transition: all 0.2s ease-out;
+	}
+
+	/* CIPH-892 (honest fix) — `.card-rhythmic` opts the card into FULL
+	   rhythm consumption: padding + radius from per-route tokens. Use
+	   this on the canonical surface cards (entry list, day-detail,
+	   export controls) so calendar/journal/reports/dashboard feel
+	   demonstrably distinct, not just 2px of corner-roundness apart.
+
+	   Cards that need explicit padding (e.g., `card-anchor` with its
+	   own 24px) keep their utility classes — opt-in only. */
+	.card-rhythmic {
+		padding: var(--rhythm-card-padding, 16px);
+	}
+	.card-rhythmic-stack {
+		display: flex;
+		flex-direction: column;
+		gap: var(--rhythm-card-gap, 8px);
+	}
+	.section-rhythmic {
+		display: flex;
+		flex-direction: column;
+		gap: var(--rhythm-section-gap, 24px);
 	}
 
 	/* CIPH-202 — Card weight hierarchy: anchor / standard / inline.

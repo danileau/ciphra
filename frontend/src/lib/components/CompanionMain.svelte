@@ -118,7 +118,7 @@
 
 <!-- ═══ "WIE GEHT'S DIR?" TREND (CIPH-781: moved to main column) ═══ -->
 {#if howAreYouChartData && howAreYouTrend}
-<section class="card p-5" aria-label={$t('companion.how_aria')}>
+<section class="card card-rhythmic" aria-label={$t('companion.how_aria')}>
 	<h2 class="text-sm font-semibold mb-1" style="color: var(--text-primary)">{$t('companion.how_title')}</h2>
 	{#if howAreYouHeadlineParts}
 		<p class="text-base font-medium mb-3" style="color: var(--text-primary)">
@@ -143,7 +143,7 @@
 
 <!-- ═══ EPISODE TREND ═══ -->
 {#if episodeChartData}
-<section class="card p-5">
+<section class="card card-rhythmic">
 	<div class="flex items-center justify-between mb-3 gap-2">
 		<h2 class="text-sm font-semibold" style="color: var(--text-primary)">
 			{companionChartScope === 'month'
@@ -185,7 +185,7 @@
 
 <!-- ═══ TOP SYMPTOMS ═══ -->
 {#if symptomChartData}
-<section class="card p-5">
+<section class="card card-rhythmic">
 	<div class="flex items-center justify-between mb-3 gap-2">
 		<h2 class="text-sm font-semibold" style="color: var(--text-primary)">
 			{symptomChartScope === 'month'

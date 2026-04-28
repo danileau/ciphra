@@ -62,9 +62,14 @@ const DISCRETE_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
 
 /** Cycle row — roses + warm/cool breaks. Slots 1/2/6 are roses; slot 3
  *  is a warm clay-rose (chart-only — see CHART_ONLY_TONES); slot 4
- *  olive and slot 5 anchor slate are cool counterpoints. */
+ *  olive and slot 5 anchor slate are cool counterpoints.
+ *  Slot 1 was shifted from `#a83a5b` to `#b6306a` (frontend-designer
+ *  critique 2026-04-28) — the previous rose sat 14° hue / 18% sat away
+ *  from discrete slot 1 `#b23c2c`, making cycle and discrete cohorts
+ *  feel like tinted siblings. `#b6306a` pulls cycle clearly into
+ *  magenta-rose territory and out of the warm-rust family. */
 const CYCLE_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
-	'#a83a5b', // 1 rose primary
+	'#b6306a', // 1 magenta-rose primary
 	'#7a2845', // 2 mulberry
 	'#b06a4a', // 3 clay-rose (chart only — 3.6:1 against cream)
 	'#7f821b', // 4 olive
@@ -129,7 +134,7 @@ export const COHORT_PALETTE_RGB: Readonly<
 	Record<Cohort, readonly [number, number, number][]>
 > = {
 	cycle: [
-		[168, 58, 91],
+		[182, 48, 106],
 		[122, 40, 69],
 		[176, 106, 74],
 		[127, 130, 27],

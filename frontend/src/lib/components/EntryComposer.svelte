@@ -960,8 +960,8 @@
 		z-index: 30;
 		margin: -16px -16px 0;
 		padding: 8px 0;
-		background: var(--surface, #fff);
-		border-bottom: 1px solid var(--border, #e5e5e0);
+		background: var(--surface, #faf8f6);
+		border-bottom: 1px solid var(--border, #e8e3dd);
 		backdrop-filter: blur(8px);
 	}
 	.log-section-nav-scroll {
@@ -979,18 +979,19 @@
 		border-radius: 999px;
 		font-size: 13px;
 		font-weight: 500;
-		color: var(--text-muted, #888);
-		background: var(--surface-muted, #f4f4f0);
+		color: var(--text-muted, #97918a);
+		background: var(--surface-muted, #f3f0ed);
 		border: 1px solid transparent;
 		text-decoration: none;
 		scroll-margin: 8px;
 		transition: color 0.15s, background 0.15s, border-color 0.15s;
 	}
 	.log-section-chip--active {
-		color: var(--brand, #b04b2f);
+		/* CIPH-891 — cohort-aware active section chip. */
+		color: var(--accent, #b23c2c);
 		font-weight: 700;
-		background: var(--surface, #fff);
-		border-color: var(--brand, #b04b2f);
+		background: var(--surface, #faf8f6);
+		border-color: var(--accent, #b23c2c);
 	}
 	@media (min-width: 768px) {
 		.log-section-nav { display: none; }

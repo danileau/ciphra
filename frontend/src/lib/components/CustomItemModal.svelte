@@ -255,7 +255,9 @@
 		{/if}
 
 		{#if errorKey}
-			<p class="text-sm" style="color: var(--brand)" data-testid="custom-item-error">
+			<!-- Error text uses --danger to match Input.svelte:84 and to read
+			     as "stop, this is wrong" rather than "warm warning". -->
+			<p class="text-sm" style="color: var(--danger)" data-testid="custom-item-error">
 				{$t(errorKey)}
 			</p>
 		{/if}
