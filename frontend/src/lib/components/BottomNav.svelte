@@ -225,7 +225,7 @@
 		stroke-width: 3;
 	}
 	.bn-fab:hover {
-		background: hsl(from var(--accent) h s calc(l - 8%));
+		background: var(--accent-hover);
 		box-shadow:
 			0 6px 18px rgba(var(--accent-rgb), 0.42),
 			0 0 0 4px var(--surface-card);

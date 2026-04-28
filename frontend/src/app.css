@@ -41,6 +41,7 @@
 		   "logged / calm" color). Warning aliased to ochre (attention,
 		   in-flight). Danger kept as hard red for destructive + errors. */
 		--danger: #DC2626;
+		--danger-hover: #b91c1c;
 		--danger-rgb: 220, 38, 38;        /* CIPH-203b: enables rgba(var(--danger-rgb), …) for tinted bg */
 		--success-rgb: 127, 130, 27;      /* olive */
 		--success: var(--olive);
@@ -158,6 +159,7 @@
 
 		/* CIPH-891 — Cohort-aware semantic tokens.
 		   --accent          = cohort slot 1 (primary)         — replaces --brand for chrome
+		   --accent-hover    = -8% lightness of slot 1         — pre-computed per cohort
 		   --accent-info     = cohort slot 3 (information)     — replaces --ochre for chrome
 		   --accent-calm     = cohort slot 4 (success/calm)    — replaces --olive for chrome
 		   --accent-neutral  = cohort slot 5 (cool neutral)    — for separators/dividers
@@ -168,8 +170,18 @@
 		   `hsl(from var(--accent) h calc(s + var(--route-s-shift))
 		   calc(l + var(--route-l-shift)))` pattern. The `--brand`,
 		   `--ochre`, `--olive` tokens above are NOT redirected — they
-		   stay invariant for brand-mark sites (wordmarks, landing CTAs). */
+		   stay invariant for brand-mark sites (wordmarks, landing CTAs).
+
+		   --accent-hover is pre-computed (not derived via `hsl(from …)`)
+		   because that CSS Color Level 5 syntax requires Firefox 128+,
+		   and a CSS rule the browser doesn't understand is dropped
+		   entirely — the result was buttons turning white on hover.
+		   Pre-computation has older-browser support and one trivial
+		   tradeoff: the hover values are baked at design time. If the
+		   palette ships changes, regenerate via the script in
+		   `scripts/compute-accent-hover.js` (planned). */
 		--accent: var(--cohort-discrete-1);
+		--accent-hover: #913124;
 		--accent-rgb: var(--cohort-discrete-1-rgb);
 		--accent-info: var(--cohort-discrete-3);
 		--accent-info-rgb: var(--cohort-discrete-3-rgb);
@@ -190,6 +202,7 @@
 	   stay on the discrete-cohort defaults declared in `:root` above. */
 	[data-cohort="cycle"] {
 		--accent: var(--cohort-cycle-1);
+		--accent-hover: #962757;
 		--accent-rgb: var(--cohort-cycle-1-rgb);
 		--accent-info: var(--cohort-cycle-3);
 		--accent-info-rgb: var(--cohort-cycle-3-rgb);
@@ -200,6 +213,7 @@
 	}
 	[data-cohort="phase"] {
 		--accent: var(--cohort-phase-1);
+		--accent-hover: #323b6e;
 		--accent-rgb: var(--cohort-phase-1-rgb);
 		--accent-info: var(--cohort-phase-3);
 		--accent-info-rgb: var(--cohort-phase-3-rgb);
@@ -210,6 +224,7 @@
 	}
 	[data-cohort="narrative"] {
 		--accent: var(--cohort-narrative-1);
+		--accent-hover: #385130;
 		--accent-rgb: var(--cohort-narrative-1-rgb);
 		--accent-info: var(--cohort-narrative-3);
 		--accent-info-rgb: var(--cohort-narrative-3-rgb);
@@ -220,6 +235,7 @@
 	}
 	[data-cohort="custom"] {
 		--accent: var(--cohort-custom-1);
+		--accent-hover: #374151;
 		--accent-rgb: var(--cohort-custom-1-rgb);
 		--accent-info: var(--cohort-custom-3);
 		--accent-info-rgb: var(--cohort-custom-3-rgb);
@@ -231,6 +247,7 @@
 	/* Discrete cohort = defaults; explicit selector for symmetry + audit. */
 	[data-cohort="discrete"] {
 		--accent: var(--cohort-discrete-1);
+		--accent-hover: #913124;
 		--accent-rgb: var(--cohort-discrete-1-rgb);
 		--accent-info: var(--cohort-discrete-3);
 		--accent-info-rgb: var(--cohort-discrete-3-rgb);
@@ -479,7 +496,7 @@
 		color: white;
 	}
 	.btn-primary:hover {
-		background: hsl(from var(--accent) h s calc(l - 8%));
+		background: var(--accent-hover);
 	}
 	.btn-primary:active { transform: scale(0.97); }
 	.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -531,7 +548,7 @@
 		box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
 	}
 	.fab:hover {
-		background: hsl(from var(--accent) h s calc(l - 8%));
+		background: var(--accent-hover);
 		box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.4);
 		transform: scale(1.05);
 	}

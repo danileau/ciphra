@@ -3,7 +3,10 @@
 
 	export let value: number = 0;
 	export let label: string = '';
-	export let color: string = '#9f630b';
+	/** CIPH-891 — default is the cohort information accent. Callers
+	 *  passing a literal hex (e.g. an episode-type color from the
+	 *  blueprint) override this. */
+	export let color: string = 'var(--accent-info)';
 	export let min: number = 0;
 
 	const dispatch = createEventDispatcher<{ change: number }>();

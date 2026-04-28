@@ -58,7 +58,7 @@
 	}
 
 	.btn-primary:hover {
-		background: hsl(from var(--accent) h s calc(l - 8%));
+		background: var(--accent-hover);
 	}
 
 	.btn-secondary {
@@ -86,7 +86,7 @@
 	}
 
 	.btn-danger:hover {
-		background: #b91c1c;
+		background: var(--danger-hover);
 	}
 
 	.btn-disabled {

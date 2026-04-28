@@ -1001,14 +1001,18 @@
 	.log-page {
 		max-width: 768px;
 		margin: 0 auto;
-		padding: 16px 16px 160px;
+		/* Bottom padding clears: save bar (~72px tall, sits 64px above
+		   viewport bottom) + bottom nav (~64px) + safe-area inset.
+		   The previous 160px was too tight on viewports where the
+		   delete-confirm row pushed the save bar to ~80px tall. */
+		padding: 16px 16px 220px;
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
 	}
 	@media (min-width: 640px) {
 		.log-page {
-			padding: 20px 24px 160px;
+			padding: 20px 24px 220px;
 		}
 	}
 

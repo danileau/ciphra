@@ -22,19 +22,25 @@
 	export let size: number = 20;
 	export let spin: boolean = false;
 	export let muted: boolean = false;
-	export let color: 'brand' | 'ochre' | 'olive' | 'coral' | 'white' | 'muted' = 'brand';
+	/** CIPH-891 — `accent` (cohort-aware) is the default. `brand` stays
+	 *  invariant for the wordmark + landing where brand identity must
+	 *  not shift per cohort. `coral` was a dead variant — removed. */
+	export let color: 'accent' | 'brand' | 'ochre' | 'olive' | 'white' | 'muted' = 'accent';
 	export let mode: 'static' | 'loading' | 'saved' | 'empty' = 'static';
 
-	const colors: Record<string, string> = {
-		brand: '#b23c2c',
-		ochre: '#9f630b',
-		olive: '#7f821b',
-		coral: '#e07360',
+	/** Maps the `color` prop to a CSS-var reference. `saved` mode forces
+	 *  olive (the success token) regardless of `color` so the save flash
+	 *  always reads as "completed". */
+	const cssVarFor: Record<string, string> = {
+		accent: 'var(--accent)',
+		brand: 'var(--brand)',
+		ochre: 'var(--ochre)',
+		olive: 'var(--olive)',
 		white: '#ffffff',
-		muted: '#97918a',
+		muted: 'var(--text-muted)',
 	};
 
-	$: strokeColor = mode === 'saved' ? colors.olive : (colors[color] || colors.brand);
+	$: strokeColor = mode === 'saved' ? 'var(--olive)' : (cssVarFor[color] || cssVarFor.accent);
 </script>
 
 <svg
@@ -43,10 +49,10 @@
 	viewBox="0 0 48 48"
 	class="inline-block ast-root ast-mode-{mode}"
 	class:asterisk-spin-anim={spin}
-	style="opacity: {muted ? 0.15 : 1}"
+	style="opacity: {muted ? 0.15 : 1}; --asterisk-stroke: {strokeColor};"
 	aria-hidden="true"
 >
-	<g transform="translate(24,24) rotate(8)" stroke={strokeColor} stroke-linecap="round" fill="none">
+	<g transform="translate(24,24) rotate(8)" style="stroke: var(--asterisk-stroke);" stroke-linecap="round" fill="none">
 		<path d="M -10.56 0 L 10.56 0" stroke-width={2.0 * (48 / size > 2 ? 1.5 : 1)} />
 		<path d="M -4.33 -7.5 L 4.33 7.5" stroke-width={1.63 * (48 / size > 2 ? 1.5 : 1)} />
 		<path d="M 4.17 -7.22 L -4.17 7.22" stroke-width={1.44 * (48 / size > 2 ? 1.5 : 1)} />

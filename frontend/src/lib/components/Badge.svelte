@@ -34,7 +34,10 @@
 	}
 
 	.badge-danger {
-		background: #fef2f2;
+		/* Light-tint background derived from --danger-rgb (Tailwind red-50
+		   equivalent at 8% opacity over cream surface). Was hardcoded
+		   #fef2f2 — migrated to keep palette tokens authoritative. */
+		background: rgba(var(--danger-rgb), 0.08);
 		color: var(--danger);
 	}
 </style>
