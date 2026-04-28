@@ -72,14 +72,20 @@
 	.ast-root {
 		transform-origin: center;
 	}
+	/* Loading: faster + ease-out so the rotation reads as motion within
+	   ~1s, not a sleepy 3.6s sweep that looks static. */
 	.ast-mode-loading {
-		animation: astLoading 3.6s ease-in-out infinite;
+		animation: astLoading 1.4s linear infinite;
 	}
 	@keyframes astLoading {
 		0%   { transform: rotate(0deg); }
 		100% { transform: rotate(360deg); }
 	}
 
+	/* Saved: scale + olive flash. Reduced-motion DOES still get the
+	   olive color-swap below — only the scale animation is killed,
+	   so blind/SR users still hear the flash via the live region in
+	   the parent and sighted reduced-motion users still see green. */
 	.ast-mode-saved {
 		animation: astSaved 700ms ease-out;
 	}
@@ -89,12 +95,16 @@
 		100% { transform: scale(1); }
 	}
 
+	/* Empty: pulse the OUTER size (scale) instead of opacity, so the
+	   mark visibly "breathes" rather than faintly blinking. Distinct
+	   from static (no motion) and loading (rotation). */
 	.ast-mode-empty {
-		animation: astEmpty 3s ease-in-out infinite;
+		animation: astEmpty 2.4s ease-in-out infinite;
+		transform-origin: center;
 	}
 	@keyframes astEmpty {
-		0%, 100% { opacity: 0.3; }
-		50%      { opacity: 0.6; }
+		0%, 100% { transform: scale(0.92); opacity: 0.55; }
+		50%      { transform: scale(1.04); opacity: 0.85; }
 	}
 
 	@media (prefers-reduced-motion: reduce) {

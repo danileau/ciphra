@@ -1098,24 +1098,25 @@
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		padding: 16px;
-		border-left: 3px solid var(--border);
+		/* Critique (PI v13): the form previously used 4 different rail
+		   colors across 7 sections (olive / ochre / red / border) which
+		   read as decoration without semantics. Unified on
+		   --accent-neutral (cohort slot 5, anchor slate) so the form
+		   reads quietly and lets the section headings + chips carry the
+		   visual hierarchy. The variant classes remain in case a future
+		   semantics decision wants to bring color back. */
+		border-left: 3px solid var(--accent-neutral);
 	}
 	@media (min-width: 640px) {
 		.log-card {
 			padding: 20px;
 		}
 	}
-	.log-card--olive {
-		border-left-color: var(--olive);
-	}
-	.log-card--red {
-		border-left-color: var(--danger);
-	}
-	.log-card--ochre {
-		border-left-color: var(--ochre);
-	}
+	.log-card--olive,
+	.log-card--red,
+	.log-card--ochre,
 	.log-card--gray {
-		border-left-color: var(--border);
+		border-left-color: var(--accent-neutral);
 	}
 
 	/* ─── Section headers ─── */
@@ -1586,12 +1587,15 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.log-multi-remove {
+		/* A11y review (PI v13): bumped 28→44px to meet WCAG 2.5.5
+		   minimum touch-target. Hit area is the full 44; the icon
+		   stays small visually so the row doesn't feel chunky. */
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 28px;
-		height: 28px;
-		border-radius: 6px;
+		width: 44px;
+		height: 44px;
+		border-radius: 8px;
 		border: none;
 		background: transparent;
 		color: var(--text-muted);

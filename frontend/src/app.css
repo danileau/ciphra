@@ -285,8 +285,12 @@
 		--rhythm-section-gap: 12px;
 	}
 	[data-route="reports"] {
-		--route-l-shift: 0%;
-		--route-s-shift: -4%;
+		/* Critique (PI v13): -4% saturation was too subtle. Reports is
+		   the doctor-handover surface; it should read demonstrably more
+		   clinical than the rest of the app. -10% S + -2% L gets us
+		   there without losing brand cohesion. */
+		--route-l-shift: -2%;
+		--route-s-shift: -10%;
 		/* clinical rhythm — compact rows, hairline separators */
 		--rhythm-card-padding: 6px;
 		--rhythm-card-gap: 0px;
