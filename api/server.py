@@ -397,7 +397,12 @@ def health():
 
 
 @app.route('/api/register', methods=['POST'])
-@limiter.limit("5 per minute")
+# Tightened from 5/min to 3/min specifically to slow down username
+# enumeration: a 409 response still tells a script the username exists.
+# Combined with the generic error message below (`registration_failed`
+# instead of "Username already exists") an attacker now has neither a
+# distinguishing message nor cheap throughput.
+@limiter.limit("3 per minute")
 def register():
     """Accepts a pre-built vault bundle from the browser. The server never
     sees the password, master_key, or recovery_code — those stay on device."""
@@ -430,7 +435,11 @@ def register():
             with conn.cursor() as cur:
                 cur.execute("SELECT id FROM users WHERE username = %s", (username,))
                 if cur.fetchone():
-                    return jsonify({'error': 'Username already exists'}), 409
+                    # Generic error — same status code/string whether the
+                    # username is taken, malformed, or the bundle is bad.
+                    # The client distinguishes via the user-facing copy
+                    # ("try another username"), the server doesn't disclose.
+                    return jsonify({'error': 'registration_failed'}), 409
 
                 cur.execute("""
                     INSERT INTO users (username, auth_hash, auth_params, vault_params,
