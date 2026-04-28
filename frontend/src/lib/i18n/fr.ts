@@ -736,6 +736,7 @@ export default {
 	'setup.meds_name': 'Nom (p. ex. Lévétiracétam)',
 	'setup.meds_dose': 'Dose (p. ex. 500 mg)',
 	'setup.meds_schedule': 'Prise (p. ex. matin, soir)',
+	'setup.med_schedule_placeholder': 'matin, soir',
 	'setup.meds_as_needed': 'Médication au besoin',
 	'setup.meds_empty': 'Aucun médicament. Vous pouvez passer cette étape.',
 	'setup.confirm_title': 'Récapitulatif',

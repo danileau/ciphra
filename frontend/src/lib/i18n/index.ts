@@ -64,3 +64,41 @@ export function translateUnit(
 	// t() returns the key verbatim on miss — fall back to the raw unit.
 	return translated === key ? unit : translated;
 }
+
+/**
+ * Plural-aware translator. The dictionary stores singular and plural
+ * variants under `<base>_one` and `<base>_other` keys; this helper
+ * picks the right form per `Intl.PluralRules` for the active locale.
+ *
+ * Falls back to the `_other` form when only one variant exists, and
+ * to the bare key when neither exists (so missing-key behaviour is
+ * the same as `t()`).
+ *
+ * Example dictionary entries:
+ *   'reports.days_logged_one':   '{count} day logged',
+ *   'reports.days_logged_other': '{count} days logged',
+ *
+ * Usage:
+ *   {plural($t, $locale, 'reports.days_logged', n)}
+ */
+export function plural(
+	translator: (key: string, params?: Record<string, string | number>) => string,
+	currentLocale: Locale,
+	baseKey: string,
+	count: number,
+	extraParams: Record<string, string | number> = {},
+): string {
+	const rules = new Intl.PluralRules(currentLocale);
+	const category = rules.select(count); // 'zero' | 'one' | 'two' | 'few' | 'many' | 'other'
+	const params = { count, ...extraParams };
+	// Try the exact category first, then `_other`, then the bare key.
+	const tryKey = (k: string) => {
+		const out = translator(k, params);
+		return out === k ? null : out;
+	};
+	return (
+		tryKey(`${baseKey}_${category}`) ??
+		tryKey(`${baseKey}_other`) ??
+		translator(baseKey, params)
+	);
+}

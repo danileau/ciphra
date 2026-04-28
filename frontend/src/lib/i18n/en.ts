@@ -736,6 +736,7 @@ export default {
 	'setup.meds_name': 'Name (e.g. Levetiracetam)',
 	'setup.meds_dose': 'Dose (e.g. 500mg)',
 	'setup.meds_schedule': 'Schedule (e.g. morning, evening)',
+	'setup.med_schedule_placeholder': 'morning, evening',
 	'setup.meds_as_needed': 'As-needed medication',
 	'setup.meds_empty': 'No medications. You can skip this step.',
 	'setup.confirm_title': 'Summary',

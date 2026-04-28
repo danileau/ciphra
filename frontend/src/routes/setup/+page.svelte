@@ -705,7 +705,7 @@
 					</div>
 					<div>
 						<label class="text-xs block mb-1" for="wiz-med-schedule" style="color: var(--text-secondary)">{$t('settings.medication_schedule')}</label>
-						<input id="wiz-med-schedule" type="text" bind:value={medSchedule} class="input" placeholder="morgens, abends" />
+						<input id="wiz-med-schedule" type="text" bind:value={medSchedule} class="input" placeholder={$t('setup.med_schedule_placeholder')} />
 					</div>
 					<label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--text-primary)">
 						<input type="checkbox" bind:checked={medAsNeeded} class="w-4 h-4" style="accent-color: var(--olive)" />

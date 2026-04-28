@@ -737,6 +737,7 @@ export default {
 	'setup.meds_name': 'Nome (es. Levetiracetam)',
 	'setup.meds_dose': 'Dose (es. 500 mg)',
 	'setup.meds_schedule': 'Assunzione (es. mattina, sera)',
+	'setup.med_schedule_placeholder': 'mattina, sera',
 	'setup.meds_as_needed': 'Farmaco al bisogno',
 	'setup.meds_empty': 'Nessun farmaco. Puoi saltare questo passaggio.',
 	'setup.confirm_title': 'Riepilogo',
