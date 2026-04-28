@@ -800,7 +800,6 @@ export default {
 	'settings.export_data_desc': 'Scarica tutti i tuoi dati sanitari decifrati come file JSON. Questo file non è crittografato — conservalo in modo sicuro.',
 	'settings.export_button': 'Scarica JSON',
 
-	'darkmode.toggle': "Cambia l'aspetto",
 	'encryption.badge': 'Crittografia end-to-end',
 	'encryption.zero_knowledge': 'Il server non può leggere i tuoi dati',
 
@@ -939,8 +938,6 @@ export default {
 	'landing.feature_offline_desc': 'PWA con cache crittografata. Funziona senza internet.',
 	'landing.feature_multilang': 'Multilingue',
 	'landing.feature_multilang_desc': 'Tedesco, inglese, italiano, francese.',
-	'landing.feature_darkmode': 'Modalità scura',
-	'landing.feature_darkmode_desc': 'Rileva le preferenze di sistema o cambia manualmente.',
 	'landing.feature_custom': 'Campi personalizzati',
 	'landing.feature_custom_desc': 'Sintomi, fattori scatenanti e parametri vitali definibili liberamente.',
 

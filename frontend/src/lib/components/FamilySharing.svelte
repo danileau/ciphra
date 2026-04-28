@@ -12,7 +12,7 @@
 	import { t } from '$lib/i18n';
 	import { auth } from '$lib/stores/auth';
 	import { get } from 'svelte/store';
-	import { createFamilyGrant } from '$lib/crypto';
+	import { createFamilyGrant, encryptData, decryptData } from '$lib/crypto';
 	import { generateFamilyInvitePdf } from '$lib/pdf';
 	import { locale } from '$lib/i18n';
 	import * as api from '$lib/api';
@@ -58,13 +58,33 @@
 		? `${window.location.origin}/join/${createdGrantId}#${encodeURIComponent(createdCode)}`
 		: '';
 
+	// Security review (PI v13) LB: family_grants.label was stored
+	// plaintext, leaking the patient's social graph ("Grandma", "Dr.
+	// Schmidt") to a server breach. Encrypt with the patient's master
+	// key (the only audience) before sending. Backwards-compat: legacy
+	// plaintext labels still render — decrypt throws and we fall back.
+	async function tryDecryptLabel(stored: string, masterKey: Uint8Array): Promise<string> {
+		try {
+			return await decryptData(stored, masterKey);
+		} catch {
+			return stored;
+		}
+	}
+
 	async function load() {
 		loading = true;
 		const res = await api.familyGrantList();
 		loading = false;
-		if (res.ok) {
-			grants = (res.data.grants as Grant[]) || [];
+		if (!res.ok) return;
+		const raw = (res.data.grants as Grant[]) || [];
+		const state = get(auth);
+		if (!state.masterKey) {
+			grants = raw;
+			return;
 		}
+		grants = await Promise.all(
+			raw.map(async (g) => ({ ...g, label: await tryDecryptLabel(g.label, state.masterKey!) })),
+		);
 	}
 
 	async function createInvite() {
@@ -79,8 +99,9 @@
 		creating = true;
 		try {
 			const bundle = await createFamilyGrant(state.masterKey);
+			const encryptedLabel = await encryptData(label, state.masterKey);
 			const res = await api.familyGrantCreate({
-				label,
+				label: encryptedLabel,
 				grant_params: bundle.grant_params,
 				grant_auth: bundle.grant_auth,
 				wrapped_master: bundle.wrapped_master,

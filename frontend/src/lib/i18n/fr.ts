@@ -799,7 +799,6 @@ export default {
 	'settings.export_data_desc': 'Téléchargez toutes vos données de santé déchiffrées en fichier JSON. Ce fichier n\'est pas chiffré — conservez-le en lieu sûr.',
 	'settings.export_button': 'Télécharger JSON',
 
-	'darkmode.toggle': "Changer l'apparence",
 	'encryption.badge': 'Chiffrement de bout en bout',
 	'encryption.zero_knowledge': 'Le serveur ne peut pas lire vos données',
 
@@ -938,8 +937,6 @@ export default {
 	'landing.feature_offline_desc': 'PWA avec cache chiffré. Fonctionne sans internet.',
 	'landing.feature_multilang': 'Multilingue',
 	'landing.feature_multilang_desc': 'Allemand, anglais, italien, français.',
-	'landing.feature_darkmode': 'Mode sombre',
-	'landing.feature_darkmode_desc': 'Détecte les préférences du système ou bascule manuellement.',
 	'landing.feature_custom': 'Champs personnalisés',
 	'landing.feature_custom_desc': 'Symptômes, déclencheurs et paramètres vitaux à définir librement.',
 

@@ -799,7 +799,6 @@ export default {
 	'settings.export_data_desc': 'Download all your decrypted health data as a JSON file. This file is not encrypted — store it safely.',
 	'settings.export_button': 'Download JSON',
 
-	'darkmode.toggle': 'Toggle appearance',
 	'encryption.badge': 'End-to-end encrypted',
 	'encryption.zero_knowledge': 'The server cannot read your data',
 
@@ -938,8 +937,6 @@ export default {
 	'landing.feature_offline_desc': 'PWA with encrypted cache. Works without internet.',
 	'landing.feature_multilang': 'Multilingual',
 	'landing.feature_multilang_desc': 'German, English, Italian, French.',
-	'landing.feature_darkmode': 'Dark mode',
-	'landing.feature_darkmode_desc': 'Detects system preference or toggle manually.',
 	'landing.feature_custom': 'Custom fields',
 	'landing.feature_custom_desc': 'Define your own symptoms, triggers, and vitals.',
 

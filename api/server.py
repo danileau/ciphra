@@ -568,6 +568,11 @@ def login():
         return jsonify({'error': 'Login failed'}), 500
 
 
+DOCUMENT_QUOTA_PER_USER = int(os.environ.get('DOCUMENT_QUOTA_PER_USER', 8000))
+"""Per-user document cap. Generous: ~10y of daily entries + diary + events.
+Backstop against authenticated DoS via mass-insert. Tune via env."""
+
+
 @app.route('/api/documents', methods=['POST'])
 @token_required
 def store_document():
@@ -579,6 +584,13 @@ def store_document():
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) AS n FROM encrypted_documents WHERE user_id = %s",
+                    (request.user_id,),
+                )
+                count = cur.fetchone()['n']
+                if count >= DOCUMENT_QUOTA_PER_USER:
+                    return jsonify({'error': 'quota_exceeded'}), 429
                 cur.execute("""
                     INSERT INTO encrypted_documents (user_id, encrypted_data)
                     VALUES (%s, %s) RETURNING id, created_at
@@ -1446,6 +1458,14 @@ def family_documents_create():
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
+                # Quota counts against the OWNER (patient), not the
+                # caregiver writing on their behalf.
+                cur.execute(
+                    "SELECT COUNT(*) AS n FROM encrypted_documents WHERE user_id = %s",
+                    (source_user_id,),
+                )
+                if cur.fetchone()['n'] >= DOCUMENT_QUOTA_PER_USER:
+                    return jsonify({'error': 'quota_exceeded'}), 429
                 cur.execute("""
                     INSERT INTO encrypted_documents (user_id, encrypted_data)
                     VALUES (%s, %s) RETURNING id, created_at

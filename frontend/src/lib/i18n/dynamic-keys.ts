@@ -162,8 +162,6 @@ export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
 	'landing.feature_offline_desc',
 	'landing.feature_multilang',
 	'landing.feature_multilang_desc',
-	'landing.feature_darkmode',
-	'landing.feature_darkmode_desc',
 	'landing.feature_custom',
 	'landing.feature_custom_desc',
 	'landing.footer_features',
@@ -270,10 +268,9 @@ export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
 	'auth.register_success',
 	'auth.enable_recovery',
 
-	// Family / private / darkmode / quickadd — similar flash or
-	// settings-surface paths. Keep until audited.
+	// Family / private / quickadd — flash or settings-surface paths.
+	// Keep until audited.
 	'family.private_hidden',
-	'darkmode.toggle',
 	'private.toggle_make_private',
 
 	// Migrate phases — invoked via store-driven phase label lookup,

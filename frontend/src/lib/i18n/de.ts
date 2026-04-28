@@ -819,7 +819,6 @@ export default {
 	'settings.export_data_desc': 'Alle entschlüsselten Gesundheitsdaten als JSON-Datei herunterladen. Diese Datei ist nicht verschlüsselt — sicher aufbewahren.',
 	'settings.export_button': 'JSON herunterladen',
 
-	'darkmode.toggle': 'Darstellung umschalten',
 
 	// Encryption
 	'encryption.badge': 'Ende-zu-Ende verschlüsselt',
@@ -960,8 +959,6 @@ export default {
 	'landing.feature_offline_desc': 'PWA mit verschlüsseltem Cache. Funktioniert ohne Internet.',
 	'landing.feature_multilang': 'Mehrsprachig',
 	'landing.feature_multilang_desc': 'Deutsch, Englisch, Italienisch, Französisch.',
-	'landing.feature_darkmode': 'Dunkelmodus',
-	'landing.feature_darkmode_desc': 'Erkennt Systemeinstellung oder manuell umschaltbar.',
 	'landing.feature_custom': 'Eigene Felder',
 	'landing.feature_custom_desc': 'Symptome, Trigger, Vitalwerte individuell definierbar.',
 
