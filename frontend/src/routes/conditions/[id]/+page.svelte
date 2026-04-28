@@ -85,7 +85,18 @@
 		</div>
 	</div>
 {:else}
-	<div class="min-h-screen" style="background: var(--surface);">
+	<!-- CSS-var override scopes the page's --brand to the condition's own
+	     palette tone. Every var(--brand) / var(--brand-light) inside this
+	     subtree (back link, vitals tile, PubMed links, scale chevrons,
+	     CTA shadow) re-resolves to info.color without per-site edits.
+	     The layout's nav header sits OUTSIDE this wrapper so it keeps
+	     invariant rust — nav chrome stays brand. -->
+	<div
+		class="min-h-screen"
+		style="background: var(--surface);
+		       --brand: {info.color};
+		       --brand-light: {info.color}1a;"
+	>
 		<main class="layout-default py-8 sm:py-12">
 			<a href="/conditions" class="text-sm mb-6 inline-block transition-colors" style="color: var(--brand);">&larr; {$t('condition.index_title')}</a>
 			<div class="flex items-center gap-4 mb-4">
@@ -141,7 +152,7 @@
 							<p class="text-sm mb-4" style="color: var(--text-secondary);">{$t(group.rationaleKey)}</p>
 							<div class="flex flex-wrap gap-2">
 								{#each group.items as itemKey}
-									<span class="px-3 py-1.5 rounded-full text-sm" style="background: var(--olive-light); color: var(--olive);">{$t(itemKey)}</span>
+									<span class="px-3 py-1.5 rounded-full text-sm" style="background: {info.color}1a; color: {info.color}; border: 1px solid {info.color}33;">{$t(itemKey)}</span>
 								{/each}
 							</div>
 						</div>
@@ -159,8 +170,8 @@
 					<p class="text-sm" style="color: var(--text-secondary);">{$t(info.episodesKey)}</p>
 				</div>
 				<div class="card rounded-xl p-6">
-					<div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background: var(--ochre-light);">
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--ochre);"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-width="2"/><line x1="12" y1="9" x2="12" y2="13" stroke-width="2"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2"/></svg>
+					<div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background: {info.color}1f;">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: {info.color};"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-width="2"/><line x1="12" y1="9" x2="12" y2="13" stroke-width="2"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2"/></svg>
 					</div>
 					<h3 class="text-base font-semibold mb-2" style="color: var(--text-primary);">{$t('condition.section_triggers')}</h3>
 					<p class="text-sm" style="color: var(--text-secondary);">{$t(info.triggersKey)}</p>
@@ -177,9 +188,9 @@
 			<!-- Clinical scales -->
 			<section class="mb-12">
 				<h2 class="text-2xl font-bold mb-6" style="color: var(--text-primary);">{$t('condition.clinical_basis')}</h2>
-				<div class="card-ochre rounded-xl" style="overflow: hidden;">
+				<div class="rounded-xl" style="overflow: hidden; background: {info.color}14; border: 1px solid {info.color}26;">
 					{#each info.scales as scale, i}
-						<div class="p-5" style="{i > 0 ? 'border-top: 1px solid rgba(159,99,11,0.15);' : ''}">
+						<div class="p-5" style="{i > 0 ? `border-top: 1px solid ${info.color}26;` : ''}">
 							<div class="flex items-start justify-between gap-4">
 								<div>
 									<h3 class="text-base font-semibold" style="color: var(--text-primary);">{$t(scale.nameKey)}</h3>
@@ -206,10 +217,10 @@
 			<!-- For your doctor -->
 			<section class="mb-12">
 				<h2 class="text-2xl font-bold mb-4" style="color: var(--text-primary);">{$t('condition.for_doctor_title')}</h2>
-				<div class="card-ochre rounded-xl p-6">
+				<div class="rounded-xl p-6" style="background: {info.color}14; border: 1px solid {info.color}26;">
 					<div class="flex items-start gap-3">
-						<svg class="w-6 h-6 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--ochre);"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-width="2"/><polyline points="14,2 14,8 20,8" stroke-width="2"/></svg>
-						<p class="text-sm leading-relaxed" style="color: var(--ochre);">{$t(info.forDoctorKey)}</p>
+						<svg class="w-6 h-6 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: {info.color};"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-width="2"/><polyline points="14,2 14,8 20,8" stroke-width="2"/></svg>
+						<p class="text-sm leading-relaxed" style="color: {info.color};">{$t(info.forDoctorKey)}</p>
 					</div>
 				</div>
 			</section>

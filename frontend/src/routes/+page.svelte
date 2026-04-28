@@ -11,6 +11,7 @@
 	import { conditionGroups } from '$lib/conditionGroups';
 	import { conditionInfoMap } from '$lib/conditionInfo';
 	import type { ComponentType } from 'svelte';
+	import { onMount } from 'svelte';
 
 	let showTechnicalDetails = false;
 
@@ -28,6 +29,77 @@
 	function setLocale(e: Event) {
 		const val = /** @type {HTMLSelectElement} */ (e.currentTarget as HTMLSelectElement).value;
 		locale.set(val);
+	}
+
+	// Hero choreography — three quiet signature moments. Originally
+	// drafted on motion.one, but the Web Animations API (built into
+	// every modern browser) gives us identical capability for keyframe
+	// + cubic-bezier easing with zero bundle cost and no dev-mode
+	// import-resolution issues. The CSS `.hero-content` 700ms entrance
+	// + the inview action still cover no-JS / reduced-motion / pre-load
+	// paint. Photosensitivity rules: every animation ≥400ms, no
+	// flashing, no rapid repeats; reduced-motion users skip everything.
+	onMount(() => {
+		if (typeof window === 'undefined') return;
+		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (reduce) return;
+		// Run after the CSS hero entrance has finished so the two
+		// don't fight. requestIdleCallback keeps motion off the initial
+		// paint critical path on slow devices.
+		const start = () => runHeroChoreography();
+		if ('requestIdleCallback' in window) {
+			(window as Window & { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback?.(start);
+		} else {
+			setTimeout(start, 250);
+		}
+	});
+
+	function runHeroChoreography(): void {
+		// Cubic-bezier with overshoot >1 gives the spring-feel.
+		const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+		const EASE_OUT = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+		// Asterisk settle — the brand-identity moment. The mark wobble-
+		// rotates around its 8° rest pose and ticks back, like it just
+		// landed. SVG transform-origin is set inline on the inner <g>
+		// so this rotates around the asterisk centre, not the SVG origin.
+		const asterisk = document.querySelector<SVGGElement>(
+			'.hero-section .wordmark-asterisk',
+		);
+		if (asterisk) {
+			asterisk.animate(
+				[
+					{ transform: 'rotate(8deg) scale(1)' },
+					{ transform: 'rotate(18deg) scale(1.08)' },
+					{ transform: 'rotate(3deg) scale(0.98)' },
+					{ transform: 'rotate(8deg) scale(1)' },
+				],
+				{ duration: 1100, delay: 400, easing: SPRING, fill: 'forwards' },
+			);
+		}
+
+		// CTA pulse — one soft scale tick. Draws the eye to "Get started
+		// for free" without nagging. No repeat, no glow, no color shift.
+		const cta = document.querySelector<HTMLElement>(
+			'.hero-section [data-anim="hero-cta"]',
+		);
+		if (cta) {
+			cta.animate(
+				[
+					{ transform: 'scale(1)' },
+					{ transform: 'scale(1.025)' },
+					{ transform: 'scale(1)' },
+				],
+				{ duration: 700, delay: 1500, easing: EASE_OUT },
+			);
+		}
+
+		// (The condition-tile stagger was dropped — relying on
+		// IntersectionObserver firing during fullPage screenshots /
+		// hydration is fragile, and on a tile-grid that's already mostly
+		// above the fold the entrance read as a flicker rather than as
+		// delight. The asterisk wobble is the brand identity moment;
+		// the CTA pulse is the eye-catch. Two is enough.)
 	}
 </script>
 
@@ -55,7 +127,13 @@
 			<Wordmark size={28} />
 		</a>
 		<div class="flex items-center gap-3">
+			<!-- Primary nav — three anchors that map 1:1 to the page's
+			     three argument moments: "is my condition here?" → "how
+			     does it work?" → "is it actually private?". Adding the
+			     Conditions link closes the gap where users could scroll
+			     past 18 condition tiles with no anchor to return. -->
 			<div class="hidden md:flex items-center gap-1">
+				<a href="#conditions" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('nav.conditions')}</a>
 				<a href="#how" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_how')}</a>
 				<a href="#security" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_security')}</a>
 			</div>
@@ -70,7 +148,11 @@
 					<option value={l}>{localeNames[l]}</option>
 				{/each}
 			</select>
-			<a href="/login" class="hidden sm:inline-flex text-sm font-medium min-h-[44px] items-center px-3" style="color: var(--text-secondary);">
+			<!-- Login demoted to a quiet text-link — landing traffic is
+			     dominated by first-time visitors; returning users still
+			     find it here but it no longer competes with the primary
+			     "Get started" CTA. -->
+			<a href="/login" class="hidden sm:inline-flex text-xs min-h-[36px] items-center px-1 transition-colors" style="color: var(--text-muted);">
 				{$t('auth.login')}
 			</a>
 			<a href="/login?mode=register" class="btn-primary min-h-[44px] px-5 text-sm font-semibold rounded-lg">
@@ -110,7 +192,7 @@
 				</p>
 
 				<div class="flex flex-wrap gap-4 mb-8">
-					<a href="/login?mode=register" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors" style="box-shadow: 0 4px 14px rgba(178,60,44,0.2);">
+					<a href="/login?mode=register" data-anim="hero-cta" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors" style="box-shadow: 0 4px 14px rgba(178,60,44,0.2);">
 						{$t('landing.hero_cta')}
 					</a>
 					<a href="#how" class="btn-secondary min-h-[52px] px-8 font-medium rounded-xl text-base gap-2 transition-colors" style="border: 1px solid var(--border);">
@@ -172,8 +254,66 @@
 		</div>
 	</section>
 
-	<!-- ===== HOW IT WORKS ===== -->
-	<section class="py-20 md:py-28 reveal" use:inview id="how" style="background: var(--surface-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+	<!-- ===== CONDITIONS GRID =====
+	     Moved ahead of "How it works" — a stranger's first question is
+	     "is my condition here?"; the deep tile grid answers it before
+	     we ask them to digest the architecture. Section bg/border flipped
+	     to surface-card + both borders so the alternation rhythm with the
+	     hero's surface bg stays intact. -->
+	<section class="py-20 md:py-28 reveal" use:inview id="conditions" style="background: var(--surface-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+		<div class="max-w-5xl mx-auto px-6">
+			<div class="text-center mb-16">
+				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">
+					{$t('landing.templates_title_1')} <span style="color: var(--brand);">{$t('landing.templates_title_2')}</span>
+				</h2>
+				<p class="text-lg max-w-xl mx-auto" style="color: var(--text-muted);">{$t('landing.templates_subtitle')}</p>
+			</div>
+
+			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+				{#each presets as preset}
+					{#if preset.id === 'custom'}
+						<!-- Custom card -->
+						<div class="rounded-xl p-5 flex flex-col items-center justify-center text-center transition-colors min-h-[140px]" style="border: 2px dashed var(--border); cursor: default;">
+							<div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style="background: var(--surface-muted);">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);"><path d="M12 5v14m-7-7h14"/></svg>
+							</div>
+							<h3 class="font-semibold text-sm mb-1" style="color: var(--text-primary);">{$t(preset.labelKey)}</h3>
+							<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(preset.descriptionKey)}</p>
+						</div>
+					{:else}
+						<!-- Condition card -->
+						<a href="/conditions/{preset.id}" data-anim="condition-tile" class="card-interactive rounded-xl p-5 min-h-[140px] block group">
+							<div
+								class="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+								style="background: linear-gradient(135deg, {preset.color}26, {preset.color}10);
+								       border: 1px solid {preset.color}40;"
+							>
+								<svg class="w-5 h-5" fill="none" stroke={preset.color} stroke-width="2.2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+									<path d="{iconPaths[preset.icon] || iconPaths['heart']}"/>
+								</svg>
+							</div>
+							<h3 class="font-semibold text-sm mb-1 transition-colors" style="color: var(--text-primary);">{$t(preset.labelKey)}</h3>
+							<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(preset.descriptionKey)}</p>
+						</a>
+					{/if}
+				{/each}
+			</div>
+
+				<div class="text-center mt-8">
+					<a href="/conditions" class="inline-flex items-center gap-2 text-sm font-medium transition-colors" style="color: var(--brand);">
+						{$t('condition.index_title')}
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</a>
+				</div>
+		</div>
+	</section>
+
+	<!-- ===== HOW IT WORKS =====
+	     Demoted from the slot right after the hero — the user has now
+	     seen "yes my condition is here" via the conditions grid; this
+	     is the "how does it work?" follow-up. Background flipped to
+	     surface (was surface-card) for the alternation rhythm. -->
+	<section class="py-20 md:py-28 reveal" use:inview id="how" style="background: var(--surface); border-bottom: 1px solid var(--border);">
 		<div class="max-w-5xl mx-auto px-6">
 			<div class="text-center mb-16">
 				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">{$t('landing.how_title')}</h2>
@@ -202,55 +342,6 @@
 					<p class="leading-relaxed text-base" style="color: var(--text-muted);">{$t('landing.how_step3_desc')}</p>
 				</div>
 			</div>
-		</div>
-	</section>
-
-	<!-- ===== CONDITIONS GRID ===== -->
-	<section class="py-20 md:py-28 reveal" use:inview id="conditions" style="background: var(--surface); border-bottom: 1px solid var(--border);">
-		<div class="max-w-5xl mx-auto px-6">
-			<div class="text-center mb-16">
-				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">
-					{$t('landing.templates_title_1')} <span style="color: var(--brand);">{$t('landing.templates_title_2')}</span>
-				</h2>
-				<p class="text-lg max-w-xl mx-auto" style="color: var(--text-muted);">{$t('landing.templates_subtitle')}</p>
-			</div>
-
-			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-				{#each presets as preset}
-					{#if preset.id === 'custom'}
-						<!-- Custom card -->
-						<div class="rounded-xl p-5 flex flex-col items-center justify-center text-center transition-colors min-h-[140px]" style="border: 2px dashed var(--border); cursor: default;">
-							<div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style="background: var(--surface-muted);">
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);"><path d="M12 5v14m-7-7h14"/></svg>
-							</div>
-							<h3 class="font-semibold text-sm mb-1" style="color: var(--text-primary);">{$t(preset.labelKey)}</h3>
-							<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(preset.descriptionKey)}</p>
-						</div>
-					{:else}
-						<!-- Condition card -->
-						<a href="/conditions/{preset.id}" class="card-interactive rounded-xl p-5 min-h-[140px] block group">
-							<div
-								class="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-								style="background: linear-gradient(135deg, {preset.color}26, {preset.color}10);
-								       border: 1px solid {preset.color}40;"
-							>
-								<svg class="w-5 h-5" fill="none" stroke={preset.color} stroke-width="2.2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-									<path d="{iconPaths[preset.icon] || iconPaths['heart']}"/>
-								</svg>
-							</div>
-							<h3 class="font-semibold text-sm mb-1 transition-colors" style="color: var(--text-primary);">{$t(preset.labelKey)}</h3>
-							<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(preset.descriptionKey)}</p>
-						</a>
-					{/if}
-				{/each}
-			</div>
-
-				<div class="text-center mt-8">
-					<a href="/conditions" class="inline-flex items-center gap-2 text-sm font-medium transition-colors" style="color: var(--brand);">
-						{$t('condition.index_title')}
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</a>
-				</div>
 		</div>
 	</section>
 

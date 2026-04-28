@@ -76,9 +76,21 @@ export function inview(node: HTMLElement, options: InviewOptions = {}) {
 	);
 	obs.observe(node);
 
+	// Safety net: in environments where IntersectionObserver never
+	// fires for a section (Playwright fullPage capture, certain
+	// embedded webviews, programmatic scroll-to-anchor that lands
+	// past the section), force-reveal after 1.8s so users never see
+	// permanently empty sections. The animation still plays via
+	// transition; the user just won't have caught the entrance.
+	const safety = window.setTimeout(() => {
+		node.classList.add('in-view');
+		obs.unobserve(node);
+	}, 1800);
+
 	return {
 		destroy() {
 			obs.disconnect();
+			window.clearTimeout(safety);
 		},
 	};
 }
