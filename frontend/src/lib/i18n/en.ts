@@ -818,7 +818,7 @@ export default {
 	'landing.subtagline': 'The encrypted diary for chronic conditions.',
 	'landing.chips_prefix': 'Built-in templates:',
 	'landing.chips_custom': 'or build your own',
-	'landing.hero_subtitle': 'ciphra is the first health companion that {strong_start}cannot decrypt or read your data{strong_end}. End-to-end encrypted. For any condition.',
+	'landing.hero_subtitle': 'A diary {strong_start}not even we as admins can read{strong_end}. Encrypted right in your browser. For any condition.',
 	'landing.hero_detail': 'Built by someone who has been developing tools for chronically ill people for 7 years. Not as a product — as an answer to a real problem.',
 	'landing.hero_cta': 'Start for free',
 	'landing.hero_scroll_cue': 'Scroll to conditions',

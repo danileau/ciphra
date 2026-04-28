@@ -819,7 +819,7 @@ export default {
 	'landing.subtagline': 'Il diario cifrato per le malattie croniche.',
 	'landing.chips_prefix': 'Modelli pronti:',
 	'landing.chips_custom': 'o creane uno tuo',
-	'landing.hero_subtitle': 'ciphra è il primo compagno di salute che {strong_start}non può né decifrare né leggere i tuoi dati{strong_end}. Crittografia end-to-end. Per qualsiasi condizione.',
+	'landing.hero_subtitle': 'Un diario {strong_start}che neanche noi amministratori possiamo leggere{strong_end}. Crittografato direttamente nel tuo browser. Per qualsiasi condizione.',
 	'landing.hero_detail': 'Creato da chi sviluppa strumenti per persone con malattie croniche da 7 anni. Non come prodotto — come risposta a un problema reale.',
 	'landing.hero_cta': 'Inizia gratuitamente',
 	'landing.hero_scroll_cue': 'Vedi le condizioni',

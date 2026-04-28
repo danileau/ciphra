@@ -818,7 +818,7 @@ export default {
 	'landing.subtagline': 'Le journal chiffré pour les maladies chroniques.',
 	'landing.chips_prefix': 'Modèles prêts à l\'emploi :',
 	'landing.chips_custom': 'ou créez le vôtre',
-	'landing.hero_subtitle': 'ciphra est le premier compagnon de santé qui {strong_start}ne peut ni déchiffrer ni lire vos données{strong_end}. Chiffré de bout en bout. Pour toute affection.',
+	'landing.hero_subtitle': 'Un journal {strong_start}que même nous, les administrateurs, ne pouvons pas lire{strong_end}. Chiffré directement dans votre navigateur. Pour toute affection.',
 	'landing.hero_detail': 'Conçu par quelqu\'un qui développe des outils pour les personnes atteintes de maladies chroniques depuis 7 ans. Pas comme un produit — comme une réponse à un vrai problème.',
 	'landing.hero_cta': 'Commencer gratuitement',
 	'landing.hero_scroll_cue': 'Voir les affections',

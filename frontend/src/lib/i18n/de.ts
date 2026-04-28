@@ -826,7 +826,7 @@ export default {
 
 	// Landing page
 	'landing.skip_to_content': 'Zum Inhalt springen',
-	'landing.meta_description': 'ciphra ist dein privater, Ende-zu-Ende-verschlüsselter Gesundheitsbegleiter. Für Epilepsie, ADHS, Diabetes, Burnout, Migräne oder jede andere Erkrankung.',
+	'landing.meta_description': 'ciphra ist das verschlüsselte Tagebuch für chronische Erkrankungen. Direkt im Browser verschlüsselt — auch wir können deine Einträge nicht lesen. Für Epilepsie, ADHS, Diabetes, Burnout, Migräne und jede andere Erkrankung.',
 	'landing.nav_how': 'So funktioniert es',
 	'landing.nav_origin': 'Die Geschichte',
 	'landing.nav_security': 'Sicherheit',
@@ -840,7 +840,7 @@ export default {
 	'landing.subtagline': 'Das verschlüsselte Tagebuch für chronische Erkrankungen.',
 	'landing.chips_prefix': 'Vorbereitete Vorlagen:',
 	'landing.chips_custom': 'oder eigene bauen',
-	'landing.hero_subtitle': 'ciphra ist der erste Gesundheitsbegleiter, der deine Daten {strong_start}weder entschlüsseln noch lesen kann{strong_end}. Ende-zu-Ende-verschlüsselt. Für jede Erkrankung.',
+	'landing.hero_subtitle': 'Ein Tagebuch, das {strong_start}nicht mal wir als Admins lesen können{strong_end}. Verschlüsselt direkt im Browser. Für jede Erkrankung.',
 	'landing.hero_detail': 'Gebaut von jemandem, der seit 7 Jahren Werkzeuge für chronisch Kranke entwickelt. Nicht als Produkt — als Antwort auf ein echtes Problem.',
 	'landing.hero_cta': 'Kostenlos starten',
 	'landing.hero_scroll_cue': 'Zu den Erkrankungen scrollen',
@@ -968,7 +968,7 @@ export default {
 
 	'landing.footer_tagline': 'encrypted by design',
 	'landing.disclaimer_medical': 'ciphra ist ein persönliches Notizbuch. Es ist kein Medizinprodukt im Sinne der EU-MDR 2017/745 oder der schweizerischen MepV, stellt keine Diagnose und ersetzt keine Beratung durch qualifiziertes medizinisches Fachpersonal.',
-	'landing.footer_desc': 'Dein privater Gesundheitsbegleiter.\nEnde-zu-Ende-verschlüsselt.',
+	'landing.footer_desc': 'Dein verschlüsseltes Gesundheits-Tagebuch.\nEnde-zu-Ende-verschlüsselt.',
 	'landing.footer_product': 'Produkt',
 	'landing.footer_how': 'So funktioniert es',
 	'landing.footer_templates': 'Vorlagen',
