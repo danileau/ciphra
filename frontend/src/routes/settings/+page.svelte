@@ -219,6 +219,10 @@
 
 	async function toggleCustomHidden(kind: CustomKind, id: string) {
 		if (!bp) return;
+		// Episodes are not part of `Blueprint.customizations.hidden*`
+		// (CIPH-301b schema covers symptoms / triggers / vitals only).
+		// The template guards the affordance — defensive guard here too.
+		if (kind === 'episode') return;
 		const next: Blueprint = JSON.parse(JSON.stringify(bp));
 		const cz = next.customizations || (next.customizations = {});
 		const hideKey = (
@@ -226,13 +230,8 @@
 				symptom: 'hiddenSymptoms',
 				trigger: 'hiddenTriggers',
 				vital: 'hiddenVitals',
-				episode: 'hiddenSymptoms', // episodes don't have a dedicated hide list yet — fall through to symptoms is wrong; skip
 			} as const
 		)[kind];
-		// Episodes are not part of the existing hide-filter set (cf.
-		// `applyBlueprintCustomizations`). Hide-toggle only applies to the
-		// three pre-301b kinds; for episodes, the only affordance is delete.
-		if (kind === 'episode') return;
 		const list = ((cz as Record<string, string[] | undefined>)[hideKey] = (
 			(cz as Record<string, string[] | undefined>)[hideKey] || []
 		) as string[]);
@@ -652,6 +651,12 @@
 								<span class="text-sm truncate" style="color: var(--text-primary); {isCustomHidden(section.kind, item.id) ? 'opacity: 0.5; text-decoration: line-through;' : ''}">{item.label}</span>
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
+								<!-- Episodes intentionally have no Hide toggle: the
+									`Blueprint.customizations.hidden*` schema (CIPH-301b)
+									covers symptoms / triggers / vitals only — preset
+									episodes are not user-hideable either, so adding a
+									hide affordance just for *custom* episodes would be
+									inconsistent. Delete is the only removal action. -->
 								{#if section.kind !== 'episode'}
 									<button
 										type="button"

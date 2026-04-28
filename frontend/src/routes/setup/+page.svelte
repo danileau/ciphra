@@ -262,16 +262,33 @@
 		for (const v of merged.vitals) {
 			if (vitalOn[v.id] === false) hiddenVitals.push(v.id);
 		}
-		// Always (re)write `customizations.hidden*` so re-entry into the
-		// wizard with a fresh "all on" state correctly clears stale hides.
-		// `working.customizations.custom*` (the additive arrays) survive
-		// because we spread the existing object first.
-		working.customizations = {
-			...(working.customizations || {}),
-			hiddenSymptoms,
-			hiddenTriggers,
-			hiddenVitals,
-		};
+		// Only attach `customizations` when something meaningful is set
+		// (a hide list OR an additive custom* array already present from
+		// the modal flow). Keeps blueprints clean for fresh users who
+		// neither hid anything nor added customs. When the user previously
+		// had hides + clears them all in a re-entry, the existing block
+		// still gets overwritten because `working.customizations` carried
+		// in from the loaded blueprint — see `onMount` re-seed.
+		const cz = working.customizations;
+		const hasCustoms = !!(
+			cz?.customSymptoms?.length ||
+			cz?.customTriggers?.length ||
+			cz?.customVitals?.length ||
+			cz?.customEpisodes?.length
+		);
+		const hasHides =
+			hiddenSymptoms.length || hiddenTriggers.length || hiddenVitals.length;
+		if (hasCustoms || hasHides || cz) {
+			// `cz` truthy means the blueprint already has a customizations
+			// object (re-entry); preserve that field but rewrite the hide
+			// arrays (so toggling a hide off in re-entry actually clears).
+			working.customizations = {
+				...(cz || {}),
+				hiddenSymptoms,
+				hiddenTriggers,
+				hiddenVitals,
+			};
+		}
 
 		await blueprint.save(working);
 		// Persist per-user vital target overrides (spec: CIPH-301 screen 3).
