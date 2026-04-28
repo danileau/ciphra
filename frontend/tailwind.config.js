@@ -4,7 +4,21 @@ export default {
 	theme: {
 		extend: {
 			fontFamily: {
-				sans: ['Inter', 'DM Sans', 'system-ui', '-apple-system', 'sans-serif']
+				// Perf review (PI v13): system-ui first so the page
+				// renders at first paint without waiting on a remote
+				// font. Inter is kept as the *preferred* choice for
+				// users who already have it installed (designers,
+				// many devs), but we no longer depend on it.
+				sans: [
+					'system-ui',
+					'-apple-system',
+					'BlinkMacSystemFont',
+					'"Segoe UI"',
+					'Roboto',
+					'Inter',
+					'"DM Sans"',
+					'sans-serif'
+				]
 			},
 			colors: {
 				brand: {

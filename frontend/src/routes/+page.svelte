@@ -2,7 +2,6 @@
 	import { isAuthenticated, authReady } from '$lib/stores/auth';
 	import { t, locale, locales, localeNames } from '$lib/i18n';
 	import type { Locale } from '$lib/i18n';
-	import Companion from '$lib/components/Companion.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import { inview } from '$lib/actions/inview';
@@ -11,8 +10,20 @@
 	import { iconPaths, iconPath } from '$lib/conditionIcons';
 	import { conditionGroups } from '$lib/conditionGroups';
 	import { conditionInfoMap } from '$lib/conditionInfo';
+	import type { ComponentType } from 'svelte';
 
 	let showTechnicalDetails = false;
+
+	// Perf review (PI v13): Companion + CompanionMain + CompanionRail +
+	// ChartWrapper + chart.js together pulled ~250 KB gzip into the
+	// landing chunk despite only rendering when authenticated. Dynamic-
+	// import + reactive load keeps unauth visitors at a tight bundle.
+	let CompanionComponent: ComponentType | null = null;
+	$: if ($authReady && $isAuthenticated && !CompanionComponent) {
+		import('$lib/components/Companion.svelte').then((m) => {
+			CompanionComponent = m.default as ComponentType;
+		});
+	}
 
 	function setLocale(e: Event) {
 		const val = /** @type {HTMLSelectElement} */ (e.currentTarget as HTMLSelectElement).value;
@@ -28,7 +39,9 @@
 </svelte:head>
 
 {#if $authReady && $isAuthenticated}
-	<Companion />
+	{#if CompanionComponent}
+		<svelte:component this={CompanionComponent} />
+	{/if}
 {:else if $authReady}
 
 <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:outline-none" style="background: var(--brand); color: white;">
