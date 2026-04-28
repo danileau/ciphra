@@ -256,6 +256,14 @@ each surface is also visibly cohort-aware when empty.
 
 - **Asterisk.svelte** — the brand mark. Loading / saved / empty
   / static modes. Every route uses this.
+- **Wordmark.svelte** (CIPH-896) — the canonical "ciphra*" brand
+  mark with text + rotated asterisk in one SVG. Replaces 5+
+  hand-rolled SVG wordmarks (landing nav/hero/footer, layout
+  header, login + migrate auth headers). Single `size` prop scales
+  the whole composition; `mark="brand" | "muted"` for watermark
+  contexts. Asterisk geometry mirrors `Asterisk.svelte` exactly.
+  Audit guard: `lib/wordmark-consolidation.test.ts` forbids any
+  other `rotate(8)` SVG outside this primitive + Asterisk.
 - **Toast.svelte** — top-of-viewport transient message. Used
   in `+layout.svelte` for sync indicator and in
   `conditions/*` for the preset-saved confirmation. Keyed

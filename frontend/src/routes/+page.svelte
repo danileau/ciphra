@@ -4,6 +4,7 @@
 	import type { Locale } from '$lib/i18n';
 	import Companion from '$lib/components/Companion.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
+	import Wordmark from '$lib/components/Wordmark.svelte';
 	import { presets } from '$lib/blueprint/presets';
 	import EncryptionDemo from '$lib/components/EncryptionDemo.svelte';
 	import { iconPaths, iconPath } from '$lib/conditionIcons';
@@ -37,14 +38,7 @@
 <nav class="sticky top-0 z-40 backdrop-blur-sm" style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.85);">
 	<div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
 		<a href="/" class="flex items-center gap-1">
-			<svg viewBox="0 0 150 36" class="h-7" aria-hidden="true">
-				<text x="0" y="27" font-family="Inter, DM Sans, sans-serif" font-size="26" font-weight="500" letter-spacing="0.5" style="fill: var(--text-primary)">ciphra</text>
-				<g transform="translate(98,8) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
-					<path d="M -5 0 L 5 0" stroke-width="1.3"/>
-					<path d="M -2 -3.5 L 2 3.5" stroke-width="1"/>
-					<path d="M 2 -3.3 L -2 3.3" stroke-width="0.9"/>
-				</g>
-			</svg>
+			<Wordmark size={28} />
 		</a>
 		<div class="flex items-center gap-3">
 			<div class="hidden md:flex items-center gap-1">
@@ -79,14 +73,10 @@
 		<div class="relative max-w-5xl mx-auto px-6 py-24 sm:py-32 md:py-40 lg:py-48">
 			<div class="max-w-2xl">
 				<!-- Wordmark -->
-				<svg viewBox="0 0 220 50" class="h-12 sm:h-16 mb-8" aria-hidden="true">
-					<text x="0" y="36" font-family="Inter, DM Sans, sans-serif" font-size="36" font-weight="500" letter-spacing="1" style="fill: var(--text-primary)">ciphra</text>
-					<g transform="translate(134,12) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
-						<path d="M -6.5 0 L 6.5 0" stroke-width="1.5"/>
-						<path d="M -2.7 -4.6 L 2.7 4.6" stroke-width="1.2"/>
-						<path d="M 2.6 -4.4 L -2.6 4.4" stroke-width="1.1"/>
-					</g>
-				</svg>
+				<div class="mb-8">
+					<span class="sm:hidden"><Wordmark size={48} /></span>
+					<span class="hidden sm:inline"><Wordmark size={64} /></span>
+				</div>
 
 				<!-- Tagline + subtagline — one brand line, one "what" line.
 					 Subtagline replaces the audit-risky "for every condition"
@@ -488,14 +478,7 @@
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
 			<div>
 				<a href="/" aria-label="ciphra">
-					<svg viewBox="0 0 220 50" class="h-8" aria-hidden="true">
-						<text x="0" y="36" font-family="Inter, DM Sans, sans-serif" font-size="36" font-weight="500" letter-spacing="1" style="fill: var(--text-primary)">ciphra</text>
-						<g transform="translate(134,12) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
-							<path d="M -6.5 0 L 6.5 0" stroke-width="1.5"/>
-							<path d="M -2.7 -4.6 L 2.7 4.6" stroke-width="1.2"/>
-							<path d="M 2.6 -4.4 L -2.6 4.4" stroke-width="1.1"/>
-						</g>
-					</svg>
+					<Wordmark size={32} />
 				</a>
 				<p class="text-xs font-semibold tracking-widest uppercase mt-1" style="color: var(--brand);">{$t('landing.footer_tagline')}</p>
 				<p class="text-sm mt-3 leading-relaxed" style="color: var(--text-muted);">{@html $t('landing.footer_desc').replace('\n', '<br>')}</p>

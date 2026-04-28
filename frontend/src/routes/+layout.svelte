@@ -15,6 +15,7 @@
 	import { pathToRoute } from '$lib/cohortPalette';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
+	import Wordmark from '$lib/components/Wordmark.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { shellFor } from '$lib/routeShells';
 	import { fade, fly } from 'svelte/transition';
@@ -528,14 +529,7 @@
 	<nav class="sticky top-0 z-40 backdrop-blur-sm" style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.85);">
 		<div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
 			<a href="/" class="flex items-center gap-1">
-				<svg viewBox="0 0 150 36" class="h-7" aria-hidden="true">
-					<text x="0" y="27" font-family="Inter, DM Sans, sans-serif" font-size="26" font-weight="500" letter-spacing="0.5" style="fill: var(--text-primary)">ciphra</text>
-					<g transform="translate(98,8) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
-						<path d="M -5 0 L 5 0" stroke-width="1.3"/>
-						<path d="M -2 -3.5 L 2 3.5" stroke-width="1"/>
-						<path d="M 2 -3.3 L -2 3.3" stroke-width="0.9"/>
-					</g>
-				</svg>
+				<Wordmark size={28} />
 			</a>
 			<div class="flex items-center gap-3">
 				<!-- /conditions dropped from top nav per UX review — it remains
@@ -582,14 +576,7 @@
 	<header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b">
 		<div class="max-w-6xl mx-auto px-4 flex items-center justify-between h-14 gap-2">
 			<a href="/" class="flex items-center shrink-0" aria-label="ciphra">
-				<svg viewBox="0 0 220 50" class="h-7" aria-hidden="true">
-					<text x="0" y="36" font-family="Inter, DM Sans, sans-serif" font-size="36" font-weight="500" letter-spacing="1" class="fill-surface-slate">ciphra</text>
-					<g transform="translate(134,12) rotate(8)" class="stroke-brand" stroke-linecap="round" fill="none">
-						<path d="M -6.5 0 L 6.5 0" stroke-width="1.5"/>
-						<path d="M -2.7 -4.6 L 2.7 4.6" stroke-width="1.2"/>
-						<path d="M 2.6 -4.4 L -2.6 4.4" stroke-width="1.1"/>
-					</g>
-				</svg>
+				<Wordmark size={28} />
 			</a>
 
 			<!-- Desktop primary nav (CIPH-201 follow-up) — bottom-nav handles

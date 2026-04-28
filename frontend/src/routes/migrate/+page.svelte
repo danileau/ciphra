@@ -21,6 +21,7 @@
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n';
 	import { auth, isAuthenticated } from '$lib/stores/auth';
+	import Wordmark from '$lib/components/Wordmark.svelte';
 	import { get } from 'svelte/store';
 	import { documents } from '$lib/stores/documents';
 	import SignupFlow from '$lib/components/SignupFlow.svelte';
@@ -316,22 +317,7 @@
 	<div class="w-full max-w-md">
 		<!-- Wordmark + tagline header — identical to /login -->
 		<div class="flex justify-center mb-2">
-			<svg viewBox="0 0 112 36" class="h-10" aria-label="ciphra">
-				<text
-					x="0"
-					y="27"
-					font-family="Inter, DM Sans, sans-serif"
-					font-size="26"
-					font-weight="500"
-					letter-spacing="0.5"
-					style="fill: var(--text-primary)">ciphra</text
-				>
-				<g transform="translate(98,8) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
-					<path d="M -5 0 L 5 0" stroke-width="1.3" />
-					<path d="M -2 -3.5 L 2 3.5" stroke-width="1" />
-					<path d="M 2 -3.3 L -2 3.3" stroke-width="0.9" />
-				</g>
-			</svg>
+			<Wordmark size={40} />
 		</div>
 		<p class="text-sm text-center mb-6" style="color: var(--text-muted)">
 			{$t('encryption.badge')}

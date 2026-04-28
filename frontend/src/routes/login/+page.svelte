@@ -7,6 +7,7 @@
 	import { validateRecoveryCode } from '$lib/wordlist';
 	import SignupFlow from '$lib/components/SignupFlow.svelte';
 	import LoginForm from '$lib/components/LoginForm.svelte';
+	import Wordmark from '$lib/components/Wordmark.svelte';
 	import PasswordField from '$lib/components/PasswordField.svelte';
 
 	function setLocale(e: Event) {
@@ -127,14 +128,7 @@
 		<!-- Centered wordmark above the form — gives the auth flow its own
 		     identity instead of relying on the passive top-left nav logo. -->
 		<div class="flex justify-center mb-2">
-			<svg viewBox="0 0 112 36" class="h-10" aria-label="ciphra">
-				<text x="0" y="27" font-family="Inter, DM Sans, sans-serif" font-size="26" font-weight="500" letter-spacing="0.5" style="fill: var(--text-primary)">ciphra</text>
-				<g transform="translate(98,8) rotate(8)" style="stroke: var(--brand)" stroke-linecap="round" fill="none">
-					<path d="M -5 0 L 5 0" stroke-width="1.3"/>
-					<path d="M -2 -3.5 L 2 3.5" stroke-width="1"/>
-					<path d="M 2 -3.3 L -2 3.3" stroke-width="0.9"/>
-				</g>
-			</svg>
+			<Wordmark size={40} />
 		</div>
 		<p class="text-sm text-center mb-6" style="color: var(--text-muted)">{$t('encryption.badge')}</p>
 
