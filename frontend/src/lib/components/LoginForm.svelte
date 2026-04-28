@@ -25,6 +25,11 @@
 	let technicalError = '';
 	let touched: Record<string, boolean> = {};
 
+	// A11y validation reactives — used by aria-invalid + aria-describedby
+	// linking on the inputs (PI v13 a11y review LB-2).
+	$: userInvalid = touched.loginUser && loginUser.length > 0 && loginUser.length < 3;
+	$: passInvalid = touched.loginPass && loginPass.length > 0 && loginPass.length < 8;
+
 	function setError(userFacing: string, technical?: string) {
 		error = userFacing;
 		technicalError = technical || '';
@@ -94,9 +99,11 @@
 		<label for="login-user" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.username')}</label>
 		<input id="login-user" type="text" bind:value={loginUser} required minlength="3"
 			on:blur={() => { touched.loginUser = true; }}
+			aria-invalid={userInvalid}
+			aria-describedby={userInvalid ? 'login-user-err' : undefined}
 			class="input" />
-		{#if touched.loginUser && loginUser.length > 0 && loginUser.length < 3}
-			<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_username_short')}</p>
+		{#if userInvalid}
+			<p id="login-user-err" class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_username_short')}</p>
 		{/if}
 	</div>
 	<div>
@@ -107,10 +114,12 @@
 			required
 			minlength={8}
 			on:blur={() => { touched.loginPass = true; }}
+			ariaInvalid={passInvalid}
+			ariaDescribedby={passInvalid ? 'login-pass-err' : undefined}
 			class="input"
 		/>
-		{#if touched.loginPass && loginPass.length > 0 && loginPass.length < 8}
-			<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_short')}</p>
+		{#if passInvalid}
+			<p id="login-pass-err" class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_short')}</p>
 		{/if}
 	</div>
 	<button type="submit" disabled={loading}

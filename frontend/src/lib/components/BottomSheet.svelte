@@ -2,21 +2,67 @@
 	 (mobile bottom-anchored sheet, not centred dialog). It keeps its own
 	 fixed-inset-0 backdrop because it is itself the primitive. -->
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, tick } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 
 	export let open: boolean = false;
 
 	const dispatch = createEventDispatcher<{ close: void }>();
 
+	let sheetEl: HTMLDivElement | null = null;
+	let lastFocused: HTMLElement | null = null;
+
+	function focusableWithin(root: HTMLElement): HTMLElement[] {
+		const sel =
+			'a[href], button:not([disabled]), input:not([disabled]), ' +
+			'select:not([disabled]), textarea:not([disabled]), ' +
+			'[tabindex]:not([tabindex="-1"])';
+		return Array.from(root.querySelectorAll<HTMLElement>(sel)).filter(
+			(el) => el.offsetParent !== null || getComputedStyle(el).position === 'fixed',
+		);
+	}
+
 	function handleBackdropClick() {
 		dispatch('close');
 	}
 
+	// A11y review (PI v13) LB-1: trap focus inside the sheet, restore
+	// focus to the trigger on close. Mirrors Modal.svelte's pattern.
 	function handleKeydown(e: KeyboardEvent) {
+		if (!open) return;
 		if (e.key === 'Escape') {
 			dispatch('close');
+			return;
 		}
+		if (e.key !== 'Tab' || !sheetEl) return;
+		const focusables = focusableWithin(sheetEl);
+		if (focusables.length === 0) {
+			e.preventDefault();
+			sheetEl.focus();
+			return;
+		}
+		const first = focusables[0];
+		const last = focusables[focusables.length - 1];
+		const active = document.activeElement as HTMLElement | null;
+		if (e.shiftKey && active === first) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && active === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
+
+	$: if (typeof document !== 'undefined' && open) {
+		lastFocused = (document.activeElement as HTMLElement | null) ?? null;
+		tick().then(() => {
+			if (!sheetEl) return;
+			const f = focusableWithin(sheetEl);
+			(f[0] ?? sheetEl).focus();
+		});
+	} else if (typeof document !== 'undefined' && !open && lastFocused) {
+		try { lastFocused.focus(); } catch { /* element may be gone */ }
+		lastFocused = null;
 	}
 </script>
 
@@ -32,7 +78,9 @@
 		aria-hidden="true"
 	></div>
 	<div
-		class="sheet"
+		bind:this={sheetEl}
+		tabindex="-1"
+		class="sheet focus:outline-none"
 		role="dialog"
 		aria-modal="true"
 		transition:fly={{ y: 300, duration: 300 }}

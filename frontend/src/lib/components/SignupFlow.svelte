@@ -33,6 +33,12 @@
 	let error = '';
 	let technicalError = '';
 
+	// A11y validation reactives — used by aria-invalid + aria-describedby
+	// linking on the inputs (PI v13 a11y review LB-2).
+	$: userInvalid = touched.user && username.length > 0 && username.length < 3;
+	$: passInvalid = touched.pass && password.length > 0 && password.length < 12;
+	$: pass2Invalid = touched.pass2 && confirm.length > 0 && password !== confirm;
+
 	let recoveryCode = '';
 	let showRecovery = false;
 	let acknowledged = false;
@@ -160,9 +166,11 @@
 			<input id="signup-user" type="text" bind:value={username} required minlength="3" pattern="[a-z0-9_]+"
 				autocomplete="username"
 				on:blur={() => { touched.user = true; }}
+				aria-invalid={userInvalid}
+				aria-describedby={userInvalid ? 'signup-user-err' : undefined}
 				class="input" />
-			{#if touched.user && username.length > 0 && username.length < 3}
-				<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_username_short')}</p>
+			{#if userInvalid}
+				<p id="signup-user-err" class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_username_short')}</p>
 			{/if}
 		</div>
 		<div>
@@ -171,13 +179,15 @@
 				id="signup-pass"
 				bind:value={password}
 				required
-				minlength={8}
+				minlength={12}
 				autocomplete="new-password"
 				on:blur={() => { touched.pass = true; }}
+				ariaInvalid={passInvalid}
+				ariaDescribedby={passInvalid ? 'signup-pass-err' : undefined}
 				class="input"
 			/>
-			{#if touched.pass && password.length > 0 && password.length < 12}
-				<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_short')}</p>
+			{#if passInvalid}
+				<p id="signup-pass-err" class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_short')}</p>
 			{/if}
 		</div>
 		<div>
@@ -186,13 +196,15 @@
 				id="signup-pass2"
 				bind:value={confirm}
 				required
-				minlength={8}
+				minlength={12}
 				autocomplete="new-password"
 				on:blur={() => { touched.pass2 = true; }}
+				ariaInvalid={pass2Invalid}
+				ariaDescribedby={pass2Invalid ? 'signup-pass2-err' : undefined}
 				class="input"
 			/>
-			{#if touched.pass2 && confirm.length > 0 && password !== confirm}
-				<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_match')}</p>
+			{#if pass2Invalid}
+				<p id="signup-pass2-err" class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_match')}</p>
 			{/if}
 		</div>
 		<div class="rounded-xl p-3" style="background: var(--olive-light); border: 1px solid rgba(127,130,27,0.15)">
