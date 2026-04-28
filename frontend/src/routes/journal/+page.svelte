@@ -7,6 +7,7 @@
 	import { goto } from '$app/navigation';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import EntryPreview from '$lib/components/EntryPreview.svelte';
+	import JournalEmpty from '$lib/components/JournalEmpty.svelte';
 	import ConfirmDelete from '$lib/components/ConfirmDelete.svelte';
 
 	let filter = 'all';
@@ -228,20 +229,14 @@
 
 	<!-- Entries -->
 	{#if filteredDocs.length === 0}
-		<div class="text-center py-12">
-			<div class="mb-3 flex justify-center">
-				<Asterisk size={48} mode="empty" color="muted" />
-			</div>
-			{#if filter === 'diary'}
-				<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('journal.diary_empty')}</p>
-			{:else}
-				<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('stream.no_entries')}</p>
-				<a href="/log/today" class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2"/></svg>
-					{$t('companion.fill_today')}
-				</a>
-			{/if}
-		</div>
+		<!-- CIPH-893 — JournalEmpty primitive: stream-card silhouette
+			 instead of a uniform Asterisk hero so the surface still
+			 reads as "the journal" even when empty. -->
+		<JournalEmpty
+			variant={filter === 'diary' ? 'diary' : 'all'}
+			hideCta={filter === 'diary' || !!searchQuery}
+			onLogToday={() => goto('/log/today')}
+		/>
 	{:else}
 		<!-- CIPH-763b — aria-live announces new additions to the entry list
 			 (e.g. quick-add diary entry). aria-relevant="additions" scopes

@@ -242,22 +242,48 @@
 
 	/* CIPH-890 — Per-route HSL modulation. Composes with cohort tones
 	   via `hsl(from var(--cohort-X-N) h calc(s + var(--route-s-shift))
-	   calc(l + var(--route-l-shift)))` at consumer sites. */
+	   calc(l + var(--route-l-shift)))` at consumer sites.
+
+	   CIPH-892 extends each route block below with rhythm tokens
+	   driving silhouette differences (card padding, gap, radius,
+	   border style). The four browse surfaces feel distinct at
+	   a glance: calendar tight grid / journal stream / reports
+	   clinical / dashboard hub. */
 	[data-route="calendar"] {
 		--route-l-shift: -8%;
 		--route-s-shift: 0%;
+		/* tight grid rhythm — small radii, small gaps, square cells */
+		--rhythm-card-padding: 8px;
+		--rhythm-card-gap: 4px;
+		--rhythm-card-radius: 8px;
+		--rhythm-section-gap: 16px;
 	}
 	[data-route="journal"] {
 		--route-l-shift: 4%;
 		--route-s-shift: 0%;
+		/* stream rhythm — generous card chrome, vertical breathing */
+		--rhythm-card-padding: 16px;
+		--rhythm-card-gap: 8px;
+		--rhythm-card-radius: 12px;
+		--rhythm-section-gap: 12px;
 	}
 	[data-route="reports"] {
 		--route-l-shift: 0%;
 		--route-s-shift: -4%;
+		/* clinical rhythm — compact rows, hairline separators */
+		--rhythm-card-padding: 6px;
+		--rhythm-card-gap: 0px;
+		--rhythm-card-radius: 6px;
+		--rhythm-section-gap: 20px;
 	}
 	[data-route="dashboard"] {
 		--route-l-shift: 0%;
 		--route-s-shift: 0%;
+		/* hub rhythm — generous nested cards, soft shadows */
+		--rhythm-card-padding: 16px;
+		--rhythm-card-gap: 24px;
+		--rhythm-card-radius: 14px;
+		--rhythm-section-gap: 24px;
 	}
 
 	/* Warm overrides for Tailwind's cold slate palette */
@@ -324,11 +350,16 @@
 
 	/* ═══ CARDS ═══ */
 
-	/* Primary card — white on warm surface (standard weight) */
+	/* Primary card — white on warm surface (standard weight).
+	   CIPH-892: border-radius pulls from the per-route rhythm token so
+	   each surface gets a recognizable card silhouette. Padding is
+	   still controlled by Tailwind utility classes (p-4 / p-5) at the
+	   call site — rhythm tokens only adjust the radius for now to keep
+	   the migration surgical. */
 	.card {
 		background: var(--surface-card);
 		border: 1px solid var(--border);
-		border-radius: 12px;
+		border-radius: var(--rhythm-card-radius, 12px);
 		transition: all 0.2s ease-out;
 	}
 

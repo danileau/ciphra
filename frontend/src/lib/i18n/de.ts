@@ -718,7 +718,13 @@ export default {
 	'stream_filter.event': 'Notiz-Markierungen',
 	'stream_filter.diary': 'Tagebuch',
 	'journal.diary_hint': 'Privat — wird nie exportiert oder geteilt.',
-	'journal.diary_empty': 'Dein Tagebuch ist leer. Schnell-Notizen die du privat halten willst, landen hier.',
+	// CIPH-893 — JournalEmpty primitive (replaces the old `journal.diary_empty` key)
+	'journal.empty_aria': 'Tagebuch leer',
+	'journal.empty_title': 'Noch keine Einträge',
+	'journal.empty_caption': 'Was du protokollierst, erscheint hier als Verlauf.',
+	'journal.empty_diary_title': 'Dein Tagebuch ist leer',
+	'journal.empty_diary_caption': 'Schnell-Notizen, die du privat halten willst, landen hier.',
+	'journal.empty_cta': 'Heute eintragen',
 
 	// Setup wizard
 	'setup.title': 'ciphra einrichten',
@@ -1015,6 +1021,10 @@ export default {
 	'reports.period': 'Zeitraum',
 	'reports.coverage': 'Abdeckung',
 	'reports.no_data': 'Keine Daten für diesen Monat. Beginnen Sie mit der Protokollierung.',
+	// CIPH-893 — ReportsEmpty primitive
+	'reports.empty_aria': 'Bericht ohne Daten',
+	'reports.empty_title': 'Noch nicht genug Daten',
+	'reports.empty_caption': '{logged} Tage protokolliert, {needed} weitere bis ein aussagekräftiger Bericht zustande kommt.',
 	'reports.no_blueprint_title': 'Noch keine eigene Erfassung',
 	'reports.no_blueprint_desc': 'Berichte brauchen Einträge. Richte eine eigene Erfassung ein oder wechsle zu einem verknüpften Konto.',
 	'reports.no_blueprint_caregiver_desc': 'Du hast keine eigene Erfassung — wechsle zu dem Konto, für das du erfasst.',

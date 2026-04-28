@@ -698,7 +698,13 @@ export default {
 	'stream_filter.event': 'Note markers',
 	'stream_filter.diary': 'Diary',
 	'journal.diary_hint': 'Private — never exported or shared.',
-	'journal.diary_empty': 'Your diary is empty. Quick notes you want to keep private end up here.',
+	// CIPH-893 — JournalEmpty primitive (replaces the old `journal.diary_empty` key)
+	'journal.empty_aria': 'Journal empty',
+	'journal.empty_title': 'No entries yet',
+	'journal.empty_caption': 'What you log will appear here as a stream.',
+	'journal.empty_diary_title': 'Your diary is empty',
+	'journal.empty_diary_caption': 'Quick notes you want to keep private end up here.',
+	'journal.empty_cta': 'Log today',
 
 	// Setup wizard
 	'setup.title': 'Set up ciphra',
@@ -993,6 +999,10 @@ export default {
 	'reports.period': 'Period',
 	'reports.coverage': 'Coverage',
 	'reports.no_data': 'No data for this month. Start logging to see your report.',
+	// CIPH-893 — ReportsEmpty primitive
+	'reports.empty_aria': 'Report with no data',
+	'reports.empty_title': 'Not enough data yet',
+	'reports.empty_caption': '{logged} days logged, {needed} more before a meaningful report.',
 	'reports.no_blueprint_title': 'No tracking profile yet',
 	'reports.no_blueprint_desc': 'Set up a profile or switch to a linked account to see reports.',
 	'reports.no_blueprint_caregiver_desc': 'You don\'t have your own tracking — switch to the account you\'re helping.',

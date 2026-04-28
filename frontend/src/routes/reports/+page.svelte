@@ -5,6 +5,7 @@
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
+	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
 	import type { Blueprint } from '$lib/blueprint';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -721,11 +722,10 @@
 		</div>
 	</div>
 	{:else}
-		<div class="bg-white rounded-xl border border-slate-200 p-8 text-center">
-			<svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><line x1="3" y1="9" x2="21" y2="9" stroke-width="2"/><line x1="9" y1="3" x2="9" y2="21" stroke-width="2"/></svg>
-			<p class="text-sm text-slate-500">{$t('reports.no_data')}</p>
-			<a href="/log/today" class="inline-block mt-3 text-sm text-brand hover:text-brand-hover font-medium">{$t('companion.fill_today')}</a>
-		</div>
+		<!-- CIPH-893 — ReportsEmpty primitive: clinical tabular silhouette
+			 instead of a generic icon, so the surface still reads as
+			 "the report" even when empty. -->
+		<ReportsEmpty daysLogged={monthDocs.length} threshold={7} />
 	{/if}
 
 	{:else}

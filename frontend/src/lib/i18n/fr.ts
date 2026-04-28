@@ -698,7 +698,13 @@ export default {
 	'stream_filter.event': 'Marqueurs',
 	'stream_filter.diary': 'Journal',
 	'journal.diary_hint': 'Privé — jamais exporté ni partagé.',
-	'journal.diary_empty': 'Votre journal est vide. Les notes rapides que vous voulez garder privées se retrouvent ici.',
+	// CIPH-893 — JournalEmpty primitive (replaces the old `journal.diary_empty` key)
+	'journal.empty_aria': 'Journal vide',
+	'journal.empty_title': 'Aucune entrée pour le moment',
+	'journal.empty_caption': 'Ce que vous enregistrez apparaîtra ici sous forme de fil.',
+	'journal.empty_diary_title': 'Votre journal intime est vide',
+	'journal.empty_diary_caption': 'Les notes rapides que vous voulez garder privées se retrouvent ici.',
+	'journal.empty_cta': 'Enregistrer aujourd\'hui',
 
 	// Setup wizard
 	'setup.title': 'Configurer ciphra',
@@ -993,6 +999,10 @@ export default {
 	'reports.period': 'Période',
 	'reports.coverage': 'Couverture',
 	'reports.no_data': 'Aucune donnée pour ce mois. Commencez à enregistrer vos journées.',
+	// CIPH-893 — ReportsEmpty primitive
+	'reports.empty_aria': 'Rapport sans données',
+	'reports.empty_title': 'Pas encore assez de données',
+	'reports.empty_caption': '{logged} jours enregistrés, encore {needed} avant un rapport significatif.',
 	'reports.no_blueprint_title': "Pas encore de suivi personnel",
 	'reports.no_blueprint_desc': 'Configurez un profil ou basculez vers un compte lié pour voir les rapports.',
 	'reports.no_blueprint_caregiver_desc': "Vous n'avez pas de suivi personnel — basculez vers le compte pour lequel vous enregistrez.",

@@ -204,6 +204,21 @@ route kind.
   condition-icon mapping, date chrome. This is the one card
   primitive for diary content.
 
+### Empty states (CIPH-893)
+
+Per-surface empty primitives that read as the surface they replace
+(stream card on journal, clinical table on reports) instead of a
+uniform Asterisk hero. Composes with the cohort×route palette so
+each surface is also visibly cohort-aware when empty.
+
+- **JournalEmpty.svelte** — stream-card silhouette + hint copy.
+  Variants: `'all'` / `'diary'`. `hideCta` suppresses the
+  "log today" button when empty results come from a search filter.
+  Used in `routes/journal/+page.svelte`.
+- **ReportsEmpty.svelte** — clinical tabular silhouette with
+  greyed-out cells + threshold-aware caption ("you logged X days,
+  N more to unlock the report"). Used in `routes/reports/+page.svelte`.
+
 ### Forms
 
 - **EntryComposer.svelte** (CIPH-850) — full-form entry surface

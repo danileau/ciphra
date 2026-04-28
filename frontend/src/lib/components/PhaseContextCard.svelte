@@ -36,7 +36,14 @@
 </script>
 
 {#if phase}
-<section class="card-anchor" aria-labelledby="phase-context-heading">
+<!-- CIPH-894 — high-emphasis density: thicker accent left rail + subtle
+	 cohort-tinted background pulls the card forward as the most important
+	 cohort signal on the dashboard. -->
+<section
+	class="card-anchor phase-context-emphasis"
+	aria-labelledby="phase-context-heading"
+	data-density="emphasis"
+>
 	<div class="flex items-center gap-4">
 		<div class="text-center shrink-0">
 			<p class="text-3xl font-bold num-data" style="color: {phase.color}">
@@ -71,3 +78,17 @@
 	</div>
 </section>
 {/if}
+
+<style>
+	/* CIPH-894 — emphasis density: heavier accent rail + cohort-tinted
+	   background tint. Inherits from .card-anchor (CIPH-202 + CIPH-891
+	   2px accent border + 24px padding). */
+	.phase-context-emphasis {
+		border-left-width: 6px;
+		background: linear-gradient(
+			to right,
+			rgba(var(--accent-rgb), 0.05) 0%,
+			var(--surface-card) 40%
+		);
+	}
+</style>
