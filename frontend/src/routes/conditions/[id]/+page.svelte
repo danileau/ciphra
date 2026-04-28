@@ -48,7 +48,11 @@
 		<meta name="twitter:card" content="summary" />
 		<meta name="twitter:title" content="{title} — ciphra" />
 		<meta name="twitter:description" content={subtitle} />
-		<!-- JSON-LD structured data -->
+		<!-- JSON-LD structured data. Defensive `</` → `<\/` escape so a
+		     condition title containing the literal closing-script-tag
+		     can't break out of the JSON-LD context (security review,
+		     PI v13). Marginal in practice since `title` is preset
+		     metadata, but the escape is free. -->
 		{@html `<script type="application/ld+json">${JSON.stringify({
 			"@context": "https://schema.org",
 			"@type": "MedicalWebPage",
@@ -64,7 +68,7 @@
 				"name": "ciphra",
 				"url": "https://ciphra.app"
 			}
-		})}</script>`}
+		}).replace(/<\//g, '<\\/')}</script>`}
 	{/if}
 </svelte:head>
 

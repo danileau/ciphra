@@ -1,0 +1,35 @@
+# Security review (PI v13): seed scripts ship with literal test
+# passwords (`Test$12345_`) and fixture data. Without this file the
+# `COPY . .` in the Dockerfile would bake them into every prod image.
+
+# Test + dev artefacts
+seed_*.py
+seed_common.py
+fixtures/
+tests/
+*_test.py
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor / IDE crud
+.vscode/
+.idea/
+.swp
+*.swp
+*.swo
+
+# Local env files (secrets!)
+.env
+.env.*
+!.env.example
+
+# Git internals
+.git/
+.gitignore
+.dockerignore
+
+# Documentation
+README.md
+*.md

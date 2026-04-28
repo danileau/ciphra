@@ -373,6 +373,35 @@ def verify_auth(b64_auth_key: str, stored_hash: str) -> bool:
         return False
 
 
+_SENSITIVE_FIELDS = (
+    'recovery_key',
+    'recovery_auth',
+    'auth_hash',
+    'auth_key',
+    'current_auth_key',
+    'encrypted_master',
+    'wrapped_master',
+    'family_key',
+    'family_code',
+    'password',
+)
+
+
+def _redact_sensitive(data: dict) -> None:
+    """Mutate `data` in place, deleting any sensitive field present.
+
+    Called immediately after each sensitive endpoint has copied the
+    fields it needs into local variables. Defensive: if a future
+    `logger.exception` or custom error handler dumps `data`, the
+    secrets are already gone. Operationally a no-op for current code
+    paths because the existing `logger.exception` calls only log the
+    message + traceback, never `data`.
+    """
+    for k in _SENSITIVE_FIELDS:
+        if k in data:
+            data.pop(k, None)
+
+
 def valid_b64(value, min_bytes=1, max_bytes=4096) -> bool:
     if not isinstance(value, str):
         return False
@@ -429,6 +458,8 @@ def register():
     has_recovery = any([recovery_vault, recovery_params, recovery_auth])
     if has_recovery and not (recovery_vault and recovery_params and valid_b64(recovery_auth, 32, 32)):
         return jsonify({'error': 'Incomplete recovery bundle'}), 400
+
+    _redact_sensitive(data)
 
     try:
         with get_db() as conn:
@@ -505,6 +536,8 @@ def login():
     auth_key = data.get('auth_key')
     if not username or not USERNAME_RE.match(username) or not valid_b64(auth_key, 32, 32):
         return jsonify({'error': 'Invalid credentials'}), 401
+
+    _redact_sensitive(data)
 
     try:
         with get_db() as conn:
@@ -767,6 +800,10 @@ def recover():
         if not isinstance(val, str) or not (1 <= len(val) <= 8192):
             return jsonify({'error': f'Invalid {field}'}), 400
 
+    # Redact secrets from the request-data dict before any downstream
+    # code (current or future) might log it.
+    _redact_sensitive(data)
+
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
@@ -842,6 +879,8 @@ def change_password():
                        ('encrypted_master', encrypted_master)):
         if not isinstance(val, str) or not (1 <= len(val) <= 8192):
             return jsonify({'error': f'Invalid {field}'}), 400
+
+    _redact_sensitive(data)
 
     try:
         with get_db() as conn:
