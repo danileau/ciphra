@@ -77,14 +77,19 @@ const CYCLE_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
 	'#9a4f6b', // 6 dusty rose
 ];
 
-/** Phase row — indigos with warm + cool breaks. */
+/** Phase row — steel-violet family with warm + cool breaks.
+ *  Slot 1 was shifted from `#3f4a8a` (cool navy-indigo) to `#5e4a8a`
+ *  (warmer steel violet) on user feedback 2026-04-28: navy felt too
+ *  institutional / cold for the "as private as a notebook" brand.
+ *  Violet keeps the cool counterweight to cycle's magenta-rose without
+ *  reading as clinical-blue. */
 const PHASE_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
-	'#3f4a8a', // 1 indigo primary
-	'#2d3563', // 2 deep indigo
+	'#5e4a8a', // 1 steel violet primary (was #3f4a8a)
+	'#3e2f5e', // 2 deep dusk violet (was #2d3563)
 	'#9f630b', // 3 ochre (warm break)
 	'#5c7a4a', // 4 muted sage
 	'#5c6b73', // 5 anchor slate
-	'#6b6b9a', // 6 periwinkle
+	'#7a5e8a', // 6 dusty violet (was #6b6b9a periwinkle)
 ];
 
 /** Narrative row — sages with warm + cool breaks. */
@@ -142,12 +147,12 @@ export const COHORT_PALETTE_RGB: Readonly<
 		[154, 79, 107],
 	],
 	phase: [
-		[63, 74, 138],
-		[45, 53, 99],
+		[94, 74, 138],
+		[62, 47, 94],
 		[159, 99, 11],
 		[92, 122, 74],
 		[92, 107, 115],
-		[107, 107, 154],
+		[122, 94, 138],
 	],
 	narrative: [
 		[74, 107, 63],

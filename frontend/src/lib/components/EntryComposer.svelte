@@ -1367,6 +1367,9 @@
 	/* ─── Save bar — CIPH-784 ─── */
 	.log-save-bar {
 		position: fixed;
+		/* Mobile: clear the BottomNav (md:hidden, ~70px tall). Desktop:
+		   nav is hidden, so the save bar should sit flush at the
+		   viewport bottom — otherwise there's empty space below it. */
 		bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 		left: 0;
 		right: 0;
@@ -1375,6 +1378,11 @@
 		background: var(--surface-card);
 		border-top: 1px solid var(--border);
 		box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+	}
+	@media (min-width: 768px) {
+		.log-save-bar {
+			bottom: env(safe-area-inset-bottom, 0px);
+		}
 	}
 	.log-save-inner {
 		max-width: 768px;

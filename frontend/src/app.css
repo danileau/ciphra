@@ -98,12 +98,12 @@
 		--cohort-cycle-4: #7f821b;
 		--cohort-cycle-5: #5c6b73;
 		--cohort-cycle-6: #9a4f6b;
-		--cohort-phase-1: #3f4a8a;
-		--cohort-phase-2: #2d3563;
+		--cohort-phase-1: #5e4a8a;
+		--cohort-phase-2: #3e2f5e;
 		--cohort-phase-3: #9f630b;
 		--cohort-phase-4: #5c7a4a;
 		--cohort-phase-5: #5c6b73;
-		--cohort-phase-6: #6b6b9a;
+		--cohort-phase-6: #7a5e8a;
 		--cohort-narrative-1: #4a6b3f;
 		--cohort-narrative-2: #2f4a28;
 		--cohort-narrative-3: #9f630b;
@@ -132,12 +132,12 @@
 		--cohort-cycle-4-rgb: 127, 130, 27;
 		--cohort-cycle-5-rgb: 92, 107, 115;
 		--cohort-cycle-6-rgb: 154, 79, 107;
-		--cohort-phase-1-rgb: 63, 74, 138;
-		--cohort-phase-2-rgb: 45, 53, 99;
+		--cohort-phase-1-rgb: 94, 74, 138;
+		--cohort-phase-2-rgb: 62, 47, 94;
 		--cohort-phase-3-rgb: 159, 99, 11;
 		--cohort-phase-4-rgb: 92, 122, 74;
 		--cohort-phase-5-rgb: 92, 107, 115;
-		--cohort-phase-6-rgb: 107, 107, 154;
+		--cohort-phase-6-rgb: 122, 94, 138;
 		--cohort-narrative-1-rgb: 74, 107, 63;
 		--cohort-narrative-2-rgb: 47, 74, 40;
 		--cohort-narrative-3-rgb: 159, 99, 11;
@@ -213,7 +213,7 @@
 	}
 	[data-cohort="phase"] {
 		--accent: var(--cohort-phase-1);
-		--accent-hover: #323b6e;
+		--accent-hover: #4c3c6f;
 		--accent-rgb: var(--cohort-phase-1-rgb);
 		--accent-info: var(--cohort-phase-3);
 		--accent-info-rgb: var(--cohort-phase-3-rgb);
