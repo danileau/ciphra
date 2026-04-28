@@ -83,7 +83,7 @@ beforeEach(() => {
 describe('SignupFlow — error states', () => {
     it('shows password-mismatch error and does not call register', async () => {
         const { container } = render(SignupFlow);
-        fillSignupForm(container, 'longenough1', 'different12');
+        fillSignupForm(container, 'longenoughpw12', 'differentpw12');
         await fireEvent.click(submitButton(container));
         await waitFor(() => {
             expect(errorBlockText(container).length).toBeGreaterThan(0);
@@ -112,7 +112,7 @@ describe('SignupFlow — error states', () => {
         });
 
         const { container } = render(SignupFlow);
-        fillSignupForm(container, 'longenough1', 'longenough1');
+        fillSignupForm(container, 'longenoughpw12', 'longenoughpw12');
         await fireEvent.click(submitButton(container));
 
         await waitFor(() => expect(api.register).toHaveBeenCalled());
@@ -150,7 +150,7 @@ describe('SignupFlow — recovery-gate screen', () => {
         vi.mocked(crypto.decryptMasterKey).mockResolvedValue(new Uint8Array([9]));
 
         const rendered = render(SignupFlow);
-        fillSignupForm(rendered.container, 'longenough1', 'longenough1');
+        fillSignupForm(rendered.container, 'longenoughpw12', 'longenoughpw12');
         await fireEvent.click(submitButton(rendered.container));
         await waitFor(() => {
             expect(rendered.container.textContent).toContain('RECO-1111-2222');

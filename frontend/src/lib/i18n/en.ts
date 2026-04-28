@@ -134,7 +134,7 @@ export default {
 	'auth.recover_button': 'Reset password',
 	'auth.recovery_success': 'Password reset successful. You can now log in.',
 	'auth.error_recovery': 'Recovery didn\'t work. Double-check the 12 words and try again.',
-	'auth.error_password_short': 'Password must be at least 8 characters',
+	'auth.error_password_short': 'Password must be at least 12 characters',
 	'auth.error_username_short': 'Username must be at least 3 characters',
 
 	'companion.greeting': 'Hello {name}',

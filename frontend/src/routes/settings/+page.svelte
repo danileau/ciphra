@@ -353,7 +353,10 @@
 			passwordError = $t('auth.error_password_match');
 			return;
 		}
-		if (newPassword.length < 8) {
+		// Security review (PI v13): change-password floor 8 → 12 to
+		// match new-account creation. Existing accounts at 8 chars
+		// keep working until they choose to rotate.
+		if (newPassword.length < 12) {
 			passwordError = $t('auth.error_password_short');
 			return;
 		}

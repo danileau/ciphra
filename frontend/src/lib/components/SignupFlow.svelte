@@ -65,7 +65,11 @@
 			setError($t('auth.error_password_match'));
 			return;
 		}
-		if (password.length < 8) {
+		// Security review (PI v13): floor raised 8 → 12. The whole
+		// zero-knowledge story rests on Argon2id + password
+		// unguessability. 12 chars defends against rented-GPU attacks
+		// at typical Argon2 parameters.
+		if (password.length < 12) {
 			setError($t('auth.error_password_short'));
 			return;
 		}
@@ -172,7 +176,7 @@
 				on:blur={() => { touched.pass = true; }}
 				class="input"
 			/>
-			{#if touched.pass && password.length > 0 && password.length < 8}
+			{#if touched.pass && password.length > 0 && password.length < 12}
 				<p class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_short')}</p>
 			{/if}
 		</div>

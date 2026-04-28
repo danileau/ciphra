@@ -139,7 +139,7 @@ export default {
 	'auth.recover_button': 'Passwort zurücksetzen',
 	'auth.recovery_success': 'Passwort erfolgreich zurückgesetzt. Sie können sich jetzt anmelden.',
 	'auth.error_recovery': 'Wiederherstellung hat nicht geklappt. Bitte die 12 Wörter nochmals prüfen.',
-	'auth.error_password_short': 'Passwort muss mindestens 8 Zeichen lang sein',
+	'auth.error_password_short': 'Passwort muss mindestens 12 Zeichen lang sein',
 	'auth.error_username_short': 'Benutzername muss mindestens 3 Zeichen lang sein',
 
 	// Companion

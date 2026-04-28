@@ -111,3 +111,41 @@ export async function clearDocs(userId: string): Promise<void> {
 		tx.onerror = () => { db.close(); reject(tx.error); };
 	});
 }
+
+/**
+ * Wipe the ENTIRE IndexedDB cache regardless of user/vault partition.
+ * Called on logout so plaintext from linked-account vaults a caregiver
+ * has visited doesn't survive the session. Closing all callers must
+ * happen first — IndexedDB blocks deletion while connections are open.
+ *
+ * Security review LB-3 (PI v13): the previous `clearDocs(currentCacheKey)`
+ * only wiped the active partition, leaving plaintext from every linked
+ * patient on disk after caregiver logout.
+ */
+export async function clearAllPartitions(): Promise<void> {
+	if (typeof indexedDB === 'undefined') return;
+	return new Promise((resolve, reject) => {
+		const req = indexedDB.deleteDatabase(DB_NAME);
+		req.onsuccess = () => resolve();
+		req.onerror = () => reject(req.error);
+		req.onblocked = () => {
+			// Connection still open somewhere — try to wipe the contents
+			// of the live store as a fallback so plaintext doesn't sit
+			// at rest even if the file deletion is deferred.
+			openDB()
+				.then((db) => {
+					const tx = db.transaction(STORE_NAME, 'readwrite');
+					tx.objectStore(STORE_NAME).clear();
+					tx.oncomplete = () => {
+						db.close();
+						resolve();
+					};
+					tx.onerror = () => {
+						db.close();
+						reject(tx.error);
+					};
+				})
+				.catch(reject);
+		};
+	});
+}

@@ -121,6 +121,13 @@ function createAuthStore() {
 			if (browser) {
 				localStorage.removeItem(LS_KEY);
 				sessionStorage.removeItem(SS_MASTER_KEY);
+				// Security review LB-3 (PI v13): wipe ALL IndexedDB
+				// partitions, not just the active vault. A caregiver
+				// who has visited linked accounts must not leave their
+				// plaintext on disk after logout.
+				import('$lib/idb')
+					.then((m) => m.clearAllPartitions())
+					.catch(() => { /* best-effort; logout proceeds either way */ });
 			}
 			set(emptyState(true));
 		},

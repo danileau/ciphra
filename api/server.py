@@ -22,6 +22,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # --- Config ---
 DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://ciphra:ciphra@localhost/ciphra')
@@ -40,6 +41,19 @@ JWT_EXPIRATION_HOURS = 24
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
 
+# Cap request body to 2 MiB. Prevents authenticated DoS via unbounded
+# document upload. Single largest legitimate payload (export-import diary
+# bundle) sits well under this; tune via MAX_REQUEST_BYTES env if needed.
+app.config['MAX_CONTENT_LENGTH'] = int(
+    os.environ.get('MAX_REQUEST_BYTES', 2 * 1024 * 1024)
+)
+
+# Trust nginx-supplied X-Forwarded-* headers ONE proxy hop deep so
+# request.is_secure / get_remote_address / HSTS gating reflect the real
+# client. Without this the rate-limiter sees the LB IP and HSTS never
+# fires in prod (the security review's LB-1 finding).
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
 # CORS: restrict to configured app origins. Comma-separated list in CORS_ORIGINS,
 # or '*' for wildcard (dev only). Default matches the docker-compose dev setup.
 _raw_cors = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localhost:8080')
@@ -47,6 +61,11 @@ CORS_ORIGINS = [o.strip() for o in _raw_cors.split(',') if o.strip()]
 CORS(app, supports_credentials=True, origins=CORS_ORIGINS)
 
 limiter = Limiter(get_remote_address, app=app, default_limits=["5000 per hour"])
+
+
+@app.errorhandler(413)
+def _too_large(_e):
+    return jsonify({'error': 'request_too_large'}), 413
 
 
 @app.after_request

@@ -134,7 +134,7 @@ export default {
 	'auth.recover_button': 'Réinitialiser le mot de passe',
 	'auth.recovery_success': 'Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter.',
 	'auth.error_recovery': 'La récupération a échoué. Vérifiez les 12 mots et réessayez.',
-	'auth.error_password_short': 'Le mot de passe doit contenir au moins 8 caractères',
+	'auth.error_password_short': 'Le mot de passe doit contenir au moins 12 caractères',
 	'auth.error_username_short': 'Le nom d\'utilisateur doit comporter au moins 3 caractères',
 
 	'companion.greeting': 'Bonjour {name}',
