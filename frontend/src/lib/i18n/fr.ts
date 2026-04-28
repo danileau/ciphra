@@ -821,7 +821,7 @@ export default {
 	'landing.hero_subtitle': 'ciphra est le premier compagnon de santé qui {strong_start}ne peut ni déchiffrer ni lire vos données{strong_end}. Chiffré de bout en bout. Pour toute affection.',
 	'landing.hero_detail': 'Conçu par quelqu\'un qui développe des outils pour les personnes atteintes de maladies chroniques depuis 7 ans. Pas comme un produit — comme une réponse à un vrai problème.',
 	'landing.hero_cta': 'Commencer gratuitement',
-	'landing.hero_learn_more': 'Lire l\'histoire',
+	'landing.hero_scroll_cue': 'Voir les affections',
 	'landing.hero_badge_crypto': 'AES-256-GCM + Argon2id',
 	'landing.hero_badge_opensource': 'Open Source',
 	'landing.hero_badge_zk': 'Zero Knowledge',

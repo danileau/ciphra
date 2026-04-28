@@ -843,7 +843,7 @@ export default {
 	'landing.hero_subtitle': 'ciphra ist der erste Gesundheitsbegleiter, der deine Daten {strong_start}weder entschlüsseln noch lesen kann{strong_end}. Ende-zu-Ende-verschlüsselt. Für jede Erkrankung.',
 	'landing.hero_detail': 'Gebaut von jemandem, der seit 7 Jahren Werkzeuge für chronisch Kranke entwickelt. Nicht als Produkt — als Antwort auf ein echtes Problem.',
 	'landing.hero_cta': 'Kostenlos starten',
-	'landing.hero_learn_more': 'Die Geschichte lesen',
+	'landing.hero_scroll_cue': 'Zu den Erkrankungen scrollen',
 	'landing.hero_badge_crypto': 'AES-256-GCM + Argon2id',
 	'landing.hero_badge_opensource': 'Open Source',
 	'landing.hero_badge_zk': 'Zero Knowledge',

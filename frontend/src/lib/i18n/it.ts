@@ -822,7 +822,7 @@ export default {
 	'landing.hero_subtitle': 'ciphra è il primo compagno di salute che {strong_start}non può né decifrare né leggere i tuoi dati{strong_end}. Crittografia end-to-end. Per qualsiasi condizione.',
 	'landing.hero_detail': 'Creato da chi sviluppa strumenti per persone con malattie croniche da 7 anni. Non come prodotto — come risposta a un problema reale.',
 	'landing.hero_cta': 'Inizia gratuitamente',
-	'landing.hero_learn_more': 'Leggi la storia',
+	'landing.hero_scroll_cue': 'Vedi le condizioni',
 	'landing.hero_badge_crypto': 'AES-256-GCM + Argon2id',
 	'landing.hero_badge_opensource': 'Open Source',
 	'landing.hero_badge_zk': 'Zero Knowledge',

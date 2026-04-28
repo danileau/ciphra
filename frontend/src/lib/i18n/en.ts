@@ -821,7 +821,7 @@ export default {
 	'landing.hero_subtitle': 'ciphra is the first health companion that {strong_start}cannot decrypt or read your data{strong_end}. End-to-end encrypted. For any condition.',
 	'landing.hero_detail': 'Built by someone who has been developing tools for chronically ill people for 7 years. Not as a product — as an answer to a real problem.',
 	'landing.hero_cta': 'Start for free',
-	'landing.hero_learn_more': 'Read the story',
+	'landing.hero_scroll_cue': 'Scroll to conditions',
 	'landing.hero_badge_crypto': 'AES-256-GCM + Argon2id',
 	'landing.hero_badge_opensource': 'Open Source',
 	'landing.hero_badge_zk': 'Zero Knowledge',

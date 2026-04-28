@@ -163,10 +163,6 @@
 					<a href="/login?mode=register" data-anim="hero-cta" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors" style="box-shadow: 0 4px 14px rgba(178,60,44,0.2);">
 						{$t('landing.hero_cta')}
 					</a>
-					<a href="#how" class="btn-secondary min-h-[52px] px-8 font-medium rounded-xl text-base gap-2 transition-colors" style="border: 1px solid var(--border);">
-						{$t('landing.hero_learn_more')}
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</a>
 				</div>
 
 				<!-- Named-chips row: answers the "does it work for mine?"
@@ -220,6 +216,21 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- "More below" affordance — replaces the old "Read the story"
+		     secondary button that jumped past the now-promoted Conditions
+		     grid. This sits at the hero's bottom edge, gently bobs to
+		     signal there's more content, and scrolls smoothly to the
+		     conditions section on click. The bob is reduced-motion-safe. -->
+		<a
+			href="#conditions"
+			class="hero-scroll-cue"
+			aria-label={$t('landing.hero_scroll_cue')}
+		>
+			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+				<polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+		</a>
 	</section>
 
 	<!-- ===== CONDITIONS GRID =====
@@ -656,6 +667,40 @@
 		transform: none;
 	}
 
+	/* Hero scroll cue — chevron at the hero's bottom edge that gently
+	   bobs to signal there's more below. Replaces the old "Read the
+	   story" button that pre-empted the conditions section. Bob is
+	   slow (2.4s), low-amplitude (6px), infinite — but kept under
+	   reduced-motion via the @media block. Smooth-scroll on click is
+	   inherited from the html selector via app.css if set; the anchor
+	   navigates to #conditions either way. */
+	.hero-scroll-cue {
+		position: absolute;
+		bottom: 1.5rem;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 44px;
+		height: 44px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+		color: var(--text-muted);
+		text-decoration: none;
+		animation: heroScrollBob 2.4s ease-in-out 1.6s infinite;
+		transition: color 200ms ease-out, background 200ms ease-out;
+	}
+	.hero-scroll-cue:hover,
+	.hero-scroll-cue:focus-visible {
+		color: var(--brand);
+		background: var(--surface-card);
+		outline: none;
+	}
+	@keyframes heroScrollBob {
+		0%, 100% { transform: translate(-50%, 0); }
+		50%      { transform: translate(-50%, 6px); }
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.hero-content {
 			animation: none;
@@ -664,6 +709,9 @@
 			opacity: 1;
 			transform: none;
 			transition: none;
+		}
+		.hero-scroll-cue {
+			animation: none;
 		}
 	}
 </style>
