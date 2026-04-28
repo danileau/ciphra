@@ -61,8 +61,11 @@
 
 		// Asterisk settle — the brand-identity moment. The mark wobble-
 		// rotates around its 8° rest pose and ticks back, like it just
-		// landed. SVG transform-origin is set inline on the inner <g>
-		// so this rotates around the asterisk centre, not the SVG origin.
+		// landed. Delayed to t=720ms so the draw-in (CSS, finishes at
+		// ~620ms) plays cleanly first; the wobble then takes over the
+		// fully-drawn asterisk and adds the punctuation. SVG transform-
+		// origin is set inline on the inner <g> so this rotates around
+		// the asterisk centre, not the SVG origin.
 		const asterisk = document.querySelector<SVGGElement>(
 			'.hero-section .wordmark-asterisk',
 		);
@@ -74,7 +77,7 @@
 					{ transform: 'rotate(3deg) scale(0.98)' },
 					{ transform: 'rotate(8deg) scale(1)' },
 				],
-				{ duration: 1100, delay: 400, easing: SPRING, fill: 'forwards' },
+				{ duration: 1100, delay: 720, easing: SPRING, fill: 'forwards' },
 			);
 		}
 
@@ -90,7 +93,7 @@
 					{ transform: 'scale(1.025)' },
 					{ transform: 'scale(1)' },
 				],
-				{ duration: 700, delay: 1500, easing: EASE_OUT },
+				{ duration: 700, delay: 1900, easing: EASE_OUT },
 			);
 		}
 
@@ -168,10 +171,13 @@
 	<section class="relative overflow-hidden hero-section" style="background: var(--surface);">
 		<div class="relative max-w-5xl mx-auto px-6 py-24 sm:py-32 md:py-40 lg:py-48">
 			<div class="max-w-2xl hero-content">
-				<!-- Wordmark -->
+				<!-- Wordmark — `drawIn` triggers the asterisk-arms draw-in
+				     entrance only here (the landing hero), so chrome
+				     wordmarks elsewhere don't replay the animation on
+				     every page navigation. -->
 				<div class="mb-8">
-					<span class="sm:hidden"><Wordmark size={48} /></span>
-					<span class="hidden sm:inline"><Wordmark size={64} /></span>
+					<span class="sm:hidden"><Wordmark size={48} drawIn /></span>
+					<span class="hidden sm:inline"><Wordmark size={64} drawIn /></span>
 				</div>
 
 				<!-- Tagline + subtagline — one brand line, one "what" line.
