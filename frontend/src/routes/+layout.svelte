@@ -567,6 +567,14 @@
 	</nav>
 	<slot />
 {:else if $isAuthenticated && currentPath !== '/login' && currentPath !== '/setup'}
+	<!-- CIPH-904 — Skip-to-content link for keyboard / AT users. Public
+		 landing already had this; the authed shell didn't, leaving 8-9
+		 nav stops in the header before reaching content on every page. -->
+	<a
+		href="#main-content"
+		class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:outline-none"
+		style="background: var(--brand); color: white;"
+	>{$t('landing.skip_to_content')}</a>
 	<!-- Top Bar -->
 	<header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b">
 		<div class="max-w-6xl mx-auto px-4 flex items-center justify-between h-14 gap-2">
@@ -706,6 +714,7 @@
 	{/if}
 
 	<main
+		id="main-content"
 		data-route={currentRoute}
 		data-cohort={currentCohort}
 		style="padding-bottom: 2rem"

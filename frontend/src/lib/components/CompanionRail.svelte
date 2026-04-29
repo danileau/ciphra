@@ -35,6 +35,9 @@
 	export let complianceTone: 'high' | 'mid' | 'low';
 	export let complianceMessage: string;
 	export let complianceAccent: string;
+	// CIPH-904 — Suppress for new users (entryDocCount < 3) so day-1 users
+	// don't see "0% logged in 30 days" as a failure on their first visit.
+	export let complianceVisible: boolean = true;
 
 	// CIPH-881b — count of rescue-medication events this month. Renders only
 	// when the active blueprint declares rescueMedications AND count > 0,
@@ -50,31 +53,34 @@
 <div class="space-y-6">
 	<!-- ═══ COMPLIANCE (data-reliability) ═══
 		 At the top of the rail: the "how am I doing with logging" answer
-		 users glance at first. -->
-	<section class="card-anchor">
-		<div class="flex items-center gap-3">
-			<div class="text-center shrink-0">
-				<p class="text-2xl font-bold num-data" style="color: {complianceAccent}">
-					{Math.round(complianceRatio * 100)}%
-				</p>
-				<p class="text-[10px] uppercase tracking-wider font-medium" style="color: var(--text-muted)">
-					{complianceLogged}/{complianceTotal} {$t('common.days')}
-				</p>
-			</div>
-			<div class="flex-1 min-w-0">
-				<p class="text-xs font-medium" style="color: var(--text-primary)">{complianceMessage}</p>
-				{#if complianceTone === 'low'}
-					<p class="text-[11px] mt-1" style="color: var(--text-muted)">{$t('companion.compliance_subtitle')}</p>
-				{/if}
-				<div class="mt-2 w-full rounded-full h-1.5" style="background: var(--surface-inset)">
-					<div
-						class="h-1.5 rounded-full transition-all duration-500"
-						style="background: {complianceAccent}; width: {Math.round(complianceRatio * 100)}%"
-					></div>
+		 users glance at first. CIPH-904 — suppressed for first-day users
+		 so 0% doesn't read as failure on their first visit. -->
+	{#if complianceVisible}
+		<section class="card-anchor">
+			<div class="flex items-center gap-3">
+				<div class="text-center shrink-0">
+					<p class="text-2xl font-bold num-data" style="color: {complianceAccent}">
+						{Math.round(complianceRatio * 100)}%
+					</p>
+					<p class="text-[10px] uppercase tracking-wider font-medium" style="color: var(--text-muted)">
+						{complianceLogged}/{complianceTotal} {$t('common.days')}
+					</p>
+				</div>
+				<div class="flex-1 min-w-0">
+					<p class="text-xs font-medium" style="color: var(--text-primary)">{complianceMessage}</p>
+					{#if complianceTone === 'low'}
+						<p class="text-[11px] mt-1" style="color: var(--text-muted)">{$t('companion.compliance_subtitle')}</p>
+					{/if}
+					<div class="mt-2 w-full rounded-full h-1.5" style="background: var(--surface-inset)">
+						<div
+							class="h-1.5 rounded-full transition-all duration-500"
+							style="background: {complianceAccent}; width: {Math.round(complianceRatio * 100)}%"
+						></div>
+					</div>
 				</div>
 			</div>
-		</div>
-	</section>
+		</section>
+	{/if}
 
 	<!-- CIPH-872 — Rail "quick action" card removed. User dogfood feedback
 		 flagged it as redundant with (a) the prominent "Fill today" card in

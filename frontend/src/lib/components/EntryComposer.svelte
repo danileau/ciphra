@@ -59,8 +59,24 @@
 	let collapsed: Record<string, boolean> = {};
 	function toggleSection(id: string) { collapsed[id] = !collapsed[id]; }
 
-	// CIPH-420b — Section-jump nav (mobile)
-	const sectionIds = ['symptoms', 'episodes', 'vitals', 'triggers', 'notes'];
+	// CIPH-420b — Section-jump nav (mobile).
+	// CIPH-904 — `medications` and `phaseOverride` were missing from the
+	// chip bar; medications had been added without updating this constant
+	// since CIPH-411b, and phaseOverride since CIPH-886. Cycle-cohort users
+	// who needed to override phase had to scroll past 4 cards to find it.
+	// Now driven reactively by the blueprint so a cohort with no
+	// medications doesn't render a dead chip pointing to nowhere.
+	$: sectionIds = (() => {
+		const ids: string[] = [];
+		if (visibleSymptomGroups.length > 0) ids.push('symptoms');
+		if (bp.episodeTypes.length > 0) ids.push('episodes');
+		if (visibleVitals.length > 0) ids.push('vitals');
+		if (bp.medications.length > 0) ids.push('medications');
+		if (visibleTriggers.length > 0) ids.push('triggers');
+		if (showPhaseOverride) ids.push('phaseOverride');
+		ids.push('notes');
+		return ids;
+	})();
 	let activeSection = 'symptoms';
 	let sectionObserver: IntersectionObserver | null = null;
 
@@ -105,6 +121,12 @@
 	let deleting = false;
 	let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
 	let hasChanges = false;
+	// CIPH-904 — Persistent save timestamp. The 2.5 s saved-flash gave
+	// users no signal that the form was still saved after the asterisk
+	// pulse faded. Now we keep the time visible until the user starts
+	// editing again (or until we get a fresher save). Initialised from
+	// `existingDoc.serverCreatedAt` on mount; updated on each save.
+	let lastSavedAt: Date | null = null;
 
 	let symptoms: Record<string, boolean> = {};
 	let episodes: Record<string, number> = {};
@@ -246,6 +268,10 @@
 
 	function loadExistingEntry() {
 		if (!existingDoc) return;
+		// CIPH-904 — initialise the persistent save stamp from the doc's
+		// server-created time. Best signal we have absent an `updatedAt`
+		// field; further saves overwrite this in `saveEntry`.
+		try { lastSavedAt = new Date(existingDoc.serverCreatedAt); } catch { /* keep null */ }
 		const d = existingDoc.data;
 		if (d.symptoms) symptoms = { ...symptoms, ...d.symptoms };
 		if (d.episodes) episodes = { ...episodes, ...d.episodes };
@@ -288,8 +314,14 @@
 		saving = false;
 		saved = true;
 		hasChanges = false;
+		lastSavedAt = new Date();
 		setTimeout(() => { saved = false; }, 2500);
 	}
+
+	// CIPH-904 — formatted persistent save stamp for the save bar.
+	$: savedStamp = lastSavedAt
+		? lastSavedAt.toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit' })
+		: '';
 
 	async function handleDeleteConfirmed() {
 		deleting = true;
@@ -530,7 +562,7 @@
 			{#if bp.medications.length > 0}
 				{@const standardMeds = bp.medications.filter(m => !m.asNeeded)}
 				{@const asNeededMeds = bp.medications.filter(m => m.asNeeded)}
-				<section class="log-card log-card--olive">
+				<section id="section-medications" class="log-card log-card--olive">
 					<button class="log-section-toggle" on:click={() => toggleSection('medications')}>
 						<h2 class="log-section-header">{$t('protocol.medications')}</h2>
 						<svg class="log-section-chevron" class:log-section-chevron--open={!collapsed['medications']} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -650,12 +682,17 @@
 							</div>
 						{/if}
 						{#if episodes[ep.id] > 0}
+							<!-- CIPH-904 — episode-notes input gets a real <label>
+								 instead of placeholder-only. Placeholder disappears
+								 on focus; mobile users tapping into a 4-character
+								 input then lost context. -->
 							<div class="log-episode-detail" style="margin-top: 4px">
 								<div class="log-episode-detail-field" style="flex: 1">
+									<label class="log-detail-label" for="ep-notes-{ep.id}">{$t('protocol.episode_notes')}</label>
 									<input
+										id="ep-notes-{ep.id}"
 										type="text"
 										class="log-detail-input"
-										placeholder={$t('protocol.episode_notes')}
 										bind:value={episodeNotes[ep.id]}
 										on:input={markChanged}
 									/>
@@ -813,7 +850,7 @@
 
 			<!-- ─── CIPH-886 Phase-override card (cycle cohort only) ─── -->
 			{#if showPhaseOverride}
-				<section class="log-card log-card--ochre">
+				<section id="section-phaseOverride" class="log-card log-card--ochre">
 					<button class="log-section-toggle" on:click={() => toggleSection('phaseOverride')}>
 						<h2 class="log-section-header">{$t('cycle.phase_override_title')}</h2>
 						<svg class="log-section-chevron" class:log-section-chevron--open={!collapsed['phaseOverride']} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -908,25 +945,32 @@
 				>
 					<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
-				{#if saved}
-					<div class="log-saved-feedback" transition:fade={{ duration: 300 }}>
-						<Asterisk size={24} mode="saved" color="olive" />
-						<span>{$t('protocol.auto_saved')}</span>
-					</div>
-				{:else}
-					<button
-						on:click={saveEntry}
-						disabled={saving}
-						class="btn-primary log-btn-save"
-					>
-						{#if saving}
-							<Asterisk size={18} spin color="white" />
-							{$t('common.loading')}
-						{:else}
-							{$t('protocol.update')}
-						{/if}
-					</button>
-				{/if}
+				<!-- CIPH-904 — persistent save stamp + transient asterisk flash.
+					 The flash plays for 2.5s after each save; once it fades, the
+					 stamp keeps showing "Gespeichert · 14:32" so the user always
+					 knows their data is saved without watching for a pulse. -->
+				<div class="log-save-status" aria-live="polite">
+					{#if saved}
+						<div class="log-saved-feedback" transition:fade={{ duration: 300 }}>
+							<Asterisk size={20} mode="saved" color="olive" />
+							<span>{$t('protocol.auto_saved')}</span>
+						</div>
+					{:else if savedStamp}
+						<span class="log-saved-stamp">{$t('protocol.saved_at', { time: savedStamp })}</span>
+					{/if}
+				</div>
+				<button
+					on:click={saveEntry}
+					disabled={saving}
+					class="btn-primary log-btn-save"
+				>
+					{#if saving}
+						<Asterisk size={18} spin color="white" />
+						{$t('common.loading')}
+					{:else}
+						{$t('protocol.update')}
+					{/if}
+				</button>
 			{/if}
 		{:else}
 			{#if saved}
@@ -1648,8 +1692,6 @@
 		align-items: center;
 		justify-content: center;
 		gap: 8px;
-		padding: 12px;
-		width: 100%;
 		font-size: 14px;
 		font-weight: 500;
 		color: var(--olive);
@@ -1659,6 +1701,22 @@
 		0% { transform: scale(0.95); opacity: 0; }
 		50% { transform: scale(1.02); }
 		100% { transform: scale(1); opacity: 1; }
+	}
+	/* CIPH-904 — save-status slot. Holds the persistent stamp OR the
+	   transient asterisk-flash. Same width either way so the save button
+	   on the right doesn't jump when the flash appears/disappears. */
+	.log-save-status {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 32px;
+		font-size: 12px;
+		color: var(--text-muted);
+		font-variant-numeric: tabular-nums;
+	}
+	.log-saved-stamp {
+		font-weight: 500;
 	}
 
 	/* ─── CIPH-302 Incomplete-entry CTA ─── */

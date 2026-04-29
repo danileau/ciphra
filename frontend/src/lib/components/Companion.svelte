@@ -146,6 +146,12 @@
 		{ logged: complianceLogged, total: complianceTotal }
 	);
 	$: complianceAccent = complianceTone === 'high' ? 'var(--olive)' : complianceTone === 'mid' ? 'var(--ochre)' : 'var(--text-muted)';
+	// CIPH-904 — Suppress the compliance card for new users. Day-1 users
+	// would otherwise read "0% logged in 30 days" as a failure on first
+	// visit. Threshold = 3 entry docs (~3 days of use); after that, the
+	// percentage is meaningful even at "low" tones.
+	$: entryDocCount = allDocs.filter((d) => d.data?.type === 'entry').length;
+	$: complianceVisible = entryDocCount >= 3;
 
 	// CIPH-881b — Count rescue-medication events in the current month so the
 	// dashboard rail can render a "Rescue meds this month" counter card. Only
@@ -500,6 +506,7 @@
 				{complianceTone}
 				{complianceMessage}
 				{complianceAccent}
+				{complianceVisible}
 				{rescueMedsThisMonth}
 				canExport={!!bp && allDocs.length > 0}
 				{todayEntries}
