@@ -160,7 +160,18 @@
 	$: isPrivate = entry.data?.type === 'diary' || entry.data?.private === true;
 
 	$: symIdsRaw = bp ? Object.entries(entry.data.symptoms || {}).filter(([k, v]) => v && !POSITIVE_MARKERS.has(k)).map(([k]) => k) : [];
-	$: epEntries = bp ? Object.entries(entry.data.episodes || entry.data.seizures || {}).filter(([, n]) => Number(n) > 0) : [];
+	$: epEntriesRaw = bp ? Object.entries(entry.data.episodes || entry.data.seizures || {}).filter(([, n]) => Number(n) > 0) : [];
+	// CIPH-907c — When hideType is true the parent surface (journal day-
+	// header, calendar bottom sheet) shows a phase tag for active multiDay
+	// episodes. Rendering them again as chips here is duplication. Filter
+	// multiDay episodes out for those surfaces; counter episodes (which
+	// carry useful "Nx" count info) still render.
+	$: epEntries = (hideType && bp)
+		? epEntriesRaw.filter(([id]) => {
+				const ep = bp.episodeTypes.find((e) => e.id === id);
+				return !ep?.multiDay;
+			})
+		: epEntriesRaw;
 	$: trigIdsRaw = bp ? (Array.isArray(entry.data.triggers) ? entry.data.triggers : Object.entries(entry.data.triggers || {}).filter(([, v]) => v).map(([k]) => k)) : [];
 	$: vitalEntries = bp ? Object.entries(entry.data.vitals || {}).filter(([, v]) => v != null && String(v).trim() !== '' && String(v).trim() !== '0') : [];
 
@@ -283,17 +294,20 @@
 	{#if showDate}
 		<span class="text-xs font-normal" style="color: var(--text-muted)">{hideType && !isPrivate ? '' : ' · '}{formatDate(entry)}</span>
 	{/if}
-	{#if !compact && entry.data.type === 'entry' && (symIds.length > 0 || epEntries.length > 0 || vitalEntries.length > 0)}
-		{@const summaryLeading = !hideType || isPrivate || showDate}
+	<!-- CIPH-907c — Summary count line ("· 4 Symptome · 1 Episoden · 2
+		 Vitals") suppressed when hideType is true. The journal's day-
+		 header phase tag + the chips below already say everything; the
+		 summary was a third reference to the same data. -->
+	{#if !compact && !hideType && entry.data.type === 'entry' && (symIds.length > 0 || epEntries.length > 0 || vitalEntries.length > 0)}
 		<span class="text-xs font-normal" style="color: var(--text-muted)">
 			{#if symIds.length > 0}
-				{summaryLeading ? ' · ' : ''}{symIds.length} {$t('protocol.symptoms')}
+				· {symIds.length} {$t('protocol.symptoms')}
 			{/if}
 			{#if epEntries.length > 0}
-				{summaryLeading || symIds.length > 0 ? ' · ' : ''}{epEntries.reduce((s, [, n]) => s + Number(n), 0)} {$t('protocol.episodes')}
+				· {epEntries.reduce((s, [, n]) => s + Number(n), 0)} {$t('protocol.episodes')}
 			{/if}
 			{#if vitalEntries.length > 0}
-				{summaryLeading || symIds.length > 0 || epEntries.length > 0 ? ' · ' : ''}{vitalEntries.length} {$t('protocol.vitals')}
+				· {vitalEntries.length} {$t('protocol.vitals')}
 			{/if}
 		</span>
 	{/if}

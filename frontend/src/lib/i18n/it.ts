@@ -182,6 +182,7 @@ export default {
 	'companion.top_symptoms_max': 'Top sintomi — storico completo',
 	'reports.day_coverage': 'Copertura giorni',
 	'reports.glance_title': "Questo mese a colpo d'occhio",
+	'reports.glance_year_title': "Quest'anno a colpo d'occhio",
 	'reports.glance_episodes': 'Episodi',
 	'reports.glance_phase_days': 'Giorni in fase',
 	'reports.glance_top_symptoms': 'Sintomi principali',

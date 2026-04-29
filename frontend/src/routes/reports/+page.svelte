@@ -404,20 +404,48 @@
 
 	$: yearDaysLogged = yearDocs.length;
 
-	$: yearMostFrequentSymptom = (() => {
-		if (!bp || yearDocs.length === 0) return '';
-		let maxCount = 0;
-		let maxLabel = '';
-		for (const g of bp.symptomGroups) {
-			for (const item of g.items) {
-				const count = yearDocs.filter(d => d.data.symptoms?.[item.id]).length;
-				if (count > maxCount) {
-					maxCount = count;
-					maxLabel = isCustomItem(item.id) ? item.label : $t(item.label);
+	// CIPH-909 (year-block) — year-scope counterparts of the month
+	// stat-block. Same shape so the two views read as one product, just
+	// scoped differently. No year-over-year delta — most users have <2y
+	// of data, and the per-month view answers "is it getting better?"
+	// with last-month comparisons already.
+	$: topSymptomsThisYear = (() => {
+		if (!bp?.symptomGroups?.length) return [];
+		const counts: Record<string, number> = {};
+		for (const d of yearDocs) {
+			for (const [k, v] of Object.entries(d.data.symptoms || {})) {
+				if (v && !POSITIVE_MARKERS_REPORTS.has(k)) {
+					counts[k] = (counts[k] || 0) + 1;
 				}
 			}
 		}
-		return maxLabel;
+		const labelMap: Record<string, string> = {};
+		for (const g of bp.symptomGroups) {
+			for (const item of g.items) {
+				if (POSITIVE_MARKERS_REPORTS.has(item.id)) continue;
+				labelMap[item.id] = isCustomItem(item.id) ? item.label : $t(item.label);
+			}
+		}
+		return Object.entries(counts)
+			.sort(([, a], [, b]) => b - a)
+			.slice(0, 3)
+			.map(([id, days]) => ({ id, label: labelMap[id] || id, days }));
+	})();
+
+	$: phaseDaysThisYear = (() => {
+		if (!hasMultiDayPhases || !bp) return 0;
+		const multiIds = bp.episodeTypes.filter((e) => e.multiDay).map((e) => e.id);
+		const days = new Set<string>();
+		for (const d of yearDocs) {
+			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+			for (const id of multiIds) {
+				if (Number(eps[id] || 0) > 0) {
+					days.add(String(d.data.date || ''));
+					break;
+				}
+			}
+		}
+		return days.size;
 	})();
 
 	function getMonthShortName(month: number): string {
@@ -872,21 +900,49 @@
 		</button>
 	</div>
 
-	<!-- Year summary stats -->
-	<div class="rpt-year-stats">
-		<div class="rpt-stat-card">
-			<p class="rpt-stat-num">{yearDaysLogged}</p>
-			<p class="rpt-stat-label">{$t('reports.days_tracked')}</p>
+	<!-- CIPH-909 (year-block) — Year stat block. Same shape as the
+		 month "auf einen Blick" so the two views feel like one product. -->
+	{#if yearDocs.length > 0 && (yearTotalEpisodes > 0 || topSymptomsThisYear.length > 0 || phaseDaysThisYear > 0)}
+		<div class="card mb-4 p-4 rpt-glance">
+			<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('reports.glance_year_title')}</h2>
+			<dl class="rpt-glance-list">
+				{#if yearTotalEpisodes > 0}
+					<div class="rpt-glance-row">
+						<dt class="rpt-glance-label">{$t('reports.glance_episodes')}</dt>
+						<dd class="rpt-glance-value">
+							<span class="rpt-glance-num">{yearTotalEpisodes}</span>
+						</dd>
+					</div>
+				{/if}
+				<div class="rpt-glance-row">
+					<dt class="rpt-glance-label">{$t('reports.days_tracked')}</dt>
+					<dd class="rpt-glance-value">
+						<span class="rpt-glance-num">{yearDaysLogged}</span>
+					</dd>
+				</div>
+				{#if hasMultiDayPhases}
+					<div class="rpt-glance-row">
+						<dt class="rpt-glance-label">{$t('reports.glance_phase_days')}</dt>
+						<dd class="rpt-glance-value">
+							<span class="rpt-glance-num">{phaseDaysThisYear}</span>
+						</dd>
+					</div>
+				{/if}
+				{#if topSymptomsThisYear.length > 0}
+					<div class="rpt-glance-row">
+						<dt class="rpt-glance-label">{$t('reports.glance_top_symptoms')}</dt>
+						<dd class="rpt-glance-value rpt-glance-value--list">
+							{#each topSymptomsThisYear as sym, i}
+								{#if i > 0}<span class="rpt-glance-sep">·</span>{/if}
+								<span class="rpt-glance-sym">{sym.label}</span>
+								<span class="rpt-glance-meta">({$t('reports.glance_n_days', { n: sym.days })})</span>
+							{/each}
+						</dd>
+					</div>
+				{/if}
+			</dl>
 		</div>
-		<div class="rpt-stat-card">
-			<p class="rpt-stat-num rpt-stat-num--danger">{yearTotalEpisodes}</p>
-			<p class="rpt-stat-label">{$t('reports.total_year_episodes')}</p>
-		</div>
-		<div class="rpt-stat-card">
-			<p class="rpt-stat-num rpt-stat-num--ochre">{yearMostFrequentSymptom || '-'}</p>
-			<p class="rpt-stat-label">{$t('protocol.symptoms')}</p>
-		</div>
-	</div>
+	{/if}
 
 	<!-- Year grid (12 months) -->
 	<div class="rpt-year-grid">
@@ -1114,39 +1170,9 @@
 		text-align: center;
 	}
 
-	/* ─── Year stats ─── */
-	.rpt-year-stats {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 12px;
-		margin-bottom: 24px;
-	}
-	.rpt-stat-card {
-		background: var(--surface-card);
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		padding: 16px;
-		text-align: center;
-	}
-	.rpt-stat-num {
-		font-size: 24px;
-		font-weight: 700;
-		color: var(--text-primary);
-		font-variant-numeric: tabular-nums;
-	}
-	.rpt-stat-num--danger {
-		color: var(--danger);
-	}
-	.rpt-stat-num--ochre {
-		font-size: 14px;
-		font-weight: 600;
-		color: var(--ochre);
-	}
-	.rpt-stat-label {
-		font-size: 12px;
-		color: var(--text-muted);
-		margin-top: 4px;
-	}
+	/* CIPH-909 (year-block) — `.rpt-year-stats` / `.rpt-stat-card` /
+	   `.rpt-stat-num` removed: year view now uses the unified
+	   `.rpt-glance-*` stat block (declared above with the month view). */
 
 	/* ─── Year grid ─── */
 	.rpt-year-grid {

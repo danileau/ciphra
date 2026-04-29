@@ -181,6 +181,7 @@ export default {
 	'companion.top_symptoms_max': 'Top symptoms — full history',
 	'reports.day_coverage': 'Day coverage',
 	'reports.glance_title': 'This month at a glance',
+	'reports.glance_year_title': 'This year at a glance',
 	'reports.glance_episodes': 'Episodes',
 	'reports.glance_phase_days': 'Phase days',
 	'reports.glance_top_symptoms': 'Top symptoms',
