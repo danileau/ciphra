@@ -1833,6 +1833,7 @@ export default {
 	// CIPH-301 — Assistant de configuration
 	'setup.step_label': 'Étape {n} sur 4',
 	'setup.skip': 'Passer',
+	'setup.back_to_settings': 'Retour aux paramètres',
 	'setup.complete_button': 'C\'est parti',
 	'setup.target_label': 'Valeur cible personnelle (optionnel)',
 	'setup.target_placeholder': 'p. ex. 140',

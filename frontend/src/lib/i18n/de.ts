@@ -1856,6 +1856,7 @@ export default {
 	// CIPH-301 — Setup wizard (3-screen with skip)
 	'setup.step_label': 'Schritt {n} von 4',
 	'setup.skip': 'Überspringen',
+	'setup.back_to_settings': 'Zurück zu Einstellungen',
 	'setup.complete_button': 'Los gehts',
 	'setup.target_label': 'Persönlicher Zielwert (optional)',
 	'setup.target_placeholder': 'z.B. 140',

@@ -101,7 +101,6 @@
 
 	onDestroy(() => {
 		if (sectionObserver) sectionObserver.disconnect();
-		if (autoSaveTimer) clearTimeout(autoSaveTimer);
 	});
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -119,7 +118,10 @@
 	let saved = false;
 	let confirmDelete = false;
 	let deleting = false;
-	let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+	// CIPH-905 — autosave removed. The 3 s debounced background save
+	// hid the "saved vs not saved" state from users who couldn't tell
+	// when they were "done." The Save button is now the explicit
+	// contract; `hasChanges` drives its enabled/disabled state.
 	let hasChanges = false;
 	// CIPH-904 — Persistent save timestamp. The 2.5 s saved-flash gave
 	// users no signal that the form was still saved after the asterisk
@@ -188,11 +190,11 @@
 	];
 
 	function markChanged() {
+		// CIPH-905 — autosave removed. This now only flips the dirty
+		// flag; users save explicitly via the save bar. The persistent
+		// "Gespeichert · 14:32" stamp + the Save button's enabled state
+		// are the affordances that replace the silent debounce.
 		hasChanges = true;
-		if (autoSaveTimer) clearTimeout(autoSaveTimer);
-		autoSaveTimer = setTimeout(() => {
-			if (hasChanges && !saving) saveEntry();
-		}, 3000);
 	}
 
 	function copyPreviousDay() {
@@ -961,7 +963,7 @@
 				</div>
 				<button
 					on:click={saveEntry}
-					disabled={saving}
+					disabled={saving || !hasChanges}
 					class="btn-primary log-btn-save"
 				>
 					{#if saving}
@@ -981,7 +983,7 @@
 			{:else}
 				<button
 					on:click={saveEntry}
-					disabled={saving}
+					disabled={saving || !hasChanges}
 					class="btn-primary log-btn-save log-btn-save--full"
 				>
 					{#if saving}

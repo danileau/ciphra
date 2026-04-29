@@ -1834,6 +1834,7 @@ export default {
 	// CIPH-301 — Assistente di configurazione
 	'setup.step_label': 'Passo {n} di 4',
 	'setup.skip': 'Salta',
+	'setup.back_to_settings': 'Torna alle impostazioni',
 	'setup.complete_button': 'Andiamo',
 	'setup.target_label': 'Valore obiettivo personale (opzionale)',
 	'setup.target_placeholder': 'es. 140',

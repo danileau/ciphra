@@ -123,15 +123,17 @@ describe('CIPH-850 EntryComposer contract', () => {
 		expect(payload.private).toBeUndefined();
 	});
 
-	it('auto-saves 3s after a change', async () => {
+	it('CIPH-905 — autosave is removed; the Save button becomes the explicit contract', async () => {
 		vi.useFakeTimers({ shouldAdvanceTime: true });
 		const props = baseProps();
 		const { container } = render(EntryComposer, { props });
 		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
-		await fireEvent.input(ta, { target: { value: 'auto-save me' } });
+		await fireEvent.input(ta, { target: { value: 'no autosave please' } });
+		// The 3-s debounce that used to fire onSave is gone. Advance the
+		// clock well past the old window — onSave must NOT have been
+		// called automatically.
+		vi.advanceTimersByTime(5000);
 		expect(props.onSave).not.toHaveBeenCalled();
-		vi.advanceTimersByTime(3001);
-		await waitFor(() => expect(props.onSave).toHaveBeenCalledTimes(1));
 	});
 
 	it('Ctrl+S triggers immediate save', async () => {

@@ -246,9 +246,17 @@
 			const u = new URL(window.location.href);
 			if (u.searchParams.get('customize') === '1') {
 				step = 2;
+				// CIPH-908 — remember we entered via settings so we can
+				// render a back-to-settings link.
+				isCustomizeMode = true;
 			}
 		}
 	});
+
+	// CIPH-908 — true when the user reached /setup via "Profil anpassen"
+	// from /settings (not the initial post-signup setup). Drives the
+	// "← Zurück zu Einstellungen" link in the wizard header.
+	let isCustomizeMode = false;
 
 	function selectPreset(preset: PresetInfo) {
 		working = JSON.parse(JSON.stringify(preset.blueprint));
@@ -389,6 +397,23 @@
 <main class="min-h-screen pb-12" style="background: var(--surface)">
 	<!-- Header with step progress + skip -->
 	<div style="background: var(--surface-card); border-bottom: 1px solid var(--border)">
+		{#if isCustomizeMode}
+			<!-- CIPH-908 — "Back to settings" only when reached via the
+				 ?customize=1 deep-link (not the initial post-signup setup,
+				 where there's no settings yet to go back to). -->
+			<div class="max-w-2xl mx-auto px-4 pt-4">
+				<a
+					href="/settings?tab=tracking"
+					class="inline-flex items-center gap-1.5 text-sm font-medium min-h-[36px]"
+					style="color: var(--text-secondary)"
+				>
+					<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+						<polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
+					{$t('setup.back_to_settings')}
+				</a>
+			</div>
+		{/if}
 		<div class="max-w-2xl mx-auto px-4 py-5 flex items-center justify-between gap-3">
 			<div class="flex-1 min-w-0">
 				<h1 class="text-lg font-bold truncate" style="color: var(--text-primary)">{$t('setup.title')}</h1>
