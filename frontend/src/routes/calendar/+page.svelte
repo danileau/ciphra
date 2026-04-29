@@ -7,8 +7,9 @@
 	import { goto } from '$app/navigation';
 	import { fade, fly } from 'svelte/transition';
 	import Asterisk from '$lib/components/Asterisk.svelte';
-	import EntryPreview from '$lib/components/EntryPreview.svelte';
-	import ConfirmDelete from '$lib/components/ConfirmDelete.svelte';
+	// CIPH-910 — EntryPreview + ConfirmDelete dropped from calendar after
+	// the day-detail panel switched to the new <DayDetail> sectioned view.
+	import DayDetail from '$lib/components/DayDetail.svelte';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import {
 		computeCycleAnchor,
@@ -20,7 +21,6 @@
 	let selectedDate: string | null = null;
 	let currentYear = new Date().getFullYear();
 	let currentMonth = new Date().getMonth();
-	let confirmDeleteId: number | null = null;
 
 	$: bp = $resolvedBlueprint;
 
@@ -238,22 +238,11 @@
 			currentMonth = newM;
 			focusedDay = d.getDate();
 		}
-		confirmDeleteId = null;
 	}
-
-	function handleEditEntry(doc: CiphraDocument) {
-		const date = String(doc.data.date || selectedDate || '');
-		if (doc.data.type === 'entry') {
-			goto(`/log/${date}`);
-		} else {
-			goto(`/journal`);
-		}
-	}
-
-	async function handleDeleteEntry(id: number) {
-		await documents.remove(id);
-		confirmDeleteId = null;
-	}
+	// CIPH-910 — handleEditEntry / handleDeleteEntry / confirmDeleteId
+	// removed: the day-detail panel is render-only now. Entry editing
+	// goes through the panel-header "Bearbeiten →" link to /log/{date};
+	// events and diaries are edited via the journal moment-modal.
 
 	$: weekdays = Array.from({ length: 7 }, (_, i) => {
 		const d = new Date(2024, 0, i + 1); // Jan 1 2024 is Monday
@@ -542,7 +531,7 @@
 {#if selectedDate}
 	<button
 		class="fixed inset-0 z-[55] bg-black/40 backdrop-blur-sm"
-		on:click={() => { selectedDate = null; confirmDeleteId = null; }}
+		on:click={() => { selectedDate = null; }}
 		transition:fade={{ duration: 200 }}
 		aria-label={$t('common.close')}
 	></button>
@@ -617,46 +606,15 @@
 			{/if}
 
 			{#if selectedDayDocs.length > 0}
-				<div class="space-y-3">
-					{#each selectedDayDocs as doc}
-						<div
-							class="pl-3 py-2 rounded-r-lg"
-							style="border-left: 4px solid {doc.data.type === 'entry' ? 'var(--olive)' : 'var(--ochre)'}; background: var(--surface-muted)"
-						>
-							<div class="flex items-start justify-between gap-2">
-								<div class="flex-1 min-w-0">
-									<EntryPreview entry={doc} {bp} showDate={false} compact={true} hideType={true} recentDocs={$documents} />
-								</div>
-								<div class="flex items-center gap-0.5 shrink-0">
-									{#if confirmDeleteId === doc.id}
-										<ConfirmDelete
-											padding="p-1.5"
-											onConfirm={() => handleDeleteEntry(doc.id)}
-											onCancel={() => { confirmDeleteId = null; }}
-										/>
-									{:else}
-										<button
-											on:click={() => handleEditEntry(doc)}
-											class="p-1.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-											style="color: var(--text-muted)"
-											aria-label={$t('common.edit')}
-										>
-											<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-										</button>
-										<button
-											on:click={() => { confirmDeleteId = doc.id; }}
-											class="p-1.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-											style="color: var(--text-muted)"
-											aria-label={$t('common.delete')}
-										>
-											<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6" stroke-width="2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2"/></svg>
-										</button>
-									{/if}
-								</div>
-							</div>
-						</div>
-					{/each}
-				</div>
+				<!-- CIPH-910 — DayDetail replaces the per-doc EntryPreview
+					 stack. Sectioned, labeled view of the day's full data:
+					 PHASE / EPISODEN / SYMPTOME / AUSLÖSER / VITALS / NOTIZEN
+					 / EREIGNISSE / TAGEBUCH. Per-doc edit/delete icons are
+					 gone — the panel-header "Bearbeiten" link routes to
+					 /log/{date} for entry editing; events and diaries are
+					 edited via the journal moment-modal. Matches the
+					 "delete should be hidden" preference (CIPH-902). -->
+				<DayDetail docs={selectedDayDocs} {bp} />
 			{:else}
 				<div class="text-center py-4">
 					<div class="mb-3 flex justify-center">
@@ -691,14 +649,11 @@
 {/if}
 
 <style>
-	button.p-2:hover,
-	button.p-1\.5:hover {
+	button.p-2:hover {
 		background: var(--surface-muted);
 	}
-	button[aria-label]:last-child:hover {
-		color: var(--danger) !important;
-		background: rgba(var(--danger-rgb), 0.05) !important;
-	}
+	/* CIPH-910 — per-doc delete-on-hover selector dropped: the day-detail
+	   panel no longer renders per-doc icon buttons. */
 	a[style*="--brand"]:hover {
 		text-decoration: underline;
 	}

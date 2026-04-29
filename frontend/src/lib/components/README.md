@@ -212,6 +212,14 @@ route kind.
   its own edit/delete affordances, symptom-chip rendering,
   condition-icon mapping, date chrome. This is the one card
   primitive for diary content.
+- **DayDetail.svelte** (CIPH-910) — calendar-side-panel sectioned
+  day view. Aggregates everything logged on a single date into
+  labeled clinical sections (PHASE / EPISODEN / SYMPTOME /
+  AUSLÖSER / VITALS / NOTIZEN / EREIGNISSE / TAGEBUCH) — text
+  list per section, no chip-jumble. Render-only: edit/delete
+  is the calendar's concern (panel-header link → `/log/{date}`
+  for entries; events/diaries use the journal moment-modal).
+  Used only by `routes/calendar/+page.svelte`.
 
 ### Empty states (CIPH-893)
 

@@ -20,8 +20,12 @@ const ROUTE = resolve(__dirname, '+page.svelte');
 const SRC = readFileSync(ROUTE, 'utf8');
 
 describe('CIPH-880 calendar day-click sheet — typed-rendering guard', () => {
-	it('renders entries through <EntryPreview>', () => {
-		expect(SRC).toMatch(/<EntryPreview\b/);
+	it('renders the day through <DayDetail> (CIPH-910 — was <EntryPreview>)', () => {
+		// CIPH-910 — the per-doc EntryPreview stack was replaced by
+		// the sectioned <DayDetail> view. Either component is a
+		// typed-primitive consumer; what matters is that the sheet
+		// never falls back to raw string concatenation.
+		expect(SRC).toMatch(/<(EntryPreview|DayDetail)\b/);
 	});
 
 	it('does not concatenate vital strings with the · separator', () => {
