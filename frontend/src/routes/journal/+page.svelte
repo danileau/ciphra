@@ -478,12 +478,12 @@
 													{#if href}
 														<a href={href} class="journal-card" style="border-left-color: {railHex}">
 															{#if doc.data.time}<span class="journal-card-time">{doc.data.time}</span>{/if}
-															<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
+															<EntryPreview entry={doc} {bp} showDate={false} hideType={true} inStreak={true} recentDocs={$documents} />
 														</a>
 													{:else}
 														<button type="button" on:click={() => openMoment(doc)} class="journal-card journal-card--button" style="border-left-color: {railHex}">
 															{#if doc.data.time}<span class="journal-card-time">{doc.data.time}</span>{/if}
-															<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
+															<EntryPreview entry={doc} {bp} showDate={false} hideType={true} inStreak={true} recentDocs={$documents} />
 														</button>
 													{/if}
 												{/each}
@@ -720,15 +720,20 @@
 		position: relative;
 		width: 14px;
 		border-right: 2px solid var(--streak-color);
-		margin-right: 0;
 	}
-	/* Corner ticks pointing right, completing the `{`-style silhouette. */
+	/* Corner ticks at top + bottom, attached to the rail's right edge,
+	   extending OUT to the right (toward the days), forming a `[`-style
+	   silhouette that "contains" the day-cards on its right. The earlier
+	   `right: -2px; width: 6px` placed the ticks mostly INSIDE the rail
+	   so they read as facing-left — bug. `left: 100%` anchors the tick's
+	   left edge at the rail's right content edge so it sits fully on the
+	   gap-side of the border. */
 	.journal-streak-rail::before,
 	.journal-streak-rail::after {
 		content: '';
 		position: absolute;
-		right: -2px;
-		width: 6px;
+		left: 100%;
+		width: 8px;
 		height: 2px;
 		background: var(--streak-color);
 	}

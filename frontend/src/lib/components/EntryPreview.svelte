@@ -26,6 +26,15 @@
 	 *  day-detail panel, future journal redesign), so the type isn't
 	 *  signalled twice. The day-summary chips below carry the content. */
 	export let hideType: boolean = false;
+	/** CIPH-911b — when true, ALWAYS suppress multiDay episode chips
+	 *  regardless of other content. Set when this card is rendered
+	 *  inside a journal closed-phase streak group: the streak header
+	 *  ("Gemischte Episode · 4 Tage") + the bracket carry the phase
+	 *  identity, so a "1× Gemischte Episode" chip on each day inside
+	 *  the bracket is redundant. The card may end up empty for days
+	 *  with only the multiDay logged — that's acceptable here because
+	 *  the streak bracket is the meaningful chrome. */
+	export let inStreak: boolean = false;
 	/** Optional. Used to rank chips by frequency over the past 30 days
 	 *  (CIPH-413). When omitted, chips render in source order. */
 	export let recentDocs: CiphraDocument[] | undefined = undefined;
@@ -183,7 +192,7 @@
 			return !ep?.multiDay;
 		})
 	);
-	$: epEntries = (hideType && bp && hasNonMultiDayContent)
+	$: epEntries = (hideType && bp && (hasNonMultiDayContent || inStreak))
 		? epEntriesRaw.filter(([id]) => {
 				const ep = bp.episodeTypes.find((e) => e.id === id);
 				return !ep?.multiDay;
