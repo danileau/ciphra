@@ -298,6 +298,30 @@
 		return total;
 	}
 
+	// CIPH-912 — Counter-only episode sum (excludes multiDay). For
+	// cohorts where every episode type is multiDay (cycle: flare;
+	// IBD: flare; MS: relapse...), `totalEpisodes` and `phaseDays`
+	// resolve to the same number (one increment per active day, max),
+	// which made the 3-card "Episoden gesamt" stat read identical to
+	// the glance "Phase-Tage" — confusing redundancy. Splitting the
+	// two clarifies the model: counters are acute incidents, phase-
+	// days span a state. Each owns one slot in the report.
+	function counterOnlyForMonth(prefix: string): number {
+		if (!bp) return 0;
+		let total = 0;
+		for (const d of exportableDocs) {
+			if (d.data?.type !== 'entry') continue;
+			if (!String(d.data.date || '').startsWith(prefix)) continue;
+			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+			for (const ep of bp.episodeTypes) {
+				if (ep.multiDay) continue;
+				total += Number(eps[ep.id] || 0);
+			}
+		}
+		return total;
+	}
+	$: hasCounterEpisodes = !!bp?.episodeTypes?.some((e) => !e.multiDay);
+
 	$: prevMonthPrefix = (() => {
 		const d = new Date(currentDate + 'T12:00:00');
 		const prev = new Date(d.getFullYear(), d.getMonth() - 1, 1);
@@ -306,6 +330,10 @@
 	$: prevMonthEpisodes = bp ? totalEpisodesForMonth(prevMonthPrefix) : 0;
 	$: episodeDelta = totalEpisodes - prevMonthEpisodes;
 	$: episodeTrend = episodeDelta > 0 ? 'up' : episodeDelta < 0 ? 'down' : 'flat';
+	// CIPH-912 — counter-only stats for the 3-card middle slot.
+	$: currentMonthPrefix = currentDate.slice(0, 7);
+	$: counterEpisodesThisMonth = bp ? counterOnlyForMonth(currentMonthPrefix) : 0;
+	$: counterEpisodesThisYear = bp ? counterOnlyForMonth(String(currentYear)) : 0;
 
 	// Top 3 symptoms this month by day count. Tabular ranked list — much
 	// more skimmable than a horizontal bar chart, and it's the format
@@ -466,6 +494,7 @@
 		: 0;
 	$: scopedTopSymptoms = viewMode === 'month' ? topSymptomsThisMonth : topSymptomsThisYear;
 	$: scopedPhaseDays = viewMode === 'month' ? phaseDaysThisMonth : phaseDaysThisYear;
+	$: scopedCounterEpisodes = viewMode === 'month' ? counterEpisodesThisMonth : counterEpisodesThisYear;
 
 	function getMonthShortName(month: number): string {
 		const d = new Date(2024, month, 1);
@@ -588,16 +617,34 @@
 		</div>
 	{/if}
 
-	<!-- Summary stats (scoped — month or year). -->
+	<!-- Summary stats (scoped — month or year).
+		 CIPH-912 — Middle slot adapts to the cohort: cohorts with
+		 counter episodes (epilepsy, migraine, bipolar) show "Episoden
+		 gesamt"; cohorts with only multiDay episodes (cycle, MS, IBD)
+		 show "Phase-Tage" (since totalEpisodes would equal phaseDays —
+		 confusing redundancy). The glance block below drops both rows
+		 and keeps only top-symptoms (those are unique to glance). -->
 	<div class="grid grid-cols-3 gap-3 mb-6">
 		<div class="card p-4 text-center">
 			<p class="text-2xl font-bold text-slate-900">{scopedDaysLogged}</p>
 			<p class="text-xs text-slate-500 mt-1">{$t('pdf.days_logged')}</p>
 		</div>
-		<div class="card p-4 text-center">
-			<p class="text-2xl font-bold" style="color: var(--danger)">{scopedTotalEpisodes}</p>
-			<p class="text-xs text-slate-500 mt-1">{$t('pdf.total_episodes')}</p>
-		</div>
+		{#if hasCounterEpisodes}
+			<div class="card p-4 text-center">
+				<p class="text-2xl font-bold" style="color: var(--danger)">{scopedCounterEpisodes}</p>
+				<p class="text-xs text-slate-500 mt-1">{$t('pdf.total_episodes')}</p>
+			</div>
+		{:else if hasMultiDayPhases}
+			<div class="card p-4 text-center">
+				<p class="text-2xl font-bold" style="color: var(--ochre)">{scopedPhaseDays}</p>
+				<p class="text-xs text-slate-500 mt-1">{$t('reports.glance_phase_days')}</p>
+			</div>
+		{:else}
+			<div class="card p-4 text-center">
+				<p class="text-2xl font-bold" style="color: var(--danger)">{scopedTotalEpisodes}</p>
+				<p class="text-xs text-slate-500 mt-1">{$t('pdf.total_episodes')}</p>
+			</div>
+		{/if}
 		<div class="card p-4 text-center">
 			<p class="text-2xl font-bold text-brand">{scopedCoverage}%</p>
 			<p class="text-xs text-slate-500 mt-1">{$t('reports.coverage')}</p>
@@ -730,44 +777,31 @@
 		</div>
 	</div>
 
-	<!-- CIPH-909 (v2 + year-parity) — "auf einen Blick" stat block. Each
-		 line is a clinical sentence the user can take to their doctor.
-		 Renders only when there's something to say. Year mode skips the
-		 month-over-month delta (most users have <2y of data). -->
-	{#if scopedDocs.length > 0 && (scopedTotalEpisodes > 0 || scopedTopSymptoms.length > 0 || scopedPhaseDays > 0)}
+	<!-- CIPH-909 (v3) — "auf einen Blick" stat block. After the
+		 3-card row split counter-episodes vs phase-days into mutually-
+		 exclusive slots, the glance no longer repeats those numbers.
+		 What's left here: month-over-month trend (delta) + top
+		 symptoms ranked. Renders only when there's content. -->
+	{#if scopedDocs.length > 0 && (scopedTopSymptoms.length > 0 || (viewMode === 'month' && (prevMonthEpisodes > 0 || scopedTotalEpisodes > 0)))}
 		<div class="card mb-4 p-4 rpt-glance">
 			<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">
 				{viewMode === 'month' ? $t('reports.glance_title') : $t('reports.glance_year_title')}
 			</h2>
 			<dl class="rpt-glance-list">
-				{#if scopedTotalEpisodes > 0 || (viewMode === 'month' && prevMonthEpisodes > 0)}
+				{#if viewMode === 'month' && (prevMonthEpisodes > 0 || scopedTotalEpisodes > 0)}
 					<div class="rpt-glance-row">
-						<dt class="rpt-glance-label">{$t('reports.glance_episodes')}</dt>
+						<dt class="rpt-glance-label">{$t('reports.glance_trend')}</dt>
 						<dd class="rpt-glance-value">
-							<span class="rpt-glance-num">{scopedTotalEpisodes}</span>
-							{#if viewMode === 'month' && (prevMonthEpisodes > 0 || scopedTotalEpisodes > 0)}
-								<span class="rpt-glance-delta rpt-glance-delta--{episodeTrend}">
-									{#if episodeTrend === 'up'}↗{:else if episodeTrend === 'down'}↘{:else}→{/if}
-									{#if episodeTrend === 'down'}
-										{$t('reports.glance_delta_down', { delta: Math.abs(episodeDelta), prev: prevMonthEpisodes })}
-									{:else if episodeTrend === 'up'}
-										{$t('reports.glance_delta_up', { delta: Math.abs(episodeDelta), prev: prevMonthEpisodes })}
-									{:else}
-										{$t('reports.glance_delta_flat', { prev: prevMonthEpisodes })}
-									{/if}
-								</span>
-							{/if}
-						</dd>
-					</div>
-				{/if}
-				{#if hasMultiDayPhases}
-					<div class="rpt-glance-row">
-						<dt class="rpt-glance-label">{$t('reports.glance_phase_days')}</dt>
-						<dd class="rpt-glance-value">
-							<span class="rpt-glance-num">{scopedPhaseDays}</span>
-							{#if viewMode === 'month'}
-								<span class="rpt-glance-meta">{$t('common.of_n_days', { n: scopedDaysInWindow })}</span>
-							{/if}
+							<span class="rpt-glance-delta rpt-glance-delta--{episodeTrend}">
+								{#if episodeTrend === 'up'}↗{:else if episodeTrend === 'down'}↘{:else}→{/if}
+								{#if episodeTrend === 'down'}
+									{$t('reports.glance_delta_down', { delta: Math.abs(episodeDelta), prev: prevMonthEpisodes })}
+								{:else if episodeTrend === 'up'}
+									{$t('reports.glance_delta_up', { delta: Math.abs(episodeDelta), prev: prevMonthEpisodes })}
+								{:else}
+									{$t('reports.glance_delta_flat', { prev: prevMonthEpisodes })}
+								{/if}
+							</span>
 						</dd>
 					</div>
 				{/if}

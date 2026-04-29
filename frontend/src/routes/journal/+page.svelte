@@ -454,6 +454,15 @@
 								 phase tags are suppressed inside the group (the rail
 								 label carries the phase identity). -->
 							<div class="journal-streak-group" style="--streak-color: {item.streak.color}">
+								<!-- Header banner above the grouped days. Carries the
+									 phase identity + day count once for the whole run.
+									 The vertical rail to the LEFT of the days is decoration
+									 (aria-hidden); semantic header lives in this <p>. -->
+								<p class="journal-streak-header">
+									<span class="journal-streak-name">{isCustomItem(item.streak.epId) ? item.streak.label : $t(item.streak.label)}</span>
+									<span class="journal-streak-meta">· {$t('reports.glance_n_days', { n: item.streak.dayCount })}</span>
+								</p>
+								<aside class="journal-streak-rail" aria-hidden="true"></aside>
 								<div class="journal-streak-days">
 									{#each item.days as day (day.dayKey)}
 										{@const dh = formatDayHeader(day.dayKey)}
@@ -482,12 +491,6 @@
 										</div>
 									{/each}
 								</div>
-								<aside class="journal-streak-rail">
-									<span class="journal-streak-label">
-										<span class="journal-streak-name">{isCustomItem(item.streak.epId) ? item.streak.label : $t(item.streak.label)}</span>
-										<span class="journal-streak-meta">{$t('reports.glance_n_days', { n: item.streak.dayCount })}</span>
-									</span>
-								</aside>
 							</div>
 						{:else}
 							{@const day = item.day}
@@ -675,62 +678,32 @@
 		border-color: var(--accent);
 	}
 
-	/* CIPH-911 — Closed-phase streak bracket. Wraps consecutive day-cards
-	   that share a closed multiDay phase. Right-side vertical rail in
-	   the phase color, with corner ticks at top + bottom and a centered
-	   label "Manie · 4 Tage". Mobile: bracket shrinks to a thin rail and
-	   the label sits below the days. */
+	/* CIPH-911 — Closed-phase streak bracket.
+	   - Header banner above the run: "{phase name} · 4 Tage" in phase color.
+	   - Left vertical rail in the phase color with top + bottom corner
+	     ticks pointing right (toward the days), forming the `{`-style
+	     bracket silhouette.
+	   - Days flow to the right of the rail.
+	   Mobile (<480px): rail collapses to a thin top hairline; the header
+	   already carries the phase identity. */
 	.journal-streak-group {
-		display: flex;
-		gap: 12px;
-		align-items: stretch;
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 0 12px;
 		margin-bottom: 16px;
-		position: relative;
 	}
-	.journal-streak-days {
-		flex: 1;
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-	}
-	/* Inside a streak group, individual .journal-day blocks lose their
-	   bottom margin so the bracket wraps the run tightly. */
-	.journal-streak-days > .journal-day {
-		margin-bottom: 12px;
-	}
-	.journal-streak-days > .journal-day:last-child {
-		margin-bottom: 0;
-	}
-	.journal-streak-rail {
-		position: relative;
-		width: 24px;
-		flex-shrink: 0;
-		border-left: 2px solid var(--streak-color);
-		padding-left: 8px;
-		display: flex;
-		align-items: center;
-	}
-	/* Top + bottom corner ticks form the curly-brace silhouette without
-	   needing unicode glyphs or rotated SVG. */
-	.journal-streak-rail::before,
-	.journal-streak-rail::after {
-		content: '';
-		position: absolute;
-		left: -2px;
-		width: 8px;
-		height: 2px;
-		background: var(--streak-color);
-	}
-	.journal-streak-rail::before { top: 0; }
-	.journal-streak-rail::after { bottom: 0; }
-	.journal-streak-label {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
+	.journal-streak-header {
+		grid-column: 1 / -1;
 		font-size: 11px;
-		line-height: 1.2;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
 		color: var(--streak-color);
-		white-space: nowrap;
+		margin: 0 0 6px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		align-items: baseline;
 	}
 	.journal-streak-name {
 		font-weight: 600;
@@ -738,27 +711,56 @@
 	.journal-streak-meta {
 		font-weight: 400;
 		color: var(--text-muted);
+		text-transform: none;
+		letter-spacing: normal;
 	}
-	/* Below 480px: stack the label under the days instead of beside,
-	   so the rail still works on a 375px iPhone SE viewport. */
+	.journal-streak-rail {
+		grid-column: 1;
+		grid-row: 2;
+		position: relative;
+		width: 14px;
+		border-right: 2px solid var(--streak-color);
+		margin-right: 0;
+	}
+	/* Corner ticks pointing right, completing the `{`-style silhouette. */
+	.journal-streak-rail::before,
+	.journal-streak-rail::after {
+		content: '';
+		position: absolute;
+		right: -2px;
+		width: 6px;
+		height: 2px;
+		background: var(--streak-color);
+	}
+	.journal-streak-rail::before { top: 0; }
+	.journal-streak-rail::after { bottom: 0; }
+	.journal-streak-days {
+		grid-column: 2;
+		grid-row: 2;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+	}
+	.journal-streak-days > .journal-day {
+		margin-bottom: 12px;
+	}
+	.journal-streak-days > .journal-day:last-child {
+		margin-bottom: 0;
+	}
+	/* Mobile: the rail becomes a thin left bar, header sits above. The
+	   bracket-corner ticks are dropped — the header already labels the
+	   phase, so the rail just needs to indicate "these days are grouped." */
 	@media (max-width: 479px) {
 		.journal-streak-group {
-			flex-direction: column;
-			gap: 4px;
+			gap: 0 8px;
 		}
 		.journal-streak-rail {
-			width: auto;
-			border-left: none;
-			border-top: 2px solid var(--streak-color);
-			padding: 6px 0 0;
+			width: 0;
+			border-right: 2px solid var(--streak-color);
 		}
 		.journal-streak-rail::before,
 		.journal-streak-rail::after {
 			display: none;
-		}
-		.journal-streak-label {
-			flex-direction: row;
-			gap: 8px;
 		}
 	}
 

@@ -37,7 +37,10 @@
 			<nav class="authed-footer-links" aria-label={$t('footer.links_aria')}>
 				<a href="/privacy">{$t('privacy.title')}</a>
 				<a href="/terms">{$t('terms.title')}</a>
-				<a href="/#security">{$t('landing.footer_security')}</a>
+				<!-- CIPH-912 — `/#security` removed: routes to the public
+					 landing's #security anchor, but authed users land on the
+					 Companion dashboard so the anchor never resolves.
+					 Privacy + Terms cover the legal/info needs. -->
 			</nav>
 		</div>
 		<div class="authed-footer-trust">
@@ -59,7 +62,10 @@
 		border-top: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		/* CIPH-912 — bumped from 6px to 12px so the trust line
+		   ("✱ Ende-zu-Ende verschlüsselt") doesn't crowd the
+		   wordmark+links row when content wraps on narrow widths. */
+		gap: 12px;
 		color: var(--text-muted);
 		font-size: 11px;
 	}
