@@ -448,6 +448,25 @@
 		return days.size;
 	})();
 
+	// CIPH-909 (year-parity) — scoped reactive accessors. Lets the shared
+	// summary-card row, recent-events block, export menu, and glance
+	// stat-block render once outside the month/year if-else and pull the
+	// right values for the current view. Month and year now feel like
+	// one product, just scoped differently.
+	$: daysInYear = (() => {
+		const y = currentYear;
+		return ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0) ? 366 : 365;
+	})();
+	$: scopedDocs = viewMode === 'month' ? monthDocs : yearDocs;
+	$: scopedDaysLogged = viewMode === 'month' ? daysLogged : yearDaysLogged;
+	$: scopedTotalEpisodes = viewMode === 'month' ? totalEpisodes : yearTotalEpisodes;
+	$: scopedDaysInWindow = viewMode === 'month' ? daysInMonth : daysInYear;
+	$: scopedCoverage = scopedDaysInWindow > 0
+		? Math.round((scopedDaysLogged / scopedDaysInWindow) * 100)
+		: 0;
+	$: scopedTopSymptoms = viewMode === 'month' ? topSymptomsThisMonth : topSymptomsThisYear;
+	$: scopedPhaseDays = viewMode === 'month' ? phaseDaysThisMonth : phaseDaysThisYear;
+
 	function getMonthShortName(month: number): string {
 		const d = new Date(2024, month, 1);
 		return d.toLocaleDateString($locale, { month: 'short' });
@@ -533,48 +552,62 @@
 		</div>
 	</div>
 
+	<!-- CIPH-909 (year-parity) — Mode-specific nav at top. The summary
+		 cards / recent events / export menu / glance block that follow
+		 are all SHARED and scoped via `scoped*` reactive values. -->
 	{#if viewMode === 'month'}
-	<!-- ═══ MONTH VIEW ═══ -->
-
-	<!-- Month nav -->
-	<div class="flex items-center justify-center gap-3 mb-6">
-		<button on:click={() => changeMonth(-1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
-			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-		</button>
-		<div class="flex items-center gap-2 min-w-[180px] justify-center">
-			<span class="text-base font-semibold text-slate-900 text-center">{formatMonth(currentDate)}</span>
-			{#if !isOnCurrentMonth}
-				<button
-					on:click={jumpToCurrentMonth}
-					class="rpt-today-btn"
-					aria-label={$t('common.today')}
-				>{$t('common.today')}</button>
-			{/if}
+		<!-- Month nav -->
+		<div class="flex items-center justify-center gap-3 mb-6">
+			<button on:click={() => changeMonth(-1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</button>
+			<div class="flex items-center gap-2 min-w-[180px] justify-center">
+				<span class="text-base font-semibold text-slate-900 text-center">{formatMonth(currentDate)}</span>
+				{#if !isOnCurrentMonth}
+					<button
+						on:click={jumpToCurrentMonth}
+						class="rpt-today-btn"
+						aria-label={$t('common.today')}
+					>{$t('common.today')}</button>
+				{/if}
+			</div>
+			<button on:click={() => changeMonth(1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</button>
 		</div>
-		<button on:click={() => changeMonth(1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
-			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-		</button>
-	</div>
+	{:else}
+		<!-- Year nav -->
+		<div class="rpt-year-nav">
+			<button on:click={() => { currentYear--; }} class="rpt-nav-btn" aria-label="Previous year">
+				<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</button>
+			<span class="rpt-year-label">{currentYear}</span>
+			<button on:click={() => { currentYear++; }} class="rpt-nav-btn" aria-label="Next year">
+				<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</button>
+		</div>
+	{/if}
 
-	<!-- Summary stats -->
+	<!-- Summary stats (scoped — month or year). -->
 	<div class="grid grid-cols-3 gap-3 mb-6">
 		<div class="card p-4 text-center">
-			<p class="text-2xl font-bold text-slate-900">{daysLogged}</p>
+			<p class="text-2xl font-bold text-slate-900">{scopedDaysLogged}</p>
 			<p class="text-xs text-slate-500 mt-1">{$t('pdf.days_logged')}</p>
 		</div>
 		<div class="card p-4 text-center">
-			<p class="text-2xl font-bold" style="color: var(--danger)">{totalEpisodes}</p>
+			<p class="text-2xl font-bold" style="color: var(--danger)">{scopedTotalEpisodes}</p>
 			<p class="text-xs text-slate-500 mt-1">{$t('pdf.total_episodes')}</p>
 		</div>
 		<div class="card p-4 text-center">
-			<p class="text-2xl font-bold text-brand">{daysInMonth > 0 ? Math.round(daysLogged / daysInMonth * 100) : 0}%</p>
+			<p class="text-2xl font-bold text-brand">{scopedCoverage}%</p>
 			<p class="text-xs text-slate-500 mt-1">{$t('reports.coverage')}</p>
 		</div>
 	</div>
 
 	<!-- Recent note-marker events — closes the visibility gap. Users who
 		 create "Treatment adjusted" style markers couldn't see them anywhere
-		 in the UI before, only as vertical lines on the PDF trend chart. -->
+		 in the UI before, only as vertical lines on the PDF trend chart.
+		 The `recentEvents` reactive is already scope-aware (month/year). -->
 	<div class="card-inline mb-4">
 		<p class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('reports.recent_events_title')}</p>
 		{#if recentEvents.length === 0}
@@ -697,22 +730,22 @@
 		</div>
 	</div>
 
-	<!-- CIPH-909 (v2) — "This month at a glance" stat block. Replaces
-		 the bar charts that duplicated the day-coverage strip + grid
-		 table. Each line is a clinical sentence the user can take to
-		 their doctor: "23 episodes (8 fewer than last month)", "Top
-		 symptoms: Müdigkeit (14 days), Stress (9 days)", "Phase active
-		 12 days." Renders only when there's something to say. -->
-	{#if monthDocs.length > 0 && (totalEpisodes > 0 || topSymptomsThisMonth.length > 0 || phaseDaysThisMonth > 0)}
+	<!-- CIPH-909 (v2 + year-parity) — "auf einen Blick" stat block. Each
+		 line is a clinical sentence the user can take to their doctor.
+		 Renders only when there's something to say. Year mode skips the
+		 month-over-month delta (most users have <2y of data). -->
+	{#if scopedDocs.length > 0 && (scopedTotalEpisodes > 0 || scopedTopSymptoms.length > 0 || scopedPhaseDays > 0)}
 		<div class="card mb-4 p-4 rpt-glance">
-			<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('reports.glance_title')}</h2>
+			<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">
+				{viewMode === 'month' ? $t('reports.glance_title') : $t('reports.glance_year_title')}
+			</h2>
 			<dl class="rpt-glance-list">
-				{#if totalEpisodes > 0 || prevMonthEpisodes > 0}
+				{#if scopedTotalEpisodes > 0 || (viewMode === 'month' && prevMonthEpisodes > 0)}
 					<div class="rpt-glance-row">
 						<dt class="rpt-glance-label">{$t('reports.glance_episodes')}</dt>
 						<dd class="rpt-glance-value">
-							<span class="rpt-glance-num">{totalEpisodes}</span>
-							{#if prevMonthEpisodes > 0 || totalEpisodes > 0}
+							<span class="rpt-glance-num">{scopedTotalEpisodes}</span>
+							{#if viewMode === 'month' && (prevMonthEpisodes > 0 || scopedTotalEpisodes > 0)}
 								<span class="rpt-glance-delta rpt-glance-delta--{episodeTrend}">
 									{#if episodeTrend === 'up'}↗{:else if episodeTrend === 'down'}↘{:else}→{/if}
 									{#if episodeTrend === 'down'}
@@ -731,16 +764,18 @@
 					<div class="rpt-glance-row">
 						<dt class="rpt-glance-label">{$t('reports.glance_phase_days')}</dt>
 						<dd class="rpt-glance-value">
-							<span class="rpt-glance-num">{phaseDaysThisMonth}</span>
-							<span class="rpt-glance-meta">{$t('common.of_n_days', { n: daysInMonth })}</span>
+							<span class="rpt-glance-num">{scopedPhaseDays}</span>
+							{#if viewMode === 'month'}
+								<span class="rpt-glance-meta">{$t('common.of_n_days', { n: scopedDaysInWindow })}</span>
+							{/if}
 						</dd>
 					</div>
 				{/if}
-				{#if topSymptomsThisMonth.length > 0}
+				{#if scopedTopSymptoms.length > 0}
 					<div class="rpt-glance-row">
 						<dt class="rpt-glance-label">{$t('reports.glance_top_symptoms')}</dt>
 						<dd class="rpt-glance-value rpt-glance-value--list">
-							{#each topSymptomsThisMonth as sym, i}
+							{#each scopedTopSymptoms as sym, i}
 								{#if i > 0}<span class="rpt-glance-sep">·</span>{/if}
 								<span class="rpt-glance-sym">{sym.label}</span>
 								<span class="rpt-glance-meta">({$t('reports.glance_n_days', { n: sym.days })})</span>
@@ -752,6 +787,9 @@
 		</div>
 	{/if}
 
+	<!-- Bottom (mode-specific): day-coverage + monthly grid table for
+		 month, or 12-month heatmap for year. -->
+	{#if viewMode === 'month'}
 	<!-- Day-coverage strip (mirrors year-view coloring so the user sees
 	     which days were filled at a glance, before the data table) -->
 	{#if bp}
@@ -887,97 +925,40 @@
 	{/if}
 
 	{:else}
-	<!-- ═══ YEAR VIEW ═══ -->
-
-	<!-- Year nav -->
-	<div class="rpt-year-nav">
-		<button on:click={() => { currentYear--; }} class="rpt-nav-btn" aria-label="Previous year">
-			<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-		</button>
-		<span class="rpt-year-label">{currentYear}</span>
-		<button on:click={() => { currentYear++; }} class="rpt-nav-btn" aria-label="Next year">
-			<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-		</button>
-	</div>
-
-	<!-- CIPH-909 (year-block) — Year stat block. Same shape as the
-		 month "auf einen Blick" so the two views feel like one product. -->
-	{#if yearDocs.length > 0 && (yearTotalEpisodes > 0 || topSymptomsThisYear.length > 0 || phaseDaysThisYear > 0)}
-		<div class="card mb-4 p-4 rpt-glance">
-			<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('reports.glance_year_title')}</h2>
-			<dl class="rpt-glance-list">
-				{#if yearTotalEpisodes > 0}
-					<div class="rpt-glance-row">
-						<dt class="rpt-glance-label">{$t('reports.glance_episodes')}</dt>
-						<dd class="rpt-glance-value">
-							<span class="rpt-glance-num">{yearTotalEpisodes}</span>
-						</dd>
+		<!-- Year heatmap (12 months) -->
+		<div class="rpt-year-grid">
+			{#each Array.from({ length: 12 }, (_, i) => i) as month}
+				{@const daysInMo = getYearMonthDays(currentYear, month)}
+				{@const firstDay = getFirstDayOfWeek(currentYear, month)}
+				<div class="rpt-month-card">
+					<p class="rpt-month-name">{getMonthShortName(month)}</p>
+					<div class="rpt-month-grid">
+						<!-- Day-of-week headers -->
+						{#each ['M','T','W','T','F','S','S'] as dw}
+							<span class="rpt-dow">{dw}</span>
+						{/each}
+						<!-- Empty cells before first day -->
+						{#each Array(firstDay) as _}
+							<span class="rpt-day-cell rpt-day-cell--empty"></span>
+						{/each}
+						<!-- Day cells -->
+						{#each Array.from({ length: daysInMo }, (_, i) => i + 1) as day}
+							{@const dateStr = `${currentYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
+							{@const doc = getDayDoc(yearDocs, dateStr)}
+							{@const hasEp = dayHasEpisodes(doc, bp)}
+							<span
+								class="rpt-day-cell {doc ? (hasEp ? 'rpt-day-cell--episode' : 'rpt-day-cell--logged') : ''}"
+								title={doc ? `${dateStr}: ${dayTooltip(doc, bp)}` : dateStr}
+								on:click={() => goto(`/log/${dateStr}`)}
+								role="button"
+								tabindex="0"
+								on:keydown={(e) => { if (e.key === 'Enter') goto(`/log/${dateStr}`); }}
+							></span>
+						{/each}
 					</div>
-				{/if}
-				<div class="rpt-glance-row">
-					<dt class="rpt-glance-label">{$t('reports.days_tracked')}</dt>
-					<dd class="rpt-glance-value">
-						<span class="rpt-glance-num">{yearDaysLogged}</span>
-					</dd>
 				</div>
-				{#if hasMultiDayPhases}
-					<div class="rpt-glance-row">
-						<dt class="rpt-glance-label">{$t('reports.glance_phase_days')}</dt>
-						<dd class="rpt-glance-value">
-							<span class="rpt-glance-num">{phaseDaysThisYear}</span>
-						</dd>
-					</div>
-				{/if}
-				{#if topSymptomsThisYear.length > 0}
-					<div class="rpt-glance-row">
-						<dt class="rpt-glance-label">{$t('reports.glance_top_symptoms')}</dt>
-						<dd class="rpt-glance-value rpt-glance-value--list">
-							{#each topSymptomsThisYear as sym, i}
-								{#if i > 0}<span class="rpt-glance-sep">·</span>{/if}
-								<span class="rpt-glance-sym">{sym.label}</span>
-								<span class="rpt-glance-meta">({$t('reports.glance_n_days', { n: sym.days })})</span>
-							{/each}
-						</dd>
-					</div>
-				{/if}
-			</dl>
+			{/each}
 		</div>
-	{/if}
-
-	<!-- Year grid (12 months) -->
-	<div class="rpt-year-grid">
-		{#each Array.from({ length: 12 }, (_, i) => i) as month}
-			{@const daysInMo = getYearMonthDays(currentYear, month)}
-			{@const firstDay = getFirstDayOfWeek(currentYear, month)}
-			<div class="rpt-month-card">
-				<p class="rpt-month-name">{getMonthShortName(month)}</p>
-				<div class="rpt-month-grid">
-					<!-- Day-of-week headers -->
-					{#each ['M','T','W','T','F','S','S'] as dw}
-						<span class="rpt-dow">{dw}</span>
-					{/each}
-					<!-- Empty cells before first day -->
-					{#each Array(firstDay) as _}
-						<span class="rpt-day-cell rpt-day-cell--empty"></span>
-					{/each}
-					<!-- Day cells -->
-					{#each Array.from({ length: daysInMo }, (_, i) => i + 1) as day}
-						{@const dateStr = `${currentYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
-						{@const doc = getDayDoc(yearDocs, dateStr)}
-						{@const hasEp = dayHasEpisodes(doc, bp)}
-						<span
-							class="rpt-day-cell {doc ? (hasEp ? 'rpt-day-cell--episode' : 'rpt-day-cell--logged') : ''}"
-							title={doc ? `${dateStr}: ${dayTooltip(doc, bp)}` : dateStr}
-							on:click={() => goto(`/log/${dateStr}`)}
-							role="button"
-							tabindex="0"
-							on:keydown={(e) => { if (e.key === 'Enter') goto(`/log/${dateStr}`); }}
-						></span>
-					{/each}
-				</div>
-			</div>
-		{/each}
-	</div>
 	{/if}
 </div>
 {/if}

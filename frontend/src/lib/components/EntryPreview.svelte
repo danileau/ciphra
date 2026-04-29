@@ -161,19 +161,34 @@
 
 	$: symIdsRaw = bp ? Object.entries(entry.data.symptoms || {}).filter(([k, v]) => v && !POSITIVE_MARKERS.has(k)).map(([k]) => k) : [];
 	$: epEntriesRaw = bp ? Object.entries(entry.data.episodes || entry.data.seizures || {}).filter(([, n]) => Number(n) > 0) : [];
+	$: trigIdsRaw = bp ? (Array.isArray(entry.data.triggers) ? entry.data.triggers : Object.entries(entry.data.triggers || {}).filter(([, v]) => v).map(([k]) => k)) : [];
+	$: vitalEntries = bp ? Object.entries(entry.data.vitals || {}).filter(([, v]) => v != null && String(v).trim() !== '' && String(v).trim() !== '0') : [];
+
 	// CIPH-907c — When hideType is true the parent surface (journal day-
 	// header, calendar bottom sheet) shows a phase tag for active multiDay
-	// episodes. Rendering them again as chips here is duplication. Filter
-	// multiDay episodes out for those surfaces; counter episodes (which
-	// carry useful "Nx" count info) still render.
-	$: epEntries = (hideType && bp)
+	// episodes. Rendering them again as chips here is duplication.
+	// BUT — if the entry has nothing else logged (only the multiDay
+	// episode), suppressing the chip leaves the card body empty. Smoke
+	// flagged this. So dedup is conditional: hide multiDay chips ONLY
+	// when there's other content to fill the card. Empty-content entries
+	// still get the chip so the card never goes blank.
+	$: hasNonMultiDayContent = (
+		symIdsRaw.length > 0 ||
+		trigIdsRaw.length > 0 ||
+		vitalEntries.length > 0 ||
+		!!entry.data.notes ||
+		!!entry.data.text ||
+		epEntriesRaw.some(([id]) => {
+			const ep = bp?.episodeTypes.find((e) => e.id === id);
+			return !ep?.multiDay;
+		})
+	);
+	$: epEntries = (hideType && bp && hasNonMultiDayContent)
 		? epEntriesRaw.filter(([id]) => {
 				const ep = bp.episodeTypes.find((e) => e.id === id);
 				return !ep?.multiDay;
 			})
 		: epEntriesRaw;
-	$: trigIdsRaw = bp ? (Array.isArray(entry.data.triggers) ? entry.data.triggers : Object.entries(entry.data.triggers || {}).filter(([, v]) => v).map(([k]) => k)) : [];
-	$: vitalEntries = bp ? Object.entries(entry.data.vitals || {}).filter(([, v]) => v != null && String(v).trim() !== '' && String(v).trim() !== '0') : [];
 
 	// CIPH-413 — rank by 30-day frequency
 	function buildFrequencyMap(docs: CiphraDocument[] | undefined, kind: 'symptoms' | 'triggers'): Map<string, number> {
