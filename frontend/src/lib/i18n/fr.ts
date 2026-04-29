@@ -1309,7 +1309,6 @@ export default {
 	'condition.cta_subtitle': 'Configurez votre journal de santé chiffré en moins de 2 minutes. Aucun e-mail requis.',
 	'condition.cta_button': 'Commencer — gratuit',
 	'condition.cta_learn_more': 'En savoir plus',
-	'condition.disclaimer': "ciphra n'est pas un dispositif médical. Consultez toujours votre professionnel de santé pour les décisions médicales.",
 	'condition.index_title': 'Conditions prises en charge',
 	'condition_group.neurological.title': 'Neurologique',
 	'condition_group.neurological.description': 'Maladies du cerveau et du système nerveux — épisodes, auras et symptômes neurologiques.',

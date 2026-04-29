@@ -1310,7 +1310,6 @@ export default {
 	'condition.cta_subtitle': 'Configura il tuo diario sanitario crittografato in meno di 2 minuti. Nessuna email richiesta.',
 	'condition.cta_button': 'Inizia — gratis',
 	'condition.cta_learn_more': 'Scopri di più',
-	'condition.disclaimer': 'ciphra non è un dispositivo medico. Consulta sempre il tuo medico per le decisioni sanitarie.',
 	'condition.index_title': 'Condizioni supportate',
 	'condition_group.neurological.title': 'Neurologico',
 	'condition_group.neurological.description': 'Malattie del cervello e del sistema nervoso — episodi, aure e sintomi neurologici.',

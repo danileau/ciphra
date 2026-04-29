@@ -1310,7 +1310,6 @@ export default {
 	'condition.cta_subtitle': 'Set up your encrypted health diary in under 2 minutes. No email required.',
 	'condition.cta_button': 'Get started — free',
 	'condition.cta_learn_more': 'Learn more',
-	'condition.disclaimer': 'ciphra is not a medical device. Always consult your healthcare provider for medical decisions.',
 	'condition.index_title': 'Supported conditions',
 	'condition_group.neurological.title': 'Neurological',
 	'condition_group.neurological.description': 'Conditions affecting the brain and nervous system — episodes, auras, and neurological symptoms.',

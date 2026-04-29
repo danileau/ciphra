@@ -1331,7 +1331,6 @@ export default {
 	'condition.cta_subtitle': 'Richte dein verschlüsseltes Gesundheitstagebuch in unter 2 Minuten ein. Keine E-Mail nötig.',
 	'condition.cta_button': 'Jetzt starten — kostenlos',
 	'condition.cta_learn_more': 'Mehr erfahren',
-	'condition.disclaimer': 'ciphra ist kein Medizinprodukt. Konsultiere immer deinen Arzt für medizinische Entscheidungen.',
 	'condition.index_title': 'Unterstützte Erkrankungen',
 	'condition_group.neurological.title': 'Neurologisch',
 	'condition_group.neurological.description': 'Erkrankungen von Gehirn und Nervensystem — Anfälle, Auren und neurologische Symptome.',

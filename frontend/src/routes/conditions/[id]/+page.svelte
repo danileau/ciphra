@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { t, locale } from '$lib/i18n';
 	import { page } from '$app/stores';
-	import { conditionInfoMap, conditionIds } from '$lib/conditionInfo';
+	import { conditionInfoMap } from '$lib/conditionInfo';
 	import type { ConditionInfo } from '$lib/conditionInfo';
 	import { iconPath } from '$lib/conditionIcons';
 	import Asterisk from '$lib/components/Asterisk.svelte';
@@ -296,20 +296,10 @@
 			</section>
 		</main>
 
-		<!-- Footer -->
-		<footer class="py-8" style="border-top: 1px solid var(--border); background: var(--surface-card);">
-			<div class="max-w-4xl mx-auto px-4">
-				<div class="flex flex-wrap gap-3 justify-center mb-4">
-					{#each conditionIds.filter(id => id !== conditionId) as id}
-						<a href="/conditions/{id}" class="text-xs transition-colors" style="color: var(--text-muted);">
-							{$t(conditionInfoMap[id].titleKey)}
-						</a>
-					{/each}
-				</div>
-				<p class="text-center text-xs" style="color: var(--text-muted);">
-					{$t('condition.disclaimer')}
-				</p>
-			</div>
-		</footer>
+		<!-- CIPH-917 — inline footer (cross-link to other conditions +
+			 disclaimer) removed. PublicFooter from +layout.svelte now
+			 covers the disclaimer (`landing.disclaimer_medical`); the
+			 cross-link list was the "sumup layer" duplicated against
+			 the merged landing #conditions catalogue. -->
 	</div>
 {/if}
