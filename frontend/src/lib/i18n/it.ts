@@ -1798,7 +1798,8 @@ export default {
 	'condition.ibd.for_doctor': "Il PDF mostra la cronologia delle riacutizzazioni, la frequenza delle feci, i segni sistemici, i trend di laboratorio e il timing delle infusioni.",
 
 	'companion.how_title': 'Come stai?',
-	'companion.how_aria': 'Andamento degli ultimi 12 mesi',
+	'companion.how_aria': 'Andamento degli ultimi 12 mesi — apri nei rapporti',
+	'companion.how_view_trend': 'Vedi andamento',
 	'companion.how_episodes': 'Episodi',
 	'companion.how_symptom_days': 'Giorni con sintomi',
 	'companion.how_headline_up': 'Questo mese {last} {noun} — il mese scorso erano {prev}.',

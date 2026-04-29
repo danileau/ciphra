@@ -44,7 +44,6 @@ What's NOT in scope for CIPH-882 (preserved for future work):
   returns its label.
 - `lib/components/EntryComposer.svelte` — both the chip rendering loop
   (line ~493) and the incomplete-symptoms nudge derivation (line ~352).
-- `lib/components/Companion.svelte` — top-symptoms label map (line ~425).
 - `routes/reports/+page.svelte` — `itemLabel(id)` helper (line ~209)
   used by the monthly grid, plus the year-most-frequent symptom block
   (line ~340).
@@ -77,7 +76,6 @@ What's NOT in scope for CIPH-882 (preserved for future work):
 - `lib/components/EntryComposer.svelte` — episode counter rows
   (line ~593), and `aria-label`s on increment/decrement buttons (line
   ~609, ~617).
-- `lib/components/Companion.svelte` — episode-type label list (line ~371).
 - `lib/components/PhaseContextCard.svelte` — multiDay phase label
   (line ~54).
 - `routes/calendar/+page.svelte` — episode-legend chip (line ~402),

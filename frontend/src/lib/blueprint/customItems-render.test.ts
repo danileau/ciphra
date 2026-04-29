@@ -28,7 +28,6 @@ const read = (rel: string) => readFileSync(resolve(ROOT, rel), 'utf8');
 const RENDER_SITES: ReadonlyArray<{ path: string; reason: string }> = [
 	{ path: 'lib/components/EntryPreview.svelte', reason: 'symptom/trigger/episode/vital labels' },
 	{ path: 'lib/components/EntryComposer.svelte', reason: 'symptom chips, trigger chips, episode counters, vital labels' },
-	{ path: 'lib/components/Companion.svelte', reason: 'top-symptoms label map + episode chart series' },
 	{ path: 'lib/components/PhaseContextCard.svelte', reason: 'phase/episode label' },
 	{ path: 'routes/calendar/+page.svelte', reason: 'multiDay band tooltips + selected-day pills + legend' },
 	{ path: 'routes/+layout.svelte', reason: 'FAB episode chip' },

@@ -51,13 +51,9 @@ describe('CIPH-854 Companion cohort ordering', () => {
 		expect(cycleIdx).toBeLessThan(trendIdx);
 	});
 
-	it('episode trend + top symptoms stay after the anchor cards', () => {
-		const anchors = SOURCE.indexOf('CYCLE PHASE');
-		const episode = SOURCE.indexOf('EPISODE TREND');
-		const symptoms = SOURCE.indexOf('TOP SYMPTOMS');
-		expect(anchors).toBeLessThan(episode);
-		expect(episode).toBeLessThan(symptoms);
-	});
+	// CIPH-900 — Episode bar-chart and Top-symptoms bar-chart removed
+	// from the dashboard. /reports owns the deep view. Their ordering
+	// assertion no longer applies.
 });
 
 describe('CIPH-854 PhaseContextCard i18n', () => {

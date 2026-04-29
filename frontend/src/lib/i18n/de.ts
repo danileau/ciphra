@@ -1820,7 +1820,8 @@ export default {
 
 	// "Wie geht's dir?" — combined trend card (CIPH-715)
 	'companion.how_title': 'Wie geht es dir?',
-	'companion.how_aria': 'Verlauf der letzten 12 Monate',
+	'companion.how_aria': 'Verlauf der letzten 12 Monate — zum Bericht öffnen',
+	'companion.how_view_trend': 'Verlauf ansehen',
 	'companion.how_episodes': 'Episoden',
 	'companion.how_symptom_days': 'Symptom-Tage',
 	'companion.how_headline_up': 'Diesen Monat {last} {noun} — letzten Monat waren es {prev}.',

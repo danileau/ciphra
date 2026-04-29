@@ -1810,7 +1810,8 @@ export default {
 	'condition.ibd.for_doctor': 'The PDF report shows flare timeline, stool frequency over time, systemic signs, lab trends, and infusion/medication timing — matching what IBD clinics use for treatment decisions.',
 
 	'companion.how_title': 'How are you doing?',
-	'companion.how_aria': 'Last 12 months trend',
+	'companion.how_aria': 'Last 12 months trend — open in reports',
+	'companion.how_view_trend': 'View trend',
 	'companion.how_episodes': 'Episodes',
 	'companion.how_symptom_days': 'Symptom days',
 	'companion.how_headline_up': 'This month {last} {noun} — last month was {prev}.',

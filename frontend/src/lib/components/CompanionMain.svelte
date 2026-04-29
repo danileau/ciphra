@@ -4,6 +4,16 @@
 	// from Companion.svelte and emits the main-column sections. Splitting
 	// the markup (without duplicating the reactive cascade) is how we
 	// de-risked the rail-layout story that was deferred twice.
+	//
+	// CIPH-900 — Dropped the episode bar-chart and the top-symptoms bar-
+	// chart from the dashboard. Both lived as scope-pickered cards on the
+	// main column since PI v6 / CIPH-781. Anna-test (cycle cohort) flagged
+	// the dashboard as "lot of not matching colours, structurally
+	// confusing". /reports owns the deep view (year heatmap + monthly grid
+	// table + summary stats), which is stronger data presentation than
+	// vertical-bar counts. The single trend that stays is howAreYou,
+	// reshaped here into a sparkline-hero with the headline carrying the
+	// takeaway and a "Verlauf ansehen →" link routing to /reports.
 	import { t } from '$lib/i18n';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import PhaseContextCard from '$lib/components/PhaseContextCard.svelte';
@@ -27,22 +37,9 @@
 	export let cycleState: any;
 	export let PHASE_COLORS: Record<string, string>;
 
-	export let episodeChartData: unknown;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	export let episodeChartOptions: any;
-	export let symptomChartData: unknown;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	export let symptomChartOptions: any;
-
-	export let companionChartScope: 'month' | 'year' | 'max';
-	export let yearChartAvailable: boolean;
-	export let maxChartAvailable: boolean;
-	export let symptomChartScope: 'month' | 'year' | 'max';
-	export let symptomYearAvailable: boolean;
-	export let symptomMaxAvailable: boolean;
-
 	// CIPH-781 — "Wie geht's dir?" trend chart now lives in the main column
 	// alongside the other charts. Rail keeps auxiliary content only.
+	// CIPH-900 — only chart left on the dashboard, slimmed to sparkline.
 	export let howAreYouChartData: unknown;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	export let howAreYouChartOptions: any;
@@ -59,9 +56,6 @@
 	$: howAreYouSymptomDaysTotal = howAreYouTrend
 		? (howAreYouTrend.symptomDays as number[]).reduce((a: number, b: number) => a + b, 0)
 		: 0;
-
-	export let onSetEpisodeScope: (s: 'month' | 'year' | 'max') => void;
-	export let onSetSymptomScope: (s: 'month' | 'year' | 'max') => void;
 </script>
 
 <!-- Greeting + Today's Status moved to Companion.svelte parent so they
@@ -116,17 +110,30 @@
 	</section>
 {/if}
 
-<!-- ═══ "WIE GEHT'S DIR?" TREND (CIPH-781: moved to main column) ═══ -->
+<!-- ═══ "WIE GEHT'S DIR?" SPARKLINE-HERO (CIPH-900) ═══
+     Headline + arrow carry the takeaway. Sparkline below is glance-only
+     (no axes, no legend, no scope picker — "Verlauf ansehen →" routes
+     to /reports for the full presentation). The whole card is a link:
+     1 click from dashboard to deep trend view. -->
 {#if howAreYouChartData && howAreYouTrend}
-<section class="card card-rhythmic" aria-label={$t('companion.how_aria')}>
-	<h2 class="text-sm font-semibold mb-1" style="color: var(--text-primary)">{$t('companion.how_title')}</h2>
+<a
+	href="/reports"
+	class="card card-rhythmic hay-hero block no-underline"
+	aria-label={$t('companion.how_aria')}
+>
+	<div class="flex items-baseline justify-between gap-2 mb-2">
+		<h2 class="text-sm font-semibold" style="color: var(--text-primary)">{$t('companion.how_title')}</h2>
+		<span class="text-xs hay-link" style="color: var(--accent)">
+			{$t('companion.how_view_trend')} →
+		</span>
+	</div>
 	{#if howAreYouHeadlineParts}
 		<p class="text-base font-medium mb-3" style="color: var(--text-primary)">
 			<span aria-hidden="true">{howAreYouHeadlineParts.arrow}</span>
 			{howAreYouHeadlineParts.text}
 		</p>
 	{/if}
-	<div class="h-48">
+	<div class="hay-spark">
 		<ChartWrapper type="line" data={howAreYouChartData} options={howAreYouChartOptions} />
 	</div>
 	<p class="sr-only">
@@ -138,92 +145,36 @@
 			noun: episodeNoun,
 		})}
 	</p>
-</section>
+</a>
 {/if}
 
-<!-- ═══ EPISODE TREND ═══ -->
-{#if episodeChartData}
-<section class="card card-rhythmic">
-	<div class="flex items-center justify-between mb-3 gap-2">
-		<h2 class="text-sm font-semibold" style="color: var(--text-primary)">
-			{companionChartScope === 'month'
-				? $t('companion.episodes_this_month')
-				: companionChartScope === 'year'
-					? $t('companion.episodes_year')
-					: $t('companion.episodes_max')}
-		</h2>
-		<div class="flex gap-1 text-xs" style="color: var(--text-muted)">
-			<button
-				class="px-2 py-1 rounded"
-				class:font-semibold={companionChartScope === 'month'}
-				style="{companionChartScope === 'month' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-				on:click={() => onSetEpisodeScope('month')}
-			>{$t('pdf.scope_month_label')}</button>
-			<button
-				class="px-2 py-1 rounded"
-				class:font-semibold={companionChartScope === 'year'}
-				class:opacity-40={!yearChartAvailable}
-				disabled={!yearChartAvailable}
-				style="{companionChartScope === 'year' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-				on:click={() => onSetEpisodeScope('year')}
-			>{$t('pdf.scope_year_label')}</button>
-			<button
-				class="px-2 py-1 rounded"
-				class:font-semibold={companionChartScope === 'max'}
-				class:opacity-40={!maxChartAvailable}
-				disabled={!maxChartAvailable}
-				style="{companionChartScope === 'max' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-				on:click={() => onSetEpisodeScope('max')}
-			>{$t('companion.scope_max_label')}</button>
-		</div>
-	</div>
-	<div class="h-48">
-		<ChartWrapper type="bar" data={episodeChartData} options={episodeChartOptions} />
-	</div>
-</section>
-{/if}
+<!-- CIPH-900 — Episode bar-chart + Top-symptoms bar-chart removed. The
+     deep trend lives at /reports (year heatmap + monthly grid + sums).
+     Today's entries moved to CompanionRail. Encryption badge moved to
+     the authed footer (CIPH-903). -->
 
-<!-- ═══ TOP SYMPTOMS ═══ -->
-{#if symptomChartData}
-<section class="card card-rhythmic">
-	<div class="flex items-center justify-between mb-3 gap-2">
-		<h2 class="text-sm font-semibold" style="color: var(--text-primary)">
-			{symptomChartScope === 'month'
-				? $t('companion.top_symptoms_month')
-				: symptomChartScope === 'year'
-					? $t('companion.top_symptoms_year')
-					: $t('companion.top_symptoms_max')}
-		</h2>
-		<div class="flex gap-1 text-xs" style="color: var(--text-muted)">
-			<button
-				class="px-2 py-1 rounded"
-				class:font-semibold={symptomChartScope === 'month'}
-				style="{symptomChartScope === 'month' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-				on:click={() => onSetSymptomScope('month')}
-			>{$t('pdf.scope_month_label')}</button>
-			<button
-				class="px-2 py-1 rounded"
-				class:font-semibold={symptomChartScope === 'year'}
-				class:opacity-40={!symptomYearAvailable}
-				disabled={!symptomYearAvailable}
-				style="{symptomChartScope === 'year' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-				on:click={() => onSetSymptomScope('year')}
-			>{$t('pdf.scope_year_label')}</button>
-			<button
-				class="px-2 py-1 rounded"
-				class:font-semibold={symptomChartScope === 'max'}
-				class:opacity-40={!symptomMaxAvailable}
-				disabled={!symptomMaxAvailable}
-				style="{symptomChartScope === 'max' ? 'background: var(--surface-muted); color: var(--text-primary)' : ''}"
-				on:click={() => onSetSymptomScope('max')}
-			>{$t('companion.scope_max_label')}</button>
-		</div>
-	</div>
-	<div class="h-48">
-		<ChartWrapper type="bar" data={symptomChartData} options={symptomChartOptions} />
-	</div>
-</section>
-{/if}
-
-<!-- Today's entries moved to CompanionRail. Encryption badge moved to
-     Companion.svelte parent (full-width below grid). -->
+<style>
+	/* CIPH-900 — howAreYou hero card. The whole card is an <a>; we add a
+	   subtle hover affordance (border tint, view-trend chevron underline)
+	   without making the card feel "buttoned." */
+	.hay-hero {
+		text-decoration: none;
+		transition: border-color 0.15s ease-out, transform 0.15s ease-out;
+	}
+	.hay-hero:hover,
+	.hay-hero:focus-visible {
+		border-color: var(--accent);
+	}
+	.hay-hero:hover .hay-link,
+	.hay-hero:focus-visible .hay-link {
+		text-decoration: underline;
+	}
+	.hay-spark {
+		height: 72px;
+	}
+	@media (min-width: 768px) {
+		.hay-spark {
+			height: 96px;
+		}
+	}
+</style>

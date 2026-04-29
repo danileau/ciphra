@@ -1797,7 +1797,8 @@ export default {
 	'condition.ibd.for_doctor': "Le rapport PDF montre la chronologie des poussées, la fréquence des selles, les signes systémiques, les tendances biologiques et le timing des perfusions.",
 
 	'companion.how_title': 'Comment allez-vous ?',
-	'companion.how_aria': 'Évolution des 12 derniers mois',
+	'companion.how_aria': 'Évolution des 12 derniers mois — ouvrir dans les rapports',
+	'companion.how_view_trend': 'Voir l\'évolution',
 	'companion.how_episodes': 'Épisodes',
 	'companion.how_symptom_days': 'Jours avec symptômes',
 	'companion.how_headline_up': 'Ce mois-ci {last} {noun} — le mois dernier {prev}.',

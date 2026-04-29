@@ -2,7 +2,7 @@
 	import { t, locale } from '$lib/i18n';
 	import { auth } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
+	import { resolvedBlueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Asterisk from '$lib/components/Asterisk.svelte';
@@ -15,6 +15,7 @@
 	import { familyLinks } from '$lib/stores/familyLinks';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import { computeCycleStateToday, hasCycleTracking, PHASE_COLORS } from '$lib/cycleState';
+	import { cohortPalette } from '$lib/cohortPalette';
 
 	// CIPH-873 — exportForDoctor() helper + generateDoctorPdf import removed.
 	// The "Export for doctor" rail button now deep-links to
@@ -180,56 +181,16 @@
 		return sum + (Object.values(eps) as number[]).reduce((s, v) => s + (Number(v) || 0), 0);
 	}, 0);
 
-	// Episode trend chart with 3 horizons. 7-day was replaced because a single
-	// week tells the doctor nothing — patients pull this out for context, and
-	// context lives in months and years. 'max' extends back to the oldest doc.
-	type ChartScope = 'month' | 'year' | 'max';
-	let companionChartScope: ChartScope = 'month';
+	// CIPH-900 — Episode bar-chart and Top-symptoms bar-chart removed from
+	// the dashboard. Both lived as scope-pickered charts on Companion since
+	// PI v6; Anna-test (cycle cohort) flagged the dashboard as a "lot of not
+	// matching colours and structurally confusing". /reports already surfaces
+	// per-month coverage + sums + year heatmap, which is stronger data
+	// presentation than a vertical bar count. The dashboard now keeps a
+	// single sparkline-hero ("Wie geht's dir?") that links into /reports for
+	// the full trend view.
 
-	function dataSpanMonths(docs: CiphraDocument[]): number {
-		const dates = docs.filter(d => d.data?.type === 'entry')
-			.map(d => String(d.data.date || ''))
-			.filter(s => s.length >= 7);
-		if (dates.length === 0) return 0;
-		const oldest = dates.reduce((a, b) => (a < b ? a : b));
-		const o = new Date(oldest + 'T12:00:00');
-		const now = new Date();
-		return (now.getFullYear() - o.getFullYear()) * 12 + (now.getMonth() - o.getMonth()) + 1;
-	}
-	$: spanMonths = dataSpanMonths(allDocs);
-	$: yearChartAvailable = spanMonths >= 2;
-	$: maxChartAvailable = spanMonths > 12;
-
-	// Bucket size adapts to scope: month=daily bars, year=monthly bars,
-	// max=monthly bars across the whole history.
-	$: chartBuckets = (() => {
-		if (!bp) return { labels: [] as string[], keys: [] as string[], mode: 'day' as 'day' | 'month' };
-		if (companionChartScope === 'month') {
-			const now = new Date();
-			const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-			const keys: string[] = [];
-			const labels: string[] = [];
-			for (let d = 1; d <= days; d++) {
-				const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-				keys.push(dateStr);
-				labels.push(String(d));
-			}
-			return { labels, keys, mode: 'day' as const };
-		}
-		// month-bucketed for year + max
-		const monthCount = companionChartScope === 'year' ? 12 : Math.max(1, spanMonths);
-		const now = new Date();
-		const keys: string[] = [];
-		const labels: string[] = [];
-		for (let k = monthCount - 1; k >= 0; k--) {
-			const d = new Date(now.getFullYear(), now.getMonth() - k, 1);
-			keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-			labels.push(d.toLocaleDateString($locale, { month: 'short', year: monthCount > 12 || d.getMonth() === 0 ? '2-digit' : undefined }));
-		}
-		return { labels, keys, mode: 'month' as const };
-	})();
-
-	// ─── "Wie geht's dir?" — 12-month combined trend (CIPH-715) ─────────────
+	// ─── "Wie geht's dir?" — 12-month combined trend (CIPH-715, slimmed for CIPH-900) ─────────────
 	// Team-designed: one headline answer + one shared-axis line chart (no
 	// double-y-axis, no normalization). Episodes bold + brand, symptom-days
 	// faint + secondary. Linus's veto: text caption for SR users.
@@ -276,42 +237,55 @@
 	// doesn't override.
 	$: episodeNoun = bp?.episodeNoun ? $t(bp.episodeNoun) : $t('companion.how_episodes');
 
+	// CIPH-900 — Cohort-aware sparkline. Episode line uses cohort slot 1
+	// (the cohort's primary), symptom-days line uses slot 5 (anchor slate,
+	// cohort-invariant). The previous hardcoded `#DC2626` brick-red bled
+	// danger semantics into a cycle-cohort dashboard themed magenta-rose.
+	$: cohortAccentHex = cohortPalette(cohort)[0];
+	$: cohortNeutralHex = cohortPalette(cohort)[4]; // anchor slate, shared
+
 	$: howAreYouChartData = howAreYouTrend ? {
 		labels: howAreYouTrend.months.map((m) => m.label),
 		datasets: [
 			{
 				label: episodeNoun,
 				data: howAreYouTrend.episodes,
-				borderColor: '#DC2626',
-				backgroundColor: 'rgba(220,38,38,0.08)',
-				borderWidth: 2.5,
+				borderColor: cohortAccentHex,
+				backgroundColor: 'transparent',
+				borderWidth: 2,
 				tension: 0.3,
-				pointRadius: 2.5,
-				pointBackgroundColor: '#DC2626',
+				pointRadius: 0,
+				pointHoverRadius: 4,
+				pointBackgroundColor: cohortAccentHex,
 				fill: false,
 				yAxisID: 'y',
 			},
 			{
 				label: $t('companion.how_symptom_days'),
 				data: howAreYouTrend.symptomDays,
-				borderColor: 'rgba(120,113,108,0.55)',
+				borderColor: cohortNeutralHex,
 				backgroundColor: 'transparent',
-				borderWidth: 1.5,
+				borderWidth: 1,
 				borderDash: [3, 3],
 				tension: 0.3,
-				pointRadius: 1.5,
-				pointBackgroundColor: 'rgba(120,113,108,0.55)',
+				pointRadius: 0,
+				pointHoverRadius: 3,
+				pointBackgroundColor: cohortNeutralHex,
 				fill: false,
 				yAxisID: 'y1',
 			},
 		],
 	} : null;
 
+	// CIPH-900 — Sparkline options: no axis labels, no legend, minimal grid.
+	// The headline above the chart carries the takeaway; the chart itself
+	// is a glance-trend, not a data table. Tap the card → /reports for the
+	// full presentation.
 	$: howAreYouChartOptions = {
 		responsive: true,
 		maintainAspectRatio: false,
 		plugins: {
-			legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
+			legend: { display: false },
 			tooltip: {
 				callbacks: {
 					title: (items: Array<{ dataIndex: number }>) => {
@@ -323,25 +297,23 @@
 			},
 		},
 		scales: {
-			// CIPH-762 — dual y-axis so the primary episodes line stays
-			// visible even when symptom-days (typically an order of
-			// magnitude larger) would otherwise dominate the scale.
-			// Left axis = episodes (brick), right axis = symptom-days (muted).
 			y: {
 				type: 'linear' as const,
 				position: 'left' as const,
 				beginAtZero: true,
-				ticks: { precision: 0, font: { size: 10 }, color: '#DC2626' },
-				grid: { color: 'rgba(0,0,0,0.04)' },
+				display: false,
 			},
 			y1: {
 				type: 'linear' as const,
 				position: 'right' as const,
 				beginAtZero: true,
-				ticks: { precision: 0, font: { size: 10 }, color: 'rgba(120,113,108,0.85)' },
-				grid: { display: false },
+				display: false,
 			},
-			x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+			x: {
+				ticks: { font: { size: 9 }, color: 'rgba(120,113,108,0.65)' },
+				grid: { display: false },
+				border: { display: false },
+			},
 		},
 	};
 
@@ -364,80 +336,8 @@
 		return { arrow, text };
 	})();
 
-	$: episodeChartData = (() => {
-		if (!bp?.episodeTypes?.length) return null;
-		const { keys, labels, mode } = chartBuckets;
-		const datasets = bp.episodeTypes.map(et => ({
-			label: isCustomItem(et.id) ? et.label : $t(et.label),
-			data: keys.map(key =>
-				allDocs.filter(d => {
-					const ds = String(d.data.date || '');
-					return mode === 'day' ? ds === key : ds.startsWith(key);
-				}).reduce((sum, d) => sum + (Number((d.data.episodes || d.data.seizures || {})[et.id]) || 0), 0)
-			),
-			backgroundColor: et.color,
-			borderRadius: 3
-		}));
-		return { labels, datasets };
-	})();
-
-	$: episodeChartOptions = {
-		scales: {
-			x: { stacked: true, ticks: { maxTicksLimit: companionChartScope === 'month' ? 16 : 12 } },
-			y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } },
-		},
-		plugins: { legend: { display: (bp?.episodeTypes?.length || 0) > 1 } }
-	};
-
-	// Positive markers (slept_well) aren't symptoms — suppress them from
-	// the "top symptoms" chart. Legacy stored blueprints still list them,
-	// so we filter at render time rather than at preset time.
-	const POSITIVE_MARKERS = new Set(['slept_well']);
-
-	// Top symptoms scope mirrors the episode-chart scope: month / year / all.
-	let symptomChartScope: ChartScope = 'month';
-	$: symptomYearAvailable = spanMonths >= 2;
-	$: symptomMaxAvailable = spanMonths > 12;
-
-	$: symptomCutoffStr = (() => {
-		if (symptomChartScope === 'max') return '0000-00-00';
-		const cutoff = new Date();
-		const daysBack = symptomChartScope === 'month' ? 30 : 365;
-		cutoff.setDate(cutoff.getDate() - daysBack);
-		return cutoff.toISOString().slice(0, 10);
-	})();
-
-	$: symptomChartData = (() => {
-		if (!bp?.symptomGroups?.length) return null;
-		const counts: Record<string, number> = {};
-		for (const d of allDocs) {
-			if (String(d.data.date || '').slice(0, 10) < symptomCutoffStr) continue;
-			for (const [key, val] of Object.entries(d.data.symptoms || {})) {
-				if (val && !POSITIVE_MARKERS.has(key)) {
-					counts[key] = (counts[key] || 0) + 1;
-				}
-			}
-		}
-		const labelMap: Record<string, string> = {};
-		for (const g of bp.symptomGroups) {
-			for (const item of g.items) {
-				if (POSITIVE_MARKERS.has(item.id)) continue;
-				labelMap[item.id] = isCustomItem(item.id) ? item.label : $t(item.label);
-			}
-		}
-		const sorted = Object.entries(counts).sort(([, a], [, b]) => b - a).slice(0, 5);
-		if (!sorted.length) return null;
-		return {
-			labels: sorted.map(([id]) => labelMap[id] || id),
-			datasets: [{ data: sorted.map(([, c]) => c), backgroundColor: '#9f630b', borderRadius: 4 }]
-		};
-	})();
-
-	$: symptomChartOptions = {
-		indexAxis: 'y' as const,
-		scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
-		plugins: { legend: { display: false } }
-	};
+	// CIPH-900 — episodeChart + symptomChart bar charts removed from
+	// dashboard (see comment near howAreYou). /reports owns the deep view.
 
 	function handleEditEntry(entry: CiphraDocument) {
 		goto(entry.data.type === 'entry' ? `/log/${entry.data.date}` : '/journal');
@@ -585,23 +485,11 @@
 				{hasCycleVital}
 				{cycleState}
 				{PHASE_COLORS}
-				{episodeChartData}
-				{episodeChartOptions}
-				{symptomChartData}
-				{symptomChartOptions}
-				{companionChartScope}
-				{yearChartAvailable}
-				{maxChartAvailable}
-				{symptomChartScope}
-				{symptomYearAvailable}
-				{symptomMaxAvailable}
 				{howAreYouChartData}
 				{howAreYouChartOptions}
 				{howAreYouTrend}
 				{howAreYouHeadlineParts}
 				{episodeNoun}
-				onSetEpisodeScope={(s) => (companionChartScope = s)}
-				onSetSymptomScope={(s) => (symptomChartScope = s)}
 			/>
 		</div>
 		<aside class="min-w-0">
