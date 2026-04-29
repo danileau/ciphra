@@ -1,3 +1,27 @@
+<!-- primitive-exempt: ConfirmDelete — the moment-view modal renders an
+	 inline yes-delete/cancel row inside the modal body, with a full-width
+	 confirmation step that swaps the bottom action band. ConfirmDelete
+	 primitive is the compact icon-pair used on journal/calendar rows;
+	 inside a modal that already has its own action chrome, the icon pair
+	 would feel out of register. Pattern matches EntryComposer's banner-
+	 variant exemption. -->
+<!--
+	CIPH-902 — Journal redesign.
+
+	Threema-style chronological timeline. Day-grouped cards under floating
+	month headers. Each card's left-rail color signals doc type (olive
+	entry / ochre event / brand diary); no badge, no per-type icon. The
+	whole card is the affordance: entries link to /log/{date}, events and
+	diaries open a moment-view modal with the edit form. Per-card edit /
+	delete icons are gone — delete is hidden inside the moment-view (or,
+	for entries, behind the EntryComposer save bar) so it can't be
+	triggered in panic or by mistake.
+
+	Diary text gets a serif treatment so narrative reads differently from
+	data. Per-chip color stripes and the +N truncation on chips were
+	dropped (see EntryPreview); the journal now lets card height carry
+	"loud day vs quiet day" as visual rhythm.
+-->
 <script lang="ts">
 	import { t, locale } from '$lib/i18n';
 	import { isAuthenticated } from '$lib/stores/auth';
@@ -5,19 +29,17 @@
 	import { resolvedBlueprint } from '$lib/blueprint';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import Asterisk from '$lib/components/Asterisk.svelte';
+	import { fade } from 'svelte/transition';
 	import EntryPreview from '$lib/components/EntryPreview.svelte';
 	import JournalEmpty from '$lib/components/JournalEmpty.svelte';
-	import ConfirmDelete from '$lib/components/ConfirmDelete.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 
 	let filter = 'all';
 	let searchQuery = '';
 	let searchOpen = false;
 	let searchInputEl: HTMLInputElement | null = null;
 
-	// CIPH-711 / CIPH-725 — soft clarification banner shown until the user
-	// has authored at least one diary entry OR has visited the Tagebuch tab
-	// N≥3 times. No dismiss button; the hint fades on its own.
+	// CIPH-711 / CIPH-725 — soft clarification banner for the Tagebuch tab.
 	let diaryViews = 0;
 	$: diaryDocCount = $documents.filter((d) => d.data?.type === 'diary').length;
 	$: showDiaryHint = filter === 'diary' && diaryDocCount === 0 && diaryViews < 3;
@@ -37,11 +59,53 @@
 		if (!searchQuery) searchOpen = false;
 	}
 
-	let confirmDeleteId: number | null = null;
-	let editingId: number | null = null;
-	let editNotes = '';
-	let editPrivate = false;
-	let editSaving = false;
+	// CIPH-902 — Moment-view modal state. Events and diaries open here for
+	// editing; entries route to /log/{date} where EntryComposer handles
+	// edit + delete via its existing save bar.
+	let momentDoc: CiphraDocument | null = null;
+	let momentNotes = '';
+	let momentText = '';
+	let momentPrivate = false;
+	let momentSaving = false;
+	let momentConfirmDelete = false;
+
+	function openMoment(doc: CiphraDocument) {
+		momentDoc = doc;
+		momentNotes = doc.data.notes || '';
+		momentText = String(doc.data.text || '');
+		momentPrivate = doc.data.private === true;
+		momentConfirmDelete = false;
+	}
+
+	function closeMoment() {
+		momentDoc = null;
+		momentNotes = '';
+		momentText = '';
+		momentPrivate = false;
+		momentConfirmDelete = false;
+	}
+
+	async function saveMoment() {
+		if (!momentDoc) return;
+		momentSaving = true;
+		const updated: Record<string, unknown> = { ...momentDoc.data };
+		updated.notes = momentNotes;
+		if (momentDoc.data.type === 'diary') {
+			updated.text = momentText;
+		}
+		// CIPH-713 — preserve absence of `private` rather than writing `false`.
+		if (momentPrivate) updated.private = true;
+		else delete updated.private;
+		await documents.updateDoc(momentDoc.id, updated);
+		momentSaving = false;
+		closeMoment();
+	}
+
+	async function deleteMoment() {
+		if (!momentDoc) return;
+		await documents.remove(momentDoc.id);
+		closeMoment();
+	}
 
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
@@ -51,9 +115,7 @@
 		} catch {}
 	});
 
-	// CIPH-725 — increment view count each time the user selects the Tagebuch
-	// tab (not on every reactive recompute). Guards against runaway writes by
-	// only firing on the transition into `filter === 'diary'`.
+	// CIPH-725 — view-counter increment for the diary-hint timeout.
 	let lastCountedFilter = '';
 	$: if (filter === 'diary' && lastCountedFilter !== 'diary') {
 		lastCountedFilter = 'diary';
@@ -70,10 +132,7 @@
 			if (d.data?.type === 'blueprint') return false;
 			if (filter !== 'all' && d.data.type !== filter) return false;
 			if (searchQuery) {
-				// CIPH-767d — scope search to user-authored text only. The
-				// previous full-JSON stringify matched field names like "type"
-				// and "date", producing false positives. Only search the three
-				// narrative fields: notes, title, and (diary) text.
+				// CIPH-767d — narrative-text-only search.
 				const haystack = [d.data.notes, d.data.title, d.data.text]
 					.filter(Boolean)
 					.join(' ')
@@ -88,73 +147,91 @@
 			return db.localeCompare(da);
 		});
 
-	function typeBorderColor(type: string): string {
-		if (type === 'entry') return 'var(--olive)';
-		if (type === 'event') return 'var(--ochre)';
-		return 'var(--border)';
-	}
+	// CIPH-902 — Group docs by month → day for the timeline rendering.
+	type DayGroup = { dayKey: string; docs: CiphraDocument[] };
+	type MonthGroup = { monthKey: string; days: DayGroup[] };
 
-	function typeBadgeClass(type: string): string {
-		if (type === 'entry') return 'badge badge-olive';
-		if (type === 'event') return 'badge badge-ochre';
-		return 'badge';
-	}
-
-	function formatDate(doc: CiphraDocument): string {
-		const d = String(doc.data.date || doc.serverCreatedAt);
-		try {
-			return new Date(d.includes('T') ? d : d + 'T12:00:00').toLocaleDateString($locale, {
-				weekday: 'short', day: 'numeric', month: 'short'
-			});
-		} catch { return d; }
-	}
-
-	function typeLabel(type: string): string {
-		if (type === 'entry') return $t('protocol.title');
-		if (type === 'event') return $t('stream.events');
-		return type;
-	}
-
-	async function handleDelete(id: number) {
-		await documents.remove(id);
-		confirmDeleteId = null;
-	}
-
-	function startEdit(doc: CiphraDocument) {
-		if (doc.data.type === 'entry') {
-			const date = String(doc.data.date || '');
-			goto(`/log/${date}`);
-			return;
+	$: groupedDocs = (() => {
+		const monthMap = new Map<string, Map<string, CiphraDocument[]>>();
+		for (const doc of filteredDocs) {
+			const dateStr = String(doc.data.date || doc.serverCreatedAt);
+			const day = dateStr.slice(0, 10);
+			const month = dateStr.slice(0, 7);
+			if (!monthMap.has(month)) monthMap.set(month, new Map());
+			const days = monthMap.get(month)!;
+			if (!days.has(day)) days.set(day, []);
+			days.get(day)!.push(doc);
 		}
-		editingId = doc.id;
-		editNotes = doc.data.notes || '';
-		editPrivate = doc.data.private === true;
+		const out: MonthGroup[] = [];
+		for (const [monthKey, days] of monthMap) {
+			const dayList: DayGroup[] = [];
+			for (const [dayKey, docs] of days) {
+				// Within a day, sort by time desc when present, else stable.
+				const sorted = [...docs].sort((a, b) => {
+					const ta = String(a.data.time || '');
+					const tb = String(b.data.time || '');
+					if (ta && tb) return tb.localeCompare(ta);
+					return 0;
+				});
+				dayList.push({ dayKey, docs: sorted });
+			}
+			out.push({ monthKey, days: dayList });
+		}
+		return out;
+	})();
+
+	function railColor(type: string): string {
+		if (type === 'entry') return 'var(--olive)';
+		if (type === 'diary') return 'var(--brand)';
+		return 'var(--ochre)';
 	}
 
-	function cancelEdit() {
-		editingId = null;
-		editNotes = '';
-		editPrivate = false;
+	function formatMonthHeader(monthKey: string): string {
+		const d = new Date(monthKey + '-01T12:00:00');
+		return d.toLocaleDateString($locale, { month: 'long', year: 'numeric' });
 	}
 
-	async function saveEdit(doc: CiphraDocument) {
-		editSaving = true;
-		const updatedData = { ...doc.data };
-		updatedData.notes = editNotes;
-		// CIPH-713 — preserve absence of `private` rather than writing `false`,
-		// so re-encryption diffs stay minimal.
-		if (editPrivate) updatedData.private = true;
-		else delete updatedData.private;
-		await documents.updateDoc(doc.id, updatedData);
-		editSaving = false;
-		editingId = null;
+	function formatDayHeader(dayKey: string): { label: string; weekday: string } {
+		const d = new Date(dayKey + 'T12:00:00');
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		const yesterday = new Date(today);
+		yesterday.setDate(yesterday.getDate() - 1);
+		const target = new Date(d);
+		target.setHours(0, 0, 0, 0);
+
+		const dayMs = 86400000;
+		const diff = (today.getTime() - target.getTime()) / dayMs;
+
+		if (diff === 0) return { label: $t('common.today'), weekday: '' };
+		if (diff === 1) return { label: $t('common.yesterday'), weekday: '' };
+		if (diff > 0 && diff < 7) {
+			return {
+				label: d.toLocaleDateString($locale, { weekday: 'long' }),
+				weekday: d.toLocaleDateString($locale, { day: 'numeric', month: 'short' }),
+			};
+		}
+		return {
+			label: d.toLocaleDateString($locale, { day: 'numeric', month: 'long' }),
+			weekday: d.toLocaleDateString($locale, { weekday: 'short' }),
+		};
+	}
+
+	function cardHref(doc: CiphraDocument): string | null {
+		// Entries route into the form. Events / diaries open the moment modal.
+		if (doc.data.type === 'entry') {
+			return `/log/${String(doc.data.date || '')}`;
+		}
+		return null;
 	}
 </script>
 
-<div class="layout-data pt-4 pb-32">
+<div class="layout-data pt-4">
 	<h1 class="text-2xl font-bold mb-4" style="color: var(--text-primary)">{$t('stream.title')}</h1>
 
-	<!-- Search + filter row (CIPH-424) -->
+	<!-- Search + filter row (CIPH-424) — filter chips are now cohort-aware
+		 via --accent; the previous hardcoded olive bled brand-discrete color
+		 onto cycle / phase / narrative cohorts. -->
 	<div class="flex items-center gap-2 mb-4">
 		{#if !searchOpen}
 			<button
@@ -200,10 +277,7 @@
 					<button
 						on:click={() => { filter = tab.key; }}
 						data-testid="filter-tab-{tab.key}"
-						class="px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors min-h-[36px]"
-						style="{filter === tab.key
-							? 'background: var(--olive-light); color: var(--olive);'
-							: 'background: var(--surface-muted); color: var(--text-secondary);'}"
+						class="journal-filter-chip {filter === tab.key ? 'journal-filter-chip--active' : ''}"
 					>
 						{$t(tab.label)}
 					</button>
@@ -227,117 +301,163 @@
 		</div>
 	{/if}
 
-	<!-- Entries -->
+	<!-- Stream -->
 	{#if filteredDocs.length === 0}
-		<!-- CIPH-893 — JournalEmpty primitive: stream-card silhouette
-			 instead of a uniform Asterisk hero so the surface still
-			 reads as "the journal" even when empty. -->
 		<JournalEmpty
 			variant={filter === 'diary' ? 'diary' : 'all'}
 			hideCta={filter === 'diary' || !!searchQuery}
 			onLogToday={() => goto('/log/today')}
 		/>
 	{:else}
-		<!-- CIPH-763b — aria-live announces new additions to the entry list
-			 (e.g. quick-add diary entry). aria-relevant="additions" scopes
-			 announcements to newly-appearing nodes so SR users don't hear
-			 the full list re-read when filters change. -->
-		<div class="space-y-2" aria-live="polite" aria-relevant="additions" aria-atomic="false">
-			{#each filteredDocs as doc, i (doc.id)}
-				<div
-					class="card card-rhythmic stagger-in"
-					style="border-left: 4px solid {typeBorderColor(doc.data.type || '')}; animation-delay: {Math.min(i, 10) * 50}ms"
-				>
-					{#if editingId === doc.id}
-						<!-- Inline edit form -->
-						<div class="space-y-3">
-							<div class="flex items-center gap-2 mb-1">
-								<span class={typeBadgeClass(doc.data.type || '')}>{typeLabel(doc.data.type || '')}</span>
-								<span class="text-xs" style="color: var(--text-muted)">{formatDate(doc)}</span>
-							</div>
-							<div>
-								<label class="text-xs" style="color: var(--text-secondary)" for="journal-edit-notes-{doc.id}">{$t('common.notes')}</label>
-								<textarea
-									id="journal-edit-notes-{doc.id}"
-									bind:value={editNotes}
-									rows="2"
-									class="input resize-y mt-1"
-								></textarea>
-							</div>
-							<!-- CIPH-713 / CIPH-783 — private toggle with semantic lock state -->
-							<label class="flex items-center gap-2 text-xs" style="color: var(--text-secondary)"
-								aria-label={editPrivate ? $t('private.toggle_to_public') : $t('private.toggle_to_private')}>
-								<input type="checkbox" bind:checked={editPrivate} class="w-4 h-4" />
-								{#if editPrivate}
-									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="transition-all duration-150">
-										<rect x="4" y="11" width="16" height="10" rx="2" />
-										<path d="M8 11V7a4 4 0 1 1 8 0v4" />
-									</svg>
-								{:else}
-									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="transition-all duration-150">
-										<rect x="4" y="11" width="16" height="10" rx="2" />
-										<path d="M8 11V7a4 4 0 0 1 7 -1.5" />
-									</svg>
-								{/if}
-								{editPrivate ? $t('private.state_private') : $t('private.state_public')}
-								<span style="color: var(--text-muted)">— {$t('private.tooltip')}</span>
-							</label>
-							<div class="flex gap-2 justify-end">
-								<button
-									on:click={cancelEdit}
-									class="btn-secondary px-3 py-1.5 text-sm"
-								>{$t('common.cancel')}</button>
-								<button
-									on:click={() => saveEdit(doc)}
-									disabled={editSaving}
-									class="btn-primary px-4 py-1.5 text-sm"
-								>{editSaving ? $t('common.loading') : $t('common.save')}</button>
+		<!-- CIPH-763b — aria-live announces new additions. -->
+		<div aria-live="polite" aria-relevant="additions" aria-atomic="false">
+			{#each groupedDocs as month (month.monthKey)}
+				<section class="journal-month">
+					<h2 class="journal-month-header">{formatMonthHeader(month.monthKey)}</h2>
+					{#each month.days as day (day.dayKey)}
+						{@const dh = formatDayHeader(day.dayKey)}
+						<div class="journal-day">
+							<p class="journal-day-header">
+								<span class="journal-day-label">{dh.label}</span>
+								{#if dh.weekday}<span class="journal-day-meta">· {dh.weekday}</span>{/if}
+							</p>
+							<div class="journal-day-stack">
+								{#each day.docs as doc (doc.id)}
+									{@const href = cardHref(doc)}
+									{@const railHex = railColor(doc.data.type || '')}
+									{#if href}
+										<a
+											href={href}
+											class="journal-card"
+											style="border-left-color: {railHex}"
+										>
+											{#if doc.data.time}
+												<span class="journal-card-time">{doc.data.time}</span>
+											{/if}
+											<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
+										</a>
+									{:else}
+										<button
+											type="button"
+											on:click={() => openMoment(doc)}
+											class="journal-card journal-card--button"
+											style="border-left-color: {railHex}"
+										>
+											{#if doc.data.time}
+												<span class="journal-card-time">{doc.data.time}</span>
+											{/if}
+											<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
+										</button>
+									{/if}
+								{/each}
 							</div>
 						</div>
-					{:else}
-						<!-- Normal display -->
-						<div class="flex items-start justify-between gap-3">
-							<div class="flex-1 min-w-0">
-								<EntryPreview entry={doc} {bp} recentDocs={$documents} />
-							</div>
-							<div class="flex items-center gap-1 shrink-0">
-								<!-- Edit button -->
-								<button
-									on:click={() => startEdit(doc)}
-									class="p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-									style="color: var(--text-muted)"
-									aria-label={$t('common.edit')}
-								>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-								</button>
-								<!-- Delete button / confirmation -->
-								{#if confirmDeleteId === doc.id}
-									<div class="flex items-center gap-1">
-										<span class="text-xs font-medium whitespace-nowrap" style="color: var(--danger)">{$t('common.confirm_delete')}</span>
-										<ConfirmDelete
-											onConfirm={() => handleDelete(doc.id)}
-											onCancel={() => { confirmDeleteId = null; }}
-										/>
-									</div>
-								{:else}
-									<button
-										on:click={() => { confirmDeleteId = doc.id; }}
-										class="p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-										style="color: var(--text-muted)"
-										aria-label={$t('common.delete')}
-									>
-										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6" stroke-width="2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2"/></svg>
-									</button>
-								{/if}
-							</div>
-						</div>
-					{/if}
-				</div>
+					{/each}
+				</section>
 			{/each}
 		</div>
 	{/if}
-
 </div>
+
+<!-- CIPH-902 — Moment-view modal for events / diaries. Edit + delete
+	 live here; the journal card itself is now read-only. Delete moves
+	 behind a confirm step inside the modal so it can't fire by mistake. -->
+{#if momentDoc}
+	<Modal
+		open={true}
+		title={momentDoc.data.type === 'diary' ? $t('quickadd.mode_diary') : $t('stream.events')}
+		onClose={closeMoment}
+		maxWidth="max-w-md"
+	>
+		<div class="space-y-4">
+			{#if momentDoc.data.date}
+				<p class="text-xs" style="color: var(--text-muted)">
+					{new Date(momentDoc.data.date + (momentDoc.data.time ? 'T' + momentDoc.data.time : 'T12:00:00')).toLocaleDateString($locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+					{#if momentDoc.data.time}
+						<span> · {momentDoc.data.time}</span>
+					{/if}
+				</p>
+			{/if}
+
+			{#if momentDoc.data.type === 'diary'}
+				<div>
+					<label class="text-xs" style="color: var(--text-secondary)" for="moment-text">{$t('quickadd.diary_text_label')}</label>
+					<textarea
+						id="moment-text"
+						bind:value={momentText}
+						rows="6"
+						class="input resize-y mt-1 diary-text-edit"
+					></textarea>
+				</div>
+			{/if}
+
+			<div>
+				<label class="text-xs" style="color: var(--text-secondary)" for="moment-notes">{$t('common.notes')}</label>
+				<textarea
+					id="moment-notes"
+					bind:value={momentNotes}
+					rows="2"
+					class="input resize-y mt-1"
+				></textarea>
+			</div>
+
+			<label class="flex items-center gap-2 text-xs" style="color: var(--text-secondary)"
+				aria-label={momentPrivate ? $t('private.toggle_to_public') : $t('private.toggle_to_private')}>
+				<input type="checkbox" bind:checked={momentPrivate} class="w-4 h-4" />
+				{#if momentPrivate}
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<rect x="4" y="11" width="16" height="10" rx="2" />
+						<path d="M8 11V7a4 4 0 1 1 8 0v4" />
+					</svg>
+				{:else}
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<rect x="4" y="11" width="16" height="10" rx="2" />
+						<path d="M8 11V7a4 4 0 0 1 7 -1.5" />
+					</svg>
+				{/if}
+				{momentPrivate ? $t('private.state_private') : $t('private.state_public')}
+				<span style="color: var(--text-muted)">— {$t('private.tooltip')}</span>
+			</label>
+
+			<div class="flex flex-wrap gap-2 justify-end pt-2" style="border-top: 1px solid var(--border)">
+				{#if momentConfirmDelete}
+					<div class="flex items-center gap-2 w-full" transition:fade={{ duration: 150 }}>
+						<span class="text-sm flex-1" style="color: var(--danger)">{$t('common.confirm_delete')}</span>
+						<button
+							type="button"
+							on:click={() => (momentConfirmDelete = false)}
+							class="btn-secondary px-3 py-1.5 text-sm"
+						>{$t('common.cancel')}</button>
+						<button
+							type="button"
+							on:click={deleteMoment}
+							class="px-3 py-1.5 text-sm rounded-lg"
+							style="background: var(--danger); color: white"
+						>{$t('common.yes_delete')}</button>
+					</div>
+				{:else}
+					<button
+						type="button"
+						on:click={() => (momentConfirmDelete = true)}
+						class="text-sm px-3 py-1.5 mr-auto"
+						style="color: var(--text-muted)"
+					>{$t('common.delete')}</button>
+					<button
+						type="button"
+						on:click={closeMoment}
+						class="btn-secondary px-3 py-1.5 text-sm"
+					>{$t('common.cancel')}</button>
+					<button
+						type="button"
+						on:click={saveMoment}
+						disabled={momentSaving}
+						class="btn-primary px-4 py-1.5 text-sm"
+					>{momentSaving ? $t('common.loading') : $t('common.save')}</button>
+				{/if}
+			</div>
+		</div>
+	</Modal>
+{/if}
 
 <style>
 	@keyframes journalSearchSlide {
@@ -347,12 +467,123 @@
 	.journal-search-anim {
 		animation: journalSearchSlide 180ms ease-out;
 	}
-	button.p-2:hover {
-		color: var(--brand);
-		background: var(--brand-light);
+
+	/* CIPH-902 — filter-chip cohort-awareness. Active state uses
+	   --accent (cohort primary) instead of hardcoded olive. */
+	.journal-filter-chip {
+		padding: 6px 12px;
+		font-size: 13px;
+		font-weight: 500;
+		border-radius: 9999px;
+		white-space: nowrap;
+		min-height: 36px;
+		background: var(--surface-muted);
+		color: var(--text-secondary);
+		border: 1px solid transparent;
+		transition: background 0.15s, color 0.15s, border-color 0.15s;
 	}
-	button[aria-label]:last-child:hover {
-		color: var(--danger);
-		background: rgba(220, 38, 38, 0.05);
+	.journal-filter-chip:hover {
+		color: var(--text-primary);
+	}
+	.journal-filter-chip--active {
+		background: var(--surface-card);
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+
+	/* CIPH-902 — Threema-style timeline. Month header sticks at the top;
+	   day header is muted small text; cards stack with a 2px type-color
+	   left rail. Card height grows with content (no chip truncation). */
+	.journal-month {
+		margin-top: 8px;
+	}
+	.journal-month-header {
+		position: sticky;
+		/* Authed top header is h-14 (56px). Sticky below it. */
+		top: 56px;
+		z-index: 10;
+		margin: 0 -16px 12px;
+		padding: 8px 16px;
+		background: var(--surface);
+		border-bottom: 1px solid var(--border-subtle, var(--border));
+		font-size: 12px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--text-muted);
+		backdrop-filter: blur(6px);
+	}
+
+	.journal-day {
+		margin-bottom: 16px;
+	}
+	.journal-day-header {
+		font-size: 12px;
+		color: var(--text-secondary);
+		margin: 0 0 8px;
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
+	}
+	.journal-day-label {
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+	.journal-day-meta {
+		color: var(--text-muted);
+	}
+
+	.journal-day-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.journal-card {
+		display: block;
+		position: relative;
+		padding: 12px 16px;
+		border-radius: 8px;
+		background: var(--surface-card);
+		border: 1px solid var(--border);
+		border-left: 3px solid var(--border);
+		text-decoration: none;
+		color: inherit;
+		text-align: left;
+		width: 100%;
+		font: inherit;
+		cursor: pointer;
+		transition: border-color 0.15s ease-out, transform 0.15s ease-out, box-shadow 0.15s ease-out;
+	}
+	.journal-card--button {
+		font-family: inherit;
+		font-size: inherit;
+	}
+	.journal-card:hover,
+	.journal-card:focus-visible {
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+		outline: none;
+	}
+	.journal-card:focus-visible {
+		box-shadow: 0 0 0 2px var(--accent), 0 1px 3px rgba(0, 0, 0, 0.05);
+	}
+	.journal-card:active {
+		transform: scale(0.998);
+	}
+	.journal-card-time {
+		position: absolute;
+		top: 12px;
+		right: 16px;
+		font-size: 11px;
+		color: var(--text-muted);
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* Diary text editing: same serif treatment as the read-only excerpt
+	   inside EntryPreview. Narrative reads narrative, even in the editor. */
+	.diary-text-edit {
+		font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', Cambria, 'Times New Roman', serif;
+		font-size: 15px;
+		line-height: 1.5;
 	}
 </style>

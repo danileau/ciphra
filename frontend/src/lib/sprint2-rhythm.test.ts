@@ -67,9 +67,14 @@ describe('CIPH-892 — per-route silhouette rhythm tokens', () => {
 		// Search the source tree for `card-rhythmic` references outside
 		// app.css + the test files themselves. The honest fix only counts
 		// if it's actually consumed at canonical surfaces.
+		// CIPH-902 — the journal redesigned away from per-route card
+		// rhythm into its own timeline pattern (.journal-card with a
+		// 2px type-color rail). The dashboard rail picked up the slack:
+		// CompanionMain (howAreYou hero) + CompanionRail (reports CTA)
+		// keep card-rhythmic consumed at canonical surfaces.
 		const sources = [
-			'routes/journal/+page.svelte',
 			'lib/components/CompanionMain.svelte',
+			'lib/components/CompanionRail.svelte',
 		];
 		for (const rel of sources) {
 			const src = readFileSync(resolve(SRC_ROOT, rel), 'utf8');

@@ -321,49 +321,49 @@
 	{/if}
 
 	{#if showChips}
-		<!-- Episode chips (always first per CIPH-413) -->
+		<!-- CIPH-902 — Per-chip color stripes (red on episodes, brand on
+			 triggers) dropped: a calm timeline shouldn't fight the rail
+			 color. The "Nx" count prefix on episodes carries the "this is
+			 an episode" signal; symptoms vs triggers stay legible by label.
+			 +N truncation also dropped — let card height carry "loud day
+			 vs quiet day" as visual rhythm. -->
 		{#if epEntries.length > 0}
 			<div
 				role="group"
 				aria-label={$t('entry_preview.aria_episodes_count').replace('{n}', String(epEntries.reduce((s, [, n]) => s + Number(n), 0)))}
 				class="flex flex-wrap gap-1 {compact ? 'mt-1' : 'mt-2'}"
 			>
-				{#each epEntries.slice(0, 4) as [id, n]}
-					<span class="inline-flex items-center gap-1 {chipSize} px-2 py-0.5 rounded-r-full rounded-l-sm"
-						style={pillStyle('var(--danger)')}
+				{#each epEntries as [id, n]}
+					<span class="inline-flex items-center gap-1 {chipSize} px-2 py-0.5 rounded-full"
+						style={pillStyle(null)}
 					>{n}× {epLabelFor(id)}</span>
 				{/each}
 			</div>
 		{/if}
 
-		<!-- Symptom chips -->
 		{#if symIds.length > 0}
 			<div
 				role="group"
 				aria-label={$t('entry_preview.aria_symptoms_count').replace('{n}', String(symIds.length))}
 				class="flex flex-wrap gap-1 {compact ? 'mt-1' : (epEntries.length > 0 ? 'mt-1.5' : 'mt-2')}"
 			>
-				{#each symIds.slice(0, 6) as id}
-					<span class="{chipSize} px-2 py-0.5 rounded-r-full rounded-l-sm"
+				{#each symIds as id}
+					<span class="{chipSize} px-2 py-0.5 rounded-full"
 						style={pillStyle(null)}
 					>{symptomLabelFor(id)}</span>
 				{/each}
-				{#if symIds.length > 6}
-					<span class="{chipSize} px-2 py-0.5" style="color: var(--text-muted)">+{symIds.length - 6}</span>
-				{/if}
 			</div>
 		{/if}
 
-		<!-- Trigger chips -->
 		{#if trigIds.length > 0}
 			<div
 				role="group"
 				aria-label={$t('entry_preview.aria_triggers_count').replace('{n}', String(trigIds.length))}
 				class="flex flex-wrap gap-1 mt-1.5"
 			>
-				{#each trigIds.slice(0, 4) as id}
-					<span class="{chipSize} px-2 py-0.5 rounded-r-full rounded-l-sm"
-						style={pillStyle('var(--brand)')}
+				{#each trigIds as id}
+					<span class="{chipSize} px-2 py-0.5 rounded-full"
+						style={pillStyle(null)}
 					>{triggerLabelFor(id)}</span>
 				{/each}
 			</div>
@@ -417,7 +417,12 @@
 {/if}
 
 {#if entry.data.type === 'diary' && entry.data.text}
-	<p class="text-xs mt-1.5 line-clamp-3 whitespace-pre-wrap" style="color: var(--text-secondary)">{entry.data.text}</p>
+	<!-- CIPH-902 — Diary text gets a serif treatment so narrative reads
+		 differently from data. System-stack serif: zero font load. -->
+	<p
+		class="mt-1.5 line-clamp-3 whitespace-pre-wrap entry-preview-diary-text"
+		style="color: var(--text-secondary)"
+	>{entry.data.text}</p>
 {/if}
 
 <!-- CIPH-881b — rescue-medication pill: brand-tinted, distinct from
@@ -447,3 +452,14 @@
 {#if entry.data.notes}
 	<p class="text-xs mt-1.5 italic line-clamp-2" style="color: var(--text-secondary)">"{entry.data.notes}"</p>
 {/if}
+
+<style>
+	/* CIPH-902 — diary serif treatment. System stack — Charter on macOS,
+	   Bitstream Charter on Linux, Sitka Text on Windows, Cambria older
+	   Windows, Times New Roman fallback. No webfont load. */
+	.entry-preview-diary-text {
+		font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', Cambria, 'Times New Roman', serif;
+		font-size: 14px;
+		line-height: 1.5;
+	}
+</style>

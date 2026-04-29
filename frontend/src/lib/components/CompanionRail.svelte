@@ -106,8 +106,12 @@
 		</section>
 	{/if}
 
-	<!-- ═══ REPORTS & EXPORT ═══ -->
-	<section class="card p-4">
+	<!-- ═══ REPORTS & EXPORT ═══
+		 CIPH-902 follow-up: opted into `card-rhythmic` so dashboard's
+		 `--rhythm-card-padding` (16px) drives padding rather than the
+		 hardcoded `p-4`. No visual change today (both = 16px), but route
+		 rhythm tokens now flow through this surface. -->
+	<section class="card card-rhythmic">
 		<div class="flex items-center gap-2 mb-3">
 			<div
 				class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
