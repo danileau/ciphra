@@ -193,6 +193,7 @@ export default {
 	'reports.glance_phase_days': 'Jours en phase',
 	'reports.glance_top_symptoms': 'Principaux symptômes',
 	'reports.glance_trend': 'Évolution',
+	'reports.trend_title': 'Évolution · 24 mois',
 	'reports.glance_delta_down': '{delta} de moins que le mois dernier ({prev})',
 	'reports.glance_delta_up': '{delta} de plus que le mois dernier ({prev})',
 	'reports.glance_delta_flat': 'Identique au mois dernier ({prev})',

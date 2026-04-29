@@ -193,6 +193,7 @@ export default {
 	'reports.glance_phase_days': 'Phase days',
 	'reports.glance_top_symptoms': 'Top symptoms',
 	'reports.glance_trend': 'Trend',
+	'reports.trend_title': 'Trend · 24 months',
 	'reports.glance_delta_down': '{delta} fewer than last month ({prev})',
 	'reports.glance_delta_up': '{delta} more than last month ({prev})',
 	'reports.glance_delta_flat': 'Same as last month ({prev})',

@@ -6,6 +6,9 @@
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
+	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
+	import { cohortPalette } from '$lib/cohortPalette';
+	import { cohortOf } from '$lib/blueprint/cohort';
 	import type { Blueprint } from '$lib/blueprint';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -496,6 +499,118 @@
 	$: scopedPhaseDays = viewMode === 'month' ? phaseDaysThisMonth : phaseDaysThisYear;
 	$: scopedCounterEpisodes = viewMode === 'month' ? counterEpisodesThisMonth : counterEpisodesThisYear;
 
+	// CIPH-914 — 24-month trend chart in /reports. The doctor-facing
+	// "complexity of all aggregated data" view that the team flagged was
+	// epilepc's strongest feature. Episodes (sum, all types) per month
+	// as a primary line in the cohort accent; symptom-days per month as
+	// a faint secondary line. Year mode shows the same 24-month window
+	// (anchor = currentYear's December); month mode shows it ending at
+	// the visible month — so navigating months keeps the chart in context.
+	$: trendCohort = cohortOf(bp);
+	$: trendAccentHex = bp ? cohortPalette(trendCohort)[0] : '#b23c2c';
+	$: trendNeutralHex = bp ? cohortPalette(trendCohort)[4] : '#5c6b73';
+	$: trendAnchor = (() => {
+		if (viewMode === 'year') {
+			return new Date(currentYear, 11, 1);
+		}
+		const d = new Date(currentDate + 'T12:00:00');
+		return new Date(d.getFullYear(), d.getMonth(), 1);
+	})();
+	$: trendChartData = (() => {
+		if (!bp?.episodeTypes?.length) return null;
+		const months: { y: number; m: number; key: string; label: string }[] = [];
+		for (let i = 23; i >= 0; i--) {
+			const d = new Date(trendAnchor.getFullYear(), trendAnchor.getMonth() - i, 1);
+			months.push({
+				y: d.getFullYear(),
+				m: d.getMonth(),
+				key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+				label: d.toLocaleDateString($locale, {
+					month: 'short',
+					year: d.getMonth() === 0 || i === 23 ? '2-digit' : undefined,
+				}),
+			});
+		}
+		const episodes = months.map(() => 0);
+		const symptomDays = months.map(() => 0);
+		for (const doc of exportableDocs) {
+			if (doc.data?.type !== 'entry') continue;
+			const ds = String(doc.data.date || '');
+			const idx = months.findIndex((mo) => ds.startsWith(mo.key));
+			if (idx < 0) continue;
+			const eps = (doc.data.episodes || doc.data.seizures || {}) as Record<string, number>;
+			let epCount = 0;
+			for (const ep of bp.episodeTypes) epCount += Number(eps[ep.id] || 0);
+			episodes[idx] += epCount;
+			const syms = (doc.data.symptoms || {}) as Record<string, unknown>;
+			if (Object.values(syms).some((v) => v)) symptomDays[idx] += 1;
+		}
+		const totalSignal = episodes.reduce((a, b) => a + b, 0) + symptomDays.reduce((a, b) => a + b, 0);
+		if (totalSignal === 0) return null;
+		return {
+			labels: months.map((m) => m.label),
+			datasets: [
+				{
+					label: $t('day_detail.episodes'),
+					data: episodes,
+					borderColor: trendAccentHex,
+					backgroundColor: 'transparent',
+					borderWidth: 2,
+					tension: 0.3,
+					pointRadius: 2,
+					pointHoverRadius: 5,
+					pointBackgroundColor: trendAccentHex,
+					fill: false,
+					yAxisID: 'y',
+				},
+				{
+					label: $t('companion.how_symptom_days'),
+					data: symptomDays,
+					borderColor: trendNeutralHex,
+					backgroundColor: 'transparent',
+					borderWidth: 1,
+					borderDash: [3, 3],
+					tension: 0.3,
+					pointRadius: 1.5,
+					pointHoverRadius: 4,
+					pointBackgroundColor: trendNeutralHex,
+					fill: false,
+					yAxisID: 'y1',
+				},
+			],
+		};
+	})();
+	$: trendChartOptions = {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: {
+			legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
+		},
+		scales: {
+			y: {
+				type: 'linear' as const,
+				position: 'left' as const,
+				beginAtZero: true,
+				ticks: { precision: 0, font: { size: 10 }, color: trendAccentHex, maxTicksLimit: 5 },
+				grid: { color: 'rgba(0,0,0,0.04)' },
+				border: { display: false },
+			},
+			y1: {
+				type: 'linear' as const,
+				position: 'right' as const,
+				beginAtZero: true,
+				ticks: { precision: 0, font: { size: 10 }, color: trendNeutralHex, maxTicksLimit: 5 },
+				grid: { display: false },
+				border: { display: false },
+			},
+			x: {
+				ticks: { font: { size: 10 }, color: 'rgba(120,113,108,0.7)', maxRotation: 0 },
+				grid: { display: false },
+				border: { display: false },
+			},
+		},
+	};
+
 	function getMonthShortName(month: number): string {
 		const d = new Date(2024, month, 1);
 		return d.toLocaleDateString($locale, { month: 'short' });
@@ -650,6 +765,20 @@
 			<p class="text-xs text-slate-500 mt-1">{$t('reports.coverage')}</p>
 		</div>
 	</div>
+
+	<!-- CIPH-914 — 24-month trend chart. The "complexity of all
+		 aggregated data" view that scored highest in epilepc. Renders
+		 above the recent events block. Episodes line + symptom-days
+		 line, dual y-axis so a low episode count stays readable when
+		 symptom-days dwarf it. Hides when there's no signal yet. -->
+	{#if trendChartData}
+		<div class="card mb-4 p-4">
+			<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('reports.trend_title')}</h2>
+			<div class="rpt-trend-chart">
+				<ChartWrapper type="line" data={trendChartData} options={trendChartOptions} />
+			</div>
+		</div>
+	{/if}
 
 	<!-- Recent note-marker events — closes the visibility gap. Users who
 		 create "Treatment adjusted" style markers couldn't see them anywhere
@@ -1036,6 +1165,16 @@
 	}
 	:global(.grid-table--ultra th),
 	:global(.grid-table--ultra td) { padding-left: 2px !important; padding-right: 2px !important; }
+
+	/* CIPH-914 — 24-month trend chart container. */
+	.rpt-trend-chart {
+		height: 220px;
+	}
+	@media (min-width: 768px) {
+		.rpt-trend-chart {
+			height: 280px;
+		}
+	}
 	/* CIPH-909 (v2) — "This month at a glance" stat block. dl/dt/dd
 	   semantics so screen readers announce the term/definition pairs
 	   correctly. Two-column on wider viewports; stacked on mobile. */

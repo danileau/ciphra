@@ -268,32 +268,56 @@
 {/if}
 
 <style>
+	/* CIPH-913 — visual polish. Smoke flagged the day-detail panel as
+	   "shine-less, just text." Added: hairline divider + cohort-accent
+	   dot per section, vitals as a 2-column grid with right-aligned
+	   tabular values, diary text retains the serif treatment, the notes
+	   section reads as quote-pulled text. Calm Threema-style "designed"
+	   feel without sparkle. */
 	.dd {
 		display: flex;
 		flex-direction: column;
-		gap: 14px;
+		gap: 0;
 	}
 	.dd-section {
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
+		gap: 6px;
+		padding: 14px 0;
+		border-top: 1px solid var(--border-subtle, var(--border));
+	}
+	.dd-section:first-child {
+		padding-top: 0;
+		border-top: none;
 	}
 	.dd-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
 		font-size: 11px;
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		margin: 0;
+	}
+	.dd-label::before {
+		content: '';
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: var(--accent);
+		flex-shrink: 0;
 	}
 	.dd-count {
 		font-weight: 400;
 		text-transform: none;
 		letter-spacing: normal;
+		color: var(--text-muted);
 	}
 	.dd-content {
 		font-size: 14px;
-		line-height: 1.5;
+		line-height: 1.55;
 		color: var(--text-primary);
 		margin: 0;
 	}
@@ -303,28 +327,36 @@
 		margin: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
 		font-size: 14px;
 	}
 	.dd-vitals li {
-		display: flex;
-		gap: 6px;
+		display: grid;
+		grid-template-columns: 1fr auto;
+		gap: 12px;
 		align-items: baseline;
+		padding: 5px 0;
+		border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+	}
+	.dd-vitals li:last-child {
+		border-bottom: none;
 	}
 	.dd-vital-label {
-		color: var(--text-muted);
-		min-width: 100px;
+		color: var(--text-secondary);
 	}
 	.dd-vital-value {
 		color: var(--text-primary);
 		font-variant-numeric: tabular-nums;
+		font-weight: 500;
+		text-align: right;
 	}
 	.dd-notes {
 		font-size: 14px;
-		line-height: 1.5;
+		line-height: 1.55;
 		color: var(--text-secondary);
 		font-style: italic;
 		margin: 0;
+		padding-left: 10px;
+		border-left: 2px solid var(--border);
 	}
 	.dd-events {
 		list-style: none;
@@ -332,19 +364,24 @@
 		margin: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
 		font-size: 14px;
 	}
 	.dd-events li {
-		display: flex;
-		gap: 8px;
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 10px;
 		align-items: baseline;
+		padding: 5px 0;
+		border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+	}
+	.dd-events li:last-child {
+		border-bottom: none;
 	}
 	.dd-event-time {
 		font-variant-numeric: tabular-nums;
 		color: var(--text-muted);
 		font-size: 12px;
-		min-width: 44px;
+		font-weight: 500;
 	}
 	.dd-event-rescue {
 		font-weight: 500;
@@ -356,14 +393,16 @@
 		font-variant-numeric: tabular-nums;
 		color: var(--text-muted);
 		font-size: 12px;
-		margin: 0;
+		margin: 0 0 4px;
 	}
 	.dd-diary-text {
 		font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', Cambria, 'Times New Roman', serif;
 		font-size: 15px;
-		line-height: 1.5;
+		line-height: 1.55;
 		color: var(--text-secondary);
 		white-space: pre-wrap;
 		margin: 0;
+		padding-left: 10px;
+		border-left: 2px solid var(--border);
 	}
 </style>
