@@ -20,6 +20,12 @@
 	export let bp: Blueprint | null = null;
 	export let showDate: boolean = true;
 	export let compact: boolean = false;
+	/** CIPH-901a — when true, suppress the leading type-label
+	 *  ("Eintrag" / "Notiz" / "Tagebuch"). Used in surfaces where the
+	 *  parent already carries type via a colored left rail (calendar
+	 *  day-detail panel, future journal redesign), so the type isn't
+	 *  signalled twice. The day-summary chips below carry the content. */
+	export let hideType: boolean = false;
 	/** Optional. Used to rank chips by frequency over the past 30 days
 	 *  (CIPH-413). When omitted, chips render in source order. */
 	export let recentDocs: CiphraDocument[] | undefined = undefined;
@@ -258,7 +264,9 @@
 </script>
 
 <p class="text-sm font-medium" style="color: var(--text-primary)">
-	{isMedEvent ? $t('rescue_med.section_title') : typeLabel(entry.data.type || '')}
+	{#if !hideType}
+		{isMedEvent ? $t('rescue_med.section_title') : typeLabel(entry.data.type || '')}
+	{/if}
 	{#if isPrivate}
 		<span
 			class="inline-flex items-center align-middle ml-1 gap-1 text-xs"
@@ -273,18 +281,19 @@
 		</span>
 	{/if}
 	{#if showDate}
-		<span class="text-xs font-normal" style="color: var(--text-muted)"> · {formatDate(entry)}</span>
+		<span class="text-xs font-normal" style="color: var(--text-muted)">{hideType && !isPrivate ? '' : ' · '}{formatDate(entry)}</span>
 	{/if}
 	{#if !compact && entry.data.type === 'entry' && (symIds.length > 0 || epEntries.length > 0 || vitalEntries.length > 0)}
+		{@const summaryLeading = !hideType || isPrivate || showDate}
 		<span class="text-xs font-normal" style="color: var(--text-muted)">
 			{#if symIds.length > 0}
-				· {symIds.length} {$t('protocol.symptoms')}
+				{summaryLeading ? ' · ' : ''}{symIds.length} {$t('protocol.symptoms')}
 			{/if}
 			{#if epEntries.length > 0}
-				· {epEntries.reduce((s, [, n]) => s + Number(n), 0)} {$t('protocol.episodes')}
+				{summaryLeading || symIds.length > 0 ? ' · ' : ''}{epEntries.reduce((s, [, n]) => s + Number(n), 0)} {$t('protocol.episodes')}
 			{/if}
 			{#if vitalEntries.length > 0}
-				· {vitalEntries.length} {$t('protocol.vitals')}
+				{summaryLeading || symIds.length > 0 || epEntries.length > 0 ? ' · ' : ''}{vitalEntries.length} {$t('protocol.vitals')}
 			{/if}
 		</span>
 	{/if}

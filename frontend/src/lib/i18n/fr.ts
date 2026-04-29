@@ -194,7 +194,7 @@ export default {
 	'companion.streak_no_episodes': 'Jours sans épisodes',
 	'companion.streak_no_type': 'Jours sans {type}',
 
-	'protocol.title': 'Protocole journalier',
+	'protocol.title': 'Entrée',
 	'entry_preview.show_details': 'Afficher les détails',
 	'entry_preview.hide_details': 'Masquer les détails',
 	'entry_preview.aria_episodes_count': '{n} épisodes aujourd’hui',
@@ -253,7 +253,7 @@ export default {
 	'stream.seizures': 'Crises',
 	'stream.medication': 'Médicaments',
 	'stream.diary': 'Journal',
-	'stream.events': 'Événements',
+	'stream.events': 'Note',
 	'stream.search': 'Rechercher...',
 	'stream.no_entries': 'Aucune entrée trouvée',
 	'stream.quick_add': 'Ajout rapide',
@@ -1031,7 +1031,7 @@ export default {
 	'quickadd.mode_event': 'Repère de note',
 	'quickadd.mode_event_hint': 'Crée une ligne verticale sur le graphique de tendance.',
 	// CIPH-710 / CIPH-713
-	'quickadd.mode_diary': 'Entrée de journal',
+	'quickadd.mode_diary': 'Journal intime',
 	'quickadd.diary_hint': 'Privé. Jamais exporté ni partagé.',
 	'quickadd.diary_text_label': 'Que souhaitez-vous noter ?',
 	'quickadd.diary_placeholder': 'Texte privé — reste dans votre journal.',

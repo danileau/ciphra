@@ -201,7 +201,7 @@ export default {
 	'companion.streak_no_type': 'Tage ohne {type}',
 
 	// Protocol
-	'protocol.title': 'Tagesprotokoll',
+	'protocol.title': 'Eintrag',
 	'entry_preview.show_details': 'Details anzeigen',
 	'entry_preview.hide_details': 'Details ausblenden',
 	'entry_preview.aria_episodes_count': '{n} Episoden heute',
@@ -262,7 +262,7 @@ export default {
 	'stream.seizures': 'Anfälle',
 	'stream.medication': 'Medikamente',
 	'stream.diary': 'Tagebuch',
-	'stream.events': 'Ereignisse',
+	'stream.events': 'Notiz',
 	'stream.search': 'Suchen...',
 	'stream.no_entries': 'Keine Einträge gefunden',
 	'stream.quick_add': 'Schnelleintrag',
@@ -1053,7 +1053,7 @@ export default {
 	'quickadd.mode_event': 'Notiz-Markierung',
 	'quickadd.mode_event_hint': 'Erstellt eine senkrechte Linie im Verlauf-Diagramm.',
 	// CIPH-710 / CIPH-713
-	'quickadd.mode_diary': 'Tagebuch-Eintrag',
+	'quickadd.mode_diary': 'Tagebuch',
 	'quickadd.diary_hint': 'Privat. Wird nie exportiert oder geteilt.',
 	'quickadd.diary_text_label': 'Was möchtest du festhalten?',
 	'quickadd.diary_placeholder': 'Privater Text — bleibt in deinem Tagebuch.',

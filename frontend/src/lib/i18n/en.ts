@@ -200,7 +200,7 @@ export default {
 	'entry_preview.aria_symptoms_count': '{n} symptoms today',
 	'entry_preview.aria_triggers_count': '{n} triggers today',
 
-	'protocol.title': 'Daily Log',
+	'protocol.title': 'Entry',
 	'protocol.symptoms': 'Symptoms & Warning Signs',
 	'protocol.seizures': 'Seizures',
 	'protocol.triggers': 'Triggers',
@@ -253,7 +253,7 @@ export default {
 	'stream.seizures': 'Seizures',
 	'stream.medication': 'Medication',
 	'stream.diary': 'Diary',
-	'stream.events': 'Events',
+	'stream.events': 'Note',
 	'stream.search': 'Search...',
 	'stream.no_entries': 'No entries found',
 	'stream.quick_add': 'Quick add',
@@ -1031,7 +1031,7 @@ export default {
 	'quickadd.mode_event': 'Note marker',
 	'quickadd.mode_event_hint': 'Creates a vertical line on the trend chart.',
 	// CIPH-710 / CIPH-713
-	'quickadd.mode_diary': 'Diary entry',
+	'quickadd.mode_diary': 'Diary',
 	'quickadd.diary_hint': 'Private. Never exported or shared.',
 	'quickadd.diary_text_label': 'What do you want to write down?',
 	'quickadd.diary_placeholder': 'Private text — stays in your diary.',

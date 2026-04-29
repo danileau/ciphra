@@ -536,7 +536,9 @@
 	</div>
 </div>
 
-<!-- Day detail bottom sheet -->
+<!-- Day detail panel — bottom sheet on mobile, right-side panel on md+
+	 (CIPH-901b). The fly direction picks itself based on viewport at
+	 mount: mobile slides up, desktop slides in from the right. -->
 {#if selectedDate}
 	<button
 		class="fixed inset-0 z-[55] bg-black/40 backdrop-blur-sm"
@@ -545,13 +547,14 @@
 		aria-label={$t('common.close')}
 	></button>
 
+	{@const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768}
 	<div
-		class="fixed bottom-0 left-0 right-0 z-[60] rounded-t-2xl max-h-[70vh] overflow-y-auto"
-		style="background: var(--surface-card); border-top: 1px solid var(--border); box-shadow: 0 -4px 24px rgba(44,37,32,0.1)"
-		transition:fly={{ y: 300, duration: 300 }}
+		class="cal-detail-panel"
+		transition:fly={{ x: isDesktop ? 420 : 0, y: isDesktop ? 0 : 300, duration: 300 }}
 	>
-		<div class="p-5 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto">
-			<div class="flex justify-center mb-3">
+		<div class="cal-detail-inner">
+			<!-- Drag-handle indicator: mobile bottom-sheet affordance only. -->
+			<div class="flex justify-center mb-3 md:hidden">
 				<div class="w-10 h-1 rounded-full" style="background: var(--border)"></div>
 			</div>
 
@@ -622,7 +625,7 @@
 						>
 							<div class="flex items-start justify-between gap-2">
 								<div class="flex-1 min-w-0">
-									<EntryPreview entry={doc} {bp} showDate={false} compact={true} recentDocs={$documents} />
+									<EntryPreview entry={doc} {bp} showDate={false} compact={true} hideType={true} recentDocs={$documents} />
 								</div>
 								<div class="flex items-center gap-0.5 shrink-0">
 									{#if confirmDeleteId === doc.id}
@@ -743,5 +746,49 @@
 		color: var(--brand);
 		border-color: var(--brand);
 		background: rgba(var(--brand-rgb, 99,102,241), 0.08);
+	}
+
+	/* CIPH-901b — Day detail panel.
+	   Mobile (<768px): bottom sheet, full width, max 70vh.
+	   Desktop (>=768px): right-side panel, full height, fixed 420px width.
+	   The fly transition picks the right axis at mount; CSS positions
+	   handle the resting state. */
+	.cal-detail-panel {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 60;
+		max-height: 70vh;
+		overflow-y: auto;
+		background: var(--surface-card);
+		border-top: 1px solid var(--border);
+		border-radius: 16px 16px 0 0;
+		box-shadow: 0 -4px 24px rgba(44, 37, 32, 0.1);
+	}
+	.cal-detail-inner {
+		padding: 20px 20px calc(2rem + env(safe-area-inset-bottom, 0px));
+		max-width: 32rem;
+		margin: 0 auto;
+	}
+
+	@media (min-width: 768px) {
+		.cal-detail-panel {
+			top: 0;
+			right: 0;
+			bottom: 0;
+			left: auto;
+			max-height: 100vh;
+			width: min(420px, 90vw);
+			border-top: none;
+			border-left: 1px solid var(--border);
+			border-radius: 16px 0 0 16px;
+			box-shadow: -4px 0 24px rgba(44, 37, 32, 0.1);
+		}
+		.cal-detail-inner {
+			padding: 24px 24px env(safe-area-inset-bottom, 0px);
+			max-width: none;
+			margin: 0;
+		}
 	}
 </style>
