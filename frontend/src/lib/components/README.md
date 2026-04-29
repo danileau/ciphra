@@ -204,6 +204,12 @@ route kind.
   own the bottom of the screen. The encryption.badge used to
   live as a dashboard-only block in `Companion.svelte`; it now
   renders on every authed surface that shows the footer.
+- **PublicFooter.svelte** (CIPH-916) — full marketing footer
+  for the public site. Mounted in `+layout.svelte` for the
+  `landing` and `public-doc` shells (so /, /conditions,
+  /privacy, /terms, /protocol all share it). Lifted from the
+  inline `<footer>` that used to live in `routes/+page.svelte`.
+  Auth-flow + family-claim shells skip it deliberately.
 
 ### Cards
 

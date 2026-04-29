@@ -1311,6 +1311,7 @@ export default {
 	'condition.cta_learn_more': 'Learn more',
 	'condition.disclaimer': 'ciphra is not a medical device. Always consult your healthcare provider for medical decisions.',
 	'condition.index_title': 'Supported conditions',
+	'condition.back_to_home': 'Back to home',
 	'condition.index_subtitle': 'ciphra supports tracking for these chronic health conditions with end-to-end encryption.',
 	'condition_group.neurological.title': 'Neurological',
 	'condition_group.neurological.description': 'Conditions affecting the brain and nervous system — episodes, auras, and neurological symptoms.',

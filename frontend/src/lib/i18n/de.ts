@@ -1332,6 +1332,7 @@ export default {
 	'condition.cta_learn_more': 'Mehr erfahren',
 	'condition.disclaimer': 'ciphra ist kein Medizinprodukt. Konsultiere immer deinen Arzt für medizinische Entscheidungen.',
 	'condition.index_title': 'Unterstützte Erkrankungen',
+	'condition.back_to_home': 'Zur Startseite',
 	'condition.index_subtitle': 'ciphra unterstützt das Tracking dieser chronischen Erkrankungen mit Ende-zu-Ende-Verschlüsselung.',
 	'condition_group.neurological.title': 'Neurologisch',
 	'condition_group.neurological.description': 'Erkrankungen von Gehirn und Nervensystem — Anfälle, Auren und neurologische Symptome.',

@@ -45,6 +45,16 @@
 
 <div class="min-h-screen" style="background: var(--surface);">
 	<main class="layout-default py-8 sm:py-12">
+		<!-- CIPH-916 — explicit back-to-home link. The unified public nav
+			 above already carries a clickable Wordmark, but a textual
+			 anchor near the H1 makes the back-affordance obvious without
+			 forcing the user to recognize the logo as interactive. -->
+		<a href="/" class="conditions-back" aria-label={$t('condition.back_to_home')}>
+			<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+				<polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			{$t('condition.back_to_home')}
+		</a>
 		<h1 class="text-3xl sm:text-4xl font-bold" style="color: var(--text-primary);">{$t('condition.index_title')}</h1>
 		<p class="text-lg mt-2 mb-10" style="color: var(--text-muted);">{$t('condition.index_subtitle')}</p>
 
@@ -106,6 +116,21 @@
 </div>
 
 <style>
+	.conditions-back {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--text-muted);
+		text-decoration: none;
+		margin-bottom: 16px;
+		transition: color 0.15s ease-out;
+	}
+	.conditions-back:hover,
+	.conditions-back:focus-visible {
+		color: var(--brand);
+	}
 	.condition-icon-tile {
 		transition: transform 200ms ease-out;
 	}

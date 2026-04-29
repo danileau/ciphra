@@ -16,6 +16,7 @@
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import AuthedFooter from '$lib/components/AuthedFooter.svelte';
+	import PublicFooter from '$lib/components/PublicFooter.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { shellFor } from '$lib/routeShells';
@@ -566,6 +567,12 @@
 		</div>
 	</nav>
 	<slot />
+	<!-- CIPH-916 — public footer for landing + public-doc shells
+		 (/conditions, /privacy, /terms, /protocol). Auth-flow + family-
+		 claim shells skip it intentionally — those are focus surfaces. -->
+	{#if currentShell.shell === 'landing' || currentShell.shell === 'public-doc'}
+		<PublicFooter />
+	{/if}
 {:else if $isAuthenticated && currentPath !== '/login' && currentPath !== '/setup'}
 	<!-- CIPH-904 — Skip-to-content link for keyboard / AT users. Public
 		 landing already had this; the authed shell didn't, leaving 8-9

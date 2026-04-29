@@ -1310,6 +1310,7 @@ export default {
 	'condition.cta_learn_more': 'En savoir plus',
 	'condition.disclaimer': "ciphra n'est pas un dispositif médical. Consultez toujours votre professionnel de santé pour les décisions médicales.",
 	'condition.index_title': 'Conditions prises en charge',
+	'condition.back_to_home': 'Retour à l\'accueil',
 	'condition.index_subtitle': 'ciphra prend en charge le suivi de ces maladies chroniques avec un chiffrement de bout en bout.',
 	'condition_group.neurological.title': 'Neurologique',
 	'condition_group.neurological.description': 'Maladies du cerveau et du système nerveux — épisodes, auras et symptômes neurologiques.',
