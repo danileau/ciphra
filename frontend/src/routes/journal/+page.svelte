@@ -180,10 +180,30 @@
 		return out;
 	})();
 
-	function railColor(type: string): string {
-		if (type === 'entry') return 'var(--olive)';
-		if (type === 'diary') return 'var(--brand)';
-		return 'var(--ochre)';
+	// CIPH-907 — Journal cards take their rail color from the LOGGED DATA,
+	// not just the doc type. An entry day with an active multiDay episode
+	// (flare, manic, MS relapse, IBD flare, endo flare...) gets that
+	// episode's color. An entry day with a counter episode logged gets
+	// that episode's color. Empty entry days fall back to olive. Events
+	// stay ochre, diaries stay brand — those types are intrinsic, not
+	// data-driven. Result: scrolling the journal visually surfaces phase
+	// patterns at a glance instead of reading every chip.
+	function railColor(doc: CiphraDocument): string {
+		const t = doc.data.type;
+		if (t === 'diary') return 'var(--brand)';
+		if (t === 'event') return 'var(--ochre)';
+		if (t === 'entry' && bp) {
+			const eps = (doc.data.episodes || doc.data.seizures || {}) as Record<string, number>;
+			// Prefer multiDay-active episodes (a flare day IS a flare day).
+			for (const ep of bp.episodeTypes) {
+				if (ep.multiDay && Number(eps[ep.id] || 0) > 0) return ep.color;
+			}
+			// Else first counter-bearing episode color.
+			for (const ep of bp.episodeTypes) {
+				if (Number(eps[ep.id] || 0) > 0) return ep.color;
+			}
+		}
+		return 'var(--olive)';
 	}
 
 	function formatMonthHeader(monthKey: string): string {
@@ -324,7 +344,7 @@
 							<div class="journal-day-stack">
 								{#each day.docs as doc (doc.id)}
 									{@const href = cardHref(doc)}
-									{@const railHex = railColor(doc.data.type || '')}
+									{@const railHex = railColor(doc)}
 									{#if href}
 										<a
 											href={href}

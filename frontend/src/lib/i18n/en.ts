@@ -179,6 +179,8 @@ export default {
 	'companion.top_symptoms_year': 'Top symptoms — last 12 months',
 	'companion.top_symptoms_max': 'Top symptoms — full history',
 	'reports.day_coverage': 'Day coverage',
+	'reports.month_episodes_title': 'Episodes this month',
+	'reports.month_top_symptoms_title': 'Top symptoms this month',
 	'reports.legend_empty': 'no entry',
 	'reports.legend_logged': 'logged',
 	'reports.legend_episode': 'episode',

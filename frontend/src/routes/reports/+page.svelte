@@ -6,6 +6,7 @@
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
+	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import type { Blueprint } from '$lib/blueprint';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -13,6 +14,8 @@
 	import { generateDoctorPdf, generateCompactPdf, exportCsv, type ReportScope } from '$lib/pdf';
 	import { isEpisodeBearing } from '$lib/utils/episodeCounts';
 	import { isExportable } from '$lib/utils/exportable';
+	import { cohortPalette } from '$lib/cohortPalette';
+	import { cohortOf } from '$lib/blueprint/cohort';
 
 	let currentDate = new Date().toISOString().slice(0, 10);
 	let pdfScope: ReportScope = 'month';
@@ -278,6 +281,98 @@
 		: 0;
 	$: daysLogged = monthDocs.length;
 	$: daysInMonth = getDaysInMonth(currentDate);
+
+	// CIPH-909 — Bar charts in /reports month view. The previous PI v14
+	// dashboard subtraction moved these out of Companion. They needed a
+	// home; /reports' month view is the right one — adjacent to the day-
+	// coverage strip + monthly grid, where the user is already looking
+	// for "what happened this month."
+	$: cohort = cohortOf(bp);
+	$: monthAccentHex = cohortPalette(cohort)[2]; // slot 3, ochre-family across all cohorts
+	$: monthEpisodeChartData = (() => {
+		if (!bp?.episodeTypes?.length) return null;
+		const monthPrefix = currentDate.slice(0, 7);
+		const labels: string[] = [];
+		const days: string[] = [];
+		for (let d = 1; d <= daysInMonth; d++) {
+			const dateStr = `${monthPrefix}-${String(d).padStart(2, '0')}`;
+			days.push(dateStr);
+			labels.push(String(d));
+		}
+		const datasets = bp.episodeTypes.map((et) => ({
+			label: isCustomItem(et.id) ? et.label : $t(et.label),
+			data: days.map((dayStr) =>
+				exportableDocs
+					.filter((d) => d.data?.type === 'entry' && d.data?.date === dayStr)
+					.reduce(
+						(sum, d) =>
+							sum + (Number((d.data.episodes || d.data.seizures || {})[et.id]) || 0),
+						0,
+					),
+			),
+			backgroundColor: et.color,
+			borderRadius: 3,
+		}));
+		const totalAcrossSeries = datasets.reduce(
+			(s, ds) => s + (ds.data as number[]).reduce((a: number, b: number) => a + b, 0),
+			0,
+		);
+		if (totalAcrossSeries === 0) return null;
+		return { labels, datasets };
+	})();
+	$: monthEpisodeChartOptions = {
+		responsive: true,
+		maintainAspectRatio: false,
+		scales: {
+			x: { stacked: true, ticks: { maxTicksLimit: 16, font: { size: 10 } }, grid: { display: false } },
+			y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+		},
+		plugins: { legend: { display: (bp?.episodeTypes?.length || 0) > 1, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } } },
+	};
+
+	const POSITIVE_MARKERS_REPORTS = new Set(['slept_well']);
+	$: monthSymptomChartData = (() => {
+		if (!bp?.symptomGroups?.length) return null;
+		const counts: Record<string, number> = {};
+		for (const d of monthDocs) {
+			for (const [key, val] of Object.entries(d.data.symptoms || {})) {
+				if (val && !POSITIVE_MARKERS_REPORTS.has(key)) {
+					counts[key] = (counts[key] || 0) + 1;
+				}
+			}
+		}
+		const labelMap: Record<string, string> = {};
+		for (const g of bp.symptomGroups) {
+			for (const item of g.items) {
+				if (POSITIVE_MARKERS_REPORTS.has(item.id)) continue;
+				labelMap[item.id] = isCustomItem(item.id) ? item.label : $t(item.label);
+			}
+		}
+		const sorted = Object.entries(counts)
+			.sort(([, a], [, b]) => b - a)
+			.slice(0, 5);
+		if (!sorted.length) return null;
+		return {
+			labels: sorted.map(([id]) => labelMap[id] || id),
+			datasets: [
+				{
+					data: sorted.map(([, c]) => c),
+					backgroundColor: monthAccentHex,
+					borderRadius: 4,
+				},
+			],
+		};
+	})();
+	$: monthSymptomChartOptions = {
+		responsive: true,
+		maintainAspectRatio: false,
+		indexAxis: 'y' as const,
+		scales: {
+			x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } },
+			y: { ticks: { font: { size: 11 } } },
+		},
+		plugins: { legend: { display: false } },
+	};
 
 	// ─── Year view helpers ─────────────────────────────────
 	function getYearDocs(docs: CiphraDocument[], year: number) {
@@ -594,6 +689,28 @@
 		</div>
 	</div>
 
+	<!-- CIPH-909 — Bar charts in /reports month view. Episode chart shows
+		 stacked daily counts; top-symptom chart shows ranked frequencies
+		 across the visible month. The dashboard's sparkline-hero links
+		 here ("Verlauf ansehen →"). Renders only when there's data;
+		 skipped on first-week-of-use months. -->
+	{#if monthEpisodeChartData}
+		<div class="card mb-4 p-4">
+			<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('reports.month_episodes_title')}</h2>
+			<div class="rpt-chart-h">
+				<ChartWrapper type="bar" data={monthEpisodeChartData} options={monthEpisodeChartOptions} />
+			</div>
+		</div>
+	{/if}
+	{#if monthSymptomChartData}
+		<div class="card mb-4 p-4">
+			<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('reports.month_top_symptoms_title')}</h2>
+			<div class="rpt-chart-h">
+				<ChartWrapper type="bar" data={monthSymptomChartData} options={monthSymptomChartOptions} />
+			</div>
+		</div>
+	{/if}
+
 	<!-- Day-coverage strip (mirrors year-view coloring so the user sees
 	     which days were filled at a glance, before the data table) -->
 	{#if bp}
@@ -835,6 +952,15 @@
 	}
 	:global(.grid-table--ultra th),
 	:global(.grid-table--ultra td) { padding-left: 2px !important; padding-right: 2px !important; }
+	/* CIPH-909 — Chart container heights for month-view bar charts. */
+	.rpt-chart-h {
+		height: 200px;
+	}
+	@media (min-width: 768px) {
+		.rpt-chart-h {
+			height: 240px;
+		}
+	}
 	.rpt-page {
 		/* CIPH-746: widened to 1280 so data tables stop truncating cells
 		   on desktop. Below 640 the percentage-free padding keeps the

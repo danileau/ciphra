@@ -180,6 +180,8 @@ export default {
 	'companion.top_symptoms_year': 'Top sintomi — ultimi 12 mesi',
 	'companion.top_symptoms_max': 'Top sintomi — storico completo',
 	'reports.day_coverage': 'Copertura giorni',
+	'reports.month_episodes_title': 'Episodi questo mese',
+	'reports.month_top_symptoms_title': 'Sintomi principali questo mese',
 	'reports.legend_empty': 'nessuna voce',
 	'reports.legend_logged': 'registrato',
 	'reports.legend_episode': 'episodio',

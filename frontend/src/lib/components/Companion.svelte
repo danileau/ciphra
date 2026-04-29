@@ -283,10 +283,11 @@
 		],
 	} : null;
 
-	// CIPH-900 — Sparkline options: no axis labels, no legend, minimal grid.
-	// The headline above the chart carries the takeaway; the chart itself
-	// is a glance-trend, not a data table. Tap the card → /reports for the
-	// full presentation.
+	// CIPH-909 — User feedback: the sparkline felt like a sidenote on
+	// the cleaned-up dashboard. Re-introduce minimal but real axes (a
+	// muted left-axis tick scale + month labels on x), keep no legend,
+	// no dual y. The chart is now the dashboard's primary visual; the
+	// "view trend →" affordance still routes to /reports for breakdowns.
 	$: howAreYouChartOptions = {
 		responsive: true,
 		maintainAspectRatio: false,
@@ -307,7 +308,9 @@
 				type: 'linear' as const,
 				position: 'left' as const,
 				beginAtZero: true,
-				display: false,
+				ticks: { precision: 0, font: { size: 10 }, color: cohortAccentHex, maxTicksLimit: 4 },
+				grid: { color: 'rgba(0,0,0,0.04)' },
+				border: { display: false },
 			},
 			y1: {
 				type: 'linear' as const,
@@ -316,7 +319,7 @@
 				display: false,
 			},
 			x: {
-				ticks: { font: { size: 9 }, color: 'rgba(120,113,108,0.65)' },
+				ticks: { font: { size: 10 }, color: 'rgba(120,113,108,0.7)' },
 				grid: { display: false },
 				border: { display: false },
 			},
