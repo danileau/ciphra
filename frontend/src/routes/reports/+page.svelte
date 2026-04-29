@@ -6,7 +6,6 @@
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
-	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import type { Blueprint } from '$lib/blueprint';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -14,8 +13,6 @@
 	import { generateDoctorPdf, generateCompactPdf, exportCsv, type ReportScope } from '$lib/pdf';
 	import { isEpisodeBearing } from '$lib/utils/episodeCounts';
 	import { isExportable } from '$lib/utils/exportable';
-	import { cohortPalette } from '$lib/cohortPalette';
-	import { cohortOf } from '$lib/blueprint/cohort';
 
 	let currentDate = new Date().toISOString().slice(0, 10);
 	let pdfScope: ReportScope = 'month';
@@ -282,62 +279,44 @@
 	$: daysLogged = monthDocs.length;
 	$: daysInMonth = getDaysInMonth(currentDate);
 
-	// CIPH-909 — Bar charts in /reports month view. The previous PI v14
-	// dashboard subtraction moved these out of Companion. They needed a
-	// home; /reports' month view is the right one — adjacent to the day-
-	// coverage strip + monthly grid, where the user is already looking
-	// for "what happened this month."
-	$: cohort = cohortOf(bp);
-	$: monthAccentHex = cohortPalette(cohort)[2]; // slot 3, ochre-family across all cohorts
-	$: monthEpisodeChartData = (() => {
-		if (!bp?.episodeTypes?.length) return null;
-		const monthPrefix = currentDate.slice(0, 7);
-		const labels: string[] = [];
-		const days: string[] = [];
-		for (let d = 1; d <= daysInMonth; d++) {
-			const dateStr = `${monthPrefix}-${String(d).padStart(2, '0')}`;
-			days.push(dateStr);
-			labels.push(String(d));
-		}
-		const datasets = bp.episodeTypes.map((et) => ({
-			label: isCustomItem(et.id) ? et.label : $t(et.label),
-			data: days.map((dayStr) =>
-				exportableDocs
-					.filter((d) => d.data?.type === 'entry' && d.data?.date === dayStr)
-					.reduce(
-						(sum, d) =>
-							sum + (Number((d.data.episodes || d.data.seizures || {})[et.id]) || 0),
-						0,
-					),
-			),
-			backgroundColor: et.color,
-			borderRadius: 3,
-		}));
-		const totalAcrossSeries = datasets.reduce(
-			(s, ds) => s + (ds.data as number[]).reduce((a: number, b: number) => a + b, 0),
-			0,
-		);
-		if (totalAcrossSeries === 0) return null;
-		return { labels, datasets };
-	})();
-	$: monthEpisodeChartOptions = {
-		responsive: true,
-		maintainAspectRatio: false,
-		scales: {
-			x: { stacked: true, ticks: { maxTicksLimit: 16, font: { size: 10 } }, grid: { display: false } },
-			y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
-		},
-		plugins: { legend: { display: (bp?.episodeTypes?.length || 0) > 1, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } } },
-	};
-
+	// CIPH-909 (v2) — Bar charts dropped after smoke. They duplicated the
+	// day-coverage strip + the monthly grid table without giving the user
+	// a clinical sentence to take to the doctor. Replaced by a "this
+	// month at a glance" stat block (delta vs last month + top symptoms
+	// + phase days) — answers the questions a doctor actually asks.
 	const POSITIVE_MARKERS_REPORTS = new Set(['slept_well']);
-	$: monthSymptomChartData = (() => {
-		if (!bp?.symptomGroups?.length) return null;
+
+	function totalEpisodesForMonth(prefix: string): number {
+		if (!bp) return 0;
+		let total = 0;
+		for (const d of exportableDocs) {
+			if (d.data?.type !== 'entry') continue;
+			if (!String(d.data.date || '').startsWith(prefix)) continue;
+			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+			for (const ep of bp.episodeTypes) total += Number(eps[ep.id] || 0);
+		}
+		return total;
+	}
+
+	$: prevMonthPrefix = (() => {
+		const d = new Date(currentDate + 'T12:00:00');
+		const prev = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+		return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+	})();
+	$: prevMonthEpisodes = bp ? totalEpisodesForMonth(prevMonthPrefix) : 0;
+	$: episodeDelta = totalEpisodes - prevMonthEpisodes;
+	$: episodeTrend = episodeDelta > 0 ? 'up' : episodeDelta < 0 ? 'down' : 'flat';
+
+	// Top 3 symptoms this month by day count. Tabular ranked list — much
+	// more skimmable than a horizontal bar chart, and it's the format
+	// users already write down before a doctor visit.
+	$: topSymptomsThisMonth = (() => {
+		if (!bp?.symptomGroups?.length) return [];
 		const counts: Record<string, number> = {};
 		for (const d of monthDocs) {
-			for (const [key, val] of Object.entries(d.data.symptoms || {})) {
-				if (val && !POSITIVE_MARKERS_REPORTS.has(key)) {
-					counts[key] = (counts[key] || 0) + 1;
+			for (const [k, v] of Object.entries(d.data.symptoms || {})) {
+				if (v && !POSITIVE_MARKERS_REPORTS.has(k)) {
+					counts[k] = (counts[k] || 0) + 1;
 				}
 			}
 		}
@@ -348,31 +327,32 @@
 				labelMap[item.id] = isCustomItem(item.id) ? item.label : $t(item.label);
 			}
 		}
-		const sorted = Object.entries(counts)
+		return Object.entries(counts)
 			.sort(([, a], [, b]) => b - a)
-			.slice(0, 5);
-		if (!sorted.length) return null;
-		return {
-			labels: sorted.map(([id]) => labelMap[id] || id),
-			datasets: [
-				{
-					data: sorted.map(([, c]) => c),
-					backgroundColor: monthAccentHex,
-					borderRadius: 4,
-				},
-			],
-		};
+			.slice(0, 3)
+			.map(([id, days]) => ({ id, label: labelMap[id] || id, days }));
 	})();
-	$: monthSymptomChartOptions = {
-		responsive: true,
-		maintainAspectRatio: false,
-		indexAxis: 'y' as const,
-		scales: {
-			x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } },
-			y: { ticks: { font: { size: 11 } } },
-		},
-		plugins: { legend: { display: false } },
-	};
+
+	// Phase-days: total days in the month where ANY multiDay episode was
+	// active (flare, manic, depressive, MS relapse, IBD flare, ...). Only
+	// surfaces when the blueprint has multiDay episodes — discrete cohort
+	// (epilepsy etc.) doesn't get a phase-days card.
+	$: hasMultiDayPhases = !!bp?.episodeTypes?.some((e) => e.multiDay);
+	$: phaseDaysThisMonth = (() => {
+		if (!hasMultiDayPhases || !bp) return 0;
+		const multiIds = bp.episodeTypes.filter((e) => e.multiDay).map((e) => e.id);
+		const days = new Set<string>();
+		for (const d of monthDocs) {
+			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+			for (const id of multiIds) {
+				if (Number(eps[id] || 0) > 0) {
+					days.add(String(d.data.date || ''));
+					break;
+				}
+			}
+		}
+		return days.size;
+	})();
 
 	// ─── Year view helpers ─────────────────────────────────
 	function getYearDocs(docs: CiphraDocument[], year: number) {
@@ -689,25 +669,58 @@
 		</div>
 	</div>
 
-	<!-- CIPH-909 — Bar charts in /reports month view. Episode chart shows
-		 stacked daily counts; top-symptom chart shows ranked frequencies
-		 across the visible month. The dashboard's sparkline-hero links
-		 here ("Verlauf ansehen →"). Renders only when there's data;
-		 skipped on first-week-of-use months. -->
-	{#if monthEpisodeChartData}
-		<div class="card mb-4 p-4">
-			<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('reports.month_episodes_title')}</h2>
-			<div class="rpt-chart-h">
-				<ChartWrapper type="bar" data={monthEpisodeChartData} options={monthEpisodeChartOptions} />
-			</div>
-		</div>
-	{/if}
-	{#if monthSymptomChartData}
-		<div class="card mb-4 p-4">
-			<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('reports.month_top_symptoms_title')}</h2>
-			<div class="rpt-chart-h">
-				<ChartWrapper type="bar" data={monthSymptomChartData} options={monthSymptomChartOptions} />
-			</div>
+	<!-- CIPH-909 (v2) — "This month at a glance" stat block. Replaces
+		 the bar charts that duplicated the day-coverage strip + grid
+		 table. Each line is a clinical sentence the user can take to
+		 their doctor: "23 episodes (8 fewer than last month)", "Top
+		 symptoms: Müdigkeit (14 days), Stress (9 days)", "Phase active
+		 12 days." Renders only when there's something to say. -->
+	{#if monthDocs.length > 0 && (totalEpisodes > 0 || topSymptomsThisMonth.length > 0 || phaseDaysThisMonth > 0)}
+		<div class="card mb-4 p-4 rpt-glance">
+			<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('reports.glance_title')}</h2>
+			<dl class="rpt-glance-list">
+				{#if totalEpisodes > 0 || prevMonthEpisodes > 0}
+					<div class="rpt-glance-row">
+						<dt class="rpt-glance-label">{$t('reports.glance_episodes')}</dt>
+						<dd class="rpt-glance-value">
+							<span class="rpt-glance-num">{totalEpisodes}</span>
+							{#if prevMonthEpisodes > 0 || totalEpisodes > 0}
+								<span class="rpt-glance-delta rpt-glance-delta--{episodeTrend}">
+									{#if episodeTrend === 'up'}↗{:else if episodeTrend === 'down'}↘{:else}→{/if}
+									{#if episodeTrend === 'down'}
+										{$t('reports.glance_delta_down', { delta: Math.abs(episodeDelta), prev: prevMonthEpisodes })}
+									{:else if episodeTrend === 'up'}
+										{$t('reports.glance_delta_up', { delta: Math.abs(episodeDelta), prev: prevMonthEpisodes })}
+									{:else}
+										{$t('reports.glance_delta_flat', { prev: prevMonthEpisodes })}
+									{/if}
+								</span>
+							{/if}
+						</dd>
+					</div>
+				{/if}
+				{#if hasMultiDayPhases}
+					<div class="rpt-glance-row">
+						<dt class="rpt-glance-label">{$t('reports.glance_phase_days')}</dt>
+						<dd class="rpt-glance-value">
+							<span class="rpt-glance-num">{phaseDaysThisMonth}</span>
+							<span class="rpt-glance-meta">{$t('common.of_n_days', { n: daysInMonth })}</span>
+						</dd>
+					</div>
+				{/if}
+				{#if topSymptomsThisMonth.length > 0}
+					<div class="rpt-glance-row">
+						<dt class="rpt-glance-label">{$t('reports.glance_top_symptoms')}</dt>
+						<dd class="rpt-glance-value rpt-glance-value--list">
+							{#each topSymptomsThisMonth as sym, i}
+								{#if i > 0}<span class="rpt-glance-sep">·</span>{/if}
+								<span class="rpt-glance-sym">{sym.label}</span>
+								<span class="rpt-glance-meta">({$t('reports.glance_n_days', { n: sym.days })})</span>
+							{/each}
+						</dd>
+					</div>
+				{/if}
+			</dl>
 		</div>
 	{/if}
 
@@ -952,15 +965,66 @@
 	}
 	:global(.grid-table--ultra th),
 	:global(.grid-table--ultra td) { padding-left: 2px !important; padding-right: 2px !important; }
-	/* CIPH-909 — Chart container heights for month-view bar charts. */
-	.rpt-chart-h {
-		height: 200px;
+	/* CIPH-909 (v2) — "This month at a glance" stat block. dl/dt/dd
+	   semantics so screen readers announce the term/definition pairs
+	   correctly. Two-column on wider viewports; stacked on mobile. */
+	.rpt-glance-list {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin: 0;
 	}
-	@media (min-width: 768px) {
-		.rpt-chart-h {
-			height: 240px;
+	.rpt-glance-row {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	@media (min-width: 640px) {
+		.rpt-glance-row {
+			flex-direction: row;
+			align-items: baseline;
+			gap: 16px;
 		}
 	}
+	.rpt-glance-label {
+		font-size: 12px;
+		color: var(--text-muted);
+		font-weight: 500;
+		min-width: 140px;
+	}
+	.rpt-glance-value {
+		margin: 0;
+		font-size: 14px;
+		color: var(--text-primary);
+		display: inline-flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		align-items: baseline;
+	}
+	.rpt-glance-value--list {
+		gap: 4px;
+	}
+	.rpt-glance-num {
+		font-weight: 700;
+		font-size: 18px;
+		font-variant-numeric: tabular-nums;
+		color: var(--text-primary);
+	}
+	.rpt-glance-meta,
+	.rpt-glance-sep {
+		color: var(--text-muted);
+		font-size: 12px;
+	}
+	.rpt-glance-sym {
+		font-weight: 500;
+	}
+	.rpt-glance-delta {
+		font-size: 12px;
+		font-weight: 500;
+	}
+	.rpt-glance-delta--down { color: var(--olive); }
+	.rpt-glance-delta--up { color: var(--danger); }
+	.rpt-glance-delta--flat { color: var(--text-muted); }
 	.rpt-page {
 		/* CIPH-746: widened to 1280 so data tables stop truncating cells
 		   on desktop. Below 640 the percentage-free padding keeps the
