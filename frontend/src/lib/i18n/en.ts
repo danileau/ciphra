@@ -194,6 +194,8 @@ export default {
 	'reports.glance_top_symptoms': 'Top symptoms',
 	'reports.glance_trend': 'Trend',
 	'reports.trend_title': 'Trend · 24 months',
+	'reports.grid_cell_increment_hint': 'Click to add',
+	'reports.grid_cell_decrement': 'Remove one',
 	'reports.glance_delta_down': '{delta} fewer than last month ({prev})',
 	'reports.glance_delta_up': '{delta} more than last month ({prev})',
 	'reports.glance_delta_flat': 'Same as last month ({prev})',

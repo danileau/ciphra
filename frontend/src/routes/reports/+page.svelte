@@ -637,6 +637,20 @@
 			await documents.save(data);
 		}
 	}
+	// CIPH-915 — Decrement episode count from the grid table. Mirrors
+	// increment but goes the other way; deletes the key entirely when
+	// the count would hit 0 so re-encryption diffs stay minimal.
+	async function decrementGridEpisode(dayStr: string, episodeId: string) {
+		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
+		if (!existing) return;
+		const cur = Number(existing.data.episodes?.[episodeId] || 0);
+		if (cur <= 0) return;
+		const next = cur - 1;
+		const episodes = { ...(existing.data.episodes || {}) };
+		if (next > 0) episodes[episodeId] = next;
+		else delete episodes[episodeId];
+		await documents.updateDoc(existing.id, { ...existing.data, episodes });
+	}
 
 	function getFirstDayOfWeek(year: number, month: number): number {
 		// 0=Sun, 1=Mon... We want Mon=0
@@ -1039,9 +1053,22 @@
 									role="button"
 									tabindex="0"
 									on:keydown={(e) => { if (e.key === 'Enter') incrementGridEpisode(dayStr, col); }}
+									title={$t('reports.grid_cell_increment_hint')}
 								>
 									{#if getEpisodeCount(dayDoc, col) > 0}
 										<span class="font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{getEpisodeCount(dayDoc, col)}</span>
+										<!-- CIPH-915 — decrement counterpart for the click-to-add
+											 grid pattern. Small minus appears once a count exists.
+											 Stops propagation so the cell click (increment) doesn't
+											 fire when minus is tapped. -->
+										<button
+											type="button"
+											class="grid-episode-minus"
+											on:click|stopPropagation={() => decrementGridEpisode(dayStr, col)}
+											on:keydown|stopPropagation={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); decrementGridEpisode(dayStr, col); } }}
+											aria-label={$t('reports.grid_cell_decrement')}
+											title={$t('reports.grid_cell_decrement')}
+										>−</button>
 									{:else}
 										<span class="grid-episode-zero">-</span>
 									{/if}
@@ -1174,6 +1201,35 @@
 		.rpt-trend-chart {
 			height: 280px;
 		}
+	}
+	/* CIPH-915 — grid-cell decrement minus button. Sits inline next
+	   to the count number; takes 14px so it doesn't reflow the column
+	   width vs. count-only cells. */
+	.grid-episode-cell {
+		position: relative;
+	}
+	:global(.grid-episode-minus) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 14px;
+		height: 14px;
+		margin-left: 3px;
+		font-size: 12px;
+		line-height: 1;
+		color: var(--text-muted);
+		background: rgba(0, 0, 0, 0.04);
+		border: none;
+		border-radius: 3px;
+		cursor: pointer;
+		vertical-align: middle;
+		transition: color 0.12s ease-out, background 0.12s ease-out;
+	}
+	:global(.grid-episode-minus):hover,
+	:global(.grid-episode-minus):focus-visible {
+		color: var(--danger);
+		background: rgba(220, 38, 38, 0.1);
+		outline: none;
 	}
 	/* CIPH-909 (v2) — "This month at a glance" stat block. dl/dt/dd
 	   semantics so screen readers announce the term/definition pairs

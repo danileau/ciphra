@@ -168,10 +168,32 @@
 	// export.
 	$: isPrivate = entry.data?.type === 'diary' || entry.data?.private === true;
 
-	$: symIdsRaw = bp ? Object.entries(entry.data.symptoms || {}).filter(([k, v]) => v && !POSITIVE_MARKERS.has(k)).map(([k]) => k) : [];
-	$: epEntriesRaw = bp ? Object.entries(entry.data.episodes || entry.data.seizures || {}).filter(([, n]) => Number(n) > 0) : [];
-	$: trigIdsRaw = bp ? (Array.isArray(entry.data.triggers) ? entry.data.triggers : Object.entries(entry.data.triggers || {}).filter(([, v]) => v).map(([k]) => k)) : [];
-	$: vitalEntries = bp ? Object.entries(entry.data.vitals || {}).filter(([, v]) => v != null && String(v).trim() !== '' && String(v).trim() !== '0') : [];
+	// CIPH-915 — defensive id-resolution. Orphan ids in the saved doc
+	// (legacy data, dropped customizations, migration leftovers) used
+	// to fall through `symptomLabelFor` / `triggerLabelFor` / `epLabelFor`
+	// to "return id" — the raw id rendered as a chip. A doc with
+	// `data.symptoms = { "0": true, ... }` would render a stray "0"
+	// chip in the journal. Filter unknown ids out before they reach
+	// the chip rows.
+	function isKnownSymptom(id: string): boolean {
+		for (const g of bp?.symptomGroups || []) {
+			if (g.items.some((it) => it.id === id)) return true;
+		}
+		return false;
+	}
+	function isKnownTrigger(id: string): boolean {
+		return (bp?.triggers || []).some((tr) => tr.id === id);
+	}
+	function isKnownEpisode(id: string): boolean {
+		return (bp?.episodeTypes || []).some((ep) => ep.id === id);
+	}
+
+	$: symIdsRaw = bp ? Object.entries(entry.data.symptoms || {}).filter(([k, v]) => v && !POSITIVE_MARKERS.has(k) && isKnownSymptom(k)).map(([k]) => k) : [];
+	$: epEntriesRaw = bp ? Object.entries(entry.data.episodes || entry.data.seizures || {}).filter(([k, n]) => Number(n) > 0 && isKnownEpisode(k)) : [];
+	$: trigIdsRaw = bp ? (Array.isArray(entry.data.triggers)
+		? entry.data.triggers.filter(isKnownTrigger)
+		: Object.entries(entry.data.triggers || {}).filter(([k, v]) => v && isKnownTrigger(k)).map(([k]) => k)) : [];
+	$: vitalEntries = bp ? Object.entries(entry.data.vitals || {}).filter(([k, v]) => v != null && String(v).trim() !== '' && String(v).trim() !== '0' && (bp.vitals || []).some((vt) => vt.id === k)) : [];
 
 	// CIPH-907c — When hideType is true the parent surface (journal day-
 	// header, calendar bottom sheet) shows a phase tag for active multiDay

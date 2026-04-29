@@ -169,15 +169,14 @@
 	.hay-hero:focus-visible .hay-link {
 		text-decoration: underline;
 	}
-	/* CIPH-909 — bigger chart on the cleaned-up dashboard. The sparkline
-	   was reading as a sidenote; doubling height + showing axis labels
-	   lets the chart pull weight as the dashboard's primary visual. */
+	/* CIPH-915 — chart height bumped to accommodate the bottom legend
+	   that now matches the /reports trend chart style. */
 	.hay-spark {
-		height: 156px;
+		height: 200px;
 	}
 	@media (min-width: 768px) {
 		.hay-spark {
-			height: 200px;
+			height: 240px;
 		}
 	}
 </style>

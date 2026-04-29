@@ -250,6 +250,11 @@
 	$: cohortAccentHex = cohortPalette(cohort)[0];
 	$: cohortNeutralHex = cohortPalette(cohort)[4]; // anchor slate, shared
 
+	// CIPH-915 — Dashboard chart aligned to the /reports trend style.
+	// Visible point markers, bottom legend, dual y-axis with tick labels.
+	// One chart "look" across the app so dashboard ↔ reports feel like
+	// the same product. Data window stays at 12 months on the dashboard
+	// (vs. 24 in reports) — dashboard is the at-a-glance view.
 	$: howAreYouChartData = howAreYouTrend ? {
 		labels: howAreYouTrend.months.map((m) => m.label),
 		datasets: [
@@ -260,8 +265,8 @@
 				backgroundColor: 'transparent',
 				borderWidth: 2,
 				tension: 0.3,
-				pointRadius: 0,
-				pointHoverRadius: 4,
+				pointRadius: 2,
+				pointHoverRadius: 5,
 				pointBackgroundColor: cohortAccentHex,
 				fill: false,
 				yAxisID: 'y',
@@ -274,8 +279,8 @@
 				borderWidth: 1,
 				borderDash: [3, 3],
 				tension: 0.3,
-				pointRadius: 0,
-				pointHoverRadius: 3,
+				pointRadius: 1.5,
+				pointHoverRadius: 4,
 				pointBackgroundColor: cohortNeutralHex,
 				fill: false,
 				yAxisID: 'y1',
@@ -283,16 +288,11 @@
 		],
 	} : null;
 
-	// CIPH-909 — User feedback: the sparkline felt like a sidenote on
-	// the cleaned-up dashboard. Re-introduce minimal but real axes (a
-	// muted left-axis tick scale + month labels on x), keep no legend,
-	// no dual y. The chart is now the dashboard's primary visual; the
-	// "view trend →" affordance still routes to /reports for breakdowns.
 	$: howAreYouChartOptions = {
 		responsive: true,
 		maintainAspectRatio: false,
 		plugins: {
-			legend: { display: false },
+			legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
 			tooltip: {
 				callbacks: {
 					title: (items: Array<{ dataIndex: number }>) => {
@@ -308,7 +308,7 @@
 				type: 'linear' as const,
 				position: 'left' as const,
 				beginAtZero: true,
-				ticks: { precision: 0, font: { size: 10 }, color: cohortAccentHex, maxTicksLimit: 4 },
+				ticks: { precision: 0, font: { size: 10 }, color: cohortAccentHex, maxTicksLimit: 5 },
 				grid: { color: 'rgba(0,0,0,0.04)' },
 				border: { display: false },
 			},
@@ -316,10 +316,12 @@
 				type: 'linear' as const,
 				position: 'right' as const,
 				beginAtZero: true,
-				display: false,
+				ticks: { precision: 0, font: { size: 10 }, color: cohortNeutralHex, maxTicksLimit: 5 },
+				grid: { display: false },
+				border: { display: false },
 			},
 			x: {
-				ticks: { font: { size: 10 }, color: 'rgba(120,113,108,0.7)' },
+				ticks: { font: { size: 10 }, color: 'rgba(120,113,108,0.7)', maxRotation: 0 },
 				grid: { display: false },
 				border: { display: false },
 			},
