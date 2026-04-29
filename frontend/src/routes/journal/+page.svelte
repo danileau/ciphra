@@ -26,7 +26,7 @@
 	import { t, locale } from '$lib/i18n';
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint } from '$lib/blueprint';
+	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { fade } from 'svelte/transition';
@@ -179,6 +179,35 @@
 		}
 		return out;
 	})();
+
+	// CIPH-907b — Per-day phase tags. For day-groups containing an
+	// entry doc with active multiDay episodes, surface them as chips on
+	// the day-header so the user can scan a column and see "manic /
+	// flare / depressive" days at a glance, even before reading the
+	// cards. Mirrors the calendar bottom-sheet pattern (CIPH-880).
+	type PhaseTag = { id: string; color: string; label: string };
+	function phasesActiveOn(docs: CiphraDocument[]): PhaseTag[] {
+		if (!bp?.episodeTypes) return [];
+		const out: PhaseTag[] = [];
+		for (const ep of bp.episodeTypes) {
+			if (!ep.multiDay) continue;
+			const active = docs.some(
+				(d) =>
+					d.data.type === 'entry' &&
+					Number(
+						(d.data.episodes || d.data.seizures || {})[ep.id] || 0,
+					) > 0,
+			);
+			if (active) {
+				out.push({
+					id: ep.id,
+					color: ep.color,
+					label: ep.label,
+				});
+			}
+		}
+		return out;
+	}
 
 	// CIPH-907 — Journal cards take their rail color from the LOGGED DATA,
 	// not just the doc type. An entry day with an active multiDay episode
@@ -336,10 +365,17 @@
 					<h2 class="journal-month-header">{formatMonthHeader(month.monthKey)}</h2>
 					{#each month.days as day (day.dayKey)}
 						{@const dh = formatDayHeader(day.dayKey)}
+						{@const phases = phasesActiveOn(day.docs)}
 						<div class="journal-day">
 							<p class="journal-day-header">
 								<span class="journal-day-label">{dh.label}</span>
 								{#if dh.weekday}<span class="journal-day-meta">· {dh.weekday}</span>{/if}
+								{#each phases as p}
+									<span
+										class="journal-phase-tag"
+										style="background: {p.color}1f; color: {p.color}; border-color: {p.color}66"
+									>{isCustomItem(p.id) ? p.label : $t(p.label)}</span>
+								{/each}
 							</p>
 							<div class="journal-day-stack">
 								{#each day.docs as doc (doc.id)}
@@ -551,6 +587,21 @@
 	}
 	.journal-day-meta {
 		color: var(--text-muted);
+	}
+	/* CIPH-907b — per-day phase tags. Small inline chip per active
+	   multiDay episode on the day, tinted with the episode's color so
+	   the user can scan a column and see "manic / flare / depressive"
+	   patterns without reading every card. */
+	.journal-phase-tag {
+		display: inline-flex;
+		align-items: center;
+		font-size: 10px;
+		font-weight: 600;
+		padding: 1px 8px;
+		border-radius: 9999px;
+		border: 1px solid;
+		letter-spacing: 0.02em;
+		margin-left: 4px;
 	}
 
 	.journal-day-stack {

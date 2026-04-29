@@ -250,25 +250,35 @@
 	function applyPhaseCarryover() {
 		if (existingDoc) return; // Editing an existing day — never override the doc.
 		if (!previousDoc) return;
-		phaseCarryover = {};
 		const prevEps = (previousDoc.data.episodes ||
 			previousDoc.data.seizures ||
 			{}) as Record<string, number>;
+		// IMPORTANT — Svelte 4 needs reassignment, not mutation, to trigger
+		// reactivity. Build new objects locally then assign at the end so
+		// every reactive consumer (chip rendering, hasChanges flag, the
+		// saved-stamp time) sees the change. Earlier mutation-based code
+		// looked correct but the form rendered the empty default until the
+		// user touched another field.
+		const nextEpisodes = { ...episodes };
+		const nextCarryover: Record<string, string> = {};
 		let mutated = false;
 		for (const ep of bp.episodeTypes) {
 			if (!ep.multiDay) continue;
 			if (Number(prevEps[ep.id] || 0) <= 0) continue;
-			// Only carry over if the user hasn't already manually edited
-			// today's entry. We're in `!existingDoc` here so it's safe.
-			episodes[ep.id] = 1;
+			nextEpisodes[ep.id] = 1;
 			mutated = true;
 			const start = findPhaseStart(ep.id);
-			if (start) phaseCarryover[ep.id] = start;
+			if (start) nextCarryover[ep.id] = start;
 		}
-		// Mark dirty when we pre-filled, so the user can save the
-		// "yes still ongoing" path without first touching another field.
-		// The Save button needs hasChanges=true to enable.
-		if (mutated) hasChanges = true;
+		// Always reassign carryover so the previous-day's hint clears
+		// when the user navigates to a date with no preceding phase.
+		phaseCarryover = nextCarryover;
+		if (mutated) {
+			episodes = nextEpisodes;
+			// Mark dirty so the user can save the "yes still ongoing"
+			// path without first touching another field.
+			hasChanges = true;
+		}
 	}
 
 	$: hasPreviousDay = previousDoc !== null;
@@ -723,6 +733,12 @@
 									<button
 										type="button"
 										class="log-multiday-toggle {episodes[ep.id] > 0 ? 'log-multiday-toggle--on' : ''} {carriedFrom && episodes[ep.id] > 0 ? 'log-multiday-toggle--end' : ''}"
+										title={
+											carriedFrom && episodes[ep.id] > 0 ? $t('protocol.phase_finish_hint') :
+											carriedFrom ? $t('protocol.phase_resume_hint') :
+											episodes[ep.id] > 0 ? $t('protocol.phase_end_today_hint') :
+											$t('protocol.phase_start_hint')
+										}
 										on:click={() => { episodes[ep.id] = episodes[ep.id] > 0 ? 0 : 1; markChanged(); }}
 										aria-pressed={episodes[ep.id] > 0}
 									>
@@ -1671,11 +1687,26 @@
 		font-weight: 500;
 		cursor: pointer;
 		white-space: nowrap;
+		transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, background 0.12s ease-out;
+	}
+	/* CIPH-906 hover affordance — explains "this button does something"
+	   on pointer-over with a subtle lift + shadow. The native title=…
+	   tooltip carries the verbal explanation for AT users. Reduced-
+	   motion users still get the title; the lift is dropped via the
+	   global app.css prefers-reduced-motion block. */
+	.log-multiday-toggle:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+		background: var(--surface-muted);
 	}
 	.log-multiday-toggle--on {
 		background: var(--danger);
 		border-color: var(--danger);
 		color: white;
+	}
+	.log-multiday-toggle--on:hover {
+		background: var(--danger);
+		filter: brightness(0.92);
 	}
 	/* CIPH-906 — when the phase carried over and is still active, the
 	   action button means "end the phase," not "toggle." Visually muted
@@ -1685,6 +1716,10 @@
 		background: transparent;
 		border-color: var(--danger);
 		color: var(--danger);
+	}
+	.log-multiday-toggle--end:hover {
+		background: rgba(220, 38, 38, 0.06);
+		filter: none;
 	}
 	.log-multiday-toggle:focus-visible {
 		outline: 2px solid var(--accent);
