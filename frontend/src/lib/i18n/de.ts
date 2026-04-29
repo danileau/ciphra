@@ -224,6 +224,7 @@ export default {
 	// Protocol
 	'protocol.title': 'Eintrag',
 	'entry_preview.show_details': 'Details anzeigen',
+	'entry_preview.phase_continues': 'Phase weiter aktiv',
 	'entry_preview.hide_details': 'Details ausblenden',
 	'entry_preview.aria_episodes_count': '{n} Episoden heute',
 	'entry_preview.aria_symptoms_count': '{n} Symptome heute',

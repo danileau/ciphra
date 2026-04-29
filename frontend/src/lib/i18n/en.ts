@@ -216,6 +216,7 @@ export default {
 	'companion.streak_no_type': 'Days without {type}',
 
 	'entry_preview.show_details': 'Show details',
+	'entry_preview.phase_continues': 'Phase still active',
 	'entry_preview.hide_details': 'Hide details',
 	'entry_preview.aria_episodes_count': '{n} episodes today',
 	'entry_preview.aria_symptoms_count': '{n} symptoms today',

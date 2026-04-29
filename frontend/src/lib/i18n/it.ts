@@ -218,6 +218,7 @@ export default {
 
 	'protocol.title': 'Voce',
 	'entry_preview.show_details': 'Mostra dettagli',
+	'entry_preview.phase_continues': 'Fase ancora attiva',
 	'entry_preview.hide_details': 'Nascondi dettagli',
 	'entry_preview.aria_episodes_count': '{n} episodi oggi',
 	'entry_preview.aria_symptoms_count': '{n} sintomi oggi',

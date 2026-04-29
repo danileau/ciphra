@@ -491,6 +491,15 @@
 	<p class="text-xs mt-1.5 italic line-clamp-2" style="color: var(--text-secondary)">"{entry.data.notes}"</p>
 {/if}
 
+<!-- CIPH-911b — placeholder for empty cards inside a closed-phase streak.
+	 When inStreak suppresses the multiDay chip and there's nothing else
+	 to render, the card would be visually empty. The bracket header
+	 already says "Gemischte Episode · 4 Tage" — show a quiet "Phase
+	 weiter aktiv" inside the card so it doesn't read as broken. -->
+{#if inStreak && !hasNonMultiDayContent && entry.data.type === 'entry'}
+	<p class="entry-preview-streak-placeholder">{$t('entry_preview.phase_continues')}</p>
+{/if}
+
 <style>
 	/* CIPH-902 — diary serif treatment. System stack — Charter on macOS,
 	   Bitstream Charter on Linux, Sitka Text on Windows, Cambria older
@@ -499,5 +508,12 @@
 		font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', Cambria, 'Times New Roman', serif;
 		font-size: 14px;
 		line-height: 1.5;
+	}
+	/* CIPH-911b — placeholder for streak-only days. */
+	.entry-preview-streak-placeholder {
+		font-size: 12px;
+		font-style: italic;
+		color: var(--text-muted);
+		margin: 0;
 	}
 </style>

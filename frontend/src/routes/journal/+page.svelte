@@ -714,31 +714,20 @@
 		text-transform: none;
 		letter-spacing: normal;
 	}
+	/* Soft-corner bracket: border-left + border-top + border-bottom on
+	   the rail itself, with rounded LEFT corners and no right border.
+	   The border arms ARE the bracket (no pseudo-element ticks). Result
+	   is a `[`-style silhouette with rounded corners that "contains" the
+	   day-cards on its right and matches the rest of the app's rounded-
+	   corner design language. */
 	.journal-streak-rail {
 		grid-column: 1;
 		grid-row: 2;
-		position: relative;
-		width: 14px;
-		border-right: 2px solid var(--streak-color);
+		width: 12px;
+		border: 2px solid var(--streak-color);
+		border-right: none;
+		border-radius: 10px 0 0 10px;
 	}
-	/* Corner ticks at top + bottom, attached to the rail's right edge,
-	   extending OUT to the right (toward the days), forming a `[`-style
-	   silhouette that "contains" the day-cards on its right. The earlier
-	   `right: -2px; width: 6px` placed the ticks mostly INSIDE the rail
-	   so they read as facing-left — bug. `left: 100%` anchors the tick's
-	   left edge at the rail's right content edge so it sits fully on the
-	   gap-side of the border. */
-	.journal-streak-rail::before,
-	.journal-streak-rail::after {
-		content: '';
-		position: absolute;
-		left: 100%;
-		width: 8px;
-		height: 2px;
-		background: var(--streak-color);
-	}
-	.journal-streak-rail::before { top: 0; }
-	.journal-streak-rail::after { bottom: 0; }
 	.journal-streak-days {
 		grid-column: 2;
 		grid-row: 2;
@@ -752,20 +741,15 @@
 	.journal-streak-days > .journal-day:last-child {
 		margin-bottom: 0;
 	}
-	/* Mobile: the rail becomes a thin left bar, header sits above. The
-	   bracket-corner ticks are dropped — the header already labels the
-	   phase, so the rail just needs to indicate "these days are grouped." */
+	/* Mobile: shrink the bracket so the cards keep their breathing
+	   room on a 375px viewport. The soft-corner silhouette stays. */
 	@media (max-width: 479px) {
 		.journal-streak-group {
 			gap: 0 8px;
 		}
 		.journal-streak-rail {
-			width: 0;
-			border-right: 2px solid var(--streak-color);
-		}
-		.journal-streak-rail::before,
-		.journal-streak-rail::after {
-			display: none;
+			width: 8px;
+			border-radius: 8px 0 0 8px;
 		}
 	}
 

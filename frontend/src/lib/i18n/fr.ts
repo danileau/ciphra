@@ -217,6 +217,7 @@ export default {
 
 	'protocol.title': 'Entrée',
 	'entry_preview.show_details': 'Afficher les détails',
+	'entry_preview.phase_continues': 'Phase encore active',
 	'entry_preview.hide_details': 'Masquer les détails',
 	'entry_preview.aria_episodes_count': '{n} épisodes aujourd’hui',
 	'entry_preview.aria_symptoms_count': '{n} symptômes aujourd’hui',
