@@ -186,6 +186,17 @@
 	// flare / depressive" days at a glance, even before reading the
 	// cards. Mirrors the calendar bottom-sheet pattern (CIPH-880).
 	type PhaseTag = { id: string; color: string; label: string };
+	type ClosedStreak = {
+		epId: string;
+		color: string;
+		label: string;
+		startDate: string; // chronologically first
+		endDate: string;   // chronologically last
+		dayCount: number;
+	};
+	type RenderItem =
+		| { kind: 'day'; day: DayGroup }
+		| { kind: 'streak'; days: DayGroup[]; streak: ClosedStreak };
 	function phasesActiveOn(docs: CiphraDocument[]): PhaseTag[] {
 		if (!bp?.episodeTypes) return [];
 		const out: PhaseTag[] = [];
@@ -205,6 +216,79 @@
 					label: ep.label,
 				});
 			}
+		}
+		return out;
+	}
+
+	// CIPH-911 — Closed-phase brackets. Group consecutive calendar days
+	// in the journal that share an active multiDay episode AND whose
+	// most-recent day is in the past (closed in real time). Render the
+	// run inside a wrapper with a vertical rail + label on the right
+	// ("Manie · 4 Tage" with a `{`-style bracket). Open phases (still
+	// active today) keep using the per-day phase tag — no bracket, since
+	// the streak hasn't ended.
+	const TODAY_DATE = new Date().toISOString().slice(0, 10);
+	function computeRenderGroups(monthDays: DayGroup[]): RenderItem[] {
+		const out: RenderItem[] = [];
+		let i = 0;
+		while (i < monthDays.length) {
+			// monthDays sorted desc; index i = most-recent unprocessed day.
+			const day = monthDays[i];
+			const dayPhases = phasesActiveOn(day.docs);
+			if (dayPhases.length === 0) {
+				out.push({ kind: 'day', day });
+				i++;
+				continue;
+			}
+			// Find the longest run of calendar-consecutive days from i forward
+			// that share at least one active multiDay episode.
+			let bestRun = 1;
+			let bestPhase: PhaseTag | null = null;
+			for (const ph of dayPhases) {
+				let run = 1;
+				let cursor = i;
+				while (cursor + 1 < monthDays.length) {
+					const prevDay = monthDays[cursor + 1];
+					// Calendar adjacency: prevDay's date = monthDays[cursor]'s date - 1.
+					const expectedPrev = new Date(monthDays[cursor].dayKey + 'T12:00:00');
+					expectedPrev.setDate(expectedPrev.getDate() - 1);
+					const expectedKey = expectedPrev.toISOString().slice(0, 10);
+					if (prevDay.dayKey !== expectedKey) break;
+					const prevPhases = phasesActiveOn(prevDay.docs);
+					if (!prevPhases.some((p) => p.id === ph.id)) break;
+					run++;
+					cursor++;
+				}
+				if (run > bestRun) {
+					bestRun = run;
+					bestPhase = ph;
+				}
+			}
+			if (bestRun >= 2 && bestPhase) {
+				const streakDays = monthDays.slice(i, i + bestRun);
+				const latestDate = streakDays[0].dayKey; // chronologically last
+				const earliestDate = streakDays[bestRun - 1].dayKey;
+				// Closed when the streak's most-recent day is before today.
+				const isClosed = latestDate < TODAY_DATE;
+				if (isClosed) {
+					out.push({
+						kind: 'streak',
+						days: streakDays,
+						streak: {
+							epId: bestPhase.id,
+							color: bestPhase.color,
+							label: bestPhase.label,
+							startDate: earliestDate,
+							endDate: latestDate,
+							dayCount: bestRun,
+						},
+					});
+					i += bestRun;
+					continue;
+				}
+			}
+			out.push({ kind: 'day', day });
+			i++;
 		}
 		return out;
 	}
@@ -363,51 +447,95 @@
 			{#each groupedDocs as month (month.monthKey)}
 				<section class="journal-month">
 					<h2 class="journal-month-header">{formatMonthHeader(month.monthKey)}</h2>
-					{#each month.days as day (day.dayKey)}
-						{@const dh = formatDayHeader(day.dayKey)}
-						{@const phases = phasesActiveOn(day.docs)}
-						<div class="journal-day">
-							<p class="journal-day-header">
-								<span class="journal-day-label">{dh.label}</span>
-								{#if dh.weekday}<span class="journal-day-meta">· {dh.weekday}</span>{/if}
-								{#each phases as p}
-									<span
-										class="journal-phase-tag"
-										style="background: {p.color}1f; color: {p.color}; border-color: {p.color}66"
-									>{isCustomItem(p.id) ? p.label : $t(p.label)}</span>
-								{/each}
-							</p>
-							<div class="journal-day-stack">
-								{#each day.docs as doc (doc.id)}
-									{@const href = cardHref(doc)}
-									{@const railHex = railColor(doc)}
-									{#if href}
-										<a
-											href={href}
-											class="journal-card"
-											style="border-left-color: {railHex}"
-										>
-											{#if doc.data.time}
-												<span class="journal-card-time">{doc.data.time}</span>
-											{/if}
-											<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
-										</a>
-									{:else}
-										<button
-											type="button"
-											on:click={() => openMoment(doc)}
-											class="journal-card journal-card--button"
-											style="border-left-color: {railHex}"
-										>
-											{#if doc.data.time}
-												<span class="journal-card-time">{doc.data.time}</span>
-											{/if}
-											<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
-										</button>
-									{/if}
-								{/each}
+					{#each computeRenderGroups(month.days) as item, itemIdx (itemIdx)}
+						{#if item.kind === 'streak'}
+							<!-- CIPH-911 — closed-phase streak group. Rail + label
+								 on the right brackets the consecutive days. Per-day
+								 phase tags are suppressed inside the group (the rail
+								 label carries the phase identity). -->
+							<div class="journal-streak-group" style="--streak-color: {item.streak.color}">
+								<div class="journal-streak-days">
+									{#each item.days as day (day.dayKey)}
+										{@const dh = formatDayHeader(day.dayKey)}
+										<div class="journal-day">
+											<p class="journal-day-header">
+												<span class="journal-day-label">{dh.label}</span>
+												{#if dh.weekday}<span class="journal-day-meta">· {dh.weekday}</span>{/if}
+											</p>
+											<div class="journal-day-stack">
+												{#each day.docs as doc (doc.id)}
+													{@const href = cardHref(doc)}
+													{@const railHex = railColor(doc)}
+													{#if href}
+														<a href={href} class="journal-card" style="border-left-color: {railHex}">
+															{#if doc.data.time}<span class="journal-card-time">{doc.data.time}</span>{/if}
+															<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
+														</a>
+													{:else}
+														<button type="button" on:click={() => openMoment(doc)} class="journal-card journal-card--button" style="border-left-color: {railHex}">
+															{#if doc.data.time}<span class="journal-card-time">{doc.data.time}</span>{/if}
+															<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
+														</button>
+													{/if}
+												{/each}
+											</div>
+										</div>
+									{/each}
+								</div>
+								<aside class="journal-streak-rail">
+									<span class="journal-streak-label">
+										<span class="journal-streak-name">{isCustomItem(item.streak.epId) ? item.streak.label : $t(item.streak.label)}</span>
+										<span class="journal-streak-meta">{$t('reports.glance_n_days', { n: item.streak.dayCount })}</span>
+									</span>
+								</aside>
 							</div>
-						</div>
+						{:else}
+							{@const day = item.day}
+							{@const dh = formatDayHeader(day.dayKey)}
+							{@const phases = phasesActiveOn(day.docs)}
+							<div class="journal-day">
+								<p class="journal-day-header">
+									<span class="journal-day-label">{dh.label}</span>
+									{#if dh.weekday}<span class="journal-day-meta">· {dh.weekday}</span>{/if}
+									{#each phases as p}
+										<span
+											class="journal-phase-tag"
+											style="background: {p.color}1f; color: {p.color}; border-color: {p.color}66"
+										>{isCustomItem(p.id) ? p.label : $t(p.label)}</span>
+									{/each}
+								</p>
+								<div class="journal-day-stack">
+									{#each day.docs as doc (doc.id)}
+										{@const href = cardHref(doc)}
+										{@const railHex = railColor(doc)}
+										{#if href}
+											<a
+												href={href}
+												class="journal-card"
+												style="border-left-color: {railHex}"
+											>
+												{#if doc.data.time}
+													<span class="journal-card-time">{doc.data.time}</span>
+												{/if}
+												<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
+											</a>
+										{:else}
+											<button
+												type="button"
+												on:click={() => openMoment(doc)}
+												class="journal-card journal-card--button"
+												style="border-left-color: {railHex}"
+											>
+												{#if doc.data.time}
+													<span class="journal-card-time">{doc.data.time}</span>
+												{/if}
+												<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
+											</button>
+										{/if}
+									{/each}
+								</div>
+							</div>
+						{/if}
 					{/each}
 				</section>
 			{/each}
@@ -545,6 +673,93 @@
 		background: var(--surface-card);
 		color: var(--accent);
 		border-color: var(--accent);
+	}
+
+	/* CIPH-911 — Closed-phase streak bracket. Wraps consecutive day-cards
+	   that share a closed multiDay phase. Right-side vertical rail in
+	   the phase color, with corner ticks at top + bottom and a centered
+	   label "Manie · 4 Tage". Mobile: bracket shrinks to a thin rail and
+	   the label sits below the days. */
+	.journal-streak-group {
+		display: flex;
+		gap: 12px;
+		align-items: stretch;
+		margin-bottom: 16px;
+		position: relative;
+	}
+	.journal-streak-days {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+	}
+	/* Inside a streak group, individual .journal-day blocks lose their
+	   bottom margin so the bracket wraps the run tightly. */
+	.journal-streak-days > .journal-day {
+		margin-bottom: 12px;
+	}
+	.journal-streak-days > .journal-day:last-child {
+		margin-bottom: 0;
+	}
+	.journal-streak-rail {
+		position: relative;
+		width: 24px;
+		flex-shrink: 0;
+		border-left: 2px solid var(--streak-color);
+		padding-left: 8px;
+		display: flex;
+		align-items: center;
+	}
+	/* Top + bottom corner ticks form the curly-brace silhouette without
+	   needing unicode glyphs or rotated SVG. */
+	.journal-streak-rail::before,
+	.journal-streak-rail::after {
+		content: '';
+		position: absolute;
+		left: -2px;
+		width: 8px;
+		height: 2px;
+		background: var(--streak-color);
+	}
+	.journal-streak-rail::before { top: 0; }
+	.journal-streak-rail::after { bottom: 0; }
+	.journal-streak-label {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		font-size: 11px;
+		line-height: 1.2;
+		color: var(--streak-color);
+		white-space: nowrap;
+	}
+	.journal-streak-name {
+		font-weight: 600;
+	}
+	.journal-streak-meta {
+		font-weight: 400;
+		color: var(--text-muted);
+	}
+	/* Below 480px: stack the label under the days instead of beside,
+	   so the rail still works on a 375px iPhone SE viewport. */
+	@media (max-width: 479px) {
+		.journal-streak-group {
+			flex-direction: column;
+			gap: 4px;
+		}
+		.journal-streak-rail {
+			width: auto;
+			border-left: none;
+			border-top: 2px solid var(--streak-color);
+			padding: 6px 0 0;
+		}
+		.journal-streak-rail::before,
+		.journal-streak-rail::after {
+			display: none;
+		}
+		.journal-streak-label {
+			flex-direction: row;
+			gap: 8px;
+		}
 	}
 
 	/* CIPH-902 — Threema-style timeline. Month header sticks at the top;
