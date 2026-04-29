@@ -801,6 +801,8 @@ export default {
 	'settings.export_button': 'Scarica JSON',
 
 	'encryption.badge': 'Crittografia end-to-end',
+	'footer.aria_label': 'Piè di pagina',
+	'footer.links_aria': 'Note legali',
 	'encryption.zero_knowledge': 'Il server non può leggere i tuoi dati',
 
 	// Landing page

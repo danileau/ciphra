@@ -195,6 +195,15 @@ route kind.
   `class:active={isActive('/x')}` stops re-evaluating on
   navigation, so the first-rendered tab stays lit forever.
   12 regression tests in `BottomNav.test.ts` enforce this.
+- **AuthedFooter.svelte** (CIPH-903) — minimal authed-shell
+  footer rendered in `+layout.svelte` between `<main>` and
+  `<BottomNav>`. Watermark Wordmark + Privacy / Terms /
+  Security links + asterisk + `encryption.badge` trust line.
+  Self-hides on focus surfaces (`/log/[date]`, `/setup`,
+  `/login`, `/migrate`) so sticky save bars / wizard chrome
+  own the bottom of the screen. The encryption.badge used to
+  live as a dashboard-only block in `Companion.svelte`; it now
+  renders on every authed surface that shows the footer.
 
 ### Cards
 

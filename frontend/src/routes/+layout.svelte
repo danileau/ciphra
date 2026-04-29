@@ -15,6 +15,7 @@
 	import { pathToRoute } from '$lib/cohortPalette';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
+	import AuthedFooter from '$lib/components/AuthedFooter.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { shellFor } from '$lib/routeShells';
@@ -707,10 +708,17 @@
 	<main
 		data-route={currentRoute}
 		data-cohort={currentCohort}
-		style="padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px))"
+		style="padding-bottom: 2rem"
 	>
 		<slot />
 	</main>
+
+	<!-- CIPH-903 — minimal authed footer. Watermark + Privacy/Terms/Security
+		 links + encryption.badge trust signal that used to live in Companion's
+		 bottom block. Self-hides on /log/[date], /setup, /login, /migrate so
+		 focus surfaces stay clean. The footer's own margin-bottom clears the
+		 BottomNav (mobile) and safe-area (desktop). -->
+	<AuthedFooter />
 
 	<!-- FAB (+) button -->
 	{#if bp && $hasBlueprint && currentPath !== '/login' && currentPath !== '/setup'}

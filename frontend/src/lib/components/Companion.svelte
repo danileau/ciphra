@@ -514,12 +514,8 @@
 		</aside>
 		</div>
 
-		<!-- Full-width encryption badge below the grid (1/1) -->
-		<div class="pt-2">
-			<div class="asterisk-divider py-3">
-				<Asterisk size={14} color="muted" />
-			</div>
-			<p class="text-center text-xs" style="color: var(--text-muted)">{$t('encryption.badge')}</p>
-		</div>
+		<!-- CIPH-903 — encryption.badge + asterisk-divider moved into the
+			 authed footer so the trust signal renders on every authed page,
+			 not just the dashboard. -->
 	</div>
 {/if}

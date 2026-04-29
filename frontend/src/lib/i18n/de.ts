@@ -822,6 +822,8 @@ export default {
 
 	// Encryption
 	'encryption.badge': 'Ende-zu-Ende verschlüsselt',
+	'footer.aria_label': 'Fußzeile',
+	'footer.links_aria': 'Rechtliches',
 	'encryption.zero_knowledge': 'Der Server kann Ihre Daten nicht lesen',
 
 	// Landing page

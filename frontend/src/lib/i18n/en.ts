@@ -800,6 +800,8 @@ export default {
 	'settings.export_button': 'Download JSON',
 
 	'encryption.badge': 'End-to-end encrypted',
+	'footer.aria_label': 'Footer',
+	'footer.links_aria': 'Legal',
 	'encryption.zero_knowledge': 'The server cannot read your data',
 
 	// Landing page
