@@ -1047,31 +1047,41 @@
 								</td>
 							{/each}
 							{#each effectiveEpisodeColumns as col}
-								<td
-									class="px-2 py-1.5 text-center font-mono grid-episode-cell"
-									on:click|stopPropagation={() => incrementGridEpisode(dayStr, col)}
-									role="button"
-									tabindex="0"
-									on:keydown={(e) => { if (e.key === 'Enter') incrementGridEpisode(dayStr, col); }}
-									title={$t('reports.grid_cell_increment_hint')}
-								>
-									{#if getEpisodeCount(dayDoc, col) > 0}
-										<span class="font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{getEpisodeCount(dayDoc, col)}</span>
-										<!-- CIPH-915 — decrement counterpart for the click-to-add
-											 grid pattern. Small minus appears once a count exists.
-											 Stops propagation so the cell click (increment) doesn't
-											 fire when minus is tapped. -->
-										<button
-											type="button"
-											class="grid-episode-minus"
-											on:click|stopPropagation={() => decrementGridEpisode(dayStr, col)}
-											on:keydown|stopPropagation={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); decrementGridEpisode(dayStr, col); } }}
-											aria-label={$t('reports.grid_cell_decrement')}
-											title={$t('reports.grid_cell_decrement')}
-										>−</button>
-									{:else}
-										<span class="grid-episode-zero">-</span>
-									{/if}
+								{@const count = getEpisodeCount(dayDoc, col)}
+								{@const epColor = bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}
+								<!-- CIPH-915 — +/- counter widget. Symmetric pair instead
+									 of the earlier cell-click + inline minus pattern.
+									 Both buttons share `.grid-counter-btn` styling so
+									 they read as a matched pair. Cell-wide click handler
+									 dropped — the buttons are the explicit affordance. -->
+								<td class="px-2 py-1.5 text-center font-mono grid-episode-cell">
+									<div class="grid-counter">
+										{#if count > 0}
+											<button
+												type="button"
+												class="grid-counter-btn"
+												on:click|stopPropagation={() => decrementGridEpisode(dayStr, col)}
+												aria-label={$t('reports.grid_cell_decrement')}
+												title={$t('reports.grid_cell_decrement')}
+											>−</button>
+											<span class="grid-counter-num" style="color: {epColor}">{count}</span>
+											<button
+												type="button"
+												class="grid-counter-btn"
+												on:click|stopPropagation={() => incrementGridEpisode(dayStr, col)}
+												aria-label={$t('reports.grid_cell_increment_hint')}
+												title={$t('reports.grid_cell_increment_hint')}
+											>+</button>
+										{:else}
+											<button
+												type="button"
+												class="grid-counter-btn grid-counter-btn--solo"
+												on:click|stopPropagation={() => incrementGridEpisode(dayStr, col)}
+												aria-label={$t('reports.grid_cell_increment_hint')}
+												title={$t('reports.grid_cell_increment_hint')}
+											>+</button>
+										{/if}
+									</div>
 								</td>
 							{/each}
 							<td class="px-2 py-1.5 max-w-[240px] truncate" style="color: var(--text-secondary)">
@@ -1202,34 +1212,52 @@
 			height: 280px;
 		}
 	}
-	/* CIPH-915 — grid-cell decrement minus button. Sits inline next
-	   to the count number; takes 14px so it doesn't reflow the column
-	   width vs. count-only cells. */
+	/* CIPH-915 — grid-cell +/- counter widget. Both buttons share
+	   matching style; the count sits between them. Tap-target stays
+	   reasonable (16px sq) without bloating the table column width. */
 	.grid-episode-cell {
 		position: relative;
 	}
-	:global(.grid-episode-minus) {
+	:global(.grid-counter) {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 14px;
-		height: 14px;
-		margin-left: 3px;
-		font-size: 12px;
+		gap: 6px;
+	}
+	:global(.grid-counter-num) {
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		min-width: 1ch;
+	}
+	:global(.grid-counter-btn) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 16px;
+		height: 16px;
+		font-size: 13px;
 		line-height: 1;
 		color: var(--text-muted);
 		background: rgba(0, 0, 0, 0.04);
 		border: none;
-		border-radius: 3px;
+		border-radius: 4px;
 		cursor: pointer;
-		vertical-align: middle;
-		transition: color 0.12s ease-out, background 0.12s ease-out;
+		font-family: inherit;
+		transition: color 0.12s ease-out, background 0.12s ease-out, transform 0.12s ease-out;
 	}
-	:global(.grid-episode-minus):hover,
-	:global(.grid-episode-minus):focus-visible {
-		color: var(--danger);
-		background: rgba(220, 38, 38, 0.1);
+	:global(.grid-counter-btn):hover,
+	:global(.grid-counter-btn):focus-visible {
+		color: var(--text-primary);
+		background: rgba(0, 0, 0, 0.08);
 		outline: none;
+	}
+	:global(.grid-counter-btn):active {
+		transform: scale(0.92);
+	}
+	/* Solo + button (count=0): slightly more visible so the empty cell
+	   reads as "tap to add" rather than as filler. */
+	:global(.grid-counter-btn--solo) {
+		color: var(--text-secondary);
 	}
 	/* CIPH-909 (v2) — "This month at a glance" stat block. dl/dt/dd
 	   semantics so screen readers announce the term/definition pairs
@@ -1505,8 +1533,6 @@
 		color: var(--text-muted);
 		line-height: 1;
 	}
-	.grid-episode-zero {
-		color: var(--text-muted);
-		opacity: 0.4;
-	}
+	/* CIPH-915 — `.grid-episode-zero` removed; empty cells now show a
+	   centered "+" button instead of a muted "-" placeholder. */
 </style>
