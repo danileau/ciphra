@@ -1863,7 +1863,7 @@ export default {
 	'companion.compliance_subtitle': 'Mehr Einträge machen die Werte aussagekräftiger.',
 
 	// FAB onboarding (first 3 sessions)
-	'fab.tooltip_text': 'Schnell-Notiz hinzufügen — z.B. "Neue Medikation begonnen" oder "Arzttermin" erscheint als Markierung im Verlauf-Diagramm.',
+	'fab.tooltip_text': 'Schnelleintrag — tippe zum Hinzufügen.',
 	'fab.tooltip_dismiss': 'Verstanden',
 	'fab.aria_label': 'Schnell-Erfassung öffnen',
 

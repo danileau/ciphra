@@ -1840,7 +1840,7 @@ export default {
 	'companion.compliance_subtitle': 'Plus d\'entrées rendent les valeurs plus significatives.',
 
 	// FAB onboarding (first 3 sessions)
-	'fab.tooltip_text': 'Ajouter une note rapide — par ex. « Nouveau traitement » ou « Rendez-vous médical » apparaîtra comme un repère sur le graphique.',
+	'fab.tooltip_text': 'Ajout rapide — touchez pour saisir.',
 	'fab.tooltip_dismiss': 'Compris',
 	'fab.aria_label': 'Ouvrir l\'ajout rapide',
 

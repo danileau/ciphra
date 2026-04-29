@@ -1841,7 +1841,7 @@ export default {
 	'companion.compliance_subtitle': 'Più voci rendono i valori più significativi.',
 
 	// FAB onboarding (first 3 sessions)
-	'fab.tooltip_text': 'Aggiungi una nota rapida — ad es. «Nuova terapia» o «Visita medica» apparirà come riferimento nel grafico.',
+	'fab.tooltip_text': 'Inserimento rapido — tocca per aggiungere.',
 	'fab.tooltip_dismiss': 'Ho capito',
 	'fab.aria_label': 'Apri aggiunta rapida',
 

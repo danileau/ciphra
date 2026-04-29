@@ -1853,7 +1853,7 @@ export default {
 	'companion.compliance_subtitle': 'More entries make the values more meaningful.',
 
 	// FAB onboarding (first 3 sessions)
-	'fab.tooltip_text': 'Add a quick note — e.g. "Started new medication" or "Doctor visit" will later appear as a marker on the trend chart.',
+	'fab.tooltip_text': 'Quick add — tap to log.',
 	'fab.tooltip_dismiss': 'Got it',
 	'fab.aria_label': 'Open quick add',
 
