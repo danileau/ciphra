@@ -1215,9 +1215,6 @@
 	/* CIPH-915 — grid-cell +/- counter widget. Both buttons share
 	   matching style; the count sits between them. Tap-target stays
 	   reasonable (16px sq) without bloating the table column width. */
-	.grid-episode-cell {
-		position: relative;
-	}
 	:global(.grid-counter) {
 		display: inline-flex;
 		align-items: center;
@@ -1515,24 +1512,9 @@
 		box-shadow: 0 0 0 2px var(--olive);
 	}
 
-	.grid-episode-cell {
-		cursor: pointer;
-		position: relative;
-		transition: background 0.15s ease-out;
-	}
-	.grid-episode-cell:hover {
-		background: var(--surface-muted);
-	}
-	.grid-episode-cell:hover::after {
-		content: '+';
-		position: absolute;
-		top: 1px;
-		right: 3px;
-		font-size: 10px;
-		font-weight: 700;
-		color: var(--text-muted);
-		line-height: 1;
-	}
+	/* CIPH-915 — `.grid-episode-cell` no longer needs cursor:pointer,
+	   hover-background, or the hover-only "+" corner hint; the explicit
+	   [−] N [+] counter widget inside is the affordance. */
 	/* CIPH-915 — `.grid-episode-zero` removed; empty cells now show a
 	   centered "+" button instead of a muted "-" placeholder. */
 </style>
