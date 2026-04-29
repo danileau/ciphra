@@ -207,6 +207,70 @@
 		markChanged();
 	}
 
+	// CIPH-906 — Phase carryover. Multi-day episodes (flares, manic/
+	// depressive states, MS relapses, IBD flares, endo flares...) by
+	// definition span days — but the form starts every new day at zero,
+	// forcing the user to manually re-toggle "ongoing today" or the
+	// calendar shows yesterday-active / today-quiet, which is wrong.
+	//
+	// On hydration of a NEW day's entry (no existingDoc), if a multiDay
+	// episode was active in `previousDoc`, pre-fill `episodes[ep.id] = 1`
+	// AND record the streak start date in `phaseCarryover` so the form
+	// can render "Phase aktiv seit X. April" + a "Beenden" affordance.
+	let phaseCarryover: Record<string, string> = {};
+
+	function findPhaseStart(epId: string): string | null {
+		if (!previousDoc) return null;
+		const prevDate = String(previousDoc.data.date || '');
+		if (!prevDate) return null;
+		let started = prevDate;
+		let cursor = new Date(prevDate + 'T12:00:00');
+		// Walk backwards through recentDocs for as long as the streak
+		// holds. Cap at 60 days — if the user has had a flare for >60d
+		// they're not surprised by a "since 60 days ago" hint.
+		for (let i = 0; i < 60; i++) {
+			const earlier = new Date(cursor);
+			earlier.setDate(earlier.getDate() - 1);
+			const earlierStr = earlier.toISOString().slice(0, 10);
+			const earlierDoc = recentDocs.find(
+				(d) => d.data?.type === 'entry' && d.data?.date === earlierStr,
+			);
+			const wasActive = earlierDoc
+				? Number(
+						(earlierDoc.data.episodes || earlierDoc.data.seizures || {})[epId] || 0,
+					) > 0
+				: false;
+			if (!wasActive) break;
+			started = earlierStr;
+			cursor = earlier;
+		}
+		return started;
+	}
+
+	function applyPhaseCarryover() {
+		if (existingDoc) return; // Editing an existing day — never override the doc.
+		if (!previousDoc) return;
+		phaseCarryover = {};
+		const prevEps = (previousDoc.data.episodes ||
+			previousDoc.data.seizures ||
+			{}) as Record<string, number>;
+		let mutated = false;
+		for (const ep of bp.episodeTypes) {
+			if (!ep.multiDay) continue;
+			if (Number(prevEps[ep.id] || 0) <= 0) continue;
+			// Only carry over if the user hasn't already manually edited
+			// today's entry. We're in `!existingDoc` here so it's safe.
+			episodes[ep.id] = 1;
+			mutated = true;
+			const start = findPhaseStart(ep.id);
+			if (start) phaseCarryover[ep.id] = start;
+		}
+		// Mark dirty when we pre-filled, so the user can save the
+		// "yes still ongoing" path without first touching another field.
+		// The Save button needs hasChanges=true to enable.
+		if (mutated) hasChanges = true;
+	}
+
 	$: hasPreviousDay = previousDoc !== null;
 
 	$: hiddenSymptomIds = new Set(bp.customizations?.hiddenSymptoms || []);
@@ -265,6 +329,18 @@
 		if (existingDoc && _existingLoadedKey !== key) {
 			_existingLoadedKey = key;
 			loadExistingEntry();
+		}
+	}
+
+	// CIPH-906 — apply phase carryover for new-day entries (no existingDoc)
+	// once both `bp` and `previousDoc` have resolved. Same guard pattern
+	// as the existingDoc hydration so it runs once per date change.
+	let _phaseCarryKey = '';
+	$: {
+		const key = `${date}|${previousDoc?.id ?? 'none'}|${existingDoc ? 'has' : 'no'}`;
+		if (!existingDoc && _phaseCarryKey !== key) {
+			_phaseCarryKey = key;
+			applyPhaseCarryover();
 		}
 	}
 
@@ -629,14 +705,38 @@
 								<span>{epLabel}</span>
 							</div>
 							{#if ep.multiDay}
-								<button
-									type="button"
-									class="log-multiday-toggle {episodes[ep.id] > 0 ? 'log-multiday-toggle--on' : ''}"
-									on:click={() => { episodes[ep.id] = episodes[ep.id] > 0 ? 0 : 1; markChanged(); }}
-									aria-pressed={episodes[ep.id] > 0}
-								>
-									{episodes[ep.id] > 0 ? $t('protocol.ongoing_today') : $t('protocol.mark_ongoing')}
-								</button>
+								{@const carriedFrom = phaseCarryover[ep.id]}
+								<div class="log-multiday-cell">
+									{#if carriedFrom}
+										<!-- CIPH-906 — phase carryover: yesterday's entry had
+											 this multiDay episode active, so today's entry
+											 pre-fills as continuing. The hint surfaces the
+											 streak start; the button reframes to "Beenden"
+											 when active so the action is the explicit "this
+											 phase ended today" gesture, not a generic toggle. -->
+										<p class="log-phase-hint">
+											{$t('protocol.phase_active_since', {
+												date: new Date(carriedFrom + 'T12:00:00').toLocaleDateString($locale, { day: 'numeric', month: 'short' }),
+											})}
+										</p>
+									{/if}
+									<button
+										type="button"
+										class="log-multiday-toggle {episodes[ep.id] > 0 ? 'log-multiday-toggle--on' : ''} {carriedFrom && episodes[ep.id] > 0 ? 'log-multiday-toggle--end' : ''}"
+										on:click={() => { episodes[ep.id] = episodes[ep.id] > 0 ? 0 : 1; markChanged(); }}
+										aria-pressed={episodes[ep.id] > 0}
+									>
+										{#if carriedFrom && episodes[ep.id] > 0}
+											{$t('protocol.phase_finish')}
+										{:else if carriedFrom}
+											{$t('protocol.phase_resume')}
+										{:else if episodes[ep.id] > 0}
+											{$t('protocol.ongoing_today')}
+										{:else}
+											{$t('protocol.mark_ongoing')}
+										{/if}
+									</button>
+								</div>
 							{:else}
 								<div class="log-counter">
 									<button
@@ -1547,6 +1647,19 @@
 	}
 
 	/* ─── Multi-day episode toggle ─── */
+	.log-multiday-cell {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 4px;
+	}
+	.log-phase-hint {
+		font-size: 11px;
+		color: var(--text-muted);
+		margin: 0;
+		text-align: right;
+		white-space: nowrap;
+	}
 	.log-multiday-toggle {
 		min-height: 44px;
 		padding: 6px 14px;
@@ -1563,6 +1676,15 @@
 		background: var(--danger);
 		border-color: var(--danger);
 		color: white;
+	}
+	/* CIPH-906 — when the phase carried over and is still active, the
+	   action button means "end the phase," not "toggle." Visually muted
+	   (outline + danger text) so it doesn't feel like the destructive
+	   delete in the save bar but still reads as a deliberate action. */
+	.log-multiday-toggle--end {
+		background: transparent;
+		border-color: var(--danger);
+		color: var(--danger);
 	}
 	.log-multiday-toggle:focus-visible {
 		outline: 2px solid var(--accent);
