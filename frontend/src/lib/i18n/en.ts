@@ -904,6 +904,7 @@ export default {
 	'landing.templates_title_1': 'Start with a template,',
 	'landing.templates_title_2': 'or build your own.',
 	'landing.templates_subtitle': 'Choose a template as a starting point or create your own profile.',
+	'landing.templates_custom_group': 'Build your own',
 	'landing.template_epilepsy': 'Epilepsy',
 	'landing.template_epilepsy_desc': 'Seizure types, auras, medications, seizure-free days',
 	'landing.template_adhd': 'ADHD',
@@ -1311,8 +1312,6 @@ export default {
 	'condition.cta_learn_more': 'Learn more',
 	'condition.disclaimer': 'ciphra is not a medical device. Always consult your healthcare provider for medical decisions.',
 	'condition.index_title': 'Supported conditions',
-	'condition.back_to_home': 'Back to home',
-	'condition.index_subtitle': 'ciphra supports tracking for these chronic health conditions with end-to-end encryption.',
 	'condition_group.neurological.title': 'Neurological',
 	'condition_group.neurological.description': 'Conditions affecting the brain and nervous system — episodes, auras, and neurological symptoms.',
 	'condition_group.mental_health.title': 'Mind and mood',
@@ -1327,7 +1326,6 @@ export default {
 	'condition_group.womens_health.description': 'Cycles, hormonal transitions, and related symptoms.',
 	'condition_group.systemic.title': 'Post-viral and systemic',
 	'condition_group.systemic.description': 'Multi-system conditions with fatigue, cognitive, and autonomic components.',
-	'condition.index_description': 'Encrypted health tracking for chronic conditions — epilepsy, migraine, ADHD, autism, diabetes, chronic pain, asthma, heart conditions, cancer treatment, skin conditions, endometriosis and more.',
 
 	// Condition — Epilepsy
 	'condition.epilepsy.title': 'Epilepsy',

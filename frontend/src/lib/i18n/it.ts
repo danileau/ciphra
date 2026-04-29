@@ -905,6 +905,7 @@ export default {
 	'landing.templates_title_1': 'Inizia con un modello,',
 	'landing.templates_title_2': 'o creane uno tuo.',
 	'landing.templates_subtitle': 'Scegli un modello come punto di partenza o crea il tuo profilo.',
+	'landing.templates_custom_group': 'Crea il tuo modello',
 	'landing.template_epilepsy': 'Epilessia',
 	'landing.template_epilepsy_desc': 'Tipi di crisi, aure, farmaci, giorni senza crisi',
 	'landing.template_adhd': 'ADHD',
@@ -1311,8 +1312,6 @@ export default {
 	'condition.cta_learn_more': 'Scopri di più',
 	'condition.disclaimer': 'ciphra non è un dispositivo medico. Consulta sempre il tuo medico per le decisioni sanitarie.',
 	'condition.index_title': 'Condizioni supportate',
-	'condition.back_to_home': 'Torna alla pagina iniziale',
-	'condition.index_subtitle': 'ciphra supporta il monitoraggio di queste malattie croniche con crittografia end-to-end.',
 	'condition_group.neurological.title': 'Neurologico',
 	'condition_group.neurological.description': 'Malattie del cervello e del sistema nervoso — episodi, aure e sintomi neurologici.',
 	'condition_group.mental_health.title': 'Mente e umore',
@@ -1327,7 +1326,6 @@ export default {
 	'condition_group.womens_health.description': 'Cicli, transizioni ormonali e sintomi correlati.',
 	'condition_group.systemic.title': 'Post-virale e sistemico',
 	'condition_group.systemic.description': 'Malattie multi-sistemiche con affaticamento, componenti cognitive e autonomiche.',
-	'condition.index_description': 'Monitoraggio sanitario crittografato per malattie croniche — epilessia, emicrania, ADHD, autismo, diabete, dolore cronico, asma, malattie cardiache, trattamento oncologico, malattie dermatologiche, endometriosi e altro.',
 
 	// Condition — Epilessia
 	'condition.epilepsy.title': 'Epilessia',

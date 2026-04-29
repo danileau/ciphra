@@ -904,6 +904,7 @@ export default {
 	'landing.templates_title_1': 'Commencez avec un modèle,',
 	'landing.templates_title_2': 'ou créez le vôtre.',
 	'landing.templates_subtitle': 'Choisissez un modèle comme point de départ ou créez votre propre profil.',
+	'landing.templates_custom_group': 'Créer son modèle',
 	'landing.template_epilepsy': 'Épilepsie',
 	'landing.template_epilepsy_desc': 'Types de crises, auras, médicaments, jours sans crise',
 	'landing.template_adhd': 'TDAH',
@@ -1310,8 +1311,6 @@ export default {
 	'condition.cta_learn_more': 'En savoir plus',
 	'condition.disclaimer': "ciphra n'est pas un dispositif médical. Consultez toujours votre professionnel de santé pour les décisions médicales.",
 	'condition.index_title': 'Conditions prises en charge',
-	'condition.back_to_home': 'Retour à l\'accueil',
-	'condition.index_subtitle': 'ciphra prend en charge le suivi de ces maladies chroniques avec un chiffrement de bout en bout.',
 	'condition_group.neurological.title': 'Neurologique',
 	'condition_group.neurological.description': 'Maladies du cerveau et du système nerveux — épisodes, auras et symptômes neurologiques.',
 	'condition_group.mental_health.title': 'Esprit et humeur',
@@ -1326,7 +1325,6 @@ export default {
 	'condition_group.womens_health.description': 'Cycles, transitions hormonales et symptômes associés.',
 	'condition_group.systemic.title': 'Post-viral et systémique',
 	'condition_group.systemic.description': 'Maladies multi-systémiques avec fatigue, composantes cognitives et autonomes.',
-	'condition.index_description': 'Suivi de santé chiffré pour les maladies chroniques — épilepsie, migraine, TDAH, autisme, diabète, douleurs chroniques, asthme, maladies cardiaques, traitement du cancer, affections cutanées, endométriose et plus encore.',
 
 	// Condition — Épilepsie
 	'condition.epilepsy.title': 'Épilepsie',

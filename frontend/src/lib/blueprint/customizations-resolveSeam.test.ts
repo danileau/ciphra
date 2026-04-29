@@ -48,10 +48,9 @@ const ALLOWLIST: ReadonlyArray<{ path: string; reason: string }> = [
 		path: 'routes/migrate/+page.svelte',
 		reason: 'Only calls `blueprint.loadFromDocuments()` / `save()` — never iterates fields.',
 	},
-	{
-		path: 'routes/conditions/+page.svelte',
-		reason: 'Only calls `blueprint.save()` to switch presets.',
-	},
+	// CIPH-917 — `routes/conditions/+page.svelte` removed (merged into
+	// the landing #conditions section). Only the per-condition detail
+	// page remains.
 	{
 		path: 'routes/conditions/[id]/+page.svelte',
 		reason: 'Only calls `blueprint.save()` to switch presets.',

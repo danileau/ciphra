@@ -14,6 +14,13 @@
 
 	let showTechnicalDetails = false;
 
+	// CIPH-917 — custom-preset card lives at the bottom of the merged
+	// conditions section as the open-ended alternative to the named
+	// conditions. Hoisted from a template `{@const}` to the script so
+	// it can sit between `{/each}` and `{#if}` (which Svelte's
+	// `{@const}` placement rules don't allow).
+	$: customPreset = presets.find((p) => p.id === 'custom');
+
 	// Perf review (PI v13): Companion + CompanionMain + CompanionRail +
 	// ChartWrapper + chart.js together pulled ~250 KB gzip into the
 	// landing chunk despite only rendering when authenticated. Dynamic-
@@ -232,56 +239,70 @@
 	</section>
 
 	<!-- ===== CONDITIONS GRID =====
-	     Moved ahead of "How it works" — a stranger's first question is
-	     "is my condition here?"; the deep tile grid answers it before
-	     we ask them to digest the architecture. Section bg/border flipped
-	     to surface-card + both borders so the alternation rhythm with the
-	     hero's surface bg stays intact. -->
+	     CIPH-917 — was a flat 4-col preset grid + a "See all conditions →"
+	     link to a separate /conditions page. The standalone page duplicated
+	     the same content with a slightly different layout (categorised). The
+	     two have been merged here: full 19-condition catalogue grouped by
+	     category, with the per-condition detail still living at
+	     /conditions/{id}. /conditions itself is now a 308-redirect to the
+	     #conditions anchor on this page. -->
 	<section class="py-20 md:py-28 reveal" use:inview id="conditions" style="background: var(--surface-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
 		<div class="max-w-5xl mx-auto px-6">
-			<div class="text-center mb-16">
+			<div class="text-center mb-12">
 				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">
 					{$t('landing.templates_title_1')} <span style="color: var(--brand);">{$t('landing.templates_title_2')}</span>
 				</h2>
 				<p class="text-lg max-w-xl mx-auto" style="color: var(--text-muted);">{$t('landing.templates_subtitle')}</p>
 			</div>
 
-			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-				{#each presets as preset}
-					{#if preset.id === 'custom'}
-						<!-- Custom card -->
+			{#each conditionGroups as group}
+				<section id="group-{group.id}" class="mb-10 scroll-mt-20">
+					<header class="mb-4">
+						<h3 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">{$t(group.titleKey)}</h3>
+						<p class="text-sm mt-1" style="color: var(--text-secondary);">{$t(group.descriptionKey)}</p>
+					</header>
+					<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+						{#each group.conditionIds as id}
+							{@const info = conditionInfoMap[id]}
+							{#if info}
+								<a href="/conditions/{id}" data-anim="condition-tile" class="card-interactive rounded-xl p-5 min-h-[140px] block group">
+									<div
+										class="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+										style="background: linear-gradient(135deg, {info.color}26, {info.color}10);
+										       border: 1px solid {info.color}40;"
+									>
+										<svg class="w-5 h-5" fill="none" stroke={info.color} stroke-width="2.2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+											<path d="{iconPaths[info.icon] || iconPaths['heart']}"/>
+										</svg>
+									</div>
+									<h4 class="font-semibold text-sm mb-1 transition-colors" style="color: var(--text-primary);">{$t(info.titleKey)}</h4>
+									<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(info.subtitleKey)}</p>
+								</a>
+							{/if}
+						{/each}
+					</div>
+				</section>
+			{/each}
+
+			<!-- "Build your own" — final group, surfaced visually via the
+				 dashed-border treatment so it reads as the open-ended
+				 alternative to the named conditions. -->
+			{#if customPreset}
+				<section class="mb-2">
+					<header class="mb-4">
+						<h3 class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">{$t('landing.templates_custom_group')}</h3>
+					</header>
+					<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
 						<div class="rounded-xl p-5 flex flex-col items-center justify-center text-center transition-colors min-h-[140px]" style="border: 2px dashed var(--border); cursor: default;">
 							<div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style="background: var(--surface-muted);">
 								<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);"><path d="M12 5v14m-7-7h14"/></svg>
 							</div>
-							<h3 class="font-semibold text-sm mb-1" style="color: var(--text-primary);">{$t(preset.labelKey)}</h3>
-							<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(preset.descriptionKey)}</p>
+							<h4 class="font-semibold text-sm mb-1" style="color: var(--text-primary);">{$t(customPreset.labelKey)}</h4>
+							<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(customPreset.descriptionKey)}</p>
 						</div>
-					{:else}
-						<!-- Condition card -->
-						<a href="/conditions/{preset.id}" data-anim="condition-tile" class="card-interactive rounded-xl p-5 min-h-[140px] block group">
-							<div
-								class="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-								style="background: linear-gradient(135deg, {preset.color}26, {preset.color}10);
-								       border: 1px solid {preset.color}40;"
-							>
-								<svg class="w-5 h-5" fill="none" stroke={preset.color} stroke-width="2.2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-									<path d="{iconPaths[preset.icon] || iconPaths['heart']}"/>
-								</svg>
-							</div>
-							<h3 class="font-semibold text-sm mb-1 transition-colors" style="color: var(--text-primary);">{$t(preset.labelKey)}</h3>
-							<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(preset.descriptionKey)}</p>
-						</a>
-					{/if}
-				{/each}
-			</div>
-
-				<div class="text-center mt-8">
-					<a href="/conditions" class="inline-flex items-center gap-2 text-sm font-medium transition-colors" style="color: var(--brand);">
-						{$t('condition.index_title')}
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</a>
-				</div>
+					</div>
+				</section>
+			{/if}
 		</div>
 	</section>
 

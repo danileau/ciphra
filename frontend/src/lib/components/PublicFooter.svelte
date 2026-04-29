@@ -34,7 +34,7 @@
 				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">{$t('landing.footer_product')}</h3>
 				<ul class="space-y-2 text-sm" style="color: var(--text-muted);">
 					<li><a href="/#how" class="hover:underline" style="color: inherit;">{$t('landing.footer_how')}</a></li>
-					<li><a href="/conditions" class="hover:underline" style="color: inherit;">{$t('landing.footer_templates')}</a></li>
+					<li><a href="/#conditions" class="hover:underline" style="color: inherit;">{$t('landing.footer_templates')}</a></li>
 					<li><a href="/#security" class="hover:underline" style="color: inherit;">{$t('landing.footer_security')}</a></li>
 				</ul>
 			</div>
@@ -43,7 +43,7 @@
 				<ul class="space-y-2 text-sm" style="color: var(--text-muted);">
 					<li><a href="/login" class="hover:underline" style="color: inherit;">{$t('landing.footer_login')}</a></li>
 					<li><a href="/login?mode=register" class="hover:underline" style="color: inherit;">{$t('landing.footer_register')}</a></li>
-					<li><a href="/conditions" class="hover:underline" style="color: inherit;">{$t('nav.conditions')}</a></li>
+					<li><a href="/#conditions" class="hover:underline" style="color: inherit;">{$t('nav.conditions')}</a></li>
 				</ul>
 			</div>
 			<div>

@@ -926,6 +926,7 @@ export default {
 	'landing.templates_title_1': 'Mit Vorlage starten,',
 	'landing.templates_title_2': 'oder eigene bauen.',
 	'landing.templates_subtitle': 'Wähle eine Vorlage als Startpunkt oder erstelle dein eigenes Profil.',
+	'landing.templates_custom_group': 'Eigene Vorlage',
 	'landing.template_epilepsy': 'Epilepsie',
 	'landing.template_epilepsy_desc': 'Anfallstypen, Auren, Medikamente, anfallsfreie Tage',
 	'landing.template_adhd': 'ADHS',
@@ -1332,8 +1333,6 @@ export default {
 	'condition.cta_learn_more': 'Mehr erfahren',
 	'condition.disclaimer': 'ciphra ist kein Medizinprodukt. Konsultiere immer deinen Arzt für medizinische Entscheidungen.',
 	'condition.index_title': 'Unterstützte Erkrankungen',
-	'condition.back_to_home': 'Zur Startseite',
-	'condition.index_subtitle': 'ciphra unterstützt das Tracking dieser chronischen Erkrankungen mit Ende-zu-Ende-Verschlüsselung.',
 	'condition_group.neurological.title': 'Neurologisch',
 	'condition_group.neurological.description': 'Erkrankungen von Gehirn und Nervensystem — Anfälle, Auren und neurologische Symptome.',
 	'condition_group.mental_health.title': 'Geist und Gemüt',
@@ -1348,7 +1347,6 @@ export default {
 	'condition_group.womens_health.description': 'Zyklen, hormonelle Übergänge und zugehörige Symptome.',
 	'condition_group.systemic.title': 'Post-viral und systemisch',
 	'condition_group.systemic.description': 'Multisystem-Erkrankungen mit Erschöpfung, kognitiven und autonomen Komponenten.',
-	'condition.index_description': 'Verschlüsseltes Gesundheitstracking für chronische Erkrankungen — Epilepsie, Migräne, ADHS, Autismus, Diabetes, chronische Schmerzen, Asthma, Herzerkrankungen, Krebsbehandlung, Hauterkrankungen, Endometriose und mehr.',
 
 	// Condition — Epilepsie
 	'condition.epilepsy.title': 'Epilepsie',
