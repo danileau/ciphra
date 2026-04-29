@@ -860,7 +860,7 @@ export default {
 
 	// Landing page
 	'landing.skip_to_content': 'Zum Inhalt springen',
-	'landing.meta_description': 'ciphra ist das verschlüsselte Tagebuch für chronische Erkrankungen. Direkt im Browser verschlüsselt — auch wir können deine Einträge nicht lesen. Für Epilepsie, ADHS, Diabetes, Burnout, Migräne und jede andere Erkrankung.',
+	'landing.meta_description': 'ciphra ist das verschlüsselte Tagebuch für chronische Erkrankungen. Mit deinem Passwort direkt im Browser verschlüsselt. Für Epilepsie, ADHS, Diabetes, Burnout, Migräne und jede andere Erkrankung.',
 	'landing.nav_how': 'So funktioniert es',
 	'landing.nav_origin': 'Die Geschichte',
 	'landing.nav_security': 'Sicherheit',
@@ -874,7 +874,7 @@ export default {
 	'landing.subtagline': 'Das verschlüsselte Tagebuch für chronische Erkrankungen.',
 	'landing.chips_prefix': 'Vorbereitete Vorlagen:',
 	'landing.chips_custom': 'oder eigene bauen',
-	'landing.hero_subtitle': 'Ein Tagebuch, das {strong_start}nicht mal wir als Admins lesen können{strong_end}. Verschlüsselt direkt im Browser. Für jede Erkrankung.',
+	'landing.hero_subtitle': 'Ein Tagebuch, {strong_start}das mit deinem Passwort verschlüsselt wird{strong_end} — direkt im Browser. Für jede Erkrankung.',
 	'landing.hero_detail': 'Gebaut von jemandem, der seit 7 Jahren Werkzeuge für chronisch Kranke entwickelt. Nicht als Produkt — als Antwort auf ein echtes Problem.',
 	'landing.hero_cta': 'Kostenlos starten',
 	'landing.hero_scroll_cue': 'Zu den Erkrankungen scrollen',
