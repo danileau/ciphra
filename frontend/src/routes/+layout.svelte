@@ -19,6 +19,8 @@
 	import PublicFooter from '$lib/components/PublicFooter.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import Toast from '$lib/components/Toast.svelte';
+	import DatePicker from '$lib/components/DatePicker.svelte';
+	import TimePicker from '$lib/components/TimePicker.svelte';
 	import { shellFor } from '$lib/routeShells';
 	import { fade, fly } from 'svelte/transition';
 
@@ -920,11 +922,23 @@
 							<div class="grid grid-cols-2 gap-2 mb-3">
 								<div>
 									<label class="text-xs" style="color: var(--text-secondary)" for="qa-diary-date">{$t('common.date')}</label>
-									<input id="qa-diary-date" type="date" bind:value={diaryDate} class="input mt-1" />
+									<div class="mt-1">
+										<DatePicker
+											id="qa-diary-date"
+											bind:value={diaryDate}
+											ariaLabel={$t('common.date')}
+										/>
+									</div>
 								</div>
 								<div>
 									<label class="text-xs" style="color: var(--text-secondary)" for="qa-diary-time">{$t('common.time')} <span style="color: var(--text-muted)">({$t('common.optional')})</span></label>
-									<input id="qa-diary-time" type="time" bind:value={diaryTime} class="input mt-1" />
+									<div class="mt-1">
+										<TimePicker
+											id="qa-diary-time"
+											bind:value={diaryTime}
+											ariaLabel={$t('common.time')}
+										/>
+									</div>
 								</div>
 							</div>
 							<div class="mb-4">

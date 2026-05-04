@@ -257,6 +257,19 @@ each surface is also visibly cohort-aware when empty.
   `density='quick'` is reserved for PI v13 FAB consolidation.
   Contract enforced by `EntryComposer.test.ts`; route line-count
   guarded by `routes/log/[date]/line-count.test.ts`.
+- **DatePicker.svelte** (PI v17) — brand-consistent wrapper around
+  `<input type="date">`. Native chrome (sharp corners, browser-default
+  layout) hidden via `opacity:0`; visible face shows dd.mm.yyyy via
+  `formatDisplay`. Click triggers `inputEl.showPicker()` (Safari fallback:
+  focus()+click()). Props: `value` (ISO YYYY-MM-DD), `id`, `format`
+  (default `dd.mm.yyyy`, alts `dd/mm/yyyy`/`iso`/`us`), `ariaLabel`. Used
+  in the diary quick-add modal in `+layout.svelte`. Settings toggle for
+  display format queued for PI v18.
+- **TimePicker.svelte** (PI v17) — same wrapper pattern as DatePicker
+  for `<input type="time">`. Visible HH:MM, native picker on click.
+  `compact` prop drops to 32px min-height for inline use beside +/-
+  counters in EntryComposer episode rows. Used in diary quick-add and
+  EntryComposer episode-time + multi-entry vitals time fields.
 - **PasswordField.svelte** (CIPH-887) — wraps a native password
   input with an eye-icon toggle. Tap flips `type` between
   `password` and `text` for the current session only — visibility

@@ -529,6 +529,82 @@
 	})();
 	$: trendChartData = (() => {
 		if (!bp?.episodeTypes?.length) return null;
+		// PI v17 — context-aware. Year-view shows the rolling 24-month
+		// summary (the "complexity of all aggregated data" view that
+		// scored highest in epilepc). Month-view shows daily resolution
+		// for the displayed month — same shape, but each point is one
+		// day so the user can see the within-month rhythm next to the
+		// day-coverage strip and grid.
+		if (viewMode === 'month') {
+			const d = new Date(currentDate + 'T12:00:00');
+			const y = d.getFullYear();
+			const m = d.getMonth();
+			const daysInMo = new Date(y, m + 1, 0).getDate();
+			const labels: string[] = [];
+			const episodes: number[] = [];
+			const symptomCounts: number[] = [];
+			const monthPrefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+			// Bucket docs by date once (O(docs)) instead of per-day filter.
+			const dayDocs = new Map<string, typeof exportableDocs>();
+			for (const doc of exportableDocs) {
+				if (doc.data?.type !== 'entry') continue;
+				const ds = String(doc.data.date || '');
+				if (!ds.startsWith(monthPrefix)) continue;
+				const arr = dayDocs.get(ds);
+				if (arr) arr.push(doc);
+				else dayDocs.set(ds, [doc]);
+			}
+			for (let day = 1; day <= daysInMo; day++) {
+				const ds = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+				labels.push(String(day));
+				let epCount = 0;
+				let symCount = 0;
+				const docs = dayDocs.get(ds) || [];
+				for (const doc of docs) {
+					const eps = (doc.data.episodes || doc.data.seizures || {}) as Record<string, number>;
+					for (const ep of bp.episodeTypes) epCount += Number(eps[ep.id] || 0);
+					const syms = (doc.data.symptoms || {}) as Record<string, unknown>;
+					for (const k of Object.keys(syms)) if (syms[k]) symCount++;
+				}
+				episodes.push(epCount);
+				symptomCounts.push(symCount);
+			}
+			const totalSignal = episodes.reduce((a, b) => a + b, 0) + symptomCounts.reduce((a, b) => a + b, 0);
+			if (totalSignal === 0) return null;
+			return {
+				labels,
+				datasets: [
+					{
+						label: $t('day_detail.episodes'),
+						data: episodes,
+						borderColor: trendAccentHex,
+						backgroundColor: 'transparent',
+						borderWidth: 2,
+						tension: 0.3,
+						pointRadius: 2,
+						pointHoverRadius: 5,
+						pointBackgroundColor: trendAccentHex,
+						fill: false,
+						yAxisID: 'y',
+					},
+					{
+						label: $t('companion.symptoms'),
+						data: symptomCounts,
+						borderColor: trendNeutralHex,
+						backgroundColor: 'transparent',
+						borderWidth: 1,
+						borderDash: [3, 3],
+						tension: 0.3,
+						pointRadius: 1.5,
+						pointHoverRadius: 4,
+						pointBackgroundColor: trendNeutralHex,
+						fill: false,
+						yAxisID: 'y1',
+					},
+				],
+			};
+		}
+		// Year-view: rolling 24-month window ending at trendAnchor.
 		const months: { y: number; m: number; key: string; label: string }[] = [];
 		for (let i = 23; i >= 0; i--) {
 			const d = new Date(trendAnchor.getFullYear(), trendAnchor.getMonth() - i, 1);
@@ -597,20 +673,26 @@
 			],
 		};
 	})();
-	// PI v15 LB-4 — Screen-reader data-table mirror for the 24-month trend
-	// chart. Without this, SR users hear only the surrounding heading and
-	// then silence; the headline doctor-prep view is unusable.
+	// PI v15 LB-4 — Screen-reader data-table mirror for the trend chart.
+	// PI v17 — caption + headers track viewMode so SR users get the right
+	// context (24-month summary vs. daily-resolution-for-this-month).
+	$: trendTitle = viewMode === 'month'
+		? $t('reports.trend_title_month', { month: formatMonth(currentDate) })
+		: $t('reports.trend_title');
+	$: trendAria = viewMode === 'month'
+		? $t('reports.trend_aria_month', { month: formatMonth(currentDate) })
+		: $t('reports.trend_aria');
 	$: trendChartSrTable = (() => {
 		if (!trendChartData) return undefined;
 		const labels = trendChartData.labels as string[];
 		const eps = trendChartData.datasets[0].data as number[];
 		const sym = trendChartData.datasets[1].data as number[];
 		return {
-			caption: $t('reports.trend_title'),
+			caption: trendTitle,
 			headers: [
-				$t('common.month'),
+				viewMode === 'month' ? $t('common.day') : $t('common.month'),
 				$t('day_detail.episodes'),
-				$t('companion.how_symptom_days'),
+				viewMode === 'month' ? $t('companion.symptoms') : $t('companion.how_symptom_days'),
 			],
 			rows: labels.map((label, i) => [label, eps[i] ?? 0, sym[i] ?? 0]),
 		};
@@ -655,13 +737,43 @@
 					border: { display: false },
 				},
 				x: {
-					ticks: { font: { size: 10 }, color: 'rgba(120,113,108,0.7)', maxRotation: 0 },
+					// PI v17 (Linus dry-run): with 30+ daily ticks at 10px in a
+					// ~220px-wide mobile chart, Chart.js' default autoSkip can
+					// pile labels. Pin an explicit budget so the chart degrades
+					// to ~weekly markers on small viewports instead of pretending
+					// to show every day.
+					ticks: {
+						font: { size: 10 },
+						color: 'rgba(120,113,108,0.7)',
+						maxRotation: 0,
+						autoSkip: true,
+						autoSkipPadding: 8,
+						maxTicksLimit: 8,
+					},
 					grid: { display: false },
 					border: { display: false },
 				},
 			},
 		};
 		return _trendOpts;
+	})();
+
+	// PI v17 (both dry-runs) — explicit range chip beneath the title gives
+	// the user a visual cue that "month-view = 1 month" vs "year-view = 24
+	// months". Title text alone wasn't enough — the charts looked too
+	// similar on toggle.
+	$: trendRange = (() => {
+		if (viewMode === 'month') {
+			const d = new Date(currentDate + 'T12:00:00');
+			const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+			const first = new Date(d.getFullYear(), d.getMonth(), 1);
+			const fmt = (x: Date) => x.toLocaleDateString($locale, { day: 'numeric', month: 'short' });
+			return `${fmt(first)} – ${fmt(last)}`;
+		}
+		const end = new Date(trendAnchor.getFullYear(), trendAnchor.getMonth(), 1);
+		const start = new Date(end.getFullYear(), end.getMonth() - 23, 1);
+		const fmt = (x: Date) => x.toLocaleDateString($locale, { month: 'short', year: 'numeric' });
+		return `${fmt(start)} – ${fmt(end)}`;
 	})();
 
 	function getMonthShortName(month: number): string {
@@ -838,20 +950,38 @@
 		 above the recent events block. Episodes line + symptom-days
 		 line, dual y-axis so a low episode count stays readable when
 		 symptom-days dwarf it. Hides when there's no signal yet. -->
-	{#if trendChartData}
-		<div class="card mb-4 p-4">
-			<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('reports.trend_title')}</h2>
+	<!-- PI v17 — chart card always renders in either view (month/year). The
+	     daily-month chart can collapse to "no entries" mid-month and used
+	     to vanish the whole card, breaking page silhouette + trust. Empty
+	     state now shows the title + range chip + a muted line. -->
+	<div class="card mb-4 p-4">
+		<div class="rpt-trend-header">
+			<h2 class="rpt-trend-title" style="color: var(--text-primary)">{trendTitle}</h2>
+			<span class="rpt-trend-range" style="color: var(--text-muted)">{trendRange}</span>
+		</div>
+		{#if trendChartData}
 			<div class="rpt-trend-chart">
 				<ChartWrapper
-				type="line"
-				data={trendChartData}
-				options={trendChartOptions}
-				ariaLabel={$t('reports.trend_aria')}
-				srTable={trendChartSrTable}
-			/>
+					type="line"
+					data={trendChartData}
+					options={trendChartOptions}
+					ariaLabel={trendAria}
+					srTable={trendChartSrTable}
+				/>
 			</div>
-		</div>
-	{/if}
+		{:else}
+			<!-- PI v17 (Jonas dry-run #2) — distinguish "no entries at all"
+			     from "entries exist but no episodes/symptoms triggering
+			     signal". The latter is the common mid-month case where
+			     the user has logged diary days but no flares yet, and
+			     the previous "Keine Daten" copy gaslit them into thinking
+			     their entries weren't saved. -->
+			{@const scopeDocs = viewMode === 'year' ? yearDocs : monthDocs}
+			<div class="rpt-trend-empty" role="status" style="color: var(--text-muted)">
+				{scopeDocs.length > 0 ? $t('reports.no_signal') : $t('reports.no_data')}
+			</div>
+		{/if}
+	</div>
 
 	<!-- Recent note-marker events — closes the visibility gap. Users who
 		 create "Treatment adjusted" style markers couldn't see them anywhere
@@ -1267,7 +1397,38 @@
 	.rpt-trend-chart {
 		height: 220px;
 	}
+	/* PI v17 — title + range chip block. min-height holds the card's top
+	   region stable when the title string length changes between
+	   "Verlauf · 24 Monate" and "Verlauf · September 2026" (Linus dry-run). */
+	.rpt-trend-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 4px 12px;
+		margin-bottom: 12px;
+		min-height: 1.5rem;
+	}
+	.rpt-trend-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		margin: 0;
+	}
+	.rpt-trend-range {
+		font-size: 0.75rem;
+		font-variant-numeric: tabular-nums;
+	}
+	.rpt-trend-empty {
+		height: 220px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.875rem;
+	}
 	@media (min-width: 768px) {
+		.rpt-trend-empty {
+			height: 280px;
+		}
 		.rpt-trend-chart {
 			height: 280px;
 		}

@@ -41,6 +41,7 @@
 	import type { Phase } from '$lib/cycleState';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
+	import TimePicker from '$lib/components/TimePicker.svelte';
 	import { fade } from 'svelte/transition';
 
 	export let date: string;
@@ -778,9 +779,11 @@
 								{#if ep.trackTimeOfDay}
 									<div class="log-episode-detail-field">
 										<label class="log-detail-label" for="ep-time-{ep.id}">{$t('protocol.time_of_day')}</label>
-										<input type="time" id="ep-time-{ep.id}" class="log-detail-input"
+										<TimePicker
+											id="ep-time-{ep.id}"
 											bind:value={episodeTimes[ep.id]}
-											on:input={markChanged}
+											ariaLabel={$t('protocol.time_of_day')}
+											compact
 										/>
 									</div>
 								{/if}
@@ -891,8 +894,13 @@
 										</div>
 									{/if}
 									<div class="log-multi-add">
-										<input type="time" class="log-detail-input log-multi-add-time"
-											bind:value={multiEntryNewTime[vital.id]} placeholder="--:--" />
+										<div class="log-multi-add-time">
+											<TimePicker
+												bind:value={multiEntryNewTime[vital.id]}
+												ariaLabel={$t('vital.time_label') ?? $t('common.time')}
+												compact
+											/>
+										</div>
 										<input type="text" inputmode="decimal" class="log-detail-input log-multi-add-value"
 											bind:value={multiEntryNewValue[vital.id]} placeholder={vital.placeholder}
 											on:keydown={(e) => { if (e.key === 'Enter') addMultiEntry(vital.id); }} />
@@ -936,12 +944,13 @@
 						{/if}
 
 						<div class="log-multi-add">
-							<input
-								type="time"
-								class="log-detail-input log-multi-add-time"
-								bind:value={multiEntryNewTime[vital.id]}
-								placeholder="--:--"
-							/>
+							<div class="log-multi-add-time">
+								<TimePicker
+									bind:value={multiEntryNewTime[vital.id]}
+									ariaLabel={$t('common.time')}
+									compact
+								/>
+							</div>
 							<input
 								type="text"
 								inputmode="decimal"
@@ -1514,6 +1523,17 @@
 		font-weight: 500;
 		color: var(--ochre);
 		display: block;
+		line-height: 1.25;
+	}
+	/* PI v17 — reserve 2 lines so labels that wrap (e.g. DE
+	   "Stimmungspolarität" in the bipolar blueprint) don't push their
+	   <input> down and break grid-row alignment with sibling cells.
+	   Short labels show 1 line + spacer; long labels show 2 lines.
+	   Scoped to the grid: standalone <p class="log-vital-label"> headers
+	   on the multi-entry sections aren't in a grid, so they shouldn't
+	   reserve dead space (Jonas dry-run #3). */
+	.log-vitals-grid .log-vital-label {
+		min-height: 2.5em;
 	}
 	.log-vital-unit {
 		font-weight: 400;
