@@ -160,6 +160,11 @@ export interface Blueprint {
 	 *  which falls back to the cohort default. User can override in Settings. */
 	primaryBrowseSurface?: 'journal' | 'calendar' | 'trend';
 
+	/** CIPH-pi18-3 — Display format for the custom DatePicker popover and
+	 *  trigger. Read by call sites of `<DatePicker>`. Default `dd.mm.yyyy`
+	 *  (Swiss/EU) when unset, matching the existing PI v17 behavior. */
+	dateFormat?: 'dd.mm.yyyy' | 'dd/mm/yyyy' | 'iso' | 'us';
+
 	/** CIPH-301b / CIPH-882 — User customizations from the setup wizard
 	 *  or settings. Two layers:
 	 *

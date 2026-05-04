@@ -1919,11 +1919,9 @@ export default {
 	'settings.primary_surface_calendar': 'Calendario — vista mensile',
 	'settings.primary_surface_trend': 'Andamento — grafico per primo',
 
-	// CIPH-305 — Esportazione PDF compatta
-	'pdf.export_compact': 'Compatto A4',
-	'pdf.export_compact_desc': 'Da stampare e portare con sé — A4, 12pt, colonna singola, una o due pagine.',
-	'pdf.compact_subtitle': 'Stampabile · A4 · 12pt · da portare alla visita',
-	'pdf.compact_intro': 'Una panoramica clinica di una pagina per il medico: i fatti salienti del periodo, la curva degli episodi e i punti specifici della patologia che evidenzieremmo in consulto.',
+	// CIPH-pi18-3 — Formato di visualizzazione del DatePicker
+	'settings.date_format_title': 'Formato data',
+	'settings.date_format_desc': 'Come vengono visualizzate le date nei campi di input.',
 
 	// CIPH-411b — Gestione farmaci
 	'settings.section_medications': 'Farmaci',

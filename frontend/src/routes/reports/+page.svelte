@@ -33,11 +33,10 @@
 		return 'pdf.scope_month_label';
 	}
 
-	function pickExport(scope: ReportScope, compact: boolean) {
+	function pickExport(scope: ReportScope) {
 		pdfScope = scope;
 		exportMenuOpen = false;
-		if (compact) exportCompactForDoctor();
-		else exportForDoctor();
+		exportForDoctor();
 	}
 
 	// Available scope set depends on data span: no point offering "2 years"
@@ -254,13 +253,6 @@
 		const d = new Date(currentDate + 'T12:00:00');
 		const { generateDoctorPdf } = await loadPdfLib();
 		generateDoctorPdf(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
-	}
-
-	async function exportCompactForDoctor() {
-		if (!bp) return;
-		const d = new Date(currentDate + 'T12:00:00');
-		const { generateCompactPdf } = await loadPdfLib();
-		generateCompactPdf(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
 	}
 
 	async function exportCsvFile() {
@@ -1049,7 +1041,7 @@
 				<button
 					role="menuitem"
 					type="button"
-					on:click={() => pickExport('month', false)}
+					on:click={() => pickExport('month')}
 					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between"
 				>
 					<span style="color: var(--text-primary)">{$t('pdf.scope_month_label')}</span>
@@ -1058,7 +1050,7 @@
 				<button
 					role="menuitem"
 					type="button"
-					on:click={() => scopeYearAvailable && pickExport('year', false)}
+					on:click={() => scopeYearAvailable && pickExport('year')}
 					disabled={!scopeYearAvailable}
 					title={scopeYearAvailable ? '' : $t('pdf.scope_unavailable')}
 					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between disabled:opacity-40 disabled:cursor-not-allowed"
@@ -1069,23 +1061,12 @@
 				<button
 					role="menuitem"
 					type="button"
-					on:click={() => scopeTwoYearsAvailable && pickExport('2years', false)}
+					on:click={() => scopeTwoYearsAvailable && pickExport('2years')}
 					disabled={!scopeTwoYearsAvailable}
 					title={scopeTwoYearsAvailable ? '' : $t('pdf.scope_unavailable')}
 					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between disabled:opacity-40 disabled:cursor-not-allowed"
 				>
 					<span style="color: var(--text-primary)">{$t('pdf.scope_2years_label')}</span>
-					<span class="text-xs" style="color: var(--text-muted)">PDF</span>
-				</button>
-				<div style="border-top: 1px solid var(--border)"></div>
-				<button
-					role="menuitem"
-					type="button"
-					on:click={() => pickExport(pdfScope, true)}
-					title={$t('pdf.export_compact_desc')}
-					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between"
-				>
-					<span style="color: var(--text-primary)">{$t('pdf.export_compact')}</span>
 					<span class="text-xs" style="color: var(--text-muted)">PDF</span>
 				</button>
 			</div>
@@ -1416,7 +1397,6 @@
 	}
 	.rpt-trend-range {
 		font-size: 0.75rem;
-		font-variant-numeric: tabular-nums;
 	}
 	.rpt-trend-empty {
 		height: 220px;

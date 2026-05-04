@@ -4,6 +4,12 @@
 	import { auth, isAuthenticated } from '$lib/stores/auth';
 	import { documents } from '$lib/stores/documents';
 	import { blueprint, hasBlueprint, presets, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
+	import {
+		applyDateFormatChoice,
+		applyPrimarySurfaceChoice,
+		type DateFormatChoice,
+		type PrimarySurfaceChoice,
+	} from '$lib/blueprint/preferences';
 	import type {
 		Blueprint,
 		BlueprintItem,
@@ -20,7 +26,6 @@
 	import PasswordField from '$lib/components/PasswordField.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import Asterisk from '$lib/components/Asterisk.svelte';
 	import FamilySharing from '$lib/components/FamilySharing.svelte';
 	import LinkedAccounts from '$lib/components/LinkedAccounts.svelte';
 	import Tabs from '$lib/components/Tabs.svelte';
@@ -50,27 +55,50 @@
 		{ id: 'sharing', label: $t('settings.tab_sharing') },
 	];
 
-	// CIPH-852 — primaryBrowseSurface override. 'auto' = clear the field,
-	// fall back to cohort default. Otherwise write the explicit choice.
-	type SurfaceChoice = 'auto' | 'journal' | 'calendar' | 'trend';
-	async function setPrimarySurface(value: SurfaceChoice) {
+	// CIPH-852 — primaryBrowseSurface override. Discriminator helper lives
+	// in $lib/blueprint/preferences.ts (CIPH-pi18-3 added the test).
+	async function setPrimarySurface(value: PrimarySurfaceChoice) {
 		if (!bp) return;
-		const next: Blueprint = JSON.parse(JSON.stringify(bp));
-		if (value === 'auto') {
-			delete (next as Partial<Blueprint>).primaryBrowseSurface;
-		} else {
-			next.primaryBrowseSurface = value;
-		}
-		await blueprint.save(next);
+		await blueprint.save(applyPrimarySurfaceChoice(bp, value));
 	}
 	function onSurfaceChange(e: Event) {
 		const target = e.currentTarget as HTMLSelectElement;
-		setPrimarySurface(target.value as SurfaceChoice);
+		setPrimarySurface(target.value as PrimarySurfaceChoice);
 	}
 
 	// For the <select>: 'auto' when the field is missing, otherwise the value.
 	$: currentSurfaceChoice = bp?.primaryBrowseSurface ?? 'auto';
 	$: cohortDefault = bp ? getCohort(bp.conditionId) : 'custom';
+
+	// CIPH-pi18-3 — DatePicker display format. Lives in the Appearance
+	// section of the Account tab — it's a display preference, not a
+	// tracking preference (Jonas dry-run #1).
+	async function setDateFormat(value: DateFormatChoice) {
+		if (!bp) return;
+		await blueprint.save(applyDateFormatChoice(bp, value));
+	}
+	function onDateFormatChange(e: Event) {
+		const target = e.currentTarget as HTMLSelectElement;
+		setDateFormat(target.value as DateFormatChoice);
+	}
+	$: currentDateFormat = bp?.dateFormat ?? 'dd.mm.yyyy';
+
+	// Today's date rendered in each format — used as live option labels so
+	// the user sees the actual SHAPE rather than a fixed "31.05.2026" sample.
+	// Recomputed on locale change so the page stays fresh through the day.
+	function sampleDate(format: DateFormatChoice): string {
+		const now = new Date();
+		const y = now.getFullYear();
+		const m = String(now.getMonth() + 1).padStart(2, '0');
+		const d = String(now.getDate()).padStart(2, '0');
+		switch (format) {
+			case 'dd/mm/yyyy': return `${d}/${m}/${y}`;
+			case 'iso': return `${y}-${m}-${d}`;
+			case 'us': return `${m}/${d}/${y}`;
+			case 'dd.mm.yyyy':
+			default: return `${d}.${m}.${y}`;
+		}
+	}
 
 	let showConfirmSwitch = false;
 	let selectedPreset: PresetInfo | null = null;
@@ -558,6 +586,27 @@
 					{/each}
 				</select>
 			</div>
+
+			{#if bp}
+			<!-- CIPH-pi18-3 — DatePicker display format. Folded into Appearance
+				 because it's a display preference, alongside language. Live
+				 sample dates so the user sees the actual SHAPE on switch. -->
+			<div>
+				<label class="text-sm mb-1.5 block" style="color: var(--text-secondary)" for="date-format-select">{$t('settings.date_format_title')}</label>
+				<p class="text-xs mb-1.5" style="color: var(--text-muted)">{$t('settings.date_format_desc')}</p>
+				<select
+					id="date-format-select"
+					class="input cursor-pointer"
+					value={currentDateFormat}
+					on:change={onDateFormatChange}
+				>
+					<option value="dd.mm.yyyy">{sampleDate('dd.mm.yyyy')}</option>
+					<option value="dd/mm/yyyy">{sampleDate('dd/mm/yyyy')}</option>
+					<option value="iso">{sampleDate('iso')} (ISO 8601)</option>
+					<option value="us">{sampleDate('us')}</option>
+				</select>
+			</div>
+			{/if}
 		</div>
 	</section>
 
@@ -618,6 +667,108 @@
 		>
 			{$t('settings.customize_profile')}
 		</button>
+	</section>
+	{/if}
+
+	<!-- Medications (CIPH-411b) — moved up to right after Profile so people
+		 find it without scrolling past customizations / primary-surface /
+		 template-switcher. User feedback 2026-05-04. -->
+	{#if bp}
+	<section aria-labelledby="settings-medications-heading" class="space-y-3">
+		<h2 id="settings-medications-heading" class="text-sm font-semibold uppercase tracking-wider" style="color: var(--text-muted)">{$t('settings.section_medications')}</h2>
+
+		<section class="card p-5">
+			{#if bp.medications.length === 0}
+				<p class="text-sm mb-4" style="color: var(--text-secondary)">{$t('settings.medications_empty')}</p>
+			{:else}
+				<ul class="space-y-2 mb-4">
+					{#each bp.medications as med (med.id)}
+						<li class="flex items-center gap-3 p-3 rounded-xl" style="background: var(--surface-muted); border: 1px solid var(--border)">
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium truncate" style="color: var(--text-primary)">{med.name}</p>
+								<p class="text-xs mt-0.5 truncate" style="color: var(--text-secondary)">
+									{med.dose}{med.schedule ? ' · ' + med.schedule : ''}{med.asNeeded ? ' · ' + $t('settings.medication_as_needed') : ''}
+								</p>
+							</div>
+							<label class="flex items-center gap-1.5 text-xs cursor-pointer shrink-0" style="color: var(--text-muted)">
+								<input
+									type="checkbox"
+									checked={med.asNeeded}
+									on:change={() => toggleMedAsNeeded(med.id)}
+									class="w-4 h-4"
+									style="accent-color: var(--olive)"
+								/>
+								<span class="hidden sm:inline">{$t('settings.medication_as_needed')}</span>
+							</label>
+							<button
+								type="button"
+								on:click={() => openEditMed(med)}
+								class="text-xs font-medium px-2 py-1.5 rounded-lg min-h-[36px]"
+								style="color: var(--text-secondary); background: var(--surface-card); border: 1px solid var(--border)"
+							>
+								{$t('common.edit')}
+							</button>
+							<button
+								type="button"
+								on:click={() => deleteMed(med.id)}
+								class="text-xs font-medium px-2 py-1.5 rounded-lg min-h-[36px]"
+								style="color: var(--danger); background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)"
+							>
+								{$t('common.delete')}
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+
+			{#if !medEditorOpen}
+				<button
+					type="button"
+					on:click={openAddMed}
+					class="btn-secondary w-full rounded-xl text-sm font-medium min-h-[44px]"
+				>
+					{$t('settings.add_medication')}
+				</button>
+			{:else}
+				<form on:submit|preventDefault={saveMed} class="space-y-3 p-4 rounded-xl" style="background: var(--surface-muted); border: 1px solid var(--border)">
+					<h4 class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted)">
+						{medEditingId ? $t('settings.medication_edit_title') : $t('settings.add_medication')}
+					</h4>
+					<div>
+						<label class="text-xs block mb-1" for="med-name" style="color: var(--text-secondary)">{$t('settings.medication_name')}</label>
+						<input id="med-name" type="text" bind:value={medName} class="input" required />
+					</div>
+					<div>
+						<label class="text-xs block mb-1" for="med-dose" style="color: var(--text-secondary)">{$t('settings.medication_dose')}</label>
+						<input id="med-dose" type="text" bind:value={medDose} class="input" placeholder="10mg" required />
+					</div>
+					<div>
+						<label class="text-xs block mb-1" for="med-schedule" style="color: var(--text-secondary)">{$t('settings.medication_schedule')}</label>
+						<input id="med-schedule" type="text" bind:value={medSchedule} class="input" placeholder={$t('setup.med_schedule_placeholder')} />
+					</div>
+					<label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--text-primary)">
+						<input type="checkbox" bind:checked={medAsNeeded} class="w-4 h-4" style="accent-color: var(--olive)" />
+						{$t('settings.medication_as_needed')}
+					</label>
+					<div class="flex gap-3 pt-1">
+						<button
+							type="button"
+							on:click={() => { medEditorOpen = false; resetMedForm(); }}
+							class="btn-secondary flex-1 rounded-xl text-sm font-medium min-h-[44px]"
+						>
+							{$t('common.cancel')}
+						</button>
+						<button
+							type="submit"
+							disabled={!medName.trim() || !medDose.trim()}
+							class="btn-primary flex-1 rounded-xl text-sm font-medium min-h-[44px]"
+						>
+							{$t('settings.medication_save')}
+						</button>
+					</div>
+				</form>
+			{/if}
+		</section>
 	</section>
 	{/if}
 
@@ -727,6 +878,7 @@
 	</section>
 	{/if}
 
+
 	<!-- Quick switch (profile template) -->
 	<section class="card p-5">
 		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.switch_template')}</h3>
@@ -754,106 +906,6 @@
 			{/each}
 		</div>
 	</section>
-
-	<!-- Medications (CIPH-411b) -->
-	{#if bp}
-	<section aria-labelledby="settings-medications-heading" class="space-y-3">
-		<h2 id="settings-medications-heading" class="text-sm font-semibold uppercase tracking-wider" style="color: var(--text-muted)">{$t('settings.section_medications')}</h2>
-
-		<section class="card p-5">
-			{#if bp.medications.length === 0}
-				<p class="text-sm mb-4" style="color: var(--text-secondary)">{$t('settings.medications_empty')}</p>
-			{:else}
-				<ul class="space-y-2 mb-4">
-					{#each bp.medications as med (med.id)}
-						<li class="flex items-center gap-3 p-3 rounded-xl" style="background: var(--surface-muted); border: 1px solid var(--border)">
-							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium truncate" style="color: var(--text-primary)">{med.name}</p>
-								<p class="text-xs mt-0.5 truncate" style="color: var(--text-secondary)">
-									{med.dose}{med.schedule ? ' · ' + med.schedule : ''}{med.asNeeded ? ' · ' + $t('settings.medication_as_needed') : ''}
-								</p>
-							</div>
-							<label class="flex items-center gap-1.5 text-xs cursor-pointer shrink-0" style="color: var(--text-muted)">
-								<input
-									type="checkbox"
-									checked={med.asNeeded}
-									on:change={() => toggleMedAsNeeded(med.id)}
-									class="w-4 h-4"
-									style="accent-color: var(--olive)"
-								/>
-								<span class="hidden sm:inline">{$t('settings.medication_as_needed')}</span>
-							</label>
-							<button
-								type="button"
-								on:click={() => openEditMed(med)}
-								class="text-xs font-medium px-2 py-1.5 rounded-lg min-h-[36px]"
-								style="color: var(--text-secondary); background: var(--surface-card); border: 1px solid var(--border)"
-							>
-								{$t('common.edit')}
-							</button>
-							<button
-								type="button"
-								on:click={() => deleteMed(med.id)}
-								class="text-xs font-medium px-2 py-1.5 rounded-lg min-h-[36px]"
-								style="color: var(--danger); background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)"
-							>
-								{$t('common.delete')}
-							</button>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-
-			{#if !medEditorOpen}
-				<button
-					type="button"
-					on:click={openAddMed}
-					class="btn-secondary w-full rounded-xl text-sm font-medium min-h-[44px]"
-				>
-					{$t('settings.add_medication')}
-				</button>
-			{:else}
-				<form on:submit|preventDefault={saveMed} class="space-y-3 p-4 rounded-xl" style="background: var(--surface-muted); border: 1px solid var(--border)">
-					<h4 class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted)">
-						{medEditingId ? $t('settings.medication_edit_title') : $t('settings.add_medication')}
-					</h4>
-					<div>
-						<label class="text-xs block mb-1" for="med-name" style="color: var(--text-secondary)">{$t('settings.medication_name')}</label>
-						<input id="med-name" type="text" bind:value={medName} class="input" required />
-					</div>
-					<div>
-						<label class="text-xs block mb-1" for="med-dose" style="color: var(--text-secondary)">{$t('settings.medication_dose')}</label>
-						<input id="med-dose" type="text" bind:value={medDose} class="input" placeholder="10mg" required />
-					</div>
-					<div>
-						<label class="text-xs block mb-1" for="med-schedule" style="color: var(--text-secondary)">{$t('settings.medication_schedule')}</label>
-						<input id="med-schedule" type="text" bind:value={medSchedule} class="input" placeholder={$t('setup.med_schedule_placeholder')} />
-					</div>
-					<label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--text-primary)">
-						<input type="checkbox" bind:checked={medAsNeeded} class="w-4 h-4" style="accent-color: var(--olive)" />
-						{$t('settings.medication_as_needed')}
-					</label>
-					<div class="flex gap-3 pt-1">
-						<button
-							type="button"
-							on:click={() => { medEditorOpen = false; resetMedForm(); }}
-							class="btn-secondary flex-1 rounded-xl text-sm font-medium min-h-[44px]"
-						>
-							{$t('common.cancel')}
-						</button>
-						<button
-							type="submit"
-							disabled={!medName.trim() || !medDose.trim()}
-							class="btn-primary flex-1 rounded-xl text-sm font-medium min-h-[44px]"
-						>
-							{$t('settings.medication_save')}
-						</button>
-					</div>
-				</form>
-			{/if}
-		</section>
-	</section>
-	{/if}
 
 	</div>
 	{/if}
@@ -884,12 +936,6 @@
 
 	</div>
 	{/if}
-
-	<!-- E2E badge -->
-	<div class="flex items-center justify-center gap-2 py-4">
-		<Asterisk size={14} color="muted" />
-		<span class="text-xs" style="color: var(--text-muted)">{$t('encryption.badge')}</span>
-	</div>
 </div>
 
 <!-- primitive-exempt: Modal — two bespoke confirmation dialogs (switch preset,

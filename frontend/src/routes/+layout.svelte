@@ -926,6 +926,7 @@
 										<DatePicker
 											id="qa-diary-date"
 											bind:value={diaryDate}
+											format={$resolvedBlueprint?.dateFormat ?? 'dd.mm.yyyy'}
 											ariaLabel={$t('common.date')}
 										/>
 									</div>

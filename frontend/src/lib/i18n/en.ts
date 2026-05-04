@@ -1931,11 +1931,9 @@ export default {
 	'settings.primary_surface_calendar': 'Calendar — monthly view',
 	'settings.primary_surface_trend': 'Trend — chart first',
 
-	// CIPH-305 — Compact PDF export
-	'pdf.export_compact': 'Compact A4',
-	'pdf.export_compact_desc': 'For printing and bringing along — A4, 12pt, single column, one or two pages.',
-	'pdf.compact_subtitle': 'Print-friendly · A4 · 12pt · take to your appointment',
-	'pdf.compact_intro': 'A one-page clinical snapshot for your doctor: the headline facts for this scope, an episode trajectory chart, and the condition-aware points we would flag in a consultation.',
+	// CIPH-pi18-3 — DatePicker display format
+	'settings.date_format_title': 'Date format',
+	'settings.date_format_desc': 'How dates are shown in input fields.',
 
 	// CIPH-411b — Medication management in settings
 	'settings.section_medications': 'Medications',

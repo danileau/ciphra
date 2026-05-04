@@ -1941,11 +1941,9 @@ export default {
 	'settings.primary_surface_calendar': 'Kalender — Monatsansicht',
 	'settings.primary_surface_trend': 'Trend — Diagramm zuerst',
 
-	// CIPH-305 — Compact PDF export
-	'pdf.export_compact': 'Kompakt A4',
-	'pdf.export_compact_desc': 'Zum Ausdrucken und Mitnehmen — A4, 12pt, eine Spalte, ein bis zwei Seiten.',
-	'pdf.compact_subtitle': 'Druckfreundlich · A4 · 12pt · zum Mitnehmen',
-	'pdf.compact_intro': 'Ein einseitiger klinischer Überblick für deine Ärztin: die wichtigsten Fakten für diesen Zeitraum, eine Verlaufskurve der Episoden und die krankheitsspezifischen Punkte, die wir im Gespräch hervorheben würden.',
+	// CIPH-pi18-3 — DatePicker display format
+	'settings.date_format_title': 'Datumsformat',
+	'settings.date_format_desc': 'Wie Datumsangaben in Eingabefeldern angezeigt werden.',
 
 	// CIPH-411b — Medikamentenverwaltung
 	'settings.section_medications': 'Medikamente',

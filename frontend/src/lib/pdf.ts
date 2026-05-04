@@ -21,6 +21,8 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Blueprint, VitalField } from '$lib/blueprint';
 import { isCustomItem, resolveBlueprint } from '$lib/blueprint';
+import { cohortOf } from '$lib/blueprint/cohort';
+import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
 import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
 import { isExportable } from '$lib/utils/exportable';
@@ -63,6 +65,63 @@ const BRAND: Record<string, RGB> = {
 	borderSubtle: [240, 236, 231],
 };
 
+/* ────────────────────────────────────────────────────────────────
+ * CIPH-pi18-2 Chunk 2 — Cohort accent resolver.
+ *
+ * Two data-accent tokens that the PDF historically read from `BRAND`
+ * (brick + ochre) are now cohort-driven so a migraine PDF reads
+ * sage-green, a cycle PDF reads rose, a phase PDF reads steel-violet,
+ * etc. Discrete cohort returns the original brick/ochre values
+ * verbatim — DISCRETE_TONES in cohortPalette.ts is the rust palette.
+ *
+ * Overrides the cohortPalette.ts "NOT TOUCHED by this story" note
+ * (CIPH-890) for this file only. Print-safe contrast is enforced
+ * by `pdf.cohort-accent.test.ts`.
+ *
+ * Semantic uses of `BRAND.brick` / `BRAND.ochre` (the "worsening" /
+ * "improving" trend pill, the disclaimer strip, autoTable danger
+ * cells) intentionally stay on BRAND tokens — they're status colors,
+ * not data accents.
+ * ──────────────────────────────────────────────────────────────── */
+interface CohortAccents {
+	primary: RGB;        // replaces data-accent BRAND.brick
+	primarySoft: RGB;    // 12% premultiplied over BRAND.paper — replaces BRAND.ochreSoft as area-fill
+	break: RGB;          // replaces data-accent BRAND.ochre (KPI episode-count tile)
+}
+
+function softBlendRgb(rgb: RGB, alpha = 0.12): RGB {
+	return [
+		Math.round(BRAND.paper[0] * (1 - alpha) + rgb[0] * alpha),
+		Math.round(BRAND.paper[1] * (1 - alpha) + rgb[1] * alpha),
+		Math.round(BRAND.paper[2] * (1 - alpha) + rgb[2] * alpha),
+	];
+}
+
+function rgbToHex([r, g, b]: RGB): string {
+	const h = (n: number) => n.toString(16).padStart(2, '0');
+	return '#' + h(r) + h(g) + h(b);
+}
+
+export function resolveCohortAccents(blueprint: Blueprint): CohortAccents {
+	const tones = COHORT_PALETTE_RGB[cohortOf(blueprint)];
+	const primary = [...tones[0]] as RGB;
+	let breakTone = [...tones[2]] as RGB;
+	// Slot 2 carries the "warm break" role used by the episode-count KPI
+	// tile. Three cohorts (discrete / phase / narrative) already share
+	// ochre `#9f630b` here. Cycle and custom diverge into clay tones that
+	// pass the 3:1 chart floor but FAIL the 4.5:1 text floor against PDF
+	// paper — they're listed in `CHART_ONLY_TONES`. Fall back to BRAND.ochre
+	// in that case so the value-text on the KPI tile stays legible.
+	if (CHART_ONLY_TONES.has(rgbToHex(breakTone))) {
+		breakTone = [...BRAND.ochre] as RGB;
+	}
+	return {
+		primary,
+		primarySoft: softBlendRgb(primary),
+		break: breakTone,
+	};
+}
+
 // CIPH-801 — data-palette hex strings for MiniSeries colors.
 // Mirror of src/lib/dataPalette.ts + src/app.css --data-N. Keep in sync.
 const DATA_HEX = {
@@ -75,13 +134,11 @@ const DATA_HEX = {
 	danger: '#DC2626',
 };
 
-const MM = (n: number) => n; // doc is mm already; alias for readability
-
 /* ────────────────────────────────────────────────────────────────
- * Shared PDF data-prep layer (CIPH-305).
- * Both `generateDoctorPdf` and `generateCompactPdf` call into these —
- * any change to aggregation logic is picked up by both, eliminating
- * drift (Felix's constraint, vote 4).
+ * Shared PDF data-prep layer.
+ * Aggregator helpers used by `generateDoctorPdf`. Originally split
+ * out for `generateCompactPdf` (CIPH-305, dropped in CIPH-pi18-2);
+ * the layer stays so any aggregation change has a single home.
  * ──────────────────────────────────────────────────────────────── */
 
 export interface MonthBucket { y: number; m: number }
@@ -930,6 +987,11 @@ export function generateDoctorPdf(
 	// condition-aware bullets) skips them automatically.
 	const blueprint = applyBlueprintCustomizations(applyVitalTargetOverrides(blueprintIn, username));
 
+	// CIPH-pi18-2 Chunk 2 — Cohort accent resolution. Discrete cohort returns
+	// the original brick/ochre verbatim; cycle/phase/narrative/custom shift
+	// the data accents into their tonal family.
+	const acc = resolveCohortAccents(blueprint);
+
 	// CIPH-710 / CIPH-713 — hard-exclude diary + private docs from EVERY
 	// downstream aggregation. Single point of enforcement; internal type
 	// checks (`type === 'entry'` etc.) already exclude diary, but private
@@ -1170,21 +1232,21 @@ export function generateDoctorPdf(
 		{
 			label: t('pdf.total_episodes'),
 			value: String(totalEpisodes),
-			accent: BRAND.ochre,
+			accent: acc.break,
 		},
 		{
 			label: t('pdf.most_frequent_symptom'),
 			value: mostFrequentSymptom
 				? `${mostFrequentSymptom.label} (${mostFrequentSymptom.count})`
 				: '—',
-			accent: BRAND.brick,
+			accent: acc.primary,
 		},
 		{
 			label: t('pdf.most_frequent_trigger') === 'pdf.most_frequent_trigger'
 				? t('pdf.most_frequent_symptom') // fallback label if new key untranslated
 				: t('pdf.most_frequent_trigger'),
 			value: mostFrequentTrigger ? `${mostFrequentTrigger.label} (${mostFrequentTrigger.count})` : '—',
-			accent: BRAND.ochre,
+			accent: acc.break,
 		},
 	];
 
@@ -1534,14 +1596,14 @@ export function generateDoctorPdf(
 		}
 		areaPath.push([0, baseY - points[points.length - 1][1]]);
 		areaPath.push([-(lastX - firstX), 0]);
-		doc.setFillColor(...BRAND.ochreSoft);
-		doc.setDrawColor(...BRAND.ochreSoft);
+		doc.setFillColor(...acc.primarySoft);
+		doc.setDrawColor(...acc.primarySoft);
 		doc.lines(areaPath, firstX, baseY, undefined, 'F', true);
 	}
 
 	// Stroke straight segments on top
 	if (points.length >= 2) {
-		doc.setDrawColor(...BRAND.brick);
+		doc.setDrawColor(...acc.primary);
 		doc.setLineWidth(0.8);
 		for (let i = 1; i < points.length; i++) {
 			doc.line(points[i - 1][0], points[i - 1][1], points[i][0], points[i][1]);
@@ -1550,7 +1612,7 @@ export function generateDoctorPdf(
 
 	// Data dot at every monthly value (matches mini-chart style).
 	if (points.length > 0) {
-		doc.setFillColor(...BRAND.brick);
+		doc.setFillColor(...acc.primary);
 		for (const [px, py] of points) doc.circle(px, py, 0.6, 'F');
 		// Slightly larger end marker on the latest month.
 		const [ex, ey] = points[points.length - 1];
@@ -2894,390 +2956,4 @@ export function exportCsv(
 	link.download = `ciphra-${blueprint.conditionId}-${filePrefix}.csv`;
 	link.click();
 	URL.revokeObjectURL(url);
-}
-
-// Use MM to silence unused-import warnings if tree-shaken later.
-void MM;
-
-/* ────────────────────────────────────────────────────────────────
- * CIPH-305 — Compact A4 PDF.
- * Single column, 12pt body min, 14pt headings, no decorative frames,
- * no grid appendix. Built for legibility over density. Shares all
- * aggregator helpers with generateDoctorPdf (see `aggregate*Shared`
- * + `dayVitalsShared` above) so the two outputs never drift.
- * ──────────────────────────────────────────────────────────────── */
-export function generateCompactPdf(
-	blueprintIn: Blueprint,
-	documents: CiphraDocument[],
-	year: number,
-	month: number,
-	t: TranslateFn,
-	locale: string,
-	username: string = '',
-	scope: ReportScope = 'month'
-): void {
-	// CIPH-301b: also strip user-hidden symptoms/triggers/vitals so the
-	// compact PDF respects wizard customizations (matches generateDoctorPdf).
-	const blueprint = applyBlueprintCustomizations(applyVitalTargetOverrides(blueprintIn, username));
-
-	// CIPH-710 / CIPH-713 — hard-exclude diary + private docs.
-	documents = documents.filter(isExportable);
-
-	const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-	const pageW = doc.internal.pageSize.getWidth();
-	const pageH = doc.internal.pageSize.getHeight();
-	const marginX = 18;
-	const contentW = pageW - 2 * marginX;
-	let y = 20;
-
-	// Scope-appropriate chart horizon: 24mo default, 12mo for 'year', 24 for '2years'.
-	const MONTHS = scope === 'year' ? 12 : 24;
-	const buckets = buildMonthBuckets(year, month, MONTHS);
-	const idx = bucketIndexMap(buckets);
-
-	// ── One-line header (wordmark + scope + condition). No banner frame.
-	drawWordmark(doc, marginX, y, { size: 14 });
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(14);
-	doc.setTextColor(...BRAND.textPrimary);
-	const scopeLabel = scope === 'month'
-		? new Date(year, month).toLocaleDateString(locale, { month: 'long', year: 'numeric' })
-		: t(scope === 'year' ? 'pdf.scope_year' : 'pdf.scope_2years');
-	const conditionLabel = blueprint.conditionLabel ? t(blueprint.conditionLabel) : blueprint.conditionId;
-	doc.text(`${conditionLabel} — ${scopeLabel}`, pageW - marginX, y, { align: 'right' });
-	y += 8;
-
-	// Account + export date line.
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9);
-	doc.setTextColor(...BRAND.textMuted);
-	const exportDate = new Date().toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
-	const metaLine = username
-		? `${t('pdf.account')}: ${username}   ·   ${t('pdf.export_date')}: ${exportDate}`
-		: `${t('pdf.export_date')}: ${exportDate}`;
-	doc.text(metaLine, marginX, y);
-	y += 6;
-
-	// ── Value-prop subtitle (so the reader immediately knows what this is
-	// and why it's a single page at 12pt).
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(10);
-	doc.setTextColor(...BRAND.brick);
-	doc.text(t('pdf.compact_subtitle'), marginX, y);
-	y += 5;
-
-	// ── "What this contains" one-paragraph intro (scope at a glance).
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(10);
-	doc.setTextColor(...BRAND.textSecondary);
-	const introLines = doc.splitTextToSize(t('pdf.compact_intro'), contentW);
-	doc.text(introLines, marginX, y);
-	y += introLines.length * 4.5 + 4;
-
-	// ── Disclaimer (compact, single paragraph, 10pt).
-	doc.setFont('helvetica', 'italic');
-	doc.setFontSize(10);
-	doc.setTextColor(...BRAND.textSecondary);
-	const discText = t('pdf.disclaimer_medical_long');
-	const discLines = doc.splitTextToSize(discText, contentW);
-	doc.text(discLines, marginX, y);
-	y += discLines.length * 4.5 + 6;
-
-	// ── Summary stats (one line, 12pt).
-	const scopeMonths = scope === 'month' ? 1 : scope === 'year' ? 12 : 24;
-	const scopeEndDate = new Date(year, month + 1, 0);
-	const scopeStartDate = new Date(year, month + 1 - scopeMonths, 1);
-	const scopeStartISO = scopeStartDate.toISOString().slice(0, 10);
-	const scopeEndISO = scopeEndDate.toISOString().slice(0, 10);
-	const scopeDocs = documents.filter((d) => {
-		if (d.data?.type !== 'entry') return false;
-		const ds = String(d.data.date || '');
-		return ds >= scopeStartISO && ds <= scopeEndISO;
-	});
-	// Episode-bearing docs: daily_log + standalone `episode` quick-add in window.
-	const scopeEpisodeDocs = documents.filter((d) => {
-		const t = d.data?.type;
-		if (t !== 'entry') return false;
-		const ds = String(d.data?.date || '');
-		return ds >= scopeStartISO && ds <= scopeEndISO;
-	});
-	const totalDaysInScope = Math.round((scopeEndDate.getTime() - scopeStartDate.getTime()) / 86400000) + 1;
-	const daysLogged = scopeDocs.length;
-	// Totals iterate ALL episodeTypes so non-curated logged data isn't dropped.
-	const episodeCols = blueprint.episodeTypes.map((ep) => ep.id);
-	let totalEpisodes = 0;
-	for (const d of scopeEpisodeDocs) {
-		for (const col of episodeCols) {
-			totalEpisodes += (d.data?.episodes?.[col] || d.data?.seizures?.[col] || 0) as number;
-		}
-	}
-
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(14);
-	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(t('pdf.clinical_summary_title') === 'pdf.clinical_summary_title'
-		? t('pdf.for_doctor_title')
-		: t('pdf.clinical_summary_title'), marginX, y);
-	y += 7;
-
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(12);
-	doc.setTextColor(...BRAND.textPrimary);
-	const summaryLine = `${t('pdf.days_logged')}: ${daysLogged} / ${totalDaysInScope}   ·   ${t('pdf.total_episodes')}: ${totalEpisodes}`;
-	doc.text(summaryLine, marginX, y);
-	y += 8;
-
-	// ── Trajectory chart — scope-appropriate (12 or 24 months).
-	// Straight-segment polyline (no smoothing, no area fill, no ochre frame).
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(14);
-	doc.text(t(scope === 'year' ? 'pdf.episode_trend_12m' : 'pdf.episode_trend'), marginX, y);
-	y += 6;
-
-	const monthlyTotals: number[] = [];
-	const monthlySymptomDays: number[] = [];
-	for (const b of buckets) {
-		let sum = 0;
-		let sympDays = 0;
-		const prefix = `${b.y}-${String(b.m + 1).padStart(2, '0')}`;
-		for (const d of documents) {
-			if (d.data?.type !== 'entry') continue;
-			const ds = String(d.data.date || '');
-			if (!ds.startsWith(prefix)) continue;
-			for (const col of episodeCols) {
-				sum += (d.data?.episodes?.[col] || d.data?.seizures?.[col] || 0) as number;
-			}
-			const syms = (d.data?.symptoms || {}) as Record<string, unknown>;
-			if (Object.values(syms).some((v) => v)) sympDays += 1;
-		}
-		monthlyTotals.push(sum);
-		monthlySymptomDays.push(sympDays);
-	}
-
-	const chartH = 48;
-	const chartX = marginX + 8;
-	const chartW = contentW - 8;
-	// CIPH-762 — see generateDoctorPdf: separate y-scale for symptom-days so
-	// the episodes line stays readable even when symptom-days dominate.
-	const yMax = Math.max(...monthlyTotals, 1);
-	const symptomMax = Math.max(...monthlySymptomDays, 1);
-
-	// Background + horizontal mid gridline (no frame, no fill — print-friendly).
-	doc.setDrawColor(...BRAND.border);
-	doc.setLineWidth(0.15);
-	doc.line(chartX, y, chartX, y + chartH);                // y-axis
-	doc.line(chartX, y + chartH, chartX + chartW, y + chartH); // x-axis
-	doc.setDrawColor(...BRAND.borderSubtle);
-	doc.line(chartX, y + chartH / 2, chartX + chartW, y + chartH / 2);
-
-	// y-labels (10pt — still legible on printout).
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9);
-	doc.setTextColor(...BRAND.textMuted);
-	doc.text(String(yMax), chartX - 1, y + 3, { align: 'right' });
-	doc.text('0', chartX - 1, y + chartH, { align: 'right' });
-
-	// Points + straight line segments in brick.
-	const points: [number, number][] = monthlyTotals.map((v, i) => [
-		chartX + (i / Math.max(1, MONTHS - 1)) * chartW,
-		y + chartH - (v / yMax) * chartH,
-	]);
-	doc.setDrawColor(...BRAND.brick);
-	doc.setLineWidth(0.7);
-	for (let i = 1; i < points.length; i++) {
-		doc.line(points[i - 1][0], points[i - 1][1], points[i][0], points[i][1]);
-	}
-	doc.setFillColor(...BRAND.brick);
-	for (const [px, py] of points) doc.circle(px, py, 0.8, 'F');
-
-	// Symptom-days secondary line (faint dashed) — CIPH-762: uses a SEPARATE
-	// scale so a high symptom-day month can't flatten the episodes line.
-	if (monthlySymptomDays.some((v) => v > 0)) {
-		const sPoints: [number, number][] = monthlySymptomDays.map((v, i) => [
-			chartX + (i / Math.max(1, MONTHS - 1)) * chartW,
-			y + chartH - (v / symptomMax) * chartH,
-		]);
-		doc.setDrawColor(...BRAND.textMuted);
-		doc.setLineWidth(0.4);
-		doc.setLineDashPattern([1.2, 1.2], 0);
-		for (let i = 1; i < sPoints.length; i++) {
-			doc.line(sPoints[i - 1][0], sPoints[i - 1][1], sPoints[i][0], sPoints[i][1]);
-		}
-		doc.setLineDashPattern([], 0);
-		doc.setFillColor(...BRAND.textMuted);
-		for (const [px, py] of sPoints) doc.circle(px, py, 0.5, 'F');
-
-		// Right-edge scale disclosure for the secondary series.
-		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(7);
-		doc.setTextColor(...BRAND.textMuted);
-		doc.text(String(symptomMax), chartX + chartW + 1, y + 3, { align: 'left' });
-		doc.text('0', chartX + chartW + 1, y + chartH, { align: 'left' });
-	}
-
-	// X-axis month labels — every Nth month, all in 8pt.
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(8);
-	doc.setTextColor(...BRAND.textMuted);
-	const labelEvery = MONTHS <= 12 ? 2 : 4;
-	for (let i = 0; i < buckets.length; i++) {
-		if (i % labelEvery !== 0 && i !== buckets.length - 1) continue;
-		const b = buckets[i];
-		const lx = chartX + (i / Math.max(1, MONTHS - 1)) * chartW;
-		const dt = new Date(b.y, b.m, 1);
-		const lbl = dt.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
-		doc.text(lbl, lx, y + chartH + 5, { align: 'center' });
-	}
-
-	y += chartH + 14;
-
-	// ── Recent note-markers (events) within scope. Closes a visibility gap:
-	// users authoring "Treatment changed" markers couldn't see them in the
-	// PDF before — only as vertical lines on the trajectory chart.
-	const eventDocs = documents
-		.filter((d) => {
-			if (d.data?.type !== 'event') return false;
-			const ds = String(d.data.date || '');
-			return ds >= scopeStartISO && ds <= scopeEndISO;
-		})
-		.sort((a, b) => String(b.data.date || '').localeCompare(String(a.data.date || '')))
-		// CIPH-767a — Dr. Nguyen: PDF event list 8 → 15 so multi-week review has
-		// enough context. splitTextToSize + pageH guard below handles wrap.
-		.slice(0, 15);
-
-	if (eventDocs.length > 0) {
-		if (y > pageH - 30) { doc.addPage(); y = 20; }
-		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(12);
-		doc.setTextColor(...BRAND.textPrimary);
-		doc.text(t('reports.recent_events_title'), marginX, y);
-		y += 5;
-		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(10);
-		doc.setTextColor(...BRAND.textSecondary);
-		for (const ev of eventDocs) {
-			const date = String(ev.data.date || '');
-			const text = String(ev.data.title || ev.data.notes || '').trim() || '—';
-			const line = `${date}   ${text}`;
-			const wrapped = doc.splitTextToSize(line, contentW);
-			if (y + wrapped.length * 4.5 > pageH - 15) { doc.addPage(); y = 20; }
-			doc.text(wrapped, marginX, y);
-			y += wrapped.length * 4.5 + 1;
-		}
-		y += 4;
-	}
-
-	// ── "For your doctor" bullets. Reuses the same data-prep as the full
-	// report (episode totals, top symptom, top trigger). Compact format:
-	// numbered, 12pt, no Q/A hierarchy (one line per bullet).
-
-	// Page break if near bottom.
-	if (y > pageH - 80) { doc.addPage(); y = 20; }
-
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(14);
-	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(t('pdf.for_doctor_title'), marginX, y);
-	y += 7;
-
-	// Build bullets — 12-month window (matches `bulletWindowLabel` approach
-	// in generateDoctorPdf). Skip condition-specific bullets for simplicity;
-	// the compact PDF targets the generalist reader.
-	const bulletMonths = scopeMonths >= 12 ? 12 : 1;
-	const yearEndDate = new Date(year, month + 1, 0);
-	const yearStartDate = new Date(year, month + 1 - bulletMonths, 1);
-	const yearStartISO_c = yearStartDate.toISOString().slice(0, 10);
-	const yearEndISO_c = yearEndDate.toISOString().slice(0, 10);
-	const yearDocs = documents.filter((d) => {
-		if (d.data?.type !== 'entry') return false;
-		const ds = String(d.data.date || '');
-		return ds >= yearStartISO_c && ds <= yearEndISO_c;
-	});
-	// Episode-bearing: includes standalone `episode` quick-add docs.
-	const yearEpisodeDocs = documents.filter((d) => {
-		const t = d.data?.type;
-		if (t !== 'entry') return false;
-		const ds = String(d.data?.date || '');
-		return ds >= yearStartISO_c && ds <= yearEndISO_c;
-	});
-
-	const POSITIVE_MARKERS = new Set(['slept_well']);
-	const symptomFreq: { label: string; count: number }[] = [];
-	for (const g of blueprint.symptomGroups) {
-		for (const item of g.items) {
-			if (POSITIVE_MARKERS.has(item.id)) continue;
-			const c = yearDocs.filter((d) => d.data?.symptoms?.[item.id]).length;
-			if (c > 0) symptomFreq.push({ label: labelOf(t, item), count: c });
-		}
-	}
-	symptomFreq.sort((a, b) => b.count - a.count);
-
-	// CIPH-305b: top-trigger is no longer a separate filler — the
-	// condition-aware bullets (which include trigger-style facts via
-	// IBD / Parkinson / glaucoma / etc.) come first, then trajectory +
-	// top-symptom fill out the cap of 4. Top-trigger dropped to keep
-	// the compact layout dense.
-
-	// Trajectory direction summary via shared helper isn't needed — compute inline.
-	const first6 = monthlyTotals.slice(0, 6);
-	const last6 = monthlyTotals.slice(-6);
-	const firstAvg = first6.length ? first6.reduce((a, b) => a + b, 0) / first6.length : 0;
-	const lastAvg = last6.length ? last6.reduce((a, b) => a + b, 0) / last6.length : 0;
-	const trendEps = Math.max(0.5, firstAvg * 0.1);
-	let trendKey = 'pdf.trend_stable';
-	if (lastAvg - firstAvg > trendEps) trendKey = 'pdf.trend_worsening';
-	else if (lastAvg - firstAvg < -trendEps) trendKey = 'pdf.trend_improving';
-
-	// CIPH-305b — condition-aware bullets first (peak IOP for glaucoma,
-	// OFF time for Parkinson's, etc.), then trajectory + top-symptom as
-	// generalist fillers. Cap = 4 (denser layout than the standard PDF).
-	const bullets: string[] = [];
-
-	const conditionBullets = buildConditionAwareBullets(blueprint, yearEpisodeDocs, t, scopeLabel);
-	for (const cb of conditionBullets) bullets.push(cb.fact);
-
-	bullets.push(t('pdf.for_doctor_fact_trajectory', {
-		months: String(MONTHS),
-		first: firstAvg.toFixed(1),
-		last: lastAvg.toFixed(1),
-		trend: t(trendKey),
-	}));
-	if (symptomFreq[0] && yearDocs.length > 0) {
-		const s = symptomFreq[0];
-		bullets.push(t('pdf.for_doctor_fact_symptom', {
-			label: s.label,
-			count: String(s.count),
-			pct: String(Math.round((s.count / yearDocs.length) * 100)),
-		}));
-	}
-
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(12);
-	doc.setTextColor(...BRAND.textPrimary);
-	const bulletIndent = marginX + 6;
-	const bulletW = pageW - marginX - bulletIndent;
-	let bi = 1;
-	for (const b of bullets.slice(0, 4)) {
-		if (y > pageH - 24) { doc.addPage(); y = 20; }
-		doc.setFont('helvetica', 'bold');
-		doc.text(`${bi}.`, marginX, y);
-		doc.setFont('helvetica', 'normal');
-		const lines = doc.splitTextToSize(b, bulletW);
-		doc.text(lines, bulletIndent, y);
-		y += lines.length * 5.5 + 3;
-		bi++;
-	}
-
-	// Footnote (10pt).
-	if (y > pageH - 20) { doc.addPage(); y = 20; }
-	doc.setFont('helvetica', 'italic');
-	doc.setFontSize(10);
-	doc.setTextColor(...BRAND.textMuted);
-	doc.text(t('pdf.for_doctor_footnote'), pageW / 2, pageH - 14, { align: 'center' });
-
-	const userTag = username ? `${username}-` : '';
-	const scopeTag = scope === 'month'
-		? `${year}-${String(month + 1).padStart(2, '0')}`
-		: `${scope}-${year}-${String(month + 1).padStart(2, '0')}`;
-	doc.save(`ciphra-${userTag}kompakt-${blueprint.conditionId}-${scopeTag}.pdf`);
 }
