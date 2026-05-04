@@ -999,7 +999,7 @@ export default {
 
 	'landing.footer_tagline': 'encrypted by design',
 	'landing.disclaimer_medical': "ciphra est un carnet personnel. Ce n'est pas un dispositif médical au sens du Règlement UE 2017/745 (MDR) ou de l'ODim suisse, ne fournit aucun diagnostic et ne remplace pas l'avis d'un professionnel de santé qualifié.",
-	'landing.footer_desc': 'Votre compagnon de santé privé.\nChiffré de bout en bout.',
+	'landing.footer_desc': 'Votre journal de santé chiffré.\nChiffré de bout en bout.',
 	'landing.footer_product': 'Produit',
 	'landing.footer_how': 'Comment ça marche',
 	'landing.footer_templates': 'Modèles',

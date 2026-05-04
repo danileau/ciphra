@@ -542,13 +542,19 @@
 				}),
 			});
 		}
+		// PI v16 LB-23 — was findIndex(mo => ds.startsWith(mo.key)) per doc:
+		// O(docs × 24) per recompute, ~13K compares for 540 docs. Build a
+		// key→index Map once; loop is O(docs).
+		const keyToIdx = new Map<string, number>();
+		for (let i = 0; i < months.length; i++) keyToIdx.set(months[i].key, i);
 		const episodes = months.map(() => 0);
 		const symptomDays = months.map(() => 0);
 		for (const doc of exportableDocs) {
 			if (doc.data?.type !== 'entry') continue;
 			const ds = String(doc.data.date || '');
-			const idx = months.findIndex((mo) => ds.startsWith(mo.key));
-			if (idx < 0) continue;
+			if (ds.length < 7) continue;
+			const idx = keyToIdx.get(ds.slice(0, 7));
+			if (idx === undefined) continue;
 			const eps = (doc.data.episodes || doc.data.seizures || {}) as Record<string, number>;
 			let epCount = 0;
 			for (const ep of bp.episodeTypes) epCount += Number(eps[ep.id] || 0);
@@ -610,36 +616,53 @@
 		};
 	})();
 
-	$: trendChartOptions = {
-		responsive: true,
-		maintainAspectRatio: false,
-		plugins: {
-			legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
-		},
-		scales: {
-			y: {
-				type: 'linear' as const,
-				position: 'left' as const,
-				beginAtZero: true,
-				ticks: { precision: 0, font: { size: 10 }, color: trendAccentHex, maxTicksLimit: 5 },
-				grid: { color: 'rgba(0,0,0,0.04)' },
-				border: { display: false },
+	// PI v16 LB-23 — manual identity-stable memo for the options object.
+	// The inner block returns a fresh object only when the only two reactive
+	// deps that actually matter (the cohort palette accent + neutral hex)
+	// change. Without this, ChartWrapper's ref-equality short-circuit
+	// (ChartWrapper.svelte:104-108) was always falling through to a chart
+	// .update() on every $documents mutation — chart-update storm on save.
+	let _prevAccent = '';
+	let _prevNeutral = '';
+	let _trendOpts: Record<string, unknown> | null = null;
+	$: trendChartOptions = (() => {
+		if (trendAccentHex === _prevAccent && trendNeutralHex === _prevNeutral && _trendOpts) {
+			return _trendOpts;
+		}
+		_prevAccent = trendAccentHex;
+		_prevNeutral = trendNeutralHex;
+		_trendOpts = {
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: {
+				legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
 			},
-			y1: {
-				type: 'linear' as const,
-				position: 'right' as const,
-				beginAtZero: true,
-				ticks: { precision: 0, font: { size: 10 }, color: trendNeutralHex, maxTicksLimit: 5 },
-				grid: { display: false },
-				border: { display: false },
+			scales: {
+				y: {
+					type: 'linear' as const,
+					position: 'left' as const,
+					beginAtZero: true,
+					ticks: { precision: 0, font: { size: 10 }, color: trendAccentHex, maxTicksLimit: 5 },
+					grid: { color: 'rgba(0,0,0,0.04)' },
+					border: { display: false },
+				},
+				y1: {
+					type: 'linear' as const,
+					position: 'right' as const,
+					beginAtZero: true,
+					ticks: { precision: 0, font: { size: 10 }, color: trendNeutralHex, maxTicksLimit: 5 },
+					grid: { display: false },
+					border: { display: false },
+				},
+				x: {
+					ticks: { font: { size: 10 }, color: 'rgba(120,113,108,0.7)', maxRotation: 0 },
+					grid: { display: false },
+					border: { display: false },
+				},
 			},
-			x: {
-				ticks: { font: { size: 10 }, color: 'rgba(120,113,108,0.7)', maxRotation: 0 },
-				grid: { display: false },
-				border: { display: false },
-			},
-		},
-	};
+		};
+		return _trendOpts;
+	})();
 
 	function getMonthShortName(month: number): string {
 		const d = new Date(2024, month, 1);

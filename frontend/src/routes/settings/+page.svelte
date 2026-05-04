@@ -340,8 +340,8 @@
 		goto('/setup?customize=1');
 	}
 
-	function handleLogout() {
-		auth.logout();
+	async function handleLogout() {
+		await auth.logout();
 		goto('/login');
 	}
 
@@ -383,8 +383,8 @@
 				currentPassword = '';
 				newPassword = '';
 				confirmNewPassword = '';
-				setTimeout(() => {
-					auth.logout();
+				setTimeout(async () => {
+					await auth.logout();
 					goto('/login');
 				}, 1500);
 			} else {

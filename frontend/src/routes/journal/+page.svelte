@@ -293,6 +293,14 @@
 		return out;
 	}
 
+	// PI v16 LB-24 — memoize the render groups keyed by month. Without this
+	// the each-expression re-invokes computeRenderGroups on every reactive
+	// tick (search-box keystroke, locale change, etc.) — O(days × phases ×
+	// days) inside, ~65K iterations across 18 months on a typed character.
+	$: renderGroupsByMonth = new Map(
+		groupedDocs.map((m) => [m.monthKey, computeRenderGroups(m.days)]),
+	);
+
 	// CIPH-907 — Journal cards take their rail color from the LOGGED DATA,
 	// not just the doc type. An entry day with an active multiDay episode
 	// (flare, manic, MS relapse, IBD flare, endo flare...) gets that
@@ -447,7 +455,11 @@
 			{#each groupedDocs as month (month.monthKey)}
 				<section class="journal-month">
 					<h2 class="journal-month-header">{formatMonthHeader(month.monthKey)}</h2>
-					{#each computeRenderGroups(month.days) as item, itemIdx (itemIdx)}
+					<!-- PI v16 LB-24 — was inline computeRenderGroups(month.days)
+					     in the each-expression, which Svelte re-runs on every
+					     reactive tick (search-box keystroke, locale change, …).
+					     Memoized into renderGroupsByMonth above. -->
+					{#each renderGroupsByMonth.get(month.monthKey) || [] as item, itemIdx (itemIdx)}
 						{#if item.kind === 'streak'}
 							<!-- CIPH-911 — closed-phase streak group. Rail + label
 								 on the right brackets the consecutive days. Per-day
@@ -698,12 +710,26 @@
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
-		color: var(--streak-color);
+		/* PI v16: was var(--streak-color); cycle slot 1 (#b6306a) sat at
+		   ~4.45:1 against the cream surface — borderline AA. Pinning chrome
+		   text to text-primary so phase identity stays legible regardless of
+		   the cohort palette. The colored rail (line 727) carries the phase
+		   signal as decoration. */
+		color: var(--text-primary);
 		margin: 0 0 6px;
 		display: flex;
 		flex-wrap: wrap;
-		gap: 4px;
+		gap: 6px;
 		align-items: baseline;
+	}
+	.journal-streak-header::before {
+		content: '';
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: var(--streak-color);
+		flex-shrink: 0;
+		align-self: center;
 	}
 	.journal-streak-name {
 		font-weight: 600;

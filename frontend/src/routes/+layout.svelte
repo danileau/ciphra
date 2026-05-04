@@ -431,8 +431,11 @@
 		goto('/setup');
 	}
 
-	function handleLogout() {
-		auth.logout();
+	async function handleLogout() {
+		// PI v16 — wait for the on-disk wipe before goto so the SW + IndexedDB
+		// purge has finished before any subsequent navigation could repopulate
+		// caches. UI already flipped (logout sets empty state synchronously).
+		await auth.logout();
 		docsLoadStarted = false;
 		docsLoaded = false;
 		blueprint.clear();
@@ -505,7 +508,10 @@
 	// Force re-login so the password unlocks the vault again. Avoids leaving
 	// an authenticated but decrypt-useless state.
 	$: if (browser && $needsUnlock && currentPath !== '/login') {
-		auth.logout();
+		// auth.logout() is async (PI v16); fire-and-forget here is fine
+		// because the master key is already gone — no plaintext to leak.
+		// The wipe still runs in background.
+		void auth.logout();
 		goto('/login');
 	}
 
@@ -524,6 +530,15 @@
 	<!-- Stable background while auth hydrates — no content to prevent flashing -->
 	<div class="min-h-screen bg-surface"></div>
 {:else if !$isAuthenticated && (currentShell.shell === 'landing' || currentShell.shell === 'auth-flow' || currentShell.shell === 'public-doc' || currentShell.shell === 'family-claim')}
+	<!-- PI v16 LB-15 — skip-to-content for the public shell. Was only on
+		 the landing page; now every public-doc + auth-flow + family-claim
+		 page inherits it so /privacy /terms /protocol /conditions/[id] no
+		 longer force keyboard / SR users through 4-6 nav stops on entry. -->
+	<a
+		href="#main-content"
+		class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:outline-none"
+		style="background: var(--brand); color: white;"
+	>{$t('landing.skip_to_content')}</a>
 	<!-- Single unified public nav — covers landing, /login, /migrate,
 		 /conditions, /privacy, /terms, /join/*. One identity for every
 		 unauthenticated visitor; anchor links resolve back to the
@@ -544,7 +559,7 @@
 				</div>
 				<div class="w-px h-6 hidden md:block" style="background: var(--border);"></div>
 				<select
-					aria-label="Language"
+					aria-label={$t('common.language')}
 					class="text-xs rounded-lg px-2 py-1.5 min-h-[36px]"
 					style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-secondary);"
 					value={$locale}

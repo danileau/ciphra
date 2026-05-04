@@ -116,9 +116,25 @@
 	$: todayMonth = new Date().getMonth();
 	$: isOnCurrentMonth = currentYear === todayYear && currentMonth === todayMonth;
 
+	// PI v16 LB-22 — was `$documents.filter(...)` per-cell. With ~540 docs
+	// across 35 cells × ~6 callers per render that hit ~113K iterations on
+	// every month-paint. Now bucketed once when `monthDocs` changes; each
+	// cell is an O(1) Map lookup.
+	$: docsByDay = (() => {
+		const m = new Map<string, CiphraDocument[]>();
+		for (const d of monthDocs) {
+			const ds = String(d.data.date || '');
+			if (!ds) continue;
+			const arr = m.get(ds);
+			if (arr) arr.push(d);
+			else m.set(ds, [d]);
+		}
+		return m;
+	})();
+
 	function getDocsForDay(day: number): CiphraDocument[] {
 		const ds = `${monthPrefix}-${String(day).padStart(2, '0')}`;
-		return $documents.filter(d => String(d.data.date || '') === ds);
+		return docsByDay.get(ds) || [];
 	}
 
 	function dayHasEpisode(day: number): boolean {

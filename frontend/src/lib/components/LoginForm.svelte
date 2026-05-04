@@ -26,9 +26,13 @@
 	let touched: Record<string, boolean> = {};
 
 	// A11y validation reactives — used by aria-invalid + aria-describedby
-	// linking on the inputs (PI v13 a11y review LB-2).
+	// linking on the inputs (PI v13 a11y review LB-2). PI v16: dropped a
+	// password-length check on the login form. The server is the policy
+	// enforcer at login time; advertising a min-length on the login screen
+	// contradicts the 12-char floor enforced on signup/change/recovery and
+	// would gaslight users with legacy ≥8-char passwords. Login validates
+	// presence only.
 	$: userInvalid = touched.loginUser && loginUser.length > 0 && loginUser.length < 3;
-	$: passInvalid = touched.loginPass && loginPass.length > 0 && loginPass.length < 8;
 
 	function setError(userFacing: string, technical?: string) {
 		error = userFacing;
@@ -112,15 +116,8 @@
 			id="login-pass"
 			bind:value={loginPass}
 			required
-			minlength={8}
-			on:blur={() => { touched.loginPass = true; }}
-			ariaInvalid={passInvalid}
-			ariaDescribedby={passInvalid ? 'login-pass-err' : undefined}
 			class="input"
 		/>
-		{#if passInvalid}
-			<p id="login-pass-err" class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_password_short')}</p>
-		{/if}
 	</div>
 	<button type="submit" disabled={loading}
 		data-testid="login-submit"

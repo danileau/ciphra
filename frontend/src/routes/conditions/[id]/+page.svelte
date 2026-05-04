@@ -97,7 +97,7 @@
 		       --brand: {info.color};
 		       --brand-light: {info.color}1a;"
 	>
-		<main class="layout-default py-8 sm:py-12">
+		<main id="main-content" class="layout-default py-8 sm:py-12">
 			<a href="/#conditions" class="text-sm mb-6 inline-block transition-colors" style="color: var(--brand);">&larr; {$t('condition.index_title')}</a>
 			<div class="flex items-center gap-4 mb-4">
 				<div

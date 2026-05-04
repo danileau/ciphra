@@ -1000,7 +1000,7 @@ export default {
 
 	'landing.footer_tagline': 'encrypted by design',
 	'landing.disclaimer_medical': 'ciphra è un taccuino personale. Non è un dispositivo medico ai sensi del Regolamento UE 2017/745 (MDR) o dell\'ODmed svizzero, non fornisce diagnosi e non sostituisce il parere di un professionista sanitario qualificato.',
-	'landing.footer_desc': 'Il tuo compagno di salute privato.\nCrittografia end-to-end.',
+	'landing.footer_desc': 'Il tuo diario di salute crittografato.\nCrittografia end-to-end.',
 	'landing.footer_product': 'Prodotto',
 	'landing.footer_how': 'Come funziona',
 	'landing.footer_templates': 'Modelli',

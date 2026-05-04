@@ -999,7 +999,7 @@ export default {
 
 	'landing.footer_tagline': 'encrypted by design',
 	'landing.disclaimer_medical': 'ciphra is a personal notebook. It is not a medical device under EU MDR 2017/745 or the Swiss MepV, does not provide diagnosis, and does not replace advice from a qualified healthcare professional.',
-	'landing.footer_desc': 'Your private health companion.\nEnd-to-end encrypted.',
+	'landing.footer_desc': 'Your encrypted health diary.\nEnd-to-end encrypted.',
 	'landing.footer_product': 'Product',
 	'landing.footer_how': 'How it works',
 	'landing.footer_templates': 'Templates',

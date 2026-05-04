@@ -123,9 +123,9 @@
 	{/if}
 {:else if $authReady}
 
-<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:outline-none" style="background: var(--brand); color: white;">
-	{$t('landing.skip_to_content')}
-</a>
+<!-- Skip-to-content moved into `+layout.svelte`'s public-shell branch
+     (PI v16 LB-15) so /privacy /terms /protocol /conditions/[id] all
+     inherit it. <main id="main-content"> below is the target. -->
 
 <!-- Top nav now lives in `+layout.svelte` (the unified public nav),
      so every unauth public route — landing, /login, /migrate,
@@ -181,7 +181,7 @@
 						{#each conditionGroups as group}
 							{@const firstInfo = conditionInfoMap[group.conditionIds[0]]}
 							<a
-								href="/conditions#group-{group.id}"
+								href="/#group-{group.id}"
 								title={$t(group.descriptionKey)}
 								class="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-colors hover:underline shrink-0 whitespace-nowrap sm:whitespace-normal"
 								style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-secondary);"
@@ -637,7 +637,6 @@
 		border-radius: 50%;
 		color: var(--text-muted);
 		text-decoration: none;
-		animation: heroScrollBob 2.4s ease-in-out 1.6s infinite;
 		transition: color 200ms ease-out, background 200ms ease-out;
 	}
 	.hero-scroll-cue:hover,
@@ -646,11 +645,6 @@
 		background: var(--surface-card);
 		outline: none;
 	}
-	@keyframes heroScrollBob {
-		0%, 100% { transform: translate(-50%, 0); }
-		50%      { transform: translate(-50%, 6px); }
-	}
-
 	@media (prefers-reduced-motion: reduce) {
 		.hero-content {
 			animation: none;
@@ -659,9 +653,6 @@
 			opacity: 1;
 			transform: none;
 			transition: none;
-		}
-		.hero-scroll-cue {
-			animation: none;
 		}
 	}
 </style>

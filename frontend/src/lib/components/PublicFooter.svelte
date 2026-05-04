@@ -79,6 +79,7 @@
 					style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-muted);"
 					value={$locale}
 					on:change={setLocale}
+					aria-label={$t('common.language')}
 				>
 					{#each locales as l}
 						<option value={l}>{localeNames[l]}</option>

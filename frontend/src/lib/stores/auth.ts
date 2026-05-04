@@ -117,19 +117,36 @@ function createAuthStore() {
 				return next;
 			});
 		},
-		logout() {
-			if (browser) {
-				localStorage.removeItem(LS_KEY);
-				sessionStorage.removeItem(SS_MASTER_KEY);
-				// Security review LB-3 (PI v13): wipe ALL IndexedDB
-				// partitions, not just the active vault. A caregiver
-				// who has visited linked accounts must not leave their
-				// plaintext on disk after logout.
-				import('$lib/idb')
-					.then((m) => m.clearAllPartitions())
-					.catch(() => { /* best-effort; logout proceeds either way */ });
-			}
+		// PI v16 LB-26+27 — logout is now async. The IndexedDB wipe and the
+		// service-worker navigation cache delete BOTH have to complete before
+		// we can claim the user is logged out. Previously fire-and-forget
+		// with a swallowed catch, which left plaintext at rest if the wipe
+		// raced or threw. Set the in-memory state empty first so the UI
+		// flips immediately; then await the on-disk wipes so a fast
+		// hand-off-of-device doesn't leak.
+		async logout() {
 			set(emptyState(true));
+			if (!browser) return;
+			localStorage.removeItem(LS_KEY);
+			sessionStorage.removeItem(SS_MASTER_KEY);
+			try {
+				const m = await import('$lib/idb');
+				await m.clearAllPartitions();
+			} catch (e) {
+				console.error('logout: IndexedDB wipe failed', e);
+			}
+			// SW navigation cache survives logout otherwise (PI v14 critique
+			// IMP-1). SvelteKit ships render-only HTML shells today so this
+			// is bounded, but a future loader-injected snippet would land
+			// plaintext at rest. Cheap insurance.
+			if (typeof caches !== 'undefined') {
+				try {
+					const keys = await caches.keys();
+					await Promise.all(keys.filter((k) => k.startsWith('ciphra-')).map((k) => caches.delete(k)));
+				} catch (e) {
+					console.error('logout: SW cache purge failed', e);
+				}
+			}
 		},
 		setMasterKey(key: Uint8Array) {
 			update((s) => {

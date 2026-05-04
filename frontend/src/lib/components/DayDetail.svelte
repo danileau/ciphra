@@ -166,7 +166,7 @@
 	<div class="dd">
 		{#if activePhases.length > 0}
 			<section class="dd-section">
-				<p class="dd-label">{$t('day_detail.phase')}</p>
+				<h3 class="dd-label">{$t('day_detail.phase')}</h3>
 				<p class="dd-content">
 					{#each activePhases as ep, i}{i > 0 ? ' · ' : ''}<span style="color: {ep.color}; font-weight: 500">{epLabel(ep)}</span>{/each}
 				</p>
@@ -175,7 +175,7 @@
 
 		{#if counterEpisodes.length > 0}
 			<section class="dd-section">
-				<p class="dd-label">{$t('day_detail.episodes')}</p>
+				<h3 class="dd-label">{$t('day_detail.episodes')}</h3>
 				<p class="dd-content">
 					{#each counterEpisodes as { ep, count }, i}{i > 0 ? ' · ' : ''}<span style="color: {ep.color}; font-weight: 500">{count}× {epLabel(ep)}</span>{/each}
 				</p>
@@ -184,10 +184,10 @@
 
 		{#if aggregated.symptoms.length > 0}
 			<section class="dd-section">
-				<p class="dd-label">
+				<h3 class="dd-label">
 					{$t('day_detail.symptoms')}
 					<span class="dd-count">({aggregated.symptoms.length})</span>
-				</p>
+				</h3>
 				<p class="dd-content">
 					{#each aggregated.symptoms as id, i}{i > 0 ? ' · ' : ''}{symptomLabel(id)}{/each}
 				</p>
@@ -196,10 +196,10 @@
 
 		{#if aggregated.triggers.length > 0}
 			<section class="dd-section">
-				<p class="dd-label">
+				<h3 class="dd-label">
 					{$t('day_detail.triggers')}
 					<span class="dd-count">({aggregated.triggers.length})</span>
-				</p>
+				</h3>
 				<p class="dd-content">
 					{#each aggregated.triggers as id, i}{i > 0 ? ' · ' : ''}{triggerLabel(id)}{/each}
 				</p>
@@ -208,7 +208,7 @@
 
 		{#if Object.keys(aggregated.vitals).length > 0}
 			<section class="dd-section">
-				<p class="dd-label">{$t('day_detail.vitals')}</p>
+				<h3 class="dd-label">{$t('day_detail.vitals')}</h3>
 				<ul class="dd-vitals">
 					{#each Object.entries(aggregated.vitals) as [vid, val]}
 						<li>
@@ -222,7 +222,7 @@
 
 		{#if aggregated.notes.length > 0}
 			<section class="dd-section">
-				<p class="dd-label">{$t('day_detail.notes')}</p>
+				<h3 class="dd-label">{$t('day_detail.notes')}</h3>
 				{#each aggregated.notes as n}
 					<p class="dd-notes">"{n}"</p>
 				{/each}
@@ -231,7 +231,7 @@
 
 		{#if medEventDocs.length > 0 || eventDocs.length > 0}
 			<section class="dd-section">
-				<p class="dd-label">{$t('day_detail.events')}</p>
+				<h3 class="dd-label">{$t('day_detail.events')}</h3>
 				<ul class="dd-events">
 					{#each medEventDocs as ev}
 						<li>
@@ -255,7 +255,7 @@
 
 		{#if diaryDocs.length > 0}
 			<section class="dd-section">
-				<p class="dd-label">{$t('day_detail.diary')}</p>
+				<h3 class="dd-label">{$t('day_detail.diary')}</h3>
 				{#each diaryDocs as d}
 					{#if d.data.time}
 						<p class="dd-diary-time">{d.data.time}</p>
@@ -335,7 +335,7 @@
 		gap: 12px;
 		align-items: baseline;
 		padding: 5px 0;
-		border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+		border-bottom: 1px solid var(--border-subtle, var(--border));
 	}
 	.dd-vitals li:last-child {
 		border-bottom: none;
@@ -372,7 +372,7 @@
 		gap: 10px;
 		align-items: baseline;
 		padding: 5px 0;
-		border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+		border-bottom: 1px solid var(--border-subtle, var(--border));
 	}
 	.dd-events li:last-child {
 		border-bottom: none;
