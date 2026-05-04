@@ -74,14 +74,14 @@ describe('resolveCohortAccents — print-safe contrast', () => {
 		},
 	);
 
-	it('cycle break falls back to BRAND.ochre (slot 2 clay-rose is chart-only)', () => {
+	it('cycle break falls back to slot-1 mulberry — stays in the rose family', () => {
 		const acc = resolveCohortAccents(fixtureFor('cycle'));
-		expect(acc.break).toEqual([159, 99, 11]);
+		expect(acc.break).toEqual([122, 40, 69]); // CYCLE_TONES[1]
 	});
 
-	it('custom break falls back to BRAND.ochre (slot 2 clay is chart-only)', () => {
+	it('custom break falls back to slot-1 deep slate — stays in the slate family', () => {
 		const acc = resolveCohortAccents(fixtureFor('custom'));
-		expect(acc.break).toEqual([159, 99, 11]);
+		expect(acc.break).toEqual([51, 65, 85]); // CUSTOM_TONES[1]
 	});
 
 	it('discrete break stays on slot 2 ochre (DISCRETE_TONES is verbatim)', () => {
@@ -92,5 +92,27 @@ describe('resolveCohortAccents — print-safe contrast', () => {
 	it('discrete primary equals BRAND.brick (the universal data-accent)', () => {
 		const acc = resolveCohortAccents(fixtureFor('discrete'));
 		expect(acc.primary).toEqual([178, 60, 44]);
+	});
+
+	// Pin the soft-blend math at 12% — the area-fill alpha. If anyone tunes
+	// this constant later, this test fails before the area-fill darkens or
+	// disappears (Linus dry-run #1 carryover).
+	it('primarySoft blends primary at 12% over BRAND.paper', () => {
+		const acc = resolveCohortAccents(fixtureFor('discrete'));
+		// primary = [178, 60, 44], paper = [250, 248, 246], alpha = 0.12
+		// expected = round(paper*0.88 + primary*0.12)
+		// r: 250*0.88 + 178*0.12 = 220 + 21.36 = 241.36 → 241
+		// g: 248*0.88 + 60*0.12 = 218.24 + 7.2 = 225.44 → 225
+		// b: 246*0.88 + 44*0.12 = 216.48 + 5.28 = 221.76 → 222
+		expect(acc.primarySoft).toEqual([241, 225, 222]);
+	});
+
+	it('primarySoft is lighter than primary on every channel (sanity)', () => {
+		for (const cohort of ALL_COHORTS_PALETTE) {
+			const acc = resolveCohortAccents(fixtureFor(cohort));
+			expect(acc.primarySoft[0]).toBeGreaterThan(acc.primary[0]);
+			expect(acc.primarySoft[1]).toBeGreaterThanOrEqual(acc.primary[1]);
+			expect(acc.primarySoft[2]).toBeGreaterThanOrEqual(acc.primary[2]);
+		}
 	});
 });

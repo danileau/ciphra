@@ -102,18 +102,41 @@ function rgbToHex([r, g, b]: RGB): string {
 	return '#' + h(r) + h(g) + h(b);
 }
 
+/**
+ * Walk the cohort's palette skipping chart-only tones to find a print-safe
+ * break tone. Order: slot 1 (deeper primary variant — IN family) → slot 5
+ * (shared anchor slate — out-of-family but always print-safe) → slot 3
+ * (warm break — usually `#7f821b` olive, chart-only). Falls back to
+ * BRAND.ochre as the universal safe default if every slot is chart-only —
+ * unreachable today, but defended against future palette regressions.
+ *
+ * In-family is delivered for cohorts whose slot 1 is non-chart-only
+ * (cycle → mulberry, custom → deep slate). For discrete/phase/narrative
+ * the function isn't called because slot 2 already passes WCAG.
+ */
+function pickBreakFallback(tones: readonly (readonly [number, number, number])[]): RGB {
+	for (const slot of [1, 5, 3] as const) {
+		const candidate = [...tones[slot]] as RGB;
+		if (!CHART_ONLY_TONES.has(rgbToHex(candidate))) {
+			return candidate;
+		}
+	}
+	return [...BRAND.ochre] as RGB;
+}
+
 export function resolveCohortAccents(blueprint: Blueprint): CohortAccents {
 	const tones = COHORT_PALETTE_RGB[cohortOf(blueprint)];
 	const primary = [...tones[0]] as RGB;
 	let breakTone = [...tones[2]] as RGB;
 	// Slot 2 carries the "warm break" role used by the episode-count KPI
-	// tile. Three cohorts (discrete / phase / narrative) already share
-	// ochre `#9f630b` here. Cycle and custom diverge into clay tones that
-	// pass the 3:1 chart floor but FAIL the 4.5:1 text floor against PDF
-	// paper — they're listed in `CHART_ONLY_TONES`. Fall back to BRAND.ochre
-	// in that case so the value-text on the KPI tile stays legible.
+	// tile + monthly grid pill. Three cohorts (discrete / phase / narrative)
+	// share ochre `#9f630b` here, which passes WCAG AA against paper. Cycle
+	// and custom diverge into clay tones that pass the 3:1 chart floor but
+	// FAIL the 4.5:1 text floor — they're listed in `CHART_ONLY_TONES`. Fall
+	// back to a non-chart-only slot inside the same cohort family so the
+	// PDF stays tonally coherent (cycle → mulberry, custom → deep slate).
 	if (CHART_ONLY_TONES.has(rgbToHex(breakTone))) {
-		breakTone = [...BRAND.ochre] as RGB;
+		breakTone = pickBreakFallback(tones);
 	}
 	return {
 		primary,
@@ -523,6 +546,12 @@ function drawGridSection(
 	locale: string,
 	username: string = ''
 ): void {
+	// CIPH-pi18-2 Chunk 3 — extend cohort accent into the heatmap. Closes
+	// the Jonas dry-run "sage hat on rust coat" critique: page-1 stat cards
+	// were tinted in Chunk 2 but the page-2 monthly grid stayed warm-rust,
+	// breaking tonal coherence on the densest block of the document.
+	const acc = resolveCohortAccents(blueprint);
+
 	const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
 	const monthDocs = documents.filter(
 		(d) => d.data.type === 'entry' && String(d.data.date || '').startsWith(monthPrefix)
@@ -695,9 +724,9 @@ function drawGridSection(
 				data.cell.styles.textColor = BRAND.textSecondary as any;
 			}
 
-			// Totals row — brick background, reverse text
+			// Totals row — cohort-primary background, reverse text
 			if (isTotals) {
-				data.cell.styles.fillColor = BRAND.brick as any;
+				data.cell.styles.fillColor = acc.primary as any;
 				data.cell.styles.textColor = [255, 255, 255] as any;
 				data.cell.styles.fontStyle = 'bold';
 			}
@@ -712,14 +741,14 @@ function drawGridSection(
 			// Body cells — symptom pill (brick intensity) / episode count (ochre)
 			if (!isTotals && !isPercent && data.section === 'body') {
 				if (isSymptomCol && data.cell.raw === '•') {
-					// Intensity by column frequency — higher column sum = more opaque brick
+					// Intensity by column frequency — higher column sum = more opaque
+					// cohort-primary tint over paper.
 					const colI = colIdx - 1;
 					const freq = symptomSums[colI] / maxSymptomDays;
 					const alpha = 0.25 + freq * 0.55; // 0.25..0.80
-					// approximate alpha over paper
-					const r = Math.round(BRAND.paper[0] * (1 - alpha) + BRAND.brick[0] * alpha);
-					const g = Math.round(BRAND.paper[1] * (1 - alpha) + BRAND.brick[1] * alpha);
-					const b = Math.round(BRAND.paper[2] * (1 - alpha) + BRAND.brick[2] * alpha);
+					const r = Math.round(BRAND.paper[0] * (1 - alpha) + acc.primary[0] * alpha);
+					const g = Math.round(BRAND.paper[1] * (1 - alpha) + acc.primary[1] * alpha);
+					const b = Math.round(BRAND.paper[2] * (1 - alpha) + acc.primary[2] * alpha);
 					data.cell.styles.fillColor = [r, g, b] as any;
 					data.cell.styles.textColor = [255, 255, 255] as any;
 					data.cell.styles.halign = 'center';
@@ -728,12 +757,12 @@ function drawGridSection(
 				if (isEpisodeCol) {
 					const val = Number(data.cell.raw);
 					if (val > 0) {
-						// ochre pill, intensity by value relative to max
+						// Episode-count pill — cohort warm-break tint, intensity by value
 						const intensity = Math.min(val / maxEpCount, 1);
 						const alpha = 0.2 + intensity * 0.5;
-						const r = Math.round(BRAND.paper[0] * (1 - alpha) + BRAND.ochre[0] * alpha);
-						const g = Math.round(BRAND.paper[1] * (1 - alpha) + BRAND.ochre[1] * alpha);
-						const b = Math.round(BRAND.paper[2] * (1 - alpha) + BRAND.ochre[2] * alpha);
+						const r = Math.round(BRAND.paper[0] * (1 - alpha) + acc.break[0] * alpha);
+						const g = Math.round(BRAND.paper[1] * (1 - alpha) + acc.break[1] * alpha);
+						const b = Math.round(BRAND.paper[2] * (1 - alpha) + acc.break[2] * alpha);
 						data.cell.styles.fillColor = [r, g, b] as any;
 						data.cell.styles.textColor = BRAND.textPrimary as any;
 						data.cell.styles.halign = 'center';
@@ -1503,10 +1532,14 @@ export function generateDoctorPdf(
 	function drawEventLines(boxX: number, boxY: number, boxW: number, boxH: number, withLabels: boolean) {
 		const markers = buildEventMarkers(boxX, boxW);
 		if (markers.length === 0) return;
-		// Use brick (higher contrast vs paper background) and a bolder
-		// dash so the vertical event line is unmistakably visible on
-		// printed PDFs. Previous ochre + 0.3 line + [0.8,0.8] dash was
-		// too faint — testers reported the line was effectively invisible.
+		// CIPH-pi18-2 Chunk 3 — event markers stay on `BRAND.brick` (NOT
+		// cohort accent) by design. The original choice was contrast-
+		// driven (brick + bolder dash so the marker line was unmissable
+		// on print); ochre + 0.3 line was too faint in tester reports.
+		// A clinical event interruption is also conceptually a "warning"
+		// signal — semantic high-importance, not data-accent. Keeping
+		// brick preserves both the contrast property and the semantic
+		// register across all cohorts.
 		doc.setDrawColor(...BRAND.brick);
 		doc.setLineWidth(0.5);
 		doc.setLineDashPattern([1.2, 1], 0);
@@ -2177,13 +2210,15 @@ export function generateDoctorPdf(
 			},
 			didParseCell: (data: any) => {
 				if (data.section === 'body' && data.column.index === 1) {
-					data.cell.styles.textColor = BRAND.ochre as any;
+					// Days-active count — cohort-break (data intensity, not status)
+					data.cell.styles.textColor = acc.break as any;
 					data.cell.styles.fontStyle = 'bold';
 				}
 				if (data.section === 'body' && data.column.index === 2) {
 					const pct = parseInt(data.cell.raw as string);
 					if (pct >= 50) {
-						data.cell.styles.textColor = BRAND.brick as any;
+						// High-frequency emphasis — cohort-primary (data, not status)
+						data.cell.styles.textColor = acc.primary as any;
 						data.cell.styles.fontStyle = 'bold';
 					} else {
 						data.cell.styles.textColor = BRAND.textSecondary as any;
@@ -2434,8 +2469,8 @@ export function generateDoctorPdf(
 	const renderedBullets = bullets.slice(0, 6);
 	for (const b of renderedBullets) {
 		const num = renderedBullets.indexOf(b) + 1;
-		// Number circle
-		doc.setFillColor(...BRAND.brick);
+		// Number circle — cohort-primary fill
+		doc.setFillColor(...acc.primary);
 		doc.circle(18, byY + 2, 3, 'F');
 		doc.setFont('helvetica', 'bold');
 		doc.setFontSize(10);
