@@ -11,7 +11,7 @@
 	 * line; chips collapsible when dense; ranked by 30-day frequency; single-
 	 * axis pill style with left-edge severity stripe.
 	 */
-	import { t, locale, translateUnit } from '$lib/i18n';
+	import { t, locale, translateUnit, plural } from '$lib/i18n';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint, VitalField } from '$lib/blueprint/types';
 	import { isCustomItem } from '$lib/blueprint';
@@ -347,13 +347,13 @@
 	{#if !compact && !hideType && entry.data.type === 'entry' && (symIds.length > 0 || epEntries.length > 0 || vitalEntries.length > 0)}
 		<span class="text-xs font-normal" style="color: var(--text-muted)">
 			{#if symIds.length > 0}
-				· {symIds.length} {$t('protocol.symptoms')}
+				· {plural($t, $locale, 'entry_preview.summary_symptoms', symIds.length)}
 			{/if}
 			{#if epEntries.length > 0}
-				· {epEntries.reduce((s, [, n]) => s + Number(n), 0)} {$t('protocol.episodes')}
+				· {plural($t, $locale, 'entry_preview.summary_episodes', epEntries.reduce((s, [, n]) => s + Number(n), 0))}
 			{/if}
 			{#if vitalEntries.length > 0}
-				· {vitalEntries.length} {$t('protocol.vitals')}
+				· {plural($t, $locale, 'entry_preview.summary_vitals', vitalEntries.length)}
 			{/if}
 		</span>
 	{/if}
@@ -390,7 +390,7 @@
 		{#if epEntries.length > 0}
 			<div
 				role="group"
-				aria-label={$t('entry_preview.aria_episodes_count').replace('{n}', String(epEntries.reduce((s, [, n]) => s + Number(n), 0)))}
+				aria-label={plural($t, $locale, 'entry_preview.aria_episodes_count', epEntries.reduce((s, [, n]) => s + Number(n), 0))}
 				class="flex flex-wrap gap-1 {compact ? 'mt-1' : 'mt-2'}"
 			>
 				{#each epEntries as [id, n]}
@@ -404,7 +404,7 @@
 		{#if symIds.length > 0}
 			<div
 				role="group"
-				aria-label={$t('entry_preview.aria_symptoms_count').replace('{n}', String(symIds.length))}
+				aria-label={plural($t, $locale, 'entry_preview.aria_symptoms_count', symIds.length)}
 				class="flex flex-wrap gap-1 {compact ? 'mt-1' : (epEntries.length > 0 ? 'mt-1.5' : 'mt-2')}"
 			>
 				{#each symIds as id}
@@ -418,7 +418,7 @@
 		{#if trigIds.length > 0}
 			<div
 				role="group"
-				aria-label={$t('entry_preview.aria_triggers_count').replace('{n}', String(trigIds.length))}
+				aria-label={plural($t, $locale, 'entry_preview.aria_triggers_count', trigIds.length)}
 				class="flex flex-wrap gap-1 mt-1.5"
 			>
 				{#each trigIds as id}

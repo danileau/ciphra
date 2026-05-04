@@ -5,6 +5,18 @@
 	export let type: string;
 	export let data: any;
 	export let options: any = {};
+	/**
+	 * PI v15 LB-4 — Screen-reader text alternative for the chart.
+	 * Without this the canvas is invisible to assistive tech. Pass a short
+	 * `ariaLabel` summarising the chart and an optional `srTable` so SR
+	 * users can hear the actual data points instead of a chart blob.
+	 */
+	export let ariaLabel: string | undefined = undefined;
+	export let srTable: {
+		caption: string;
+		headers: string[];
+		rows: (string | number)[][];
+	} | undefined = undefined;
 
 	let canvas: HTMLCanvasElement;
 	let chart: any = null;
@@ -121,6 +133,33 @@
      Chart.js with responsive: true + maintainAspectRatio: false will
      fill whatever box the parent sets. -->
 <div class="w-full h-full relative">
-	<canvas bind:this={canvas}></canvas>
+	<canvas
+		bind:this={canvas}
+		role={ariaLabel ? 'img' : undefined}
+		aria-label={ariaLabel}
+	></canvas>
+	{#if srTable}
+		<!-- PI v15 LB-4 — visually hidden data-table mirror. Lets screen-
+		     reader users navigate the chart's underlying data points. -->
+		<table class="sr-only">
+			<caption>{srTable.caption}</caption>
+			<thead>
+				<tr>
+					{#each srTable.headers as h}
+						<th scope="col">{h}</th>
+					{/each}
+				</tr>
+			</thead>
+			<tbody>
+				{#each srTable.rows as row}
+					<tr>
+						{#each row as cell}
+							<td>{cell}</td>
+						{/each}
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{/if}
 </div>
 {/if}

@@ -1,14 +1,35 @@
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import de from './de';
-import en from './en';
-import fr from './fr';
-import it from './it';
 
 export type Locale = 'de' | 'en' | 'fr' | 'it';
 export const locales: Locale[] = ['de', 'en', 'fr', 'it'];
 export const localeNames: Record<Locale, string> = { de: 'Deutsch', en: 'English', fr: 'Français', it: 'Italiano' };
 
-const translations: Record<Locale, Record<string, string>> = { de, en, fr, it };
+// `de` is the SSR/fallback dict and is bundled eagerly. The other three are
+// loaded on demand via dynamic import — splits ~130KB gzip off first paint
+// for users whose detected locale is also `de` (the dominant Swiss case).
+const translations: Partial<Record<Locale, Record<string, string>>> = { de };
+const inflight: Partial<Record<Locale, Promise<Record<string, string>>>> = {};
+
+const localeLoaders: Record<Exclude<Locale, 'de'>, () => Promise<{ default: Record<string, string> }>> = {
+	en: () => import('./en'),
+	fr: () => import('./fr'),
+	it: () => import('./it'),
+};
+
+async function ensureLocale(target: Locale): Promise<void> {
+	if (translations[target]) return;
+	if (target === 'de') return;
+	if (!inflight[target]) {
+		inflight[target] = localeLoaders[target as Exclude<Locale, 'de'>]().then((mod) => {
+			translations[target] = mod.default;
+			// Force a refresh of derived stores by re-publishing the current locale.
+			_locale.update((l) => l);
+			return mod.default;
+		});
+	}
+	await inflight[target];
+}
 
 function detectLocale(): Locale {
 	if (typeof localStorage !== 'undefined') {
@@ -27,6 +48,8 @@ const _locale = writable<Locale>(detectLocale());
 _locale.subscribe((l) => {
 	if (typeof localStorage !== 'undefined') localStorage.setItem('ciphra_locale', l);
 	if (typeof document !== 'undefined') document.documentElement.lang = l;
+	// Kick off the load if needed; refreshes on resolve via the update() above.
+	void ensureLocale(l);
 });
 
 export const locale = {
@@ -37,9 +60,12 @@ export const locale = {
 };
 
 export const t = derived(locale, ($locale) => {
-	const dict = translations[$locale] || translations.de;
+	// Prefer the requested locale; fall back to `de` while a pending dict
+	// resolves, then to the raw key. Same lookup order as before, just with
+	// a missing-dict tier added.
+	const dict = translations[$locale];
 	return (key: string, params?: Record<string, string | number>): string => {
-		let str = dict[key] || translations.de[key] || key;
+		let str = (dict && dict[key]) || translations.de![key] || key;
 		if (params) {
 			for (const [k, v] of Object.entries(params)) {
 				str = str.replace(`{${k}}`, String(v));
@@ -102,3 +128,13 @@ export function plural(
 		translator(baseKey, params)
 	);
 }
+
+// Force-load all locales (for tests or for surfaces that switch language
+// often, like the public language picker on landing where users will
+// click through them).
+export async function ensureAllLocales(): Promise<void> {
+	await Promise.all(locales.map(ensureLocale));
+}
+
+// Re-export for tests that need to reset state.
+export { ensureLocale, get };

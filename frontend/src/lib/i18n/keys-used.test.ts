@@ -47,6 +47,15 @@ function walk(dir: string, acc: string[] = []): string[] {
 const T_CALL_RE =
 	/(?<![\w])\$?t\(\s*(?:'([A-Za-z0-9_.]+)'|"([A-Za-z0-9_.]+)"|`([A-Za-z0-9_.]+)`)\s*[,)]/g;
 
+// PI v15 LB-7 — `plural($t, $locale, 'foo.bar', count)` resolves to
+// `foo.bar_one` / `foo.bar_other` / `foo.bar` via Intl.PluralRules.
+// Capture the base key from each plural() call so the `_one` / `_other`
+// variants don't show up as orphans.
+const PLURAL_CALL_RE =
+	/\bplural\([^,]+,\s*[^,]+,\s*(?:'([A-Za-z0-9_.]+)'|"([A-Za-z0-9_.]+)"|`([A-Za-z0-9_.]+)`)/g;
+
+const PLURAL_CATEGORIES = ['zero', 'one', 'two', 'few', 'many', 'other'];
+
 function collectUsedKeys(files: string[]): Set<string> {
 	const used = new Set<string>();
 	for (const f of files) {
@@ -54,6 +63,12 @@ function collectUsedKeys(files: string[]): Set<string> {
 		for (const m of src.matchAll(T_CALL_RE)) {
 			const key = m[1] || m[2] || m[3];
 			if (key) used.add(key);
+		}
+		for (const m of src.matchAll(PLURAL_CALL_RE)) {
+			const baseKey = m[1] || m[2] || m[3];
+			if (!baseKey) continue;
+			used.add(baseKey);
+			for (const cat of PLURAL_CATEGORIES) used.add(`${baseKey}_${cat}`);
 		}
 	}
 	return used;

@@ -49,8 +49,8 @@ async function registerAndConfigure(
 	page: import('@playwright/test').Page,
 	cohort: (typeof COHORT_PRESETS)[number],
 ) {
-	const user = 'smoke_' + cohort.id + '_' + Math.random().toString(36).slice(2, 8);
-	const pass = 'Test$12345_';
+	const user = 'smoke_' + cohort.id + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+	const pass = 'Test$12345_!';
 
 	await page.goto('/login?mode=register');
 	await page.locator('#signup-user').fill(user);

@@ -23,7 +23,7 @@
 	"loud day vs quiet day" as visual rhythm.
 -->
 <script lang="ts">
-	import { t, locale } from '$lib/i18n';
+	import { t, locale, plural } from '$lib/i18n';
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
@@ -460,7 +460,7 @@
 									 (aria-hidden); semantic header lives in this <p>. -->
 								<p class="journal-streak-header">
 									<span class="journal-streak-name">{isCustomItem(item.streak.epId) ? item.streak.label : $t(item.streak.label)}</span>
-									<span class="journal-streak-meta">· {$t('reports.glance_n_days', { n: item.streak.dayCount })}</span>
+									<span class="journal-streak-meta">· {plural($t, $locale, 'reports.glance_n_days', item.streak.dayCount)}</span>
 								</p>
 								<aside class="journal-streak-rail" aria-hidden="true"></aside>
 								<div class="journal-streak-days">

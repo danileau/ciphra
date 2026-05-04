@@ -13,7 +13,6 @@
 	import { auth } from '$lib/stores/auth';
 	import { get } from 'svelte/store';
 	import { createFamilyGrant, encryptData, decryptData } from '$lib/crypto';
-	import { generateFamilyInvitePdf } from '$lib/pdf';
 	import { locale } from '$lib/i18n';
 	import * as api from '$lib/api';
 	import { browser } from '$app/environment';
@@ -141,8 +140,9 @@
 		try { await navigator.clipboard.writeText(createdCode); } catch {}
 	}
 
-	function downloadPdf() {
+	async function downloadPdf() {
 		const state = get(auth);
+		const { generateFamilyInvitePdf } = await import('$lib/pdf');
 		generateFamilyInvitePdf(
 			state.username || '',
 			createdLabel,

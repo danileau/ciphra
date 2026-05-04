@@ -74,7 +74,7 @@
 			error = $t('auth.error_password_match');
 			return;
 		}
-		if (recNewPass.length < 8) {
+		if (recNewPass.length < 12) {
 			error = $t('auth.error_password_short');
 			return;
 		}
@@ -196,7 +196,7 @@
 									id="rec-new-pass"
 									bind:value={recNewPass}
 									required
-									minlength={8}
+									minlength={12}
 									class="input"
 								/>
 							</div>
@@ -206,7 +206,7 @@
 									id="rec-new-pass2"
 									bind:value={recNewPassConfirm}
 									required
-									minlength={8}
+									minlength={12}
 									class="input"
 								/>
 							</div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t, locale } from '$lib/i18n';
+	import { t, locale, plural } from '$lib/i18n';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
@@ -13,9 +13,15 @@
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { generateDoctorPdf, generateCompactPdf, exportCsv, type ReportScope } from '$lib/pdf';
+	import type { ReportScope } from '$lib/pdf';
+	// jsPDF + autoTable + pdfkit core add ~152KB gzip. Defer until the user
+	// actually clicks an export action.
+	async function loadPdfLib() {
+		return await import('$lib/pdf');
+	}
 	import { isEpisodeBearing } from '$lib/utils/episodeCounts';
 	import { isExportable } from '$lib/utils/exportable';
+	import { weekdayLabels } from '$lib/i18n/dates';
 
 	let currentDate = new Date().toISOString().slice(0, 10);
 	let pdfScope: ReportScope = 'month';
@@ -236,26 +242,31 @@
 	})();
 	$: isOnCurrentMonth = currentDate.slice(0, 7) === todayMonthStr;
 
+	$: weekdays = weekdayLabels($locale, 'narrow');
+
 	function formatMonth(dateStr: string): string {
 		const d = new Date(dateStr + 'T12:00:00');
 		return d.toLocaleDateString($locale, { month: 'long', year: 'numeric' });
 	}
 
-	function exportForDoctor() {
+	async function exportForDoctor() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
+		const { generateDoctorPdf } = await loadPdfLib();
 		generateDoctorPdf(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
 	}
 
-	function exportCompactForDoctor() {
+	async function exportCompactForDoctor() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
+		const { generateCompactPdf } = await loadPdfLib();
 		generateCompactPdf(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
 	}
 
-	function exportCsvFile() {
+	async function exportCsvFile() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
+		const { exportCsv } = await loadPdfLib();
 		exportCsv(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, pdfScope);
 	}
 
@@ -580,6 +591,25 @@
 			],
 		};
 	})();
+	// PI v15 LB-4 — Screen-reader data-table mirror for the 24-month trend
+	// chart. Without this, SR users hear only the surrounding heading and
+	// then silence; the headline doctor-prep view is unusable.
+	$: trendChartSrTable = (() => {
+		if (!trendChartData) return undefined;
+		const labels = trendChartData.labels as string[];
+		const eps = trendChartData.datasets[0].data as number[];
+		const sym = trendChartData.datasets[1].data as number[];
+		return {
+			caption: $t('reports.trend_title'),
+			headers: [
+				$t('common.month'),
+				$t('day_detail.episodes'),
+				$t('companion.how_symptom_days'),
+			],
+			rows: labels.map((label, i) => [label, eps[i] ?? 0, sym[i] ?? 0]),
+		};
+	})();
+
 	$: trendChartOptions = {
 		responsive: true,
 		maintainAspectRatio: false,
@@ -716,7 +746,7 @@
 	{#if viewMode === 'month'}
 		<!-- Month nav -->
 		<div class="flex items-center justify-center gap-3 mb-6">
-			<button on:click={() => changeMonth(-1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
+			<button on:click={() => changeMonth(-1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500" aria-label={$t('common.previous_month')}>
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 			</button>
 			<div class="flex items-center gap-2 min-w-[180px] justify-center">
@@ -729,18 +759,18 @@
 					>{$t('common.today')}</button>
 				{/if}
 			</div>
-			<button on:click={() => changeMonth(1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500">
+			<button on:click={() => changeMonth(1)} class="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500" aria-label={$t('common.next_month')}>
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 			</button>
 		</div>
 	{:else}
 		<!-- Year nav -->
 		<div class="rpt-year-nav">
-			<button on:click={() => { currentYear--; }} class="rpt-nav-btn" aria-label="Previous year">
+			<button on:click={() => { currentYear--; }} class="rpt-nav-btn" aria-label={$t('common.previous_year')}>
 				<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 			</button>
 			<span class="rpt-year-label">{currentYear}</span>
-			<button on:click={() => { currentYear++; }} class="rpt-nav-btn" aria-label="Next year">
+			<button on:click={() => { currentYear++; }} class="rpt-nav-btn" aria-label={$t('common.next_year')}>
 				<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 			</button>
 		</div>
@@ -789,7 +819,13 @@
 		<div class="card mb-4 p-4">
 			<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">{$t('reports.trend_title')}</h2>
 			<div class="rpt-trend-chart">
-				<ChartWrapper type="line" data={trendChartData} options={trendChartOptions} />
+				<ChartWrapper
+				type="line"
+				data={trendChartData}
+				options={trendChartOptions}
+				ariaLabel={$t('reports.trend_aria')}
+				srTable={trendChartSrTable}
+			/>
 			</div>
 		</div>
 	{/if}
@@ -938,9 +974,9 @@
 							<span class="rpt-glance-delta rpt-glance-delta--{episodeTrend}">
 								{#if episodeTrend === 'up'}↗{:else if episodeTrend === 'down'}↘{:else}→{/if}
 								{#if episodeTrend === 'down'}
-									{$t('reports.glance_delta_down', { delta: Math.abs(episodeDelta), prev: prevMonthEpisodes })}
+									{plural($t, $locale, 'reports.glance_delta_down', Math.abs(episodeDelta), { prev: prevMonthEpisodes })}
 								{:else if episodeTrend === 'up'}
-									{$t('reports.glance_delta_up', { delta: Math.abs(episodeDelta), prev: prevMonthEpisodes })}
+									{plural($t, $locale, 'reports.glance_delta_up', Math.abs(episodeDelta), { prev: prevMonthEpisodes })}
 								{:else}
 									{$t('reports.glance_delta_flat', { prev: prevMonthEpisodes })}
 								{/if}
@@ -955,7 +991,7 @@
 							{#each scopedTopSymptoms as sym, i}
 								{#if i > 0}<span class="rpt-glance-sep">·</span>{/if}
 								<span class="rpt-glance-sym">{sym.label}</span>
-								<span class="rpt-glance-meta">({$t('reports.glance_n_days', { n: sym.days })})</span>
+								<span class="rpt-glance-meta">({plural($t, $locale, 'reports.glance_n_days', sym.days)})</span>
 							{/each}
 						</dd>
 					</div>
@@ -983,7 +1019,7 @@
 			</div>
 		</div>
 		<div class="rpt-month-grid">
-			{#each ['M','T','W','T','F','S','S'] as dw}
+			{#each weekdays as dw}
 				<span class="rpt-dow">{dw}</span>
 			{/each}
 			{#each Array(firstDow) as _}
@@ -993,14 +1029,13 @@
 				{@const dateStr = `${yearOfMonth}-${String(monthIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
 				{@const doc = getDayDoc(monthDocs, dateStr)}
 				{@const hasEp = dayHasEpisodes(doc, bp)}
-				<span
+				<button
+					type="button"
 					class="rpt-day-cell {doc ? (hasEp ? 'rpt-day-cell--episode' : 'rpt-day-cell--logged') : ''}"
 					title={doc ? `${dateStr}: ${dayTooltip(doc, bp)}` : dateStr}
+					aria-label={doc ? `${dateStr} — ${dayTooltip(doc, bp)}` : dateStr}
 					on:click={() => goto(`/log/${dateStr}`)}
-					role="button"
-					tabindex="0"
-					on:keydown={(e) => { if (e.key === 'Enter') goto(`/log/${dateStr}`); }}
-				></span>
+				></button>
 			{/each}
 		</div>
 	</div>
@@ -1032,18 +1067,21 @@
 								<a href="/log/{dayStr}" class="grid-day-link">{day}</a>
 							</td>
 							{#each effectiveSymptomColumns as col}
-								<td
-									class="px-2 py-1.5 text-center grid-symptom-cell"
-									on:click|stopPropagation={() => toggleGridSymptom(dayStr, col)}
-									role="button"
-									tabindex="0"
-									on:keydown={(e) => { if (e.key === 'Enter') toggleGridSymptom(dayStr, col); }}
-								>
-									{#if getSymptom(dayDoc, col)}
-										<span class="inline-block w-4 h-4 rounded-sm" style="background: var(--olive)"></span>
-									{:else}
-										<span class="inline-block w-4 h-4 rounded-sm" style="background: var(--surface-inset)"></span>
-									{/if}
+								{@const present = !!getSymptom(dayDoc, col)}
+								<td class="px-2 py-1.5 text-center grid-symptom-cell">
+									<button
+										type="button"
+										class="grid-symptom-toggle"
+										aria-pressed={present}
+										aria-label={`${dayStr} — ${itemLabel(col)}`}
+										on:click|stopPropagation={() => toggleGridSymptom(dayStr, col)}
+									>
+										{#if present}
+											<span class="inline-block w-4 h-4 rounded-sm" style="background: var(--olive)"></span>
+										{:else}
+											<span class="inline-block w-4 h-4 rounded-sm" style="background: var(--surface-inset)"></span>
+										{/if}
+									</button>
 								</td>
 							{/each}
 							{#each effectiveEpisodeColumns as col}
@@ -1134,7 +1172,7 @@
 					<p class="rpt-month-name">{getMonthShortName(month)}</p>
 					<div class="rpt-month-grid">
 						<!-- Day-of-week headers -->
-						{#each ['M','T','W','T','F','S','S'] as dw}
+						{#each weekdays as dw}
 							<span class="rpt-dow">{dw}</span>
 						{/each}
 						<!-- Empty cells before first day -->
@@ -1146,14 +1184,13 @@
 							{@const dateStr = `${currentYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
 							{@const doc = getDayDoc(yearDocs, dateStr)}
 							{@const hasEp = dayHasEpisodes(doc, bp)}
-							<span
+							<button
+								type="button"
 								class="rpt-day-cell {doc ? (hasEp ? 'rpt-day-cell--episode' : 'rpt-day-cell--logged') : ''}"
 								title={doc ? `${dateStr}: ${dayTooltip(doc, bp)}` : dateStr}
+								aria-label={doc ? `${dateStr} — ${dayTooltip(doc, bp)}` : dateStr}
 								on:click={() => goto(`/log/${dateStr}`)}
-								role="button"
-								tabindex="0"
-								on:keydown={(e) => { if (e.key === 'Enter') goto(`/log/${dateStr}`); }}
-							></span>
+							></button>
 						{/each}
 					</div>
 				</div>
@@ -1468,6 +1505,12 @@
 		cursor: pointer;
 		transition: transform 0.15s ease-out;
 		margin: 0 auto;
+		/* PI v15 LB-3 — was a span+role=button; now a real <button>. Reset
+		   browser defaults so the cell still renders as a colored 18px square. */
+		border: none;
+		padding: 0;
+		font: inherit;
+		display: block;
 	}
 	.rpt-day-cell:hover {
 		transform: scale(1.3);
@@ -1502,14 +1545,33 @@
 	}
 
 	.grid-symptom-cell {
+		/* PI v15 LB-3 — the <td> is no longer interactive; the inner <button>
+		   is. Keep the cell padding only. */
+		padding: 0;
+	}
+	.grid-symptom-toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		min-height: 32px;
+		padding: 6px 4px;
+		background: transparent;
+		border: none;
+		font: inherit;
 		cursor: pointer;
 		transition: transform 0.15s ease-out;
 	}
-	.grid-symptom-cell:hover {
+	.grid-symptom-toggle:hover {
 		transform: scale(1.15);
 	}
-	.grid-symptom-cell:hover span {
+	.grid-symptom-toggle:hover span {
 		box-shadow: 0 0 0 2px var(--olive);
+	}
+	.grid-symptom-toggle:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 1px;
+		border-radius: 3px;
 	}
 
 	/* CIPH-915 — `.grid-episode-cell` no longer needs cursor:pointer,

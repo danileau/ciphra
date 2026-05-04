@@ -60,7 +60,12 @@ _raw_cors = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localho
 CORS_ORIGINS = [o.strip() for o in _raw_cors.split(',') if o.strip()]
 CORS(app, supports_credentials=True, origins=CORS_ORIGINS)
 
-limiter = Limiter(get_remote_address, app=app, default_limits=["5000 per hour"])
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["5000 per hour"],
+    enabled=os.environ.get('CIPHRA_DEV_MOCKS') != '1',
+)
 
 
 @app.errorhandler(413)

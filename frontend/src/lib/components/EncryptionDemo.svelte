@@ -11,7 +11,13 @@
 	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { t } from '$lib/i18n';
-	import { bytesToB64 } from '$lib/crypto';
+	// Inlined to keep this landing-page component out of $lib/crypto's import
+	// graph, which drags in BIP39 wordlist + recovery-code generator (~7KB).
+	function bytesToB64(bytes: Uint8Array): string {
+		let bin = '';
+		for (const b of bytes) bin += String.fromCharCode(b);
+		return btoa(bin);
+	}
 
 	let rootEl: HTMLDivElement;
 	let step = 0; // 0 idle, 1 plaintext, 2 derive, 3 encrypt, 4 done

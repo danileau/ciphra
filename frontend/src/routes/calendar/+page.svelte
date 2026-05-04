@@ -3,7 +3,7 @@
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { fade, fly } from 'svelte/transition';
 	import Asterisk from '$lib/components/Asterisk.svelte';
@@ -17,6 +17,7 @@
 		PHASE_COLORS,
 		type Phase,
 	} from '$lib/cycleState';
+	import { weekdayLabels } from '$lib/i18n/dates';
 
 	let selectedDate: string | null = null;
 	let currentYear = new Date().getFullYear();
@@ -239,15 +240,75 @@
 			focusedDay = d.getDate();
 		}
 	}
+
+	// CIPH-PI-v15 LB-1+2 — A11y wiring for the day-detail panel. The bespoke
+	// modal previously bypassed Modal.svelte/BottomSheet.svelte's hard-won
+	// PI v13 focus-trap pattern. Inline the same contract here because the
+	// desktop right-panel layout doesn't fit either primitive.
+	let panelEl: HTMLDivElement | null = null;
+	let lastFocused: HTMLElement | null = null;
+	const panelTitleId = `cal-detail-title-${Math.random().toString(36).slice(2, 9)}`;
+	let prefersReducedMotion = false;
+	if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+		prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	}
+
+	function focusableWithin(root: HTMLElement): HTMLElement[] {
+		const sel =
+			'a[href], button:not([disabled]), input:not([disabled]), ' +
+			'select:not([disabled]), textarea:not([disabled]), ' +
+			'[tabindex]:not([tabindex="-1"])';
+		return Array.from(root.querySelectorAll<HTMLElement>(sel)).filter(
+			(el) => el.offsetParent !== null || getComputedStyle(el).position === 'fixed',
+		);
+	}
+
+	function handlePanelKey(e: KeyboardEvent) {
+		if (!selectedDate) return;
+		if (e.key === 'Escape') {
+			selectedDate = null;
+			return;
+		}
+		if (e.key !== 'Tab' || !panelEl) return;
+		const focusables = focusableWithin(panelEl);
+		if (focusables.length === 0) {
+			e.preventDefault();
+			panelEl.focus();
+			return;
+		}
+		const first = focusables[0];
+		const last = focusables[focusables.length - 1];
+		const active = document.activeElement as HTMLElement | null;
+		if (e.shiftKey && active === first) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && active === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
+
+	$: if (typeof document !== 'undefined' && selectedDate) {
+		// Capture trigger + auto-focus the first focusable inside the panel.
+		if (!lastFocused) {
+			lastFocused = (document.activeElement as HTMLElement | null) ?? null;
+		}
+		tick().then(() => {
+			if (!panelEl) return;
+			const f = focusableWithin(panelEl);
+			(f[0] ?? panelEl).focus();
+		});
+	} else if (typeof document !== 'undefined' && !selectedDate && lastFocused) {
+		// Restore focus to the day cell that opened the panel.
+		try { lastFocused.focus(); } catch { /* day cell may have re-rendered */ }
+		lastFocused = null;
+	}
 	// CIPH-910 — handleEditEntry / handleDeleteEntry / confirmDeleteId
 	// removed: the day-detail panel is render-only now. Entry editing
 	// goes through the panel-header "Bearbeiten →" link to /log/{date};
 	// events and diaries are edited via the journal moment-modal.
 
-	$: weekdays = Array.from({ length: 7 }, (_, i) => {
-		const d = new Date(2024, 0, i + 1); // Jan 1 2024 is Monday
-		return d.toLocaleDateString($locale, { weekday: 'short' });
-	});
+	$: weekdays = weekdayLabels($locale, 'short');
 
 	// CIPH-763c — roving-tabindex focus model for the day grid. Only one
 	// cell is in the tab sequence at a time; arrow keys move focus within
@@ -525,21 +586,38 @@
 	</div>
 </div>
 
+<!-- primitive-exempt: Modal — the day-detail dialog is a right-side
+	 panel on desktop and a bottom sheet on mobile, neither of which fits
+	 the centred Modal primitive. The same a11y contract (focus trap,
+	 Esc, focus return, role=dialog, aria-modal, prefers-reduced-motion)
+	 is implemented inline above (handlePanelKey + reactive focus
+	 management). PI v15 LB-1+2. -->
 <!-- Day detail panel — bottom sheet on mobile, right-side panel on md+
 	 (CIPH-901b). The fly direction picks itself based on viewport at
 	 mount: mobile slides up, desktop slides in from the right. -->
+<svelte:window on:keydown={handlePanelKey} />
 {#if selectedDate}
 	<button
 		class="fixed inset-0 z-[55] bg-black/40 backdrop-blur-sm"
 		on:click={() => { selectedDate = null; }}
-		transition:fade={{ duration: 200 }}
+		transition:fade={{ duration: prefersReducedMotion ? 0 : 200 }}
 		aria-label={$t('common.close')}
+		tabindex="-1"
 	></button>
 
 	{@const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768}
 	<div
+		bind:this={panelEl}
+		tabindex="-1"
 		class="cal-detail-panel"
-		transition:fly={{ x: isDesktop ? 420 : 0, y: isDesktop ? 0 : 300, duration: 300 }}
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby={panelTitleId}
+		transition:fly={{
+			x: prefersReducedMotion ? 0 : (isDesktop ? 420 : 0),
+			y: prefersReducedMotion ? 0 : (isDesktop ? 0 : 300),
+			duration: prefersReducedMotion ? 0 : 300,
+		}}
 	>
 		<div class="cal-detail-inner">
 			<!-- Drag-handle indicator: mobile bottom-sheet affordance only. -->
@@ -558,7 +636,7 @@
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
-				<h2 class="text-base font-semibold flex-1 text-center min-w-0 truncate" style="color: var(--text-primary)">
+				<h2 id={panelTitleId} class="text-base font-semibold flex-1 text-center min-w-0 truncate" style="color: var(--text-primary)">
 					{new Date(selectedDate + 'T12:00:00').toLocaleDateString($locale, { weekday: 'long', day: 'numeric', month: 'long' })}
 				</h2>
 				<button

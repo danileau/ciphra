@@ -20,8 +20,13 @@
 	import * as api from '$lib/api';
 	import { auth } from '$lib/stores/auth';
 	import { createVault, decryptMasterKey, deriveAuthKey } from '$lib/crypto';
-	import { generateRecoveryPdf } from '$lib/pdf';
 	import PasswordField from '$lib/components/PasswordField.svelte';
+
+	// jsPDF is heavy; only load it if the user clicks "download recovery PDF".
+	async function downloadRecoveryPdf() {
+		const { generateRecoveryPdf } = await import('$lib/pdf');
+		generateRecoveryPdf(username.trim().toLowerCase(), recoveryCode, $t, $locale);
+	}
 
 	const dispatch = createEventDispatcher<{ 'signup-complete': void }>();
 
@@ -86,7 +91,15 @@
 			const bundle = await createVault(uname, password, true);
 			const reg = await api.register(bundle);
 			if (!reg.ok) {
-				setError($t('auth.error_exists'), (reg.data.error as string) || '');
+				// Status-aware copy. Server is enumeration-resistant (409 also covers
+				// bundle-bad), so 409 still maps to "username taken" — that's the
+				// most useful message for the dominant case. Other statuses must NOT
+				// claim the username is taken.
+				const msg =
+					reg.status === 429 ? $t('auth.error_locked') :
+					reg.status >= 500 ? $t('auth.error_server') :
+					$t('auth.error_exists');
+				setError(msg, (reg.data.error as string) || '');
 				return;
 			}
 			recoveryCode = bundle.recovery_code || '';
@@ -124,7 +137,9 @@
 			};
 			showRecovery = true;
 		} catch (e) {
-			setError($t('auth.error_exists'), e instanceof Error ? e.message : String(e));
+			// Network drop, crypto exception, abort — anything that doesn't reach
+			// `reg.ok`. Don't claim the username is taken; that misled real users.
+			setError($t('auth.error_server'), e instanceof Error ? e.message : String(e));
 		} finally {
 			busy = false;
 			busyLabel = '';
@@ -246,7 +261,7 @@
 		<div class="grid grid-cols-2 gap-2 mb-4">
 			<button
 				type="button"
-				on:click={() => generateRecoveryPdf(username.trim().toLowerCase(), recoveryCode, $t, $locale)}
+				on:click={downloadRecoveryPdf}
 				class="btn-secondary px-4 min-h-[44px] flex items-center justify-center gap-2"
 			>
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
