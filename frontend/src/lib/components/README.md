@@ -226,6 +226,15 @@ route kind.
   is the calendar's concern (panel-header link → `/log/{date}`
   for entries; events/diaries use the journal moment-modal).
   Used only by `routes/calendar/+page.svelte`.
+- **MonthMiniSummary.svelte** (CIPH-pi19-B) — calendar right-rail
+  tail. Shows trigger-day + rescue-med-day counts for the visible
+  month, gated on `showTrigger` / `showRescue` props (which the
+  parent derives from `bp.triggers.length` / `bp.rescueMedications
+  .length`). Glyphs mirror the in-cell encoding (ochre triangle,
+  brand vertical bar). Render-only — counts are pre-computed in
+  the parent so we don't re-traverse `monthDocs`. Used only by
+  `routes/calendar/+page.svelte`. PI v19 Story C will extend it
+  with a 28-cell trigger-heatmap row above the count rows.
 
 ### Empty states (CIPH-893)
 

@@ -10,6 +10,8 @@
 	// CIPH-910 — EntryPreview + ConfirmDelete dropped from calendar after
 	// the day-detail panel switched to the new <DayDetail> sectioned view.
 	import DayDetail from '$lib/components/DayDetail.svelte';
+	// CIPH-pi19-B — month-summary tail of the lg+ persistent rail.
+	import MonthMiniSummary from '$lib/components/MonthMiniSummary.svelte';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import {
 		computeCycleAnchor,
@@ -84,6 +86,16 @@
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
 		documents.load();
+		// CIPH-pi19-B — keep isLg in sync as the user resizes/drag-handles
+		// across the breakpoint. Modal must dissolve into the rail (and
+		// vice versa) without a remount.
+		if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+			const mq = window.matchMedia('(min-width: 1024px)');
+			isLg = mq.matches;
+			const handler = (e: MediaQueryListEvent) => { isLg = e.matches; };
+			mq.addEventListener('change', handler);
+			return () => mq.removeEventListener('change', handler);
+		}
 	});
 
 	$: daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -169,6 +181,10 @@
 	// the edge bar entirely; data-driven, not cohort-switched.
 	$: showTriggerMark = (bp?.triggers?.length ?? 0) > 0;
 	$: showRescueMedMark = (bp?.rescueMedications?.length ?? 0) > 0;
+
+	// CIPH-pi19-B — month-level tallies powering the rail's mini-summary.
+	$: triggerDayCount = triggerCountByDay.size;
+	$: rescueMedDayCount = rescueMedCountByDay.size;
 
 	function getDocsForDay(day: number): CiphraDocument[] {
 		const ds = `${monthPrefix}-${String(day).padStart(2, '0')}`;
@@ -271,6 +287,49 @@
 	$: selectedDayDocs = selectedDate ? $documents.filter(d => String(d.data.date || '') === selectedDate) : [];
 	$: monthName = new Date(currentYear, currentMonth).toLocaleDateString($locale, { month: 'long', year: 'numeric' });
 
+	// CIPH-pi19-B — viewport breakpoint for the persistent rail. lg+ (≥1024px)
+	// switches the calendar to a 2-col layout and suppresses the bespoke
+	// modal in favour of the rail. matchMedia keeps the flag in sync on
+	// resize so a window drag across the breakpoint doesn't strand a modal.
+	let isLg = false;
+	if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+		isLg = window.matchMedia('(min-width: 1024px)').matches;
+	}
+
+	// CIPH-pi19-B — derived "rail anchor": the date the rail's DayDetail
+	// reads from. Tracks selectedDate when set; otherwise falls back to
+	// today (current month) or the most recent logged day in view (other
+	// months). Returns null only when the visible month has zero data and
+	// we're not on the current month.
+	$: railSelectedDate = (() => {
+		if (selectedDate) return selectedDate;
+		if (isOnCurrentMonth) return new Date().toISOString().slice(0, 10);
+		const logged = monthDocs
+			.map(d => String(d.data.date || ''))
+			.filter(Boolean)
+			.sort();
+		return logged.length > 0 ? logged[logged.length - 1] : null;
+	})();
+	$: railDocs = railSelectedDate
+		? $documents.filter(d => String(d.data.date || '') === railSelectedDate)
+		: [];
+	$: railDayPhase = (cycleOverlayActive && railSelectedDate && cycleAnchor)
+		? (cycleStateForDate(cycleAnchor, railSelectedDate)?.phase ?? null)
+		: null;
+	$: railDayBands = (() => {
+		if (cohort !== 'phase' || !railSelectedDate || !bp?.episodeTypes) return [];
+		const out: { id: string; color: string; label: string }[] = [];
+		for (const ep of bp.episodeTypes) {
+			if (!ep.multiDay) continue;
+			const active = railDocs.some(d =>
+				d.data.type === 'entry' &&
+				(((d.data.episodes || d.data.seizures || {}) as Record<string, number>)[ep.id] || 0) > 0,
+			);
+			if (active) out.push({ id: ep.id, color: ep.color, label: ep.label });
+		}
+		return out;
+	})();
+
 	// CIPH-880 — Cohort-aware sheet header. Cycle cohort gets a phase chip
 	// (matches the day-cell ring colour from CIPH-879). Phase cohort gets
 	// pills for any multiDay band active on the selected day.
@@ -303,8 +362,13 @@
 	})();
 
 	function adjustSelectedDate(delta: number) {
-		if (!selectedDate) return;
-		const d = new Date(selectedDate + 'T12:00:00');
+		// CIPH-pi19-B — anchor on railSelectedDate when no day is explicitly
+		// selected so the rail's prev/next arrows can browse from "today" or
+		// the most-recent-logged fallback. Modal path (selectedDate set)
+		// behaves exactly as before.
+		const anchor = selectedDate || railSelectedDate;
+		if (!anchor) return;
+		const d = new Date(anchor + 'T12:00:00');
 		d.setDate(d.getDate() + delta);
 		const newDate = d.toISOString().slice(0, 10);
 		selectedDate = newDate;
@@ -345,6 +409,10 @@
 			selectedDate = null;
 			return;
 		}
+		// CIPH-pi19-B — Tab focus-trap is modal-only. The lg+ rail is a
+		// non-modal layout element; trapping focus there would steal Tab
+		// from the surrounding page (header / nav / grid).
+		if (isLg) return;
 		if (e.key !== 'Tab' || !panelEl) return;
 		const focusables = focusableWithin(panelEl);
 		if (focusables.length === 0) {
@@ -364,8 +432,10 @@
 		}
 	}
 
-	$: if (typeof document !== 'undefined' && selectedDate) {
-		// Capture trigger + auto-focus the first focusable inside the panel.
+	$: if (typeof document !== 'undefined' && selectedDate && !isLg) {
+		// Modal path only — at lg+ the rail is non-modal so we don't
+		// auto-focus or trap. Capture the trigger so we can restore focus
+		// when the modal closes.
 		if (!lastFocused) {
 			lastFocused = (document.activeElement as HTMLElement | null) ?? null;
 		}
@@ -450,9 +520,13 @@
 	 that used to pinch the month grid + event timeline on desktop.
 	 CIPH-782: tighter desktop spacing so month + event strip + day list
 	 fit in a 900px-tall viewport without scroll. Mobile sizing preserved
-	 by gating shrinkage on `md:` — tap targets stay ≥44px on phones. -->
+	 by gating shrinkage on `md:` — tap targets stay ≥44px on phones.
+	 CIPH-pi19-B: 2-col lg+ grid (1fr / 360px). Calendar grid stays in the
+	 left column; the right column is a sticky non-modal rail hosting
+	 DayDetail + MonthMiniSummary. Below lg the rail is hidden and the
+	 existing modal/sheet handles selection. -->
 <div class="layout-data pt-2 md:pt-3 pb-32">
-	<div>
+	<div class="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6 lg:items-start">
 		<!-- Calendar grid -->
 		<div>
 			<!-- Month navigation -->
@@ -726,6 +800,93 @@
 			{/if}
 		</div>
 
+		<!-- CIPH-pi19-B — persistent right-rail (lg+ only). Non-modal layout
+			 element: no role=dialog, no aria-modal, no scrim, no focus trap.
+			 Mirrors the modal's prev/next + date title + edit link, but the
+			 grid stays visible alongside it. Default content is today (current
+			 month) or the most recent logged day in view (other months). -->
+		<aside class="hidden lg:block cal-rail" aria-label={$t('calendar.rail_aria')}>
+			{#if railSelectedDate}
+				<div class="cal-rail-header">
+					<button
+						on:click={() => adjustSelectedDate(-1)}
+						class="cal-sheet-nav"
+						aria-label={$t('common.previous_day')}
+					>
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</button>
+					<h2 class="text-base font-semibold flex-1 text-center min-w-0 truncate" aria-live="polite" style="color: var(--text-primary)">
+						{new Date(railSelectedDate + 'T12:00:00').toLocaleDateString($locale, { weekday: 'long', day: 'numeric', month: 'long' })}
+					</h2>
+					<button
+						on:click={() => adjustSelectedDate(1)}
+						class="cal-sheet-nav"
+						aria-label={$t('common.next_day')}
+					>
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</button>
+					<a
+						href="/log/{railSelectedDate}"
+						class="text-sm font-medium flex items-center gap-1 ml-1"
+						style="color: var(--brand)"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+						{$t('common.edit')}
+					</a>
+				</div>
+
+				{#if railDayPhase}
+					<div class="flex justify-center mb-3">
+						<span
+							class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
+							style="background: {PHASE_COLORS[railDayPhase]}26; color: {PHASE_COLORS[railDayPhase]}; border: 1px solid {PHASE_COLORS[railDayPhase]}"
+						>
+							<span class="w-1.5 h-1.5 rounded-full" style="background: {PHASE_COLORS[railDayPhase]}"></span>
+							{$t(`cycle.phase_${railDayPhase}`)}
+						</span>
+					</div>
+				{:else if railDayBands.length > 0}
+					<div class="flex flex-wrap justify-center gap-2 mb-3">
+						{#each railDayBands as band}
+							<span
+								class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
+								style="background: {band.color}1f; color: {band.color}; border: 1px solid {band.color}"
+							>
+								<span class="w-1.5 h-1.5 rounded-full" style="background: {band.color}"></span>
+								{isCustomItem(band.id) ? band.label : $t(band.label)}
+							</span>
+						{/each}
+					</div>
+				{/if}
+
+				{#if railDocs.length > 0}
+					<DayDetail docs={railDocs} {bp} />
+				{:else}
+					<div class="text-center py-4">
+						<div class="mb-3 flex justify-center">
+							<Asterisk size={48} muted color="muted" />
+						</div>
+						<p class="text-sm mb-3" style="color: var(--text-muted)">{$t('calendar.no_entries')}</p>
+						<a
+							href="/log/{railSelectedDate}"
+							class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2"/></svg>
+							{$t('companion.fill_today')}
+						</a>
+					</div>
+				{/if}
+			{/if}
+
+			<MonthMiniSummary
+				{monthName}
+				{triggerDayCount}
+				{rescueMedDayCount}
+				showTrigger={showTriggerMark}
+				showRescue={showRescueMedMark}
+			/>
+		</aside>
+
 	</div>
 </div>
 
@@ -734,12 +895,14 @@
 	 the centred Modal primitive. The same a11y contract (focus trap,
 	 Esc, focus return, role=dialog, aria-modal, prefers-reduced-motion)
 	 is implemented inline above (handlePanelKey + reactive focus
-	 management). PI v15 LB-1+2. -->
+	 management). PI v15 LB-1+2.
+	 CIPH-pi19-B — modal is suppressed at lg+ (≥1024px). The persistent
+	 rail handles day-detail as a layout element instead of an overlay. -->
 <!-- Day detail panel — bottom sheet on mobile, right-side panel on md+
 	 (CIPH-901b). The fly direction picks itself based on viewport at
 	 mount: mobile slides up, desktop slides in from the right. -->
 <svelte:window on:keydown={handlePanelKey} />
-{#if selectedDate}
+{#if selectedDate && !isLg}
 	<button
 		class="fixed inset-0 z-[55] bg-black/40 backdrop-blur-sm"
 		on:click={() => { selectedDate = null; }}
@@ -966,5 +1129,25 @@
 			max-width: none;
 			margin: 0;
 		}
+	}
+
+	/* CIPH-pi19-B — persistent right-rail at lg+. Sticky under the authed
+	   header, max-height pinned so the rail can scroll independently when
+	   DayDetail + MonthMiniSummary together overflow the viewport. The
+	   left border + padding is the visual seam separating browse (grid)
+	   from detail (rail) — no scrim, this is layout not modal. */
+	.cal-rail {
+		position: sticky;
+		top: 80px;
+		max-height: calc(100vh - 96px);
+		overflow-y: auto;
+		border-left: 1px solid var(--border-subtle, var(--border));
+		padding-left: 20px;
+	}
+	.cal-rail-header {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 12px;
 	}
 </style>
