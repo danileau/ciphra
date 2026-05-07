@@ -1247,7 +1247,7 @@ export default {
 	'pdf.compared_to_prev': 'Vergleich zum Vormonat',
 	'pdf.compared_to_prev_year': 'Vergleich zu Vorjahr',
 	'pdf.most_frequent_trigger': 'Häufigster Auslöser',
-	'pdf.rescue_med_days': 'Tage mit Notfallmedikament',
+	'pdf.rescue_med_days': 'Notfallmed.-Tage',
 	'pdf.recovery_instructions_heading': 'So verwendest du dieses Dokument',
 	'pdf.recovery_step_1': 'Bewahre dieses Blatt dort auf, wo nur du Zugriff hast — abschliessbare Schublade, Safe oder Passwort-Manager.',
 	'pdf.recovery_step_2': 'Teile den 12-Wort-Code mit niemandem. ciphra wird ihn nie von dir verlangen.',

@@ -507,17 +507,33 @@ function drawStatCard(
 	doc.setFillColor(...accent);
 	doc.rect(x, y, 1.8, h, 'F');
 
-	// label
+	// label — CIPH-pi19-3-fix: 6.5pt (was 7.5pt) for the narrower 4-tile
+	// context. DE labels like "TAGE MIT NOTFALLMEDIKAMENT" pushed past
+	// the 35mm usable width at 7.5pt; truncation is a defense-in-depth
+	// against future long-label additions.
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(7.5);
+	doc.setFontSize(6.5);
 	doc.setTextColor(...BRAND.textMuted);
-	doc.text(label.toUpperCase(), x + 5, y + 6);
+	const labelPadLeft = 5;
+	const labelPadRight = 3;
+	const maxLabelW = w - labelPadLeft - labelPadRight;
+	let displayLabel = label.toUpperCase();
+	if (doc.getTextWidth(displayLabel) > maxLabelW) {
+		const ell = '…';
+		let s = displayLabel;
+		while (s.length > 1 && doc.getTextWidth(s + ell) > maxLabelW) {
+			s = s.slice(0, -1);
+		}
+		displayLabel = s.trimEnd() + ell;
+	}
+	doc.text(displayLabel, x + labelPadLeft, y + 5.5);
 
-	// value — truncate to a single line + ellipsis if the label is too long
-	// for the card width. Long labels (e.g. PCOS "Vermehrter Haarwuchs
+	// value — truncate to a single line + ellipsis if the value is too long
+	// for the card width. Long values (e.g. PCOS "Vermehrter Haarwuchs
 	// (Gesicht/Körper…)" previously bled into the neighbouring card.
+	// CIPH-pi19-3-fix: 13pt (was 15pt) for the narrower 4-tile context.
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(15);
+	doc.setFontSize(13);
 	doc.setTextColor(...accent);
 	const valPadLeft = 5;
 	const valPadRight = 3;
@@ -554,6 +570,49 @@ function drawStatCard(
 		const text = delta.sign === '=' ? delta.value : `${delta.sign}${delta.value}`;
 		doc.text(text, x + valPadLeft, y + h - 4);
 	}
+}
+
+/* ────────────────────────────────────────────────────────────────
+ * CIPH-pi19-3-fix — Smooth-line helper.
+ *
+ * Catmull-Rom-to-cubic-Bezier conversion for line charts. Returns
+ * doc.lines()-compatible relative deltas: each entry is
+ * [c1dx, c1dy, c2dx, c2dy, edx, edy] — relative to the previous
+ * endpoint, jsPDF's cubic-bezier shape.
+ *
+ * tension = 0.25 is gentler than Chart.js default 0.4 — chosen
+ * because we previously had to revert smoothing entirely after
+ * bezier overshoot dipped below y=0 on descending legs (see the
+ * straight-line comment block in the chart code). Control-point
+ * Y is also explicitly clamped to [yMin, yMax] so even with
+ * extreme adjacent-point spreads, control points can't push the
+ * curve outside the chart frame.
+ * ──────────────────────────────────────────────────────────────── */
+function smoothBezierDeltas(
+	points: Array<[number, number]>,
+	yMin: number,
+	yMax: number,
+	tension = 0.25,
+): number[][] {
+	const out: number[][] = [];
+	if (points.length < 2) return out;
+	const clampY = (y: number): number => Math.max(yMin, Math.min(yMax, y));
+	for (let i = 1; i < points.length; i++) {
+		const p0 = points[i - 2] ?? points[i - 1];
+		const p1 = points[i - 1];
+		const p2 = points[i];
+		const p3 = points[i + 1] ?? points[i];
+		const cp1x = p1[0] + (p2[0] - p0[0]) * tension;
+		const cp1y = clampY(p1[1] + (p2[1] - p0[1]) * tension);
+		const cp2x = p2[0] - (p3[0] - p1[0]) * tension;
+		const cp2y = clampY(p2[1] - (p3[1] - p1[1]) * tension);
+		out.push([
+			cp1x - p1[0], cp1y - p1[1],
+			cp2x - p1[0], cp2y - p1[1],
+			p2[0] - p1[0], p2[1] - p1[1],
+		]);
+	}
+	return out;
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -1621,21 +1680,14 @@ export function generateDoctorPdf(
 
 	cursorY += 6;
 
-	// ── Narrative summary (accessible fallback for the chart) ──
-	// Screen readers can't meaningfully read an SVG-like vector chart, and
-	// doctors triaging a stack of PDFs benefit from a one-sentence TL;DR.
-	const narrativeText = t('pdf.trajectory_narrative', {
-		months: String(MONTHS),
-		first: firstAvg.toFixed(1),
-		last: lastAvg.toFixed(1),
-		trend: trendLabel,
-	});
-	doc.setFont('helvetica', 'italic');
-	doc.setFontSize(8);
-	doc.setTextColor(...BRAND.textSecondary);
-	const narrativeLines = doc.splitTextToSize(narrativeText, pageW - 28);
-	doc.text(narrativeLines, 14, cursorY);
-	cursorY += narrativeLines.length * 3.5 + 3;
+	// CIPH-pi19-3-fix — Narrative paragraph dropped (was 2-3 italic lines
+	// restating firstAvg → lastAvg → trend, all already conveyed by the
+	// trend pill above + the KPI tiles + the chart itself). Screen readers
+	// announce the trend pill text; the paragraph was redundant under the
+	// new KPI vocabulary. Variables `firstAvg`/`lastAvg`/`trendLabel` are
+	// retained because chartContext still exposes them to the bullet block
+	// later in the report.
+	void firstAvg; void lastAvg; void trendLabel;
 
 	const chartX = 22;
 	const chartW = pageW - 28 - 8;
@@ -1798,45 +1850,47 @@ export function generateDoctorPdf(
 		doc.setLineDashPattern([], 0);
 	}
 
-	// Build polyline points. Straight segments + dots match the vital
-	// mini-charts below and avoid the bezier overshoot that previously
-	// clipped the chart's bottom border on descending legs.
+	// CIPH-pi19-3-fix — Re-introduce bezier smoothing to match the rounded
+	// /reports Chart.js style. Tension is held at 0.25 (vs Chart.js 0.4)
+	// AND control-point Y is clamped to [yMin, yMax] inside
+	// smoothBezierDeltas — this addresses the prior regression where
+	// bezier overshoot dipped below y=0 on descending legs and clipped
+	// the chart's bottom border.
 	const points: Array<[number, number]> = monthlyTotals.map((v, i) => [
 		chartX + (i / Math.max(1, MONTHS - 1)) * chartW,
 		cursorY + chartH - (v / yMax) * chartH,
 	]);
 
 	const baseY = cursorY + chartH;
+	const yTop = cursorY;
+	const yBottom = cursorY + chartH;
 
-	// Switched from Catmull-Rom bezier smoothing to straight-line segments +
-	// dots — same visual language as the vital mini-charts below. Bezier
-	// overshoot dipped below y=0 on descending legs, clipping the chart's
-	// bottom border; straight lines eliminate that and make monthly data
-	// points discoverable at a glance.
-
-	// Area fill from straight-line polygon (no bezier deltas).
+	// Area fill — bezier top edge so the area doesn't visually mismatch
+	// the smoothed stroke. Bottom edge stays a straight horizontal segment.
 	if (points.length >= 2) {
 		const firstX = points[0][0];
 		const firstY = points[0][1];
 		const lastX = points[points.length - 1][0];
+		const lastY = points[points.length - 1][1];
+		const bezier = smoothBezierDeltas(points, yTop, yBottom);
+		// Path starts at (firstX, baseY); first delta walks UP to firstY.
 		const areaPath: number[][] = [[0, firstY - baseY]];
-		for (let i = 1; i < points.length; i++) {
-			areaPath.push([points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]]);
-		}
-		areaPath.push([0, baseY - points[points.length - 1][1]]);
+		// Bezier deltas already encoded relative to previous endpoint.
+		for (const seg of bezier) areaPath.push(seg);
+		// Walk DOWN to baseline at lastX, then back HORIZONTALLY to firstX.
+		areaPath.push([0, baseY - lastY]);
 		areaPath.push([-(lastX - firstX), 0]);
 		doc.setFillColor(...acc.primarySoft);
 		doc.setDrawColor(...acc.primarySoft);
 		doc.lines(areaPath, firstX, baseY, undefined, 'F', true);
 	}
 
-	// Stroke straight segments on top
+	// Stroke smoothed bezier segments on top.
 	if (points.length >= 2) {
+		const bezier = smoothBezierDeltas(points, yTop, yBottom);
 		doc.setDrawColor(...acc.primary);
 		doc.setLineWidth(0.8);
-		for (let i = 1; i < points.length; i++) {
-			doc.line(points[i - 1][0], points[i - 1][1], points[i][0], points[i][1]);
-		}
+		doc.lines(bezier, points[0][0], points[0][1], undefined, 'S', false);
 	}
 
 	// Data dot at every monthly value (matches mini-chart style).
@@ -1857,12 +1911,13 @@ export function generateDoctorPdf(
 			chartX + (i / Math.max(1, MONTHS - 1)) * chartW,
 			cursorY + chartH - (v / symptomMax) * chartH,
 		]);
+		// CIPH-pi19-3-fix — same bezier smoothing as the primary line so
+		// the two series read as one visual family.
 		doc.setDrawColor(...BRAND.textMuted);
 		doc.setLineWidth(0.4);
 		doc.setLineDashPattern([1.2, 1.2], 0);
-		for (let i = 1; i < sPoints.length; i++) {
-			doc.line(sPoints[i - 1][0], sPoints[i - 1][1], sPoints[i][0], sPoints[i][1]);
-		}
+		const sBezier = smoothBezierDeltas(sPoints, yTop, yBottom);
+		doc.lines(sBezier, sPoints[0][0], sPoints[0][1], undefined, 'S', false);
 		doc.setLineDashPattern([], 0);
 		doc.setFillColor(...BRAND.textMuted);
 		for (const [px, py] of sPoints) doc.circle(px, py, 0.4, 'F');
@@ -2197,7 +2252,12 @@ export function generateDoctorPdf(
 				}
 			}
 
-			// Each series — straight segments + dots (sparse data is honest)
+			// Each series — CIPH-pi19-3-fix: bezier-smoothed segments to
+			// match the rounded /reports Chart.js style. Same tension/clamp
+			// discipline as the trajectory line so overshoot can't dip below
+			// the chart frame.
+			const yTopMini = cursorY;
+			const yBottomMini = cursorY + ch;
 			for (const s of chart.series) {
 				const rgb = hexToRGB(s.color);
 				doc.setDrawColor(...rgb);
@@ -2210,8 +2270,9 @@ export function generateDoctorPdf(
 					const y = cursorY + ch - ((v - yMin) / ySpan) * ch;
 					pts.push([x, y]);
 				}
-				for (let i = 1; i < pts.length; i++) {
-					doc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+				if (pts.length >= 2) {
+					const bezier = smoothBezierDeltas(pts, yTopMini, yBottomMini);
+					doc.lines(bezier, pts[0][0], pts[0][1], undefined, 'S', false);
 				}
 				doc.setFillColor(...rgb);
 				for (const [x, y] of pts) doc.circle(x, y, 0.55, 'F');

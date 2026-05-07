@@ -1226,7 +1226,7 @@ export default {
 	'pdf.compared_to_prev': 'Confronto con il mese precedente',
 	'pdf.compared_to_prev_year': "Rispetto all'anno precedente",
 	'pdf.most_frequent_trigger': 'Fattore scatenante più frequente',
-	'pdf.rescue_med_days': 'Giorni con farmaco di emergenza',
+	'pdf.rescue_med_days': 'Giorni farm. emerg.',
 	'pdf.recovery_instructions_heading': 'Come usare questo documento',
 	'pdf.recovery_step_1': 'Conserva questa pagina in un luogo accessibile solo a te — cassetto chiuso a chiave, cassaforte o password manager.',
 	'pdf.recovery_step_2': 'Non condividere mai il codice a 12 parole. Lo staff ciphra non te lo chiederà mai.',

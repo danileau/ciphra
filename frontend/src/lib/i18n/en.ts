@@ -1226,7 +1226,7 @@ export default {
 	'pdf.compared_to_prev': 'Compared to previous month',
 	'pdf.compared_to_prev_year': 'Compared to prior year',
 	'pdf.most_frequent_trigger': 'Most frequent trigger',
-	'pdf.rescue_med_days': 'Days with rescue medication',
+	'pdf.rescue_med_days': 'Rescue-med days',
 	'pdf.recovery_instructions_heading': 'How to use this document',
 	'pdf.recovery_step_1': 'Store this page somewhere only you can access — a locked drawer, a safe, or a password manager vault.',
 	'pdf.recovery_step_2': 'Never share the 12-word code. ciphra staff will never ask for it.',
