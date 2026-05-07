@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t, locale } from '$lib/i18n';
+	import { t, locale, plural } from '$lib/i18n';
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
@@ -132,6 +132,44 @@
 		return m;
 	})();
 
+	// CIPH-pi19-A — per-day trigger + rescue-med tally for the cell encoding.
+	// Same memoization shape as docsByDay: bucket once per monthDocs change so
+	// each cell is O(1). Maps date-string → count (zero-implies-absent).
+	$: triggerCountByDay = (() => {
+		const m = new Map<string, number>();
+		for (const d of monthDocs) {
+			if (d.data.type !== 'entry') continue;
+			const ds = String(d.data.date || '');
+			if (!ds) continue;
+			const trs = (d.data as Record<string, unknown>).triggers as unknown;
+			let n = 0;
+			if (Array.isArray(trs)) {
+				n = trs.length;
+			} else if (trs && typeof trs === 'object') {
+				for (const v of Object.values(trs as Record<string, boolean>)) {
+					if (v) n++;
+				}
+			}
+			if (n > 0) m.set(ds, (m.get(ds) || 0) + n);
+		}
+		return m;
+	})();
+	$: rescueMedCountByDay = (() => {
+		const m = new Map<string, number>();
+		for (const d of monthDocs) {
+			if (d.data.type !== 'event' || (d.data as Record<string, unknown>).kind !== 'medication') continue;
+			const ds = String(d.data.date || '');
+			if (!ds) continue;
+			m.set(ds, (m.get(ds) || 0) + 1);
+		}
+		return m;
+	})();
+	// CIPH-pi19-A — gates: only render the marks if the blueprint declares
+	// the corresponding feature. ADHD blueprints (no rescueMedications) skip
+	// the edge bar entirely; data-driven, not cohort-switched.
+	$: showTriggerMark = (bp?.triggers?.length ?? 0) > 0;
+	$: showRescueMedMark = (bp?.rescueMedications?.length ?? 0) > 0;
+
 	function getDocsForDay(day: number): CiphraDocument[] {
 		const ds = `${monthPrefix}-${String(day).padStart(2, '0')}`;
 		return docsByDay.get(ds) || [];
@@ -167,6 +205,20 @@
 		return getDocsForDay(day).some(d => d.data.type === 'entry');
 	}
 
+	// CIPH-pi19-A — counter-row triangle (slot 3) + right-edge bar.
+	function dayHasTrigger(day: number): boolean {
+		return (triggerCountByDay.get(`${monthPrefix}-${String(day).padStart(2, '0')}`) || 0) > 0;
+	}
+	function dayHasRescueMed(day: number): boolean {
+		return (rescueMedCountByDay.get(`${monthPrefix}-${String(day).padStart(2, '0')}`) || 0) > 0;
+	}
+	function countTriggersForDay(day: number): number {
+		return triggerCountByDay.get(`${monthPrefix}-${String(day).padStart(2, '0')}`) || 0;
+	}
+	function countRescueMedsForDay(day: number): number {
+		return rescueMedCountByDay.get(`${monthPrefix}-${String(day).padStart(2, '0')}`) || 0;
+	}
+
 	/** Count active symptoms across all entry docs on this day. */
 	function countSymptomsForDay(day: number): number {
 		const docs = getDocsForDay(day);
@@ -199,13 +251,21 @@
 		});
 		const epCount = countEpisodesForDay(day);
 		const symCount = countSymptomsForDay(day);
+		// CIPH-pi19-A — append cardinality suffixes when the blueprint declares
+		// the feature AND the day carries the signal. plural() picks _one/_other.
+		const trigCount = showTriggerMark ? countTriggersForDay(day) : 0;
+		const rescueCount = showRescueMedMark ? countRescueMedsForDay(day) : 0;
+		const trigSuffix = trigCount > 0 ? plural($t, $locale, 'calendar.aria_day_trigger_suffix', trigCount) : '';
+		const rescueSuffix = rescueCount > 0 ? plural($t, $locale, 'calendar.aria_day_rescue_suffix', rescueCount) : '';
+		let base: string;
 		if (epCount > 0) {
-			return $t('calendar.aria_day_episode', { date: dateFmt, episodes: epCount, symptoms: symCount });
+			base = $t('calendar.aria_day_episode', { date: dateFmt, episodes: epCount, symptoms: symCount });
+		} else if (dayHasLog(day)) {
+			base = $t('calendar.aria_day_logged', { date: dateFmt, count: symCount });
+		} else {
+			base = $t('calendar.aria_day_empty', { date: dateFmt });
 		}
-		if (dayHasLog(day)) {
-			return $t('calendar.aria_day_logged', { date: dateFmt, count: symCount });
-		}
-		return $t('calendar.aria_day_empty', { date: dateFmt });
+		return base + trigSuffix + rescueSuffix;
 	}
 
 	$: selectedDayDocs = selectedDate ? $documents.filter(d => String(d.data.date || '') === selectedDate) : [];
@@ -494,6 +554,8 @@
 					{@const bands = dayMultiDayBands(day)}
 					{@const phase = dayPhase(day)}
 					{@const phaseIsOverridden = dayPhaseOverride(day) !== null}
+					{@const hasTrigger = showTriggerMark && dayHasTrigger(day)}
+					{@const hasRescueMed = showRescueMedMark && dayHasRescueMed(day)}
 					<button
 						on:click={() => { selectedDate = dayStr; focusedDay = day; }}
 						on:keydown={(e) => handleGridKey(e, day)}
@@ -521,15 +583,34 @@
 						>{day}</span>
 						<!-- CIPH-855b — counter-dots dim to 40% when a phase band is
 							 active on this cell AND the blueprint is a phase cohort,
-							 so the band reads as the primary signal. -->
-						<div class="flex gap-0.5 mt-0.5" style="opacity: {phaseBandEmphasis && bands.length > 0 ? 0.4 : 1}">
+							 so the band reads as the primary signal.
+							 CIPH-pi19-A — counter row extended to 3-slot grammar:
+							 slot 1 = episode (red dot), slot 2 = log (olive dot),
+							 slot 3 = trigger (ochre triangle — shape variant for
+							 color-blind safety). -->
+						<div class="flex gap-0.5 mt-0.5 items-center" style="opacity: {phaseBandEmphasis && bands.length > 0 ? 0.4 : 1}">
 							{#if hasEpisode}
 								<span class="w-1.5 h-1.5 rounded-full" style="background: var(--danger)"></span>
 							{/if}
 							{#if hasLog}
 								<span class="w-1.5 h-1.5 rounded-full" style="background: var(--olive)"></span>
 							{/if}
+							{#if hasTrigger}
+								<span aria-hidden="true" style="width: 0; height: 0; border-left: 3px solid transparent; border-right: 3px solid transparent; border-bottom: 6px solid var(--ochre);"></span>
+							{/if}
 						</div>
+						<!-- CIPH-pi19-A — rescue-med edge bar. The clinically strongest
+							 signal gets a position the dot row can't drown: a 3px brand
+							 stripe down the right edge. Outside the dot-row dim rule by
+							 design — rescue meds always read first. pointer-events:none
+							 keeps the whole cell as the 44×44 hit zone. -->
+						{#if hasRescueMed}
+							<span
+								aria-hidden="true"
+								class="absolute"
+								style="top: 4px; bottom: 4px; right: 0; width: 3px; border-radius: 2px 0 0 2px; background: var(--brand); pointer-events: none;"
+							></span>
+						{/if}
 						{#if bands.length > 0}
 							<!-- CIPH-855b — 6px bands for phase cohort (foreground),
 								 3px default for everyone else (backward-compat). -->

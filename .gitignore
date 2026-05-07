@@ -10,3 +10,4 @@ api/seed_*.py
 api/fixtures/
 pdfs
 frontend/test-results
+.vite/
