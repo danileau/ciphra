@@ -49,8 +49,8 @@ describe('CIPH-pi19-A render gates are blueprint-driven', () => {
 describe('CIPH-pi19-A counter-row triangle (slot 3)', () => {
 	it('renders an ochre triangle when hasTrigger', () => {
 		// Triangle uses CSS border trick: width 0, height 0,
-		// border-bottom 6px solid var(--ochre).
-		expect(CAL).toMatch(/\{#if hasTrigger\}[\s\S]{0,200}border-bottom:\s*6px solid var\(--ochre\)/);
+		// border-bottom 8px solid var(--ochre) (CIPH-pi19-A3 bump from 6px).
+		expect(CAL).toMatch(/\{#if hasTrigger\}[\s\S]{0,200}border-bottom:\s*8px solid var\(--ochre\)/);
 	});
 
 	it('triangle is aria-hidden (the cardinality lives in the parent label)', () => {
@@ -60,7 +60,7 @@ describe('CIPH-pi19-A counter-row triangle (slot 3)', () => {
 	it('triangle inherits the dot-row dim under phaseBandEmphasis', () => {
 		// Triangle is a sibling of the existing dot spans inside the same
 		// flex row that already carries the opacity binding.
-		const row = CAL.match(/<div class="flex gap-0\.5 mt-0\.5 items-center"[\s\S]*?<\/div>/);
+		const row = CAL.match(/<div class="flex gap-1 mt-0\.5 items-center"[\s\S]*?<\/div>/);
 		expect(row, 'expected dot row markup').toBeTruthy();
 		expect(row![0]).toMatch(/opacity:\s*\{phaseBandEmphasis/);
 		expect(row![0]).toMatch(/\{#if hasTrigger\}/);
@@ -68,9 +68,11 @@ describe('CIPH-pi19-A counter-row triangle (slot 3)', () => {
 });
 
 describe('CIPH-pi19-A rescue-med right-edge bar', () => {
-	it('renders a 3px brand bar absolutely-positioned on the right edge', () => {
+	it('renders a 4px brand bar absolutely-positioned on the right edge', () => {
+		// CIPH-pi19-A3 — bumped from 3px after persona feedback that the
+		// edge bar was easy to miss alongside the bigger triangle.
 		expect(CAL).toMatch(
-			/\{#if hasRescueMed\}[\s\S]{0,400}width:\s*3px[\s\S]{0,80}background:\s*var\(--brand\)/,
+			/\{#if hasRescueMed\}[\s\S]{0,400}width:\s*4px[\s\S]{0,80}background:\s*var\(--brand\)/,
 		);
 	});
 
@@ -82,7 +84,7 @@ describe('CIPH-pi19-A rescue-med right-edge bar', () => {
 	it('bar is OUTSIDE the dot-row dim wrapper (always reads first)', () => {
 		// The bar lives in its own absolutely-positioned <span>, NOT inside
 		// the .flex.gap-0.5.mt-0.5 dot row that gets opacity-dimmed.
-		const dotRowMatch = CAL.match(/<div class="flex gap-0\.5 mt-0\.5 items-center"[\s\S]*?<\/div>/);
+		const dotRowMatch = CAL.match(/<div class="flex gap-1 mt-0\.5 items-center"[\s\S]*?<\/div>/);
 		expect(dotRowMatch).toBeTruthy();
 		expect(dotRowMatch![0]).not.toMatch(/\{#if hasRescueMed\}/);
 	});
@@ -158,7 +160,7 @@ describe('CIPH-pi19-A2 cell-mark legend', () => {
 		expect(legendBlock, 'expected legend block to be matchable').toBeTruthy();
 		expect(legendBlock![0]).toMatch(/background:\s*var\(--danger\)/);
 		expect(legendBlock![0]).toMatch(/background:\s*var\(--olive\)/);
-		expect(legendBlock![0]).toMatch(/border-bottom:\s*6px solid var\(--ochre\)/);
+		expect(legendBlock![0]).toMatch(/border-bottom:\s*8px solid var\(--ochre\)/);
 		expect(legendBlock![0]).toMatch(/background:\s*var\(--brand\)/);
 	});
 });

@@ -127,7 +127,7 @@ describe('CIPH-pi19-B MonthMiniSummary component contract', () => {
 	});
 
 	it('glyphs mirror the cell encoding (ochre triangle + brand bar)', () => {
-		expect(MINI).toMatch(/border-bottom:\s*6px solid var\(--ochre\)/);
+		expect(MINI).toMatch(/border-bottom:\s*8px solid var\(--ochre\)/);
 		expect(MINI).toMatch(/background:\s*var\(--brand\)/);
 	});
 

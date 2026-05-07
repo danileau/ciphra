@@ -159,13 +159,13 @@
 	.cal-mini-glyph-trigger {
 		width: 0;
 		height: 0;
-		border-left: 3px solid transparent;
-		border-right: 3px solid transparent;
-		border-bottom: 6px solid var(--ochre);
+		border-left: 4px solid transparent;
+		border-right: 4px solid transparent;
+		border-bottom: 8px solid var(--ochre);
 	}
 	.cal-mini-glyph-rescue {
-		width: 3px;
-		height: 12px;
+		width: 4px;
+		height: 14px;
 		border-radius: 2px;
 		background: var(--brand);
 	}

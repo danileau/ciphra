@@ -630,22 +630,22 @@
 			<div class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]" aria-label={$t('calendar.cell_legend_aria')}>
 				<span class="uppercase tracking-wider font-medium" style="color: var(--text-muted)">{$t('calendar.cell_legend')}</span>
 				<span class="inline-flex items-center gap-1.5">
-					<span class="w-1.5 h-1.5 rounded-full" style="background: var(--danger)"></span>
+					<span class="w-2 h-2 rounded-full" style="background: var(--danger)"></span>
 					<span style="color: var(--text-secondary)">{$t('calendar.cell_legend_episode')}</span>
 				</span>
 				<span class="inline-flex items-center gap-1.5">
-					<span class="w-1.5 h-1.5 rounded-full" style="background: var(--olive)"></span>
+					<span class="w-2 h-2 rounded-full" style="background: var(--olive)"></span>
 					<span style="color: var(--text-secondary)">{$t('calendar.cell_legend_log')}</span>
 				</span>
 				{#if showTriggerMark}
 					<span class="inline-flex items-center gap-1.5">
-						<span aria-hidden="true" style="width: 0; height: 0; border-left: 3px solid transparent; border-right: 3px solid transparent; border-bottom: 6px solid var(--ochre);"></span>
+						<span aria-hidden="true" style="width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 8px solid var(--ochre);"></span>
 						<span style="color: var(--text-secondary)">{$t('calendar.cell_legend_trigger')}</span>
 					</span>
 				{/if}
 				{#if showRescueMedMark}
 					<span class="inline-flex items-center gap-1.5">
-						<span aria-hidden="true" class="block" style="width: 3px; height: 12px; border-radius: 2px; background: var(--brand)"></span>
+						<span aria-hidden="true" class="block" style="width: 4px; height: 14px; border-radius: 2px; background: var(--brand)"></span>
 						<span style="color: var(--text-secondary)">{$t('calendar.cell_legend_rescue')}</span>
 					</span>
 				{/if}
@@ -707,20 +707,26 @@
 							 CIPH-pi19-A — counter row extended to 3-slot grammar:
 							 slot 1 = episode (red dot), slot 2 = log (olive dot),
 							 slot 3 = trigger (ochre triangle — shape variant for
-							 color-blind safety). -->
-						<div class="flex gap-0.5 mt-0.5 items-center" style="opacity: {phaseBandEmphasis && bands.length > 0 ? 0.4 : 1}">
+							 color-blind safety).
+							 CIPH-pi19-A3 — sizes bumped (6px → 8px dots, 6×6 → 8×8
+							 triangle, 3px → 4px edge bar) after persona feedback that
+							 the marks were "very small and the triangles hard to
+							 identify." Cell capacity (≥44px tall, day text 14px +
+							 2px gap + 8px marks + ≤6px band = 30px) absorbs the bump
+							 without crowding. -->
+						<div class="flex gap-1 mt-0.5 items-center" style="opacity: {phaseBandEmphasis && bands.length > 0 ? 0.4 : 1}">
 							{#if hasEpisode}
-								<span class="w-1.5 h-1.5 rounded-full" style="background: var(--danger)"></span>
+								<span class="w-2 h-2 rounded-full" style="background: var(--danger)"></span>
 							{/if}
 							{#if hasLog}
-								<span class="w-1.5 h-1.5 rounded-full" style="background: var(--olive)"></span>
+								<span class="w-2 h-2 rounded-full" style="background: var(--olive)"></span>
 							{/if}
 							{#if hasTrigger}
-								<span aria-hidden="true" style="width: 0; height: 0; border-left: 3px solid transparent; border-right: 3px solid transparent; border-bottom: 6px solid var(--ochre);"></span>
+								<span aria-hidden="true" style="width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 8px solid var(--ochre);"></span>
 							{/if}
 						</div>
 						<!-- CIPH-pi19-A — rescue-med edge bar. The clinically strongest
-							 signal gets a position the dot row can't drown: a 3px brand
+							 signal gets a position the dot row can't drown: a 4px brand
 							 stripe down the right edge. Outside the dot-row dim rule by
 							 design — rescue meds always read first. pointer-events:none
 							 keeps the whole cell as the 44×44 hit zone. -->
@@ -728,7 +734,7 @@
 							<span
 								aria-hidden="true"
 								class="absolute"
-								style="top: 4px; bottom: 4px; right: 0; width: 3px; border-radius: 2px 0 0 2px; background: var(--brand); pointer-events: none;"
+								style="top: 4px; bottom: 4px; right: 0; width: 4px; border-radius: 2px 0 0 2px; background: var(--brand); pointer-events: none;"
 							></span>
 						{/if}
 						{#if bands.length > 0}
