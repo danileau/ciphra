@@ -863,6 +863,13 @@ export default {
 
 	// Settings
 	'settings.appearance': 'Darstellung',
+	'settings.local_data': 'Daten auf diesem Gerät',
+	'settings.local_data_desc': 'Für schnellere Ladezeiten werden entschlüsselte Dokumente lokal zwischengespeichert. Beim Abmelden wird dieser Speicher automatisch geleert. Mit dieser Aktion kannst du ihn jederzeit ohne Abmelden leeren.',
+	'settings.local_data_loading': 'Lokaler Speicher wird geprüft …',
+	'settings.local_data_empty': 'Aktuell sind keine entschlüsselten Dokumente lokal gespeichert.',
+	'settings.local_data_count': '{count} entschlüsselte Dokumente sind lokal zwischengespeichert.',
+	'settings.local_data_clear': 'Cache jetzt leeren',
+	'settings.local_data_cleared': 'Lokaler Speicher wurde geleert. Beim nächsten Aufruf werden die Daten neu vom Server entschlüsselt.',
 	'settings.current_profile': 'Aktuelles Profil',
 	'settings.customize_profile': 'Profil anpassen (Setup-Assistent)',
 	'settings.switch_template': 'Vorlage wechseln',

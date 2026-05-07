@@ -843,6 +843,13 @@ export default {
 
 	// Settings
 	'settings.appearance': 'Apparence',
+	'settings.local_data': 'Données sur cet appareil',
+	'settings.local_data_desc': 'Pour des chargements plus rapides, les documents déchiffrés sont mis en cache localement. La déconnexion vide ce cache automatiquement. Cette action te permet de le vider sans te déconnecter.',
+	'settings.local_data_loading': 'Vérification du stockage local …',
+	'settings.local_data_empty': 'Aucun document déchiffré n\'est mis en cache localement actuellement.',
+	'settings.local_data_count': '{count} documents déchiffrés sont mis en cache localement.',
+	'settings.local_data_clear': 'Vider le cache maintenant',
+	'settings.local_data_cleared': 'Cache local vidé. Les données seront déchiffrées à nouveau depuis le serveur lors de la prochaine utilisation.',
 	'settings.current_profile': 'Profil actuel',
 	'settings.customize_profile': 'Personnaliser le profil (assistant de configuration)',
 	'settings.switch_template': 'Changer de modèle',

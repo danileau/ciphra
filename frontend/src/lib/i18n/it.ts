@@ -844,6 +844,13 @@ export default {
 
 	// Settings
 	'settings.appearance': 'Aspetto',
+	'settings.local_data': 'Dati su questo dispositivo',
+	'settings.local_data_desc': 'Per caricamenti più veloci, i documenti decifrati vengono memorizzati nella cache locale. Il logout svuota automaticamente questa cache. Questa azione permette di svuotarla senza disconnettersi.',
+	'settings.local_data_loading': 'Verifica della memoria locale …',
+	'settings.local_data_empty': 'Al momento nessun documento decifrato è memorizzato localmente.',
+	'settings.local_data_count': '{count} documenti decifrati sono memorizzati localmente.',
+	'settings.local_data_clear': 'Svuota la cache ora',
+	'settings.local_data_cleared': 'Cache locale svuotata. I dati verranno decifrati di nuovo dal server al prossimo utilizzo.',
 	'settings.current_profile': 'Profilo attuale',
 	'settings.customize_profile': 'Personalizza profilo (assistente di configurazione)',
 	'settings.switch_template': 'Cambia modello',

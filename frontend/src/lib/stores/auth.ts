@@ -154,6 +154,30 @@ function createAuthStore() {
 				saveToStorage(next);
 				return next;
 			});
+		},
+		// CIPH-pi20-LB-2 — wipe locally-cached plaintext without ending
+		// the session. Mirrors logout()'s on-disk wipe (IndexedDB +
+		// SW navigation cache) but leaves localStorage/sessionStorage and
+		// the in-memory state intact so the user stays logged in. Returns
+		// when both wipes complete (or fail loudly via console.error).
+		// SECURITY.md "What the browser stores" section points users at
+		// this — keep that doc in sync with the wipe contract here.
+		async clearLocalCache() {
+			if (!browser) return;
+			try {
+				const m = await import('$lib/idb');
+				await m.clearAllPartitions();
+			} catch (e) {
+				console.error('clearLocalCache: IndexedDB wipe failed', e);
+			}
+			if (typeof caches !== 'undefined') {
+				try {
+					const keys = await caches.keys();
+					await Promise.all(keys.filter((k) => k.startsWith('ciphra-')).map((k) => caches.delete(k)));
+				} catch (e) {
+					console.error('clearLocalCache: SW cache purge failed', e);
+				}
+			}
 		}
 	};
 }

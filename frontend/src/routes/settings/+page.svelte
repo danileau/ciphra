@@ -112,6 +112,44 @@
 	let passwordSuccess = false;
 	let passwordLoading = false;
 
+	// CIPH-pi20-LB-2 — Local-cache wipe affordance. Counterpart to the
+	// SECURITY.md "What the browser stores" disclosure: lets the user
+	// wipe IndexedDB plaintext + SW navigation cache without ending
+	// the session.
+	let cachedDocCount: number | null = null;
+	let clearingCache = false;
+	let cacheCleared = false;
+
+	async function refreshCachedCount() {
+		try {
+			const state = get(auth);
+			if (!state.username) {
+				cachedDocCount = 0;
+				return;
+			}
+			const m = await import('$lib/idb');
+			const docs = await m.getAllDocs(state.username);
+			cachedDocCount = docs.length;
+		} catch {
+			cachedDocCount = null;
+		}
+	}
+
+	async function handleClearCache() {
+		clearingCache = true;
+		cacheCleared = false;
+		try {
+			await auth.clearLocalCache();
+			cachedDocCount = 0;
+			cacheCleared = true;
+			// Auto-hide the success line after ~4s so the section settles
+			// back to the steady-state.
+			setTimeout(() => { cacheCleared = false; }, 4000);
+		} finally {
+			clearingCache = false;
+		}
+	}
+
 	// CIPH-411b — Medication editor state
 	let medEditorOpen = false;
 	let medEditingId: string | null = null;
@@ -336,6 +374,9 @@
 	onMount(() => {
 		if (!$isAuthenticated) goto('/login');
 		documents.load();
+		// CIPH-pi20-LB-2 — read the IndexedDB-cached doc count once on
+		// mount so the privacy row shows a real number, not a placeholder.
+		refreshCachedCount();
 	});
 
 	// Settings reads BOTH stores: `bp` is the raw blueprint (so the
@@ -567,6 +608,37 @@
 		>
 			{$t('auth.logout')}
 		</button>
+	</section>
+
+	<!-- CIPH-pi20-LB-2 — Local data row. Sibling action to logout: same
+		 wipe path (IndexedDB plaintext + SW cache), session preserved.
+		 SECURITY.md "What the browser stores" section is the long-form
+		 disclosure this row points users at. -->
+	<section class="card p-5 mt-6" aria-labelledby="settings-local-data-heading">
+		<h3 id="settings-local-data-heading" class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.local_data')}</h3>
+		<p class="text-sm mb-2" style="color: var(--text-secondary)">{$t('settings.local_data_desc')}</p>
+		<p class="text-xs mb-3" style="color: var(--text-muted)">
+			{#if cachedDocCount === null}
+				{$t('settings.local_data_loading')}
+			{:else if cachedDocCount === 0}
+				{$t('settings.local_data_empty')}
+			{:else}
+				{$t('settings.local_data_count', { count: String(cachedDocCount) })}
+			{/if}
+		</p>
+		<button
+			type="button"
+			on:click={handleClearCache}
+			disabled={clearingCache || cachedDocCount === 0}
+			class="w-full py-2 rounded-xl text-sm font-medium min-h-[44px] transition-colors disabled:opacity-50"
+			style="background: var(--surface-muted); color: var(--text-primary); border: 1px solid var(--border)"
+			data-testid="clear-local-cache"
+		>
+			{clearingCache ? $t('common.loading') : $t('settings.local_data_clear')}
+		</button>
+		{#if cacheCleared}
+			<p class="text-sm mt-3" role="status" style="color: var(--success)">{$t('settings.local_data_cleared')}</p>
+		{/if}
 	</section>
 
 	<!-- Language & Appearance -->

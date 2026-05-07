@@ -843,6 +843,13 @@ export default {
 
 	// Settings
 	'settings.appearance': 'Appearance',
+	'settings.local_data': 'Data on this device',
+	'settings.local_data_desc': 'For faster page loads, decrypted documents are cached locally. Logging out clears this cache automatically. This action lets you clear it without logging out.',
+	'settings.local_data_loading': 'Checking local storage …',
+	'settings.local_data_empty': 'No decrypted documents are cached locally right now.',
+	'settings.local_data_count': '{count} decrypted documents are cached locally.',
+	'settings.local_data_clear': 'Clear cache now',
+	'settings.local_data_cleared': 'Local cache cleared. Data will be re-decrypted from the server on next use.',
 	'settings.current_profile': 'Current profile',
 	'settings.customize_profile': 'Customize profile (setup wizard)',
 	'settings.switch_template': 'Switch template',
