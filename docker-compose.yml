@@ -23,6 +23,10 @@ services:
   api:
     build:
       context: ./api
+      # CIPH-pi20-LB-4 — `dev` target adds pytest so tests can run via
+      # `docker compose run --rm api pytest -q`. Production deploys
+      # should override `target: prod` for a smaller image.
+      target: dev
     container_name: ciphra-api
     depends_on:
       postgres:
