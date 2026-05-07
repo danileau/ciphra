@@ -485,7 +485,9 @@
 
 			<!-- CIPH-855a — Cycle-phase legend. Shown only for the cycle
 				 cohort so non-cycle users don't see unused chrome. Day-cell
-				 background color at 15% opacity maps 1:1 to these swatches. -->
+				 background color at 15% opacity maps 1:1 to these swatches.
+				 CIPH-pi19-A2 — last item explains the corner-triangle
+				 indicator for manually-overridden days (CIPH-886). -->
 			{#if cycleOverlayActive}
 				<div class="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]" aria-label={$t('cycle.phase_legend_aria')}>
 					<span class="uppercase tracking-wider font-medium" style="color: var(--text-muted)">{$t('cycle.phase_legend')}</span>
@@ -495,6 +497,21 @@
 							<span style="color: var(--text-secondary)">{$t('cycle.phase_' + ph)}</span>
 						</span>
 					{/each}
+					<span class="inline-flex items-center gap-1.5">
+						<span class="relative inline-block w-3 h-3 rounded" style="background: {PHASE_COLORS.luteal}26; border: 1px solid {PHASE_COLORS.luteal}">
+							<svg
+								class="absolute"
+								style="top: 0; right: 0;"
+								width="6"
+								height="6"
+								viewBox="0 0 6 6"
+								aria-hidden="true"
+							>
+								<polygon points="0,6 6,6 6,0" fill={PHASE_COLORS.luteal} />
+							</svg>
+						</span>
+						<span style="color: var(--text-secondary)">{$t('cycle.phase_override_legend')}</span>
+					</span>
 				</div>
 				<!-- CIPH-879 — anchor correction hint. Shows which logged day the
 					 calculated phases are pivoting on, and one-tap links the user
@@ -530,6 +547,35 @@
 					{/each}
 				</div>
 			{/if}
+
+			<!-- CIPH-pi19-A2 — cell-mark legend. Explains the 4 in-cell encodings
+				 (episode dot, log dot, trigger triangle, rescue-med edge bar) so
+				 the new shapes from CIPH-pi19-A aren't a guessing game. Same data-
+				 driven gating as the marks themselves: triangle/bar only appear
+				 here if the blueprint declares the corresponding feature. -->
+			<div class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]" aria-label={$t('calendar.cell_legend_aria')}>
+				<span class="uppercase tracking-wider font-medium" style="color: var(--text-muted)">{$t('calendar.cell_legend')}</span>
+				<span class="inline-flex items-center gap-1.5">
+					<span class="w-1.5 h-1.5 rounded-full" style="background: var(--danger)"></span>
+					<span style="color: var(--text-secondary)">{$t('calendar.cell_legend_episode')}</span>
+				</span>
+				<span class="inline-flex items-center gap-1.5">
+					<span class="w-1.5 h-1.5 rounded-full" style="background: var(--olive)"></span>
+					<span style="color: var(--text-secondary)">{$t('calendar.cell_legend_log')}</span>
+				</span>
+				{#if showTriggerMark}
+					<span class="inline-flex items-center gap-1.5">
+						<span aria-hidden="true" style="width: 0; height: 0; border-left: 3px solid transparent; border-right: 3px solid transparent; border-bottom: 6px solid var(--ochre);"></span>
+						<span style="color: var(--text-secondary)">{$t('calendar.cell_legend_trigger')}</span>
+					</span>
+				{/if}
+				{#if showRescueMedMark}
+					<span class="inline-flex items-center gap-1.5">
+						<span aria-hidden="true" class="block" style="width: 3px; height: 12px; border-radius: 2px; background: var(--brand)"></span>
+						<span style="color: var(--text-secondary)">{$t('calendar.cell_legend_rescue')}</span>
+					</span>
+				{/if}
+			</div>
 
 			<!-- Weekday headers -->
 			<div class="grid grid-cols-7 gap-1 md:gap-0.5 mb-1" role="row">

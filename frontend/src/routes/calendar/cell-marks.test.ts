@@ -124,3 +124,79 @@ describe('CIPH-pi19-A i18n', () => {
 		});
 	}
 });
+
+describe('CIPH-pi19-A2 cell-mark legend', () => {
+	it('legend row uses calendar.cell_legend header + cell_legend_aria label', () => {
+		expect(CAL).toMatch(/aria-label=\{\$t\('calendar\.cell_legend_aria'\)\}/);
+		expect(CAL).toMatch(/\$t\('calendar\.cell_legend'\)/);
+	});
+
+	it('episode + log items always render (no gate)', () => {
+		// The two dot items live at the top of the legend row and are not
+		// wrapped in {#if showTriggerMark} / {#if showRescueMedMark}.
+		expect(CAL).toMatch(/\$t\('calendar\.cell_legend_episode'\)/);
+		expect(CAL).toMatch(/\$t\('calendar\.cell_legend_log'\)/);
+	});
+
+	it('trigger item is gated on showTriggerMark', () => {
+		expect(CAL).toMatch(
+			/\{#if showTriggerMark\}[\s\S]{0,400}\$t\('calendar\.cell_legend_trigger'\)/,
+		);
+	});
+
+	it('rescue item is gated on showRescueMedMark', () => {
+		expect(CAL).toMatch(
+			/\{#if showRescueMedMark\}[\s\S]{0,400}\$t\('calendar\.cell_legend_rescue'\)/,
+		);
+	});
+
+	it('legend swatches mirror the cell encodings (danger / olive / ochre / brand)', () => {
+		// One legend row contains all four swatches when the gates pass.
+		const legendBlock = CAL.match(
+			/aria-label=\{\$t\('calendar\.cell_legend_aria'\)\}[\s\S]*?<\/div>\s*<!-- Weekday headers/,
+		);
+		expect(legendBlock, 'expected legend block to be matchable').toBeTruthy();
+		expect(legendBlock![0]).toMatch(/background:\s*var\(--danger\)/);
+		expect(legendBlock![0]).toMatch(/background:\s*var\(--olive\)/);
+		expect(legendBlock![0]).toMatch(/border-bottom:\s*6px solid var\(--ochre\)/);
+		expect(legendBlock![0]).toMatch(/background:\s*var\(--brand\)/);
+	});
+});
+
+describe('CIPH-pi19-A2 i18n legend keys', () => {
+	const KEYS = [
+		'calendar.cell_legend',
+		'calendar.cell_legend_aria',
+		'calendar.cell_legend_episode',
+		'calendar.cell_legend_log',
+		'calendar.cell_legend_trigger',
+		'calendar.cell_legend_rescue',
+		'cycle.phase_override_legend',
+	] as const;
+	for (const locale of ['de', 'en', 'fr', 'it']) {
+		it(`${locale}: every legend key present and non-empty`, async () => {
+			const mod = await import(`../../lib/i18n/${locale}`);
+			const dict = mod.default as Record<string, string>;
+			for (const k of KEYS) {
+				expect(dict[k], `${locale} missing ${k}`).toBeTruthy();
+				expect(dict[k]!.trim().length).toBeGreaterThan(0);
+			}
+		});
+	}
+});
+
+describe('CIPH-pi19-A2 phase-override corner triangle is documented', () => {
+	it('cycle phase legend ends with the override-triangle item', () => {
+		// The 5th item in the cycle phase legend explains the top-right
+		// corner triangle from CIPH-886 (manually-overridden phase).
+		expect(CAL).toMatch(/cycle\.phase_override_legend/);
+	});
+
+	it('legend swatch echoes the cell triangle (polygon over a phase swatch)', () => {
+		const cycleLegendBlock = CAL.match(
+			/aria-label=\{\$t\('cycle\.phase_legend_aria'\)\}[\s\S]*?<\/div>/,
+		);
+		expect(cycleLegendBlock).toBeTruthy();
+		expect(cycleLegendBlock![0]).toMatch(/<polygon points="0,6 6,6 6,0"/);
+	});
+});
