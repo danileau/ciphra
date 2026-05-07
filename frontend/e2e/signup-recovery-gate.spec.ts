@@ -9,18 +9,18 @@
  * Requires the api to be reachable at /api/* (dev server proxies).
  */
 import { test, expect } from '@playwright/test';
-
-function randUser() {
-    return 'e2e_' + Math.random().toString(36).slice(2, 10);
-}
+import { TEST_PASSWORD, randUser } from './_helpers/testUser';
 
 // argon2 vault creation in the browser can take 10–20s per sign-up in dev.
 test.setTimeout(90_000);
 
 // CIPH-751 — testid-driven selectors so this test is locale-independent.
+// CIPH-pi20-LB-3 — does NOT use registerNewUser() because the test asserts
+// the gate's intermediate state (button disabled before checkbox); inlining
+// the registration flow lets us add those assertions between steps.
 test('signup → recovery gate → /', async ({ page }) => {
     const user = randUser();
-    const pass = 'Test$12345_';
+    const pass = TEST_PASSWORD;
 
     await page.goto('/login?mode=register');
 

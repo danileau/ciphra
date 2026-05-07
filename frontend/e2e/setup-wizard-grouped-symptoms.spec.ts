@@ -9,22 +9,14 @@
  * symptom-group-row, symptom-item-toggle). Unblocked by CIPH-740 drill-in fix.
  */
 import { test, expect } from '@playwright/test';
+import { registerNewUser } from './_helpers/testUser';
 
 test.setTimeout(120_000);
 
 test('setup wizard: asthma grouped-symptoms toggle off (CIPH-740)', async ({ page }) => {
-    const user = 'e2e_' + Math.random().toString(36).slice(2, 10);
-    const pass = 'Test$12345_';
-
-    await page.goto('/login?mode=register');
-    await page.locator('#signup-user').fill(user);
-    await page.locator('#signup-pass').fill(pass);
-    await page.locator('#signup-pass2').fill(pass);
-    await page.getByTestId('register-submit').click();
-
-    await page.getByTestId('recovery-code-display').waitFor({ timeout: 30_000 });
-    await page.getByTestId('recovery-ack-checkbox').check();
-    await page.getByTestId('recovery-continue').click();
+    // CIPH-pi20-LB-3 — shared registration helper. Wizard flow stays inline
+    // because the test asserts mid-wizard state (group drill-in toggle).
+    await registerNewUser(page);
 
     await page.goto('/setup');
 

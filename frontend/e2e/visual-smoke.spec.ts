@@ -20,6 +20,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { TEST_PASSWORD } from './_helpers/testUser';
 
 test.setTimeout(180_000);
 test.describe.configure({ mode: 'serial' });
@@ -54,7 +55,7 @@ async function registerAndConfigure(
 	cohort: (typeof COHORT_PRESETS)[number],
 ) {
 	const user = 'smoke_' + cohort.id + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-	const pass = 'Test$12345_!';
+	const pass = TEST_PASSWORD;
 
 	await page.goto('/login?mode=register');
 	await page.locator('#signup-user').fill(user);

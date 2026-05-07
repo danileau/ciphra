@@ -11,6 +11,7 @@
  * route is off by default.
  */
 import { test, expect } from '@playwright/test';
+import { TEST_PASSWORD, randUser } from './_helpers/testUser';
 
 const runMigrate = !!process.env.PLAYWRIGHT_RUN_MIGRATE;
 
@@ -21,9 +22,10 @@ test.setTimeout(120_000);
 test('migrate: dev-typical bundle → epilepsy blueprint + /today', async ({ page }) => {
     await page.goto('/migrate#migrate=dev-typical&source=localhost:5000');
 
-    // Inline SignupFlow on the migrate page.
-    const user = 'e2e_mig_' + Math.random().toString(36).slice(2, 10);
-    const pass = 'Test$12345_';
+    // Inline SignupFlow on the migrate page (not /login) — can't reuse
+    // registerNewUser which navigates to /login?mode=register.
+    const user = randUser('e2e_mig_');
+    const pass = TEST_PASSWORD;
     await page.locator('#signup-user').fill(user);
     await page.locator('#signup-pass').fill(pass);
     await page.locator('#signup-pass2').fill(pass);

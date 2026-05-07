@@ -11,22 +11,14 @@
  * This spec creates one of each and checks the journal filter tabs.
  */
 import { test, expect } from '@playwright/test';
+import { registerNewUser } from './_helpers/testUser';
 
 test.setTimeout(120_000);
 
 test('quick-add: entry + event + diary each land in the correct journal tab', async ({ page }) => {
-    const user = 'e2e_' + Math.random().toString(36).slice(2, 10);
-    const pass = 'Test$12345_';
-
-    // Signup.
-    await page.goto('/login?mode=register');
-    await page.locator('#signup-user').fill(user);
-    await page.locator('#signup-pass').fill(pass);
-    await page.locator('#signup-pass2').fill(pass);
-    await page.getByTestId('register-submit').click();
-    await page.getByTestId('recovery-code-display').waitFor({ timeout: 30_000 });
-    await page.getByTestId('recovery-ack-checkbox').check();
-    await page.getByTestId('recovery-continue').click();
+    // CIPH-pi20-LB-3 — registerNewUser handles signup + the recovery-code
+    // gate using a 12-char password (UI floor).
+    await registerNewUser(page);
 
     // Fresh users land on /. Skip setup wizard by navigating directly; the
     // default blueprint covers quick-add mode buttons.

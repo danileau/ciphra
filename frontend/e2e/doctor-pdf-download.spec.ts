@@ -9,23 +9,14 @@
  * disabled; create a doc first. For now, run after at least one quick-add.
  */
 import { test, expect } from '@playwright/test';
+import { registerNewUser } from './_helpers/testUser';
 
 test.setTimeout(120_000);
 
 test('doctor PDF export triggers a download', async ({ page }) => {
-    const user = 'e2e_' + Math.random().toString(36).slice(2, 10);
-    const pass = 'Test$12345_';
-
-    await page.goto('/login?mode=register');
-    await page.locator('#signup-user').fill(user);
-    await page.locator('#signup-pass').fill(pass);
-    await page.locator('#signup-pass2').fill(pass);
-    await page.getByTestId('register-submit').click();
-
-    await page.getByTestId('recovery-code-display').waitFor({ timeout: 30_000 });
-    await page.getByTestId('recovery-ack-checkbox').check();
-    await page.getByTestId('recovery-continue').click();
-
+    // CIPH-pi20-LB-3 — shared helper: 12-char password, registers + clicks
+    // through the recovery-code gate, lands on `/`.
+    await registerNewUser(page);
     await expect(page).toHaveURL(/\/(\?.*)?$/);
 
     // Seed one doc so the export button enables.
