@@ -1171,6 +1171,7 @@ export default {
 	'pdf.episode_free_streak': 'Episodenfrei (Ende)',
 	'pdf.episode_trend': 'Verlauf über 24 Monate',
 	'pdf.episode_trend_12m': 'Verlauf über 12 Monate',
+	'pdf.day_coverage_title': 'Tagesüberblick · {month}',
 	'pdf.total_short': 'Summe',
 	'pdf.trend_improving': 'Weniger Ereignisse',
 	'pdf.trend_worsening': 'Mehr Ereignisse',

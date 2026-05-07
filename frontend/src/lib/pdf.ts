@@ -528,6 +528,143 @@ function drawStatCard(
 }
 
 /* ────────────────────────────────────────────────────────────────
+ * CIPH-pi19-2 — Day-coverage strip (PDF_REWRITE.md §7).
+ *
+ * 31-cell horizontal strip mirroring calendar v3's per-cell encoding
+ * for the focus month. Cell body = symptom-load α-blend on the cohort
+ * primary tone; trigger triangle (top-right, ochre) when any trigger
+ * was logged that day; right-edge brick bar (half-height = 1 dose,
+ * full-height = ≥2 doses) when rescue meds were taken.
+ *
+ * Marks (ochre triangle, brick bar) stay universal across cohorts —
+ * they're clinical signals, not data accents. The cell BODY is the
+ * cohort-tinted layer.
+ *
+ * Pre-bucketing the per-day counts by date string keeps this O(N+D)
+ * (N docs + D days), no per-cell .find() scan over monthDocs.
+ * ──────────────────────────────────────────────────────────────── */
+function drawDayCoverageStrip(
+	doc: jsPDF,
+	blueprint: Blueprint,
+	focusMonthEntries: CiphraDocument[],
+	allDocs: CiphraDocument[],
+	year: number,
+	month: number,
+	daysInMonth: number,
+	t: TranslateFn,
+	locale: string,
+	acc: CohortAccents,
+	cursorY: number,
+): number {
+	const pageW = 210;
+	const stripW = pageW - 28;                            // 182mm content width
+	const cellGap = 0.4;
+	const cellW = (stripW - (daysInMonth - 1) * cellGap) / daysInMonth;
+	const cellH = 6;
+	const triSize = 1.4;
+	const barW = 0.6;
+	const focusPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+	// Pre-bucket: O(N) walk over focus-month entries + O(M) walk over
+	// medication events. Each cell is then an O(1) Map lookup.
+	const triggerByDay = new Map<string, number>();
+	const symptomCountByDay = new Map<string, number>();
+	for (const d of focusMonthEntries) {
+		if (d.data.type !== 'entry') continue;
+		const ds = String(d.data.date || '');
+		if (!ds) continue;
+		const trs = (d.data as Record<string, unknown>).triggers as unknown;
+		let trN = 0;
+		if (Array.isArray(trs)) {
+			trN = trs.length;
+		} else if (trs && typeof trs === 'object') {
+			for (const v of Object.values(trs as Record<string, boolean>)) {
+				if (v) trN++;
+			}
+		}
+		if (trN > 0) triggerByDay.set(ds, (triggerByDay.get(ds) || 0) + trN);
+		const syms = (d.data?.symptoms || {}) as Record<string, unknown>;
+		let symN = 0;
+		for (const v of Object.values(syms)) if (v) symN++;
+		if (symN > 0) symptomCountByDay.set(ds, (symptomCountByDay.get(ds) || 0) + symN);
+	}
+	const rescueByDay = new Map<string, number>();
+	for (const d of allDocs) {
+		if (d.data.type !== 'event' || (d.data as Record<string, unknown>).kind !== 'medication') continue;
+		const ds = String(d.data.date || '');
+		if (!ds.startsWith(focusPrefix)) continue;
+		rescueByDay.set(ds, (rescueByDay.get(ds) || 0) + 1);
+	}
+
+	// Section title — match the section-title vocabulary (helvetica bold 10pt
+	// textPrimary) used elsewhere in generateDoctorPdf.
+	const focusMonthName = new Date(year, month).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(10);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.day_coverage_title', { month: focusMonthName }), 14, cursorY);
+	cursorY += 4;
+
+	// Symptom-column count for normalising load. effectiveSymptomColumns is
+	// view-shape-aware; for the strip we want the underlying possible columns
+	// (an asthma user with 6 symptoms shouldn't have load capped by the visible
+	// 4-column grid — the strip is a per-day signal, not a table view).
+	const symptomColCount = Math.max(
+		1,
+		(blueprint.symptomGroups || []).reduce((n, g) => n + (g.items?.length || 0), 0),
+	);
+
+	const stripY = cursorY;
+	for (let day = 1; day <= daysInMonth; day++) {
+		const ds = `${focusPrefix}-${String(day).padStart(2, '0')}`;
+		const x = 14 + (day - 1) * (cellW + cellGap);
+		const symN = symptomCountByDay.get(ds) || 0;
+		const symLoad = Math.min(1, symN / symptomColCount);
+		const fillAlpha = symN > 0 ? 0.18 + symLoad * 0.6 : 0;
+
+		if (fillAlpha > 0) {
+			const fill = softBlendRgb(acc.primary, fillAlpha);
+			doc.setFillColor(...fill);
+			doc.rect(x, stripY, cellW, cellH, 'F');
+		} else {
+			// Empty day — hairline so position is preserved on silent months.
+			doc.setDrawColor(...BRAND.borderSubtle);
+			doc.setLineWidth(0.1);
+			doc.rect(x, stripY, cellW, cellH, 'S');
+		}
+
+		// Day number top-left.
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(5.5);
+		doc.setTextColor(...BRAND.textPrimary);
+		doc.text(String(day), x + 0.6, stripY + 2.2);
+
+		// Trigger triangle top-right (universal ochre — calendar parity).
+		if ((triggerByDay.get(ds) || 0) > 0) {
+			doc.setFillColor(...BRAND.ochre);
+			doc.triangle(
+				x + cellW - triSize, stripY + 0.4,
+				x + cellW - 0.4,     stripY + 0.4,
+				x + cellW - 0.4,     stripY + triSize + 0.4,
+				'F',
+			);
+		}
+
+		// Rescue-med edge bar (universal brick — calendar parity).
+		// 1 dose = half-height bar; ≥2 doses = full-height.
+		const rescueN = rescueByDay.get(ds) || 0;
+		if (rescueN > 0) {
+			doc.setFillColor(...BRAND.brick);
+			const barH = rescueN === 1 ? cellH * 0.5 : cellH;
+			doc.rect(x + cellW - barW, stripY + (cellH - barH), barW, barH, 'F');
+		}
+	}
+	cursorY = stripY + cellH + 4;
+
+	return cursorY;
+}
+
+/* ────────────────────────────────────────────────────────────────
  * 1) Grid Report — monthly protocol grid (clinical handover)
  * ──────────────────────────────────────────────────────────────── */
 
@@ -1329,6 +1466,25 @@ export function generateDoctorPdf(
 
 	cursorY += 12;
 	}
+
+	// CIPH-pi19-2 — Day-coverage strip. 31-cell per-day overview of the focus
+	// month, mirrors calendar v3's cell encoding (symptom-load tint, trigger
+	// triangle, rescue-med edge bar). Section is always rendered so the
+	// strip is a stable spine element across cohorts; cohort tinting is
+	// scoped to the cell BODY via acc.primary, not to the marks.
+	cursorY = drawDayCoverageStrip(
+		doc,
+		blueprint,
+		focusMonthDocs,
+		documents,
+		year,
+		month,
+		focusDaysInMonth,
+		t,
+		locale,
+		acc,
+		cursorY,
+	);
 
 	// Trajectory metadata exposed outside the scope block so the "trajectory"
 	// bullet on the For-Doctor page can reference it when the chart is drawn.

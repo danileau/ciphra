@@ -1148,6 +1148,7 @@ export default {
 	'pdf.most_frequent_symptom': 'Most frequent symptom',
 	'pdf.episode_free_streak': 'Episode-free (end)',
 	'pdf.episode_trend': '24-month trajectory',
+	'pdf.day_coverage_title': 'Day-by-day · {month}',
 	'pdf.episode_trend_12m': '12-month trajectory',
 	'pdf.total_short': 'Sum',
 	'pdf.trend_improving': 'Fewer episodes',

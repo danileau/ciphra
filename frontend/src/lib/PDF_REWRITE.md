@@ -487,9 +487,62 @@ PI v18 floor is 4.6. Persona dry-run before each chunk merges: Linus for cohort 
 
 ---
 
-## 11. Self-score
+## 11. Resolved design questions (PI v19, before drawDayCoverageStrip)
 
-**Memo score: 4.7 / 5.0**
+Four open questions from PI v18's chunk-3-partial dry-run, resolved 2026-05-07
+before Track B implementation starts. PI v19 implements per these decisions.
+
+### Q1 — Trajectory + vital-mini-chart frames at `pdf.ts:~1686/2026`
+
+**Decision: migrate from BRAND.ochreSoft → BRAND.borderSubtle.**
+
+The chart frame is structural chrome, not data. Cohort-tinting it on a
+sage-green or rose chart is the same "sage hat on rust coat" mismatch Jonas
+flagged at smaller scale. Memo §4 already retires BRAND.ochre as a universal
+accent; the chart frame was the last residual. If borderSubtle prints too
+faint on warm-cream paper, the right fix is bumping borderSubtle's alpha
+globally, not keeping ochre as a workaround.
+
+### Q2 — Discrete cohort exception (brick + ochre)
+
+**Decision: keep as original-look reference; document the asymmetry in
+`pickBreakFallback` so future devs don't migrate it accidentally.**
+
+Three reasons:
+1. Discrete (epilepsy/asthma/parkinson) is the load-bearing case (§1) —
+   changing its palette mid-PI risks "did something clinical change?"
+   perception from existing patients.
+2. The tonal-pair pattern emerged because ochre was a poor break for cycle
+   (rose+ochre clash) and custom. Brick+ochre is *already* tonally coherent —
+   both warm reds, similar temperature. No mismatch to fix.
+3. Defensive documentation > silent exception.
+
+### Q3 — Sage 12% wash printability on warm paper
+
+**Decision: cool primaries (sage / slate) → 15%; warm primaries stay 12%.**
+
+Warm paper amplifies warm tones in printer ink-mixing; cool tones lose
+~3-5% effective alpha on cheap clinic printers. Per-cohort lookup keyed off
+slot-1 hue — `isCoolPrimary(cohort)` returns true for narrative (sage) and
+custom (slate). 15% is still subtle but crosses the visibility floor on
+older lasers.
+
+### Q4 — Replace vs layer for new primitives on the existing heatmap
+
+**Decision: neither — they live on different pages.**
+
+- `drawDayCoverageStrip` + `drawPhaseDistribution` + `drawCycleStrip` →
+  **page 1-2** (the 30-second-read block, gated by cohort).
+- Existing monthly symptom grid heatmap (`drawGridSection`, the 31×N table) →
+  **appendix**, unchanged. §2 already classifies it as L for all cohorts.
+
+The "replace vs layer" framing was a category error — the heatmap was already
+queued to move to the back, the new primitives were already queued for the
+front. Both render; no crowding because they're on different pages.
+
+---
+
+## 12. Self-score
 
 Hits the contract: 30-second-read per cohort with concrete examples (§1), explicit cohort×section matrix with H/M/L/— (§2), architecture B chosen with `buildConditionAwareBullets` precedent cited (§3), visual-token swap table with line numbers + the `#b6306a` contrast flag surfaced (§4), trend approach picked with budget rationale + per-scope mode (§5), KPI tile selector per cohort (§6), calendar-v3 parity expressed in mm + jsPDF pseudocode (§7), grep-confirmed i18n drop list (§8), 3-chunk implementation split with risk + dependency + visible-change for each (§9), 4 honest deferrals (§10).
 
