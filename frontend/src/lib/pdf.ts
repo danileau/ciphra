@@ -478,6 +478,13 @@ function drawWatermarkPattern(doc: jsPDF): void {
 	}
 }
 
+/** Optional delta sub-line for drawStatCard (CIPH-pi19-3). */
+interface StatCardDelta {
+	sign: '+' | '-' | '=';
+	value: string;
+	semantic: 'good' | 'bad' | 'neutral';
+}
+
 /** A StatCard-style block: label above, value below, accent stripe left. */
 function drawStatCard(
 	doc: jsPDF,
@@ -487,7 +494,8 @@ function drawStatCard(
 	h: number,
 	label: string,
 	value: string,
-	accent: RGB
+	accent: RGB,
+	delta?: StatCardDelta,
 ): void {
 	// card
 	doc.setFillColor(...BRAND.card);
@@ -524,7 +532,28 @@ function drawStatCard(
 		}
 		displayValue = s.trimEnd() + ell;
 	}
-	doc.text(displayValue, x + valPadLeft, y + h - 4.5);
+	// Reserve 4mm at the bottom for the delta line when present so the value
+	// stays vertically grounded — without delta, the value sits at h-4.5
+	// (existing baseline). With delta, lift the value to h-9 and place the
+	// delta line at h-4.5.
+	const valBaseline = delta ? y + h - 9 : y + h - 4.5;
+	doc.text(displayValue, x + valPadLeft, valBaseline);
+
+	if (delta) {
+		// Color from semantic — olive=good, brick=bad, textMuted=neutral.
+		// Same vocabulary as the legacy comparison-deltas block we replace.
+		const dColor: RGB =
+			delta.semantic === 'good'
+				? BRAND.olive
+				: delta.semantic === 'bad'
+					? BRAND.brick
+					: BRAND.textMuted;
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(7.5);
+		doc.setTextColor(...dColor);
+		const text = delta.sign === '=' ? delta.value : `${delta.sign}${delta.value}`;
+		doc.text(text, x + valPadLeft, y + h - 4);
+	}
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -1375,15 +1404,21 @@ export function generateDoctorPdf(
 	// Clinical summary one-liner removed — duplicated the stat cards below.
 	void monthName; void daysInMonth; void topPct;
 
-	// ── Stat cards (2×2) with accent stripes ──
-	const cardGap = 4;
-	const cardW = (pageW - 28 - cardGap) / 2;
-	const cardH = 18;
+	// CIPH-pi19-3 — 4-tile KPI glance (PDF_REWRITE.md §6). Replaces the
+	// 2×2 stat-card grid + separate "Comparison deltas" block. Tiles
+	// carry their own delta sub-line; selection is per-cohort so a
+	// migraine PDF leads with the trigger tile, an epilepsy PDF with
+	// rescue-med days, etc. Geometry: 4 × 1 row across 182mm content
+	// width, ~42mm × 22mm per tile.
+	const cohort = cohortOf(blueprint);
+	const tileGap = 3;
+	const tileW = (pageW - 28 - 3 * tileGap) / 4;
+	const tileH = 22;
 
 	// Days-logged is a data-quality signal (so the doctor knows whether to
 	// trust the means), not a clinical metric — render it as a small line
 	// AFTER the disclaimer banner so it doesn't overlap. Position is right
-	// above the stat cards.
+	// above the KPI tiles.
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(7.5);
 	doc.setTextColor(...BRAND.textMuted);
@@ -1394,78 +1429,83 @@ export function generateDoctorPdf(
 		{ align: 'right' }
 	);
 
-	const cards: { label: string; value: string; accent: RGB }[] = [
-		{
-			label: t('pdf.total_episodes'),
-			value: String(totalEpisodes),
-			accent: acc.break,
-		},
-		{
-			label: t('pdf.most_frequent_symptom'),
-			value: mostFrequentSymptom
-				? `${mostFrequentSymptom.label} (${mostFrequentSymptom.count})`
-				: '—',
-			accent: acc.primary,
-		},
-		{
-			label: t('pdf.most_frequent_trigger') === 'pdf.most_frequent_trigger'
-				? t('pdf.most_frequent_symptom') // fallback label if new key untranslated
-				: t('pdf.most_frequent_trigger'),
-			value: mostFrequentTrigger ? `${mostFrequentTrigger.label} (${mostFrequentTrigger.count})` : '—',
-			accent: acc.break,
-		},
-	];
-
-	for (let i = 0; i < cards.length; i++) {
-		const col = i % 2;
-		const row = Math.floor(i / 2);
-		const x = 14 + col * (cardW + cardGap);
-		const y = cursorY + row * (cardH + cardGap);
-		drawStatCard(doc, x, y, cardW, cardH, cards[i].label, cards[i].value, cards[i].accent);
-	}
-	cursorY += 2 * (cardH + cardGap);
-
-	// ── Comparison deltas ──
-	// For '2years' scope there is no meaningful prior window (prevMonths===0),
-	// so we suppress the entire deltas block. For 'year' scope we compare to
-	// the prior 12-month window and retitle accordingly.
+	// Pre-aggregations the tiles need.
 	const episodeChange = totalEpisodes - prevTotalEpisodes;
-	const daysChange = daysLogged - prevDaysLogged;
-	const showDeltas = scope !== '2years';
-	if (showDeltas) {
-	const deltaTitleKey = scope === 'year' ? 'pdf.compared_to_prev_year' : 'pdf.compared_to_prev';
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(8);
-	doc.setTextColor(...BRAND.textMuted);
-	doc.text(t(deltaTitleKey).toUpperCase(), 14, cursorY + 2);
-	cursorY += 6;
+	const focusPrefixForKpi = `${year}-${String(month + 1).padStart(2, '0')}`;
+	const rescueMedDays = (() => {
+		const days = new Set<string>();
+		for (const d of documents) {
+			if (d.data.type !== 'event' || (d.data as Record<string, unknown>).kind !== 'medication') continue;
+			const ds = String(d.data.date || '');
+			if (!ds.startsWith(focusPrefixForKpi)) continue;
+			days.add(ds);
+		}
+		return days.size;
+	})();
 
-	// jsPDF's built-in fonts render WinAnsi only — Unicode triangles (▲▼)
-	// and a bunch of typographic punctuation come out as garbage ("%¼"-style
-	// glyphs). Draw triangles as vector shapes and use ASCII everywhere else.
-	const drawDelta = (x: number, label: string, delta: number, invertGood: boolean) => {
-		const isGood = invertGood ? delta < 0 : delta > 0;
-		const isFlat = delta === 0;
-		const color: RGB = isFlat ? BRAND.textMuted : isGood ? BRAND.olive : BRAND.brick;
+	type Tile = { label: string; value: string; accent: RGB; delta?: StatCardDelta };
+	const tileEpisodes = (): Tile => ({
+		label: t('pdf.total_episodes'),
+		value: String(totalEpisodes),
+		accent: acc.primary,
+		delta: scope !== '2years' && episodeChange !== 0
+			? {
+				sign: episodeChange > 0 ? '+' : '-',
+				value: String(Math.abs(episodeChange)),
+				// Episode increase is bad (more events); decrease is good.
+				semantic: episodeChange > 0 ? 'bad' : 'good',
+			}
+			: undefined,
+	});
+	const tileTopSymptom = (): Tile => ({
+		label: t('pdf.most_frequent_symptom'),
+		value: mostFrequentSymptom
+			? `${mostFrequentSymptom.label} (${mostFrequentSymptom.count})`
+			: '—',
+		accent: acc.primary,
+	});
+	const tileTopTrigger = (): Tile => ({
+		label: t('pdf.most_frequent_trigger'),
+		value: mostFrequentTrigger
+			? `${mostFrequentTrigger.label} (${mostFrequentTrigger.count})`
+			: '—',
+		accent: acc.break,
+	});
+	const tileDaysLogged = (): Tile => ({
+		label: t('pdf.days_logged'),
+		value: `${daysLogged}/${daysInMonth}`,
+		accent: acc.break,
+	});
+	const tileRescueMed = (): Tile => ({
+		label: t('pdf.rescue_med_days'),
+		value: rescueMedDays > 0 ? String(rescueMedDays) : '—',
+		accent: acc.break,
+	});
 
-		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(8);
-		doc.setTextColor(...BRAND.textSecondary);
-		doc.text(label, x, cursorY);
+	// Per-cohort selection. MVP uses already-aggregated data; cohort-specific
+	// tiles like tileLongestStreak / tilePhasePct in PDF_REWRITE.md §6 will
+	// land in PI v20 once the underlying aggregations exist.
+	const tiles: Tile[] = (() => {
+		switch (cohort) {
+			case 'discrete':
+				return [tileEpisodes(), tileRescueMed(), tileTopSymptom(), tileTopTrigger()];
+			case 'cycle':
+				return [tileTopTrigger(), tileTopSymptom(), tileEpisodes(), tileDaysLogged()];
+			case 'phase':
+				return [tileEpisodes(), tileTopSymptom(), tileTopTrigger(), tileRescueMed()];
+			case 'narrative':
+				return [tileTopTrigger(), tileEpisodes(), tileTopSymptom(), tileDaysLogged()];
+			case 'custom':
+			default:
+				return [tileEpisodes(), tileTopSymptom(), tileTopTrigger(), tileDaysLogged()];
+		}
+	})();
 
-		// No arrow — color + explicit sign are enough to read direction.
-		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(11);
-		doc.setTextColor(...color);
-		const sign = delta > 0 ? '+' : '';
-		doc.text(`${sign}${delta}`, x, cursorY + 6);
-	};
-
-	drawDelta(14, t('pdf.total_episodes'), episodeChange, true);
-	drawDelta(14 + cardW + cardGap, t('pdf.days_logged'), daysChange, false);
-
-	cursorY += 12;
+	for (let i = 0; i < tiles.length; i++) {
+		const x = 14 + i * (tileW + tileGap);
+		drawStatCard(doc, x, cursorY, tileW, tileH, tiles[i].label, tiles[i].value, tiles[i].accent, tiles[i].delta);
 	}
+	cursorY += tileH + 6;
 
 	// CIPH-pi19-2 — Day-coverage strip. 31-cell per-day overview of the focus
 	// month, mirrors calendar v3's cell encoding (symptom-load tint, trigger

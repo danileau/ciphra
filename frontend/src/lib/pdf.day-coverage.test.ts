@@ -105,13 +105,16 @@ describe('CIPH-pi19-2 wired into generateDoctorPdf', () => {
 		);
 	});
 
-	it('placement: after stat cards, before the trajectory if-block', () => {
-		// The strip lives between the deltas (cursorY += 12 + closing brace)
-		// and the "Trajectory metadata" comment.
+	it('placement: after KPI glance, before the trajectory if-block', () => {
+		// Story 1 placed the strip after the legacy 2×2 stat-card block;
+		// Story 2 (CIPH-pi19-3) replaced that block with the 4-tile KPI
+		// glance. The strip's invariant is "after the tiles, before the
+		// trajectory block" — pinned by the `cursorY += tileH + 6` line
+		// that ends the KPI glance.
 		const callSite = PDF.match(
-			/cursorY \+= 12;[\s\S]{0,80}\}[\s\S]{0,500}drawDayCoverageStrip[\s\S]{0,1200}Trajectory metadata/,
+			/cursorY \+= tileH \+ 6;[\s\S]{0,800}drawDayCoverageStrip[\s\S]{0,1500}Trajectory metadata/,
 		);
-		expect(callSite, 'expected placement after stat cards, before trajectory block').toBeTruthy();
+		expect(callSite, 'expected placement after KPI glance, before trajectory block').toBeTruthy();
 	});
 });
 

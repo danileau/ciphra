@@ -1225,6 +1225,7 @@ export default {
 	'pdf.compared_to_prev': 'Comparé au mois précédent',
 	'pdf.compared_to_prev_year': "Comparé à l'année précédente",
 	'pdf.most_frequent_trigger': 'Déclencheur le plus fréquent',
+	'pdf.rescue_med_days': 'Jours avec médicament de secours',
 	'pdf.recovery_instructions_heading': "Comment utiliser ce document",
 	'pdf.recovery_step_1': "Rangez cette page dans un endroit accessible seulement à vous — tiroir fermé à clé, coffre ou gestionnaire de mots de passe.",
 	'pdf.recovery_step_2': "Ne partagez jamais le code à 12 mots. L'équipe ciphra ne vous le demandera jamais.",
