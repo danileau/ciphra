@@ -27,6 +27,10 @@ test.describe.configure({ mode: 'serial' });
 const VIEWPORTS = [
 	{ name: 'mobile', width: 375, height: 812 },
 	{ name: 'desktop', width: 1280, height: 900 },
+	// CIPH-pi19-D — wide viewport adds the lg+ persistent calendar rail
+	// to the smoke pipeline. 1440px is the common laptop/desktop width
+	// where the rail lives (≥1024px breakpoint).
+	{ name: 'wide', width: 1440, height: 900 },
 ] as const;
 
 const ROUTES_AUTHED = [

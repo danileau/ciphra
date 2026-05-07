@@ -222,6 +222,47 @@ describe('CIPH-pi19-C trigger heatmap row', () => {
 	});
 });
 
+describe('CIPH-pi19-D motion + visual-smoke contract', () => {
+	it('rail aside has NO transition: directive — re-target is instant', () => {
+		// Modal's fly transition was a dialog affordance. The rail is a
+		// layout element; sliding it on every day-pick would feel like
+		// the modal we just dissolved. This test asserts that none of
+		// the elements inside the lg+ aside use svelte transitions.
+		const aside = CAL.match(/<aside class="hidden lg:block cal-rail"[\s\S]*?<\/aside>/);
+		expect(aside, 'expected aside block').toBeTruthy();
+		expect(aside![0]).not.toMatch(/\btransition:[a-z]+\s*=/);
+		expect(aside![0]).not.toMatch(/\bin:[a-z]+\s*=/);
+		expect(aside![0]).not.toMatch(/\bout:[a-z]+\s*=/);
+	});
+
+	it('modal preserves prefers-reduced-motion gating on fly + scrim', () => {
+		// fly() durations and the scrim's fade must collapse to 0 under
+		// prefers-reduced-motion. Defends the PI v15 LB-1+2 contract.
+		expect(CAL).toMatch(/duration:\s*prefersReducedMotion\s*\?\s*0\s*:\s*200/);
+		expect(CAL).toMatch(/duration:\s*prefersReducedMotion\s*\?\s*0\s*:\s*300/);
+		expect(CAL).toMatch(/x:\s*prefersReducedMotion\s*\?\s*0/);
+		expect(CAL).toMatch(/y:\s*prefersReducedMotion\s*\?\s*0/);
+	});
+
+	it('1440px viewport added to visual-smoke spec so rail is captured', () => {
+		const smoke = readFileSync(
+			join(__dirname, '..', '..', '..', 'e2e', 'visual-smoke.spec.ts'),
+			'utf8',
+		);
+		expect(smoke).toMatch(/name:\s*'wide',\s*width:\s*1440/);
+	});
+
+	it('rail-only marks (heatmap cells) get focus-visible outlines', () => {
+		// Color-blind validation: clickable cells must be keyboard-focusable
+		// AND show a non-color focus indicator. The :focus-visible style
+		// uses an outline (not just a color shift) so blind/contrast users
+		// see the focus state.
+		expect(MINI).toMatch(
+			/\.cal-mini-heat-cell:focus-visible\s*\{[\s\S]*?outline-color:\s*var\(--brand\)/,
+		);
+	});
+});
+
 describe('CIPH-pi19-C i18n keys', () => {
 	const KEYS = [
 		'calendar.trigger_pressure',
