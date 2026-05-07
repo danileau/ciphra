@@ -884,6 +884,10 @@
 				{rescueMedDayCount}
 				showTrigger={showTriggerMark}
 				showRescue={showRescueMedMark}
+				{monthPrefix}
+				{daysInMonth}
+				{triggerCountByDay}
+				on:selectday={(e) => { selectedDate = e.detail; }}
 			/>
 		</aside>
 

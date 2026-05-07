@@ -119,8 +119,11 @@ describe('CIPH-pi19-B MonthMiniSummary component contract', () => {
 		expect(MINI).toMatch(/\{#if showRescue\}[\s\S]*?calendar\.mini_rescue_days/);
 	});
 
-	it('renders empty-state when neither flag is on', () => {
-		expect(MINI).toMatch(/\{:else\}[\s\S]*?calendar\.mini_summary_empty/);
+	it('renders empty-state when neither row flag is on (and no heatmap)', () => {
+		// CIPH-pi19-C narrowed this branch from `{:else}` to
+		// `{:else if !showHeatmap}` so the empty copy doesn't double-print
+		// when only the heatmap is showing. The empty key is still reached.
+		expect(MINI).toMatch(/\{:else if !showHeatmap\}[\s\S]*?calendar\.mini_summary_empty/);
 	});
 
 	it('glyphs mirror the cell encoding (ochre triangle + brand bar)', () => {
@@ -154,6 +157,93 @@ describe('CIPH-pi19-B i18n', () => {
 				expect(dict[k]!.trim().length).toBeGreaterThan(0);
 			}
 			expect(dict['calendar.mini_summary_aria'], `${locale} mini_summary_aria templates {month}`).toMatch(/\{month\}/);
+		});
+	}
+});
+
+describe('CIPH-pi19-C trigger heatmap row', () => {
+	it('MonthMiniSummary declares the new heatmap props with safe defaults', () => {
+		expect(MINI).toMatch(/export let monthPrefix:\s*string\s*=\s*''/);
+		expect(MINI).toMatch(/export let daysInMonth:\s*number\s*=\s*0/);
+		expect(MINI).toMatch(/export let triggerCountByDay:\s*Map<string,\s*number>\s*=\s*new Map\(\)/);
+	});
+
+	it('heatmap is gated on showTrigger AND non-zero geometry inputs', () => {
+		expect(MINI).toMatch(
+			/showHeatmap\s*=\s*showTrigger\s*&&\s*daysInMonth\s*>\s*0\s*&&\s*monthPrefix\.length\s*>\s*0/,
+		);
+	});
+
+	it('5-bucket opacity ramp covers 0 / 1 / 2 / 3-4 / 5+', () => {
+		// The discrete ramp must distinguish "no triggers" from "1 trigger"
+		// — a continuous mapping (0.2 + count * 0.15) would hide that.
+		expect(MINI).toMatch(/if\s*\(count\s*<=\s*0\)\s*return 0/);
+		expect(MINI).toMatch(/if\s*\(count\s*===\s*1\)\s*return 0\.3/);
+		expect(MINI).toMatch(/if\s*\(count\s*===\s*2\)\s*return 0\.5/);
+		expect(MINI).toMatch(/if\s*\(count\s*<=\s*4\)\s*return 0\.7/);
+		expect(MINI).toMatch(/return 0\.9/);
+	});
+
+	it('cells are buttons (clickable) with aria-label per density', () => {
+		// Filled cells use plural() for cardinality; empty cells use the
+		// dedicated _empty key so SR users hear "no triggers" not "0".
+		expect(MINI).toMatch(/<button\s+type="button"\s+class="cal-mini-heat-cell"/);
+		expect(MINI).toMatch(/calendar\.trigger_pressure_cell\b/);
+		expect(MINI).toMatch(/calendar\.trigger_pressure_cell_empty/);
+	});
+
+	it('click dispatches selectday with an ISO date string', () => {
+		expect(MINI).toMatch(/dispatch\('selectday',\s*dateStr\)/);
+	});
+
+	it('parent wires the new props + selectday handler', () => {
+		expect(CAL).toMatch(/<MonthMiniSummary[\s\S]*?\{monthPrefix\}/);
+		expect(CAL).toMatch(/<MonthMiniSummary[\s\S]*?\{daysInMonth\}/);
+		expect(CAL).toMatch(/<MonthMiniSummary[\s\S]*?\{triggerCountByDay\}/);
+		expect(CAL).toMatch(
+			/<MonthMiniSummary[\s\S]*?on:selectday=\{\(e\)\s*=>\s*\{\s*selectedDate\s*=\s*e\.detail;?\s*\}\}/,
+		);
+	});
+
+	it('grid columns scale with daysInMonth so 28-day Februaries fit', () => {
+		expect(MINI).toMatch(/grid-template-columns:\s*repeat\(\{daysInMonth\},\s*1fr\)/);
+	});
+
+	it('empty cell has hairline outline so column position stays readable', () => {
+		expect(MINI).toMatch(
+			/\.cal-mini-heat-cell\.is-empty\s*\{[\s\S]*?box-shadow:\s*inset 0 0 0 1px var\(--border-subtle/,
+		);
+	});
+
+	it('empty-state copy yields the floor only when neither row nor heatmap renders', () => {
+		// Previously the empty <p> appeared as the {:else} of the row block;
+		// once the heatmap gate is on, it must not double-print.
+		expect(MINI).toMatch(/\{:else if !showHeatmap\}[\s\S]*?calendar\.mini_summary_empty/);
+	});
+});
+
+describe('CIPH-pi19-C i18n keys', () => {
+	const KEYS = [
+		'calendar.trigger_pressure',
+		'calendar.trigger_pressure_aria',
+		'calendar.trigger_pressure_cell_one',
+		'calendar.trigger_pressure_cell_other',
+		'calendar.trigger_pressure_cell_empty',
+	] as const;
+	for (const locale of ['de', 'en', 'fr', 'it']) {
+		it(`${locale}: heatmap keys present + plural variants reference {count}+{day}`, async () => {
+			const mod = await import(`../../lib/i18n/${locale}`);
+			const dict = mod.default as Record<string, string>;
+			for (const k of KEYS) {
+				expect(dict[k], `${locale} missing ${k}`).toBeTruthy();
+				expect(dict[k]!.trim().length).toBeGreaterThan(0);
+			}
+			expect(dict['calendar.trigger_pressure_aria']!).toMatch(/\{month\}/);
+			expect(dict['calendar.trigger_pressure_cell_one']!).toMatch(/\{day\}/);
+			expect(dict['calendar.trigger_pressure_cell_one']!).toMatch(/\{count\}/);
+			expect(dict['calendar.trigger_pressure_cell_other']!).toMatch(/\{day\}/);
+			expect(dict['calendar.trigger_pressure_cell_other']!).toMatch(/\{count\}/);
+			expect(dict['calendar.trigger_pressure_cell_empty']!).toMatch(/\{day\}/);
 		});
 	}
 });
