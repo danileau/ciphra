@@ -2,7 +2,7 @@
 
 This document is the honest description of what ciphra protects, what it doesn't, and how. It is the substitute for a third-party audit (which has not been done at the time of writing). Read it skeptically, read the code, and decide for yourself.
 
-**Last updated:** 2026-04-12
+**Last updated:** 2026-05-07
 
 ---
 
@@ -87,6 +87,60 @@ This list is exhaustive. If we discover otherwise, we will update this document 
 
 ---
 
+## What the browser stores (and why)
+
+The server-side promise above is the strong leg of the threat model. The local-device leg is weaker and we want you to see exactly why.
+
+While you are logged in, three different browser storage locations hold material relevant to your data:
+
+### 1. `sessionStorage` — `ciphra_master_key`
+
+The 32-byte master key, base64-encoded. **Cleared automatically when the browser tab closes** — that's the whole reason it's in `sessionStorage` and not `localStorage`. If a tab reloads mid-session the key survives; if you close the browser, you'll be asked to log in again on the next visit. This shrinks the XSS-stolen-key blast radius from "forever" to "this tab session."
+
+Code: `frontend/src/lib/stores/auth.ts:48-83`.
+
+### 2. `localStorage` — `ciphra_auth`
+
+A JSON blob with: JWT bearer token, username, encrypted vault metadata (auth params, vault params, encrypted master), and an admin flag.
+
+This **persists across browser restarts** by design — without it, every visit would require a fresh login. It is, however, the broadest local-attack surface:
+
+- An XSS hole anywhere in the app could read the JWT and call our APIs as you. Our CSP (`default-src 'self'`, no inline scripts, no `eval`) is the structural mitigation; we eliminate injection sinks rather than rely on token-storage tricks.
+- Browser-profile theft (someone with disk access to your unlocked machine) gets the token and the encrypted-vault metadata. They still need your password to unlock the master key, but they have a head start.
+
+We chose this tradeoff explicitly. An "always re-login" alternative would be more secure but materially worse UX for a daily journal. If the calculus matters for your threat model, log out manually after each session — that wipes both stores.
+
+Code: `frontend/src/lib/stores/auth.ts:34-83`.
+
+### 3. `IndexedDB` — `ciphra_cache` / `decrypted_documents`
+
+This is the part most users do not realise is there.
+
+**ciphra caches decrypted document plaintext on the device** for warm-load performance. After your first decrypt of a document, the plaintext is written to IndexedDB alongside an etag (the original ciphertext). On the next page load we can read straight from cache and skip the Argon2 + AES-GCM step — that's how the calendar / journal feel instant on revisit. The tradeoff is that **plaintext exists at rest on your device between login and logout**, in addition to the ciphertext your browser already had to download.
+
+Code: `frontend/src/lib/idb.ts:1-90`.
+
+**Wipe semantics** — what removes this plaintext, and when:
+
+- **Logout** (the "Abmelden" button): wipes IndexedDB completely via `indexedDB.deleteDatabase`, and as a fallback also clears the live store contents if a tab still has the database open. Logout is `async` and the wipe is awaited before the UI confirms. Code: `frontend/src/lib/stores/auth.ts:127-149`, `frontend/src/lib/idb.ts:125-151`.
+- **Browser tab close**: does **not** wipe IndexedDB. The plaintext stays. Re-opening the tab requires re-login (because the master key in `sessionStorage` is gone), but a forensic examination of the browser profile in that interval would surface the cached plaintext.
+- **Browser-profile compromise on an unlocked device**: out of scope. An attacker with disk access to your unlocked browser profile can read IndexedDB. This is the same threat model as any browser-served E2E app and is one of the listed exclusions at the top of this document.
+- **Caregiver / family-sharing context**: PI v13 security review caught a related bug where switching between linked vaults left the prior vault's plaintext on disk. Fixed in PI v16 (`clearAllPartitions` deletes the entire database, not just the active partition).
+
+If you want plaintext gone right now without losing your session, log out — the wipe is awaited before the UI confirms. A "Clear local cache" affordance that triggers the same wipe path while keeping you logged in is shipping next (CIPH-pi20-LB-2 in the current development cycle); when it lands, this section will be updated to point at it.
+
+### 4. Service worker cache
+
+Same wipe contract as IndexedDB on logout — every cache whose key starts with `ciphra-` is deleted. SvelteKit currently ships render-only HTML shells via the SW, so today there is no patient data sitting in this cache; the wipe is defensive against future loader-injected content. Code: `frontend/src/lib/stores/auth.ts:142-149`.
+
+### What this means in practice
+
+If your device is yours alone and locked when you walk away, the IndexedDB cache buys you faster page loads at no real-world cost. If a roommate, partner, hotel housekeeper, IT department, or border officer can sit at your unlocked browser, the cache is one of several things they can read. The structural defenses (sessionStorage-bound master key, logout wipe, "Clear local cache" button) bound the exposure; they do not eliminate it.
+
+We will not pretend otherwise.
+
+---
+
 ## Hardening
 
 - **JWT secret:** required env var, ≥ 32 chars, no fallback. Server fails to start without it.
@@ -138,5 +192,9 @@ Please **do not** open a public GitHub issue for security vulnerabilities. Use e
 2. Read `api/server.py` — search for `verify_auth`, `hash_auth_key`, the `register`, `login`, `recover`, `family_grant_*` endpoints.
 3. Open browser DevTools → Network tab on a real registration. Inspect the POST body to `/api/register`. Confirm: no plaintext password, no plaintext recovery code, just hashes and ciphertexts.
 4. Repeat for `/api/login` and `/api/family/grants` — same check.
+5. Open browser DevTools → Application → Storage. Confirm:
+   - `localStorage` → key `ciphra_auth` contains JWT + encrypted-vault metadata, no plaintext.
+   - `sessionStorage` → key `ciphra_master_key` contains a base64 32-byte string while logged in; gone after browser close.
+   - `IndexedDB` → `ciphra_cache` / `decrypted_documents` contains plaintext document JSON while logged in; **the entire database is gone after clicking Abmelden**.
 
 If anything in this document is contradicted by the code, please file an issue or email security. The code is the truth; this document tries to describe it accurately.
