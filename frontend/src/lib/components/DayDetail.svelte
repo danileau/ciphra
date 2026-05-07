@@ -303,8 +303,8 @@
 	}
 	.dd-label::before {
 		content: '';
-		width: 5px;
-		height: 5px;
+		width: 6px;
+		height: 6px;
 		border-radius: 50%;
 		background: var(--accent);
 		flex-shrink: 0;

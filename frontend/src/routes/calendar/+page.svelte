@@ -847,7 +847,7 @@
 							class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
 							style="background: {PHASE_COLORS[railDayPhase]}26; color: {PHASE_COLORS[railDayPhase]}; border: 1px solid {PHASE_COLORS[railDayPhase]}"
 						>
-							<span class="w-1.5 h-1.5 rounded-full" style="background: {PHASE_COLORS[railDayPhase]}"></span>
+							<span class="w-2 h-2 rounded-full" style="background: {PHASE_COLORS[railDayPhase]}"></span>
 							{$t(`cycle.phase_${railDayPhase}`)}
 						</span>
 					</div>
@@ -858,7 +858,7 @@
 								class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
 								style="background: {band.color}1f; color: {band.color}; border: 1px solid {band.color}"
 							>
-								<span class="w-1.5 h-1.5 rounded-full" style="background: {band.color}"></span>
+								<span class="w-2 h-2 rounded-full" style="background: {band.color}"></span>
 								{isCustomItem(band.id) ? band.label : $t(band.label)}
 							</span>
 						{/each}
@@ -981,7 +981,7 @@
 						class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
 						style="background: {PHASE_COLORS[selectedDayPhase]}26; color: {PHASE_COLORS[selectedDayPhase]}; border: 1px solid {PHASE_COLORS[selectedDayPhase]}"
 					>
-						<span class="w-1.5 h-1.5 rounded-full" style="background: {PHASE_COLORS[selectedDayPhase]}"></span>
+						<span class="w-2 h-2 rounded-full" style="background: {PHASE_COLORS[selectedDayPhase]}"></span>
 						{$t(`cycle.phase_${selectedDayPhase}`)}
 					</span>
 				</div>
@@ -992,7 +992,7 @@
 							class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
 							style="background: {band.color}1f; color: {band.color}; border: 1px solid {band.color}"
 						>
-							<span class="w-1.5 h-1.5 rounded-full" style="background: {band.color}"></span>
+							<span class="w-2 h-2 rounded-full" style="background: {band.color}"></span>
 							{isCustomItem(band.id) ? band.label : $t(band.label)}
 						</span>
 					{/each}
