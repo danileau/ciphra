@@ -2,7 +2,11 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 declare const process: { env: Record<string, string | undefined> };
-const apiTarget = process.env.VITE_API_URL || 'http://localhost:5000';
+// CIPH-pi20-LB-6 — default 5000 → 5050: macOS AirPlay/AirTunes listens
+// on :5000 by default, which silently 403'd against our API in local
+// dev (FULL_REVIEW 2026-05-05 P1.3). 5050 is collision-free across
+// macOS/Linux/Windows. Override via VITE_API_URL when needed.
+const apiTarget = process.env.VITE_API_URL || 'http://localhost:5050';
 
 export default defineConfig({
 	plugins: [sveltekit()],

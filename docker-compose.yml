@@ -37,8 +37,11 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
       CIPHRA_DEV_MOCKS: ${CIPHRA_DEV_MOCKS:-0}
       PYTHONUNBUFFERED: "1"
+    # CIPH-pi20-LB-6 — exposed on host :5050 to avoid macOS AirPlay/AirTunes
+    # collision on :5000. Container-internal port stays 5000 (the gunicorn
+    # bind in api/Dockerfile and the healthcheck both reference 5000).
     ports:
-      - "5000:5000"
+      - "5050:5000"
     volumes:
       - ./api:/app
     command: python server.py
