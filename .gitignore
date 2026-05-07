@@ -7,6 +7,10 @@ build/
 *.log
 .claude/
 api/seed_*.py
+# CIPH-pi20-LB-5 — explicit un-ignore: the production guardrail must be
+# tracked + reviewable + testable in fresh clones, even though the seed
+# scripts that USE it are intentionally local-only.
+!api/seed_guardrail.py
 api/fixtures/
 pdfs
 frontend/test-results

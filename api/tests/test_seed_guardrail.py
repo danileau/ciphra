@@ -1,7 +1,7 @@
 """
 CIPH-pi20-LB-5 — demo-seed production guardrail.
 
-Pinning the two-check contract on _assert_demo_seed_allowed():
+Pinning the two-check contract on assert_demo_seed_allowed():
   1. CIPHRA_ALLOW_DEMO_SEED=1 must be set.
   2. The DSN must not contain production-looking patterns.
 
@@ -18,7 +18,7 @@ import pytest
 # Ensure api/ is importable.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from seed_common import _assert_demo_seed_allowed, DemoSeedRefused  # noqa: E402
+from seed_guardrail import assert_demo_seed_allowed, DemoSeedRefused  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -29,13 +29,13 @@ def restore_env(monkeypatch):
 
 def test_refuses_without_env_var():
     with pytest.raises(DemoSeedRefused, match="CIPHRA_ALLOW_DEMO_SEED"):
-        _assert_demo_seed_allowed("postgresql://ciphra:ciphra@localhost/ciphra_dev")
+        assert_demo_seed_allowed("postgresql://ciphra:ciphra@localhost/ciphra_dev")
 
 
 def test_refuses_when_env_var_is_zero(monkeypatch):
     monkeypatch.setenv("CIPHRA_ALLOW_DEMO_SEED", "0")
     with pytest.raises(DemoSeedRefused):
-        _assert_demo_seed_allowed("postgresql://ciphra:ciphra@localhost/ciphra_dev")
+        assert_demo_seed_allowed("postgresql://ciphra:ciphra@localhost/ciphra_dev")
 
 
 def test_refuses_when_env_var_is_other_truthy(monkeypatch):
@@ -44,15 +44,15 @@ def test_refuses_when_env_var_is_other_truthy(monkeypatch):
     for val in ("true", "yes", "on", "TRUE", "True"):
         monkeypatch.setenv("CIPHRA_ALLOW_DEMO_SEED", val)
         with pytest.raises(DemoSeedRefused):
-            _assert_demo_seed_allowed("postgresql://ciphra:ciphra@localhost/ciphra_dev")
+            assert_demo_seed_allowed("postgresql://ciphra:ciphra@localhost/ciphra_dev")
 
 
 def test_allows_when_env_set_and_dsn_dev(monkeypatch):
     monkeypatch.setenv("CIPHRA_ALLOW_DEMO_SEED", "1")
     # Should not raise.
-    _assert_demo_seed_allowed("postgresql://ciphra:ciphra@localhost/ciphra_dev")
-    _assert_demo_seed_allowed("postgresql://ciphra:ciphra@localhost:5433/ciphra")
-    _assert_demo_seed_allowed("postgresql://ciphra:ciphra@postgres/ciphra")
+    assert_demo_seed_allowed("postgresql://ciphra:ciphra@localhost/ciphra_dev")
+    assert_demo_seed_allowed("postgresql://ciphra:ciphra@localhost:5433/ciphra")
+    assert_demo_seed_allowed("postgresql://ciphra:ciphra@postgres/ciphra")
 
 
 def test_refuses_dsn_with_prod_substring(monkeypatch):
@@ -64,13 +64,13 @@ def test_refuses_dsn_with_prod_substring(monkeypatch):
         "postgresql://prod_user:pwd@host/ciphra",
     ):
         with pytest.raises(DemoSeedRefused, match="prod"):
-            _assert_demo_seed_allowed(dsn)
+            assert_demo_seed_allowed(dsn)
 
 
 def test_refuses_dsn_with_production_substring(monkeypatch):
     monkeypatch.setenv("CIPHRA_ALLOW_DEMO_SEED", "1")
     with pytest.raises(DemoSeedRefused, match="prod"):
-        _assert_demo_seed_allowed("postgresql://ciphra:pwd@host/ciphra_production")
+        assert_demo_seed_allowed("postgresql://ciphra:pwd@host/ciphra_production")
 
 
 def test_refuses_dsn_pointing_at_ciphra_ch(monkeypatch):
@@ -79,7 +79,7 @@ def test_refuses_dsn_pointing_at_ciphra_ch(monkeypatch):
     earlier work and they switch DSN without thinking."""
     monkeypatch.setenv("CIPHRA_ALLOW_DEMO_SEED", "1")
     with pytest.raises(DemoSeedRefused, match="ciphra\\.ch"):
-        _assert_demo_seed_allowed("postgresql://ciphra:pwd@db.ciphra.ch/ciphra")
+        assert_demo_seed_allowed("postgresql://ciphra:pwd@db.ciphra.ch/ciphra")
 
 
 def test_pattern_check_is_case_insensitive(monkeypatch):
@@ -92,4 +92,4 @@ def test_pattern_check_is_case_insensitive(monkeypatch):
         "postgresql://ciphra:pwd@db.Ciphra.CH/ciphra",
     ):
         with pytest.raises(DemoSeedRefused):
-            _assert_demo_seed_allowed(dsn)
+            assert_demo_seed_allowed(dsn)
