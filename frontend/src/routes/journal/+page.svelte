@@ -379,7 +379,7 @@
 				type="button"
 				on:click={openSearch}
 				aria-label={$t('journal.search_aria')}
-				class="shrink-0 p-2 rounded-lg min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors"
+				class="shrink-0 p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
 				style="background: var(--surface-muted); color: var(--text-secondary)"
 			>
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke-width="2"/></svg>
@@ -401,7 +401,7 @@
 					type="button"
 					on:click={() => { searchQuery = ''; searchOpen = false; }}
 					aria-label={$t('journal.search_close_aria')}
-					class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded"
+					class="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded"
 					style="color: var(--text-muted)"
 				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke-width="2"/><line x1="6" y1="6" x2="18" y2="18" stroke-width="2"/></svg>
@@ -630,7 +630,7 @@
 						<button
 							type="button"
 							on:click={deleteMoment}
-							class="px-3 py-1.5 text-sm rounded-lg"
+							class="px-3 py-1.5 text-sm rounded-lg min-h-[44px] inline-flex items-center"
 							style="background: var(--danger); color: white"
 						>{$t('common.yes_delete')}</button>
 					</div>
@@ -638,7 +638,7 @@
 					<button
 						type="button"
 						on:click={() => (momentConfirmDelete = true)}
-						class="text-sm px-3 py-1.5 mr-auto"
+						class="text-sm px-3 py-1.5 mr-auto min-h-[44px] inline-flex items-center"
 						style="color: var(--text-muted)"
 					>{$t('common.delete')}</button>
 					<button
@@ -670,12 +670,16 @@
 	/* CIPH-902 — filter-chip cohort-awareness. Active state uses
 	   --accent (cohort primary) instead of hardcoded olive. */
 	.journal-filter-chip {
-		padding: 6px 12px;
+		/* CIPH-pi22-JC-1 — 44pt min-height per WCAG 2.5.5. Vertical padding
+		   pushed from 6 → 11 to land at 44 with the 13px font + line-height. */
+		padding: 11px 14px;
 		font-size: 13px;
 		font-weight: 500;
 		border-radius: 9999px;
 		white-space: nowrap;
-		min-height: 36px;
+		min-height: 44px;
+		display: inline-flex;
+		align-items: center;
 		background: var(--surface-muted);
 		color: var(--text-secondary);
 		border: 1px solid transparent;
