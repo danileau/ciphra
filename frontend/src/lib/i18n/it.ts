@@ -2051,6 +2051,10 @@ export default {
 	'condition.pcos.vitals_rationale': 'Giorno e lunghezza del ciclo (anche se irregolari), peso, circonferenza vita, HbA1c e umore sono i valori che endocrinologi e ginecologi seguono nel tempo.',
 	'condition.pcos.for_doctor': 'Il report PDF mostra la variabilità della lunghezza dei cicli, i pattern dei sintomi per gruppi androgenici/metabolici/umore, le tendenze di peso e HbA1c — a supporto delle decisioni terapeutiche in endocrinologia e ginecologia.',
 
+	// CIPH-pi24-4a-full / 4b-full / 4c-full — keys for cancer_treatment,
+	// hashimoto and rheumatoid_arthritis already exist earlier in this file.
+	// PI v24 wired the conditionInfoMap entries; no duplicate authoring here.
+
 	// Scheda fase del ciclo (CIPH-401)
 	'cycle.title': 'Fase del ciclo',
 	'cycle.day_n': 'Giorno {n}',

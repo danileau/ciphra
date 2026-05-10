@@ -477,6 +477,76 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 		forDoctorKey: 'condition.pcos.for_doctor',
 		relatedConditions: ['endometriosis', 'anxiety_depression', 'diabetes'],
 	},
+
+	// CIPH-pi24-4a-full — cancer_treatment (narrative cohort).
+	cancer_treatment: {
+		id: 'cancer_treatment',
+		icon: 'shield-plus',
+		color: DATA_4,
+		titleKey: 'condition.cancer_treatment.title',
+		subtitleKey: 'condition.cancer_treatment.subtitle',
+		introKey: 'condition.cancer_treatment.intro',
+		symptomGroups: [
+			{ labelKey: 'symptom_group.gi', rationaleKey: 'condition.cancer_treatment.rationale_gi', items: ['symptom.nausea', 'symptom.vomiting', 'symptom.appetite_loss', 'symptom.taste_changes', 'symptom.mouth_sores'] },
+			{ labelKey: 'symptom_group.fatigue', rationaleKey: 'condition.cancer_treatment.rationale_fatigue', items: ['symptom.tired', 'symptom.exhausted', 'symptom.weakness'] },
+			{ labelKey: 'symptom_group.neuro', rationaleKey: 'condition.cancer_treatment.rationale_neuro', items: ['symptom.tingling_hands', 'symptom.tingling_feet', 'symptom.brain_fog'] },
+			{ labelKey: 'symptom_group.emotional', rationaleKey: 'condition.cancer_treatment.rationale_emotional', items: ['symptom.anxious', 'symptom.depressed', 'symptom.overwhelmed', 'symptom.fearful'] },
+		],
+		episodesKey: 'condition.cancer_treatment.episodes_rationale',
+		triggersKey: 'condition.cancer_treatment.triggers_rationale',
+		vitalsKey: 'condition.cancer_treatment.vitals_rationale',
+		scales: [
+			{ nameKey: 'condition.scale.fact_g', descriptionKey: 'condition.scale.fact_g_desc', url: 'https://pubmed.ncbi.nlm.nih.gov/8445433/' },
+			{ nameKey: 'condition.scale.eortc_qlq', descriptionKey: 'condition.scale.eortc_qlq_desc', url: 'https://pubmed.ncbi.nlm.nih.gov/8433390/' },
+		],
+		forDoctorKey: 'condition.cancer_treatment.for_doctor',
+		relatedConditions: ['anxiety_depression', 'chronic_pain', 'long_covid'],
+	},
+
+	// CIPH-pi24-4b-full — hashimoto (discrete cohort, lab-driven).
+	hashimoto: {
+		id: 'hashimoto',
+		icon: 'droplet',
+		color: DATA_6,
+		titleKey: 'condition.hashimoto.title',
+		subtitleKey: 'condition.hashimoto.subtitle',
+		introKey: 'condition.hashimoto.intro',
+		symptomGroups: [
+			{ labelKey: 'symptom_group.hypothyroid', rationaleKey: 'condition.hashimoto.rationale_hypothyroid', items: ['symptom.tired', 'symptom.cold_intolerance', 'symptom.weight_gain', 'symptom.hair_loss', 'symptom.brain_fog', 'symptom.dry_skin', 'symptom.constipation'] },
+			{ labelKey: 'symptom_group.goiter', rationaleKey: 'condition.hashimoto.rationale_goiter', items: ['symptom.throat_lump', 'symptom.neck_pain', 'symptom.hoarse_voice', 'symptom.swallowing_difficulty'] },
+		],
+		episodesKey: 'condition.hashimoto.episodes_rationale',
+		triggersKey: 'condition.hashimoto.triggers_rationale',
+		vitalsKey: 'condition.hashimoto.vitals_rationale',
+		scales: [
+			{ nameKey: 'condition.scale.tsq', descriptionKey: 'condition.scale.tsq_desc', url: 'https://pubmed.ncbi.nlm.nih.gov/26765691/' },
+		],
+		forDoctorKey: 'condition.hashimoto.for_doctor',
+		relatedConditions: ['diabetes', 'menopause', 'anxiety_depression'],
+	},
+
+	// CIPH-pi24-4c-full — rheumatoid_arthritis (phase cohort, flare/remission).
+	rheumatoid_arthritis: {
+		id: 'rheumatoid_arthritis',
+		icon: 'flame',
+		color: DATA_1,
+		titleKey: 'condition.rheumatoid_arthritis.title',
+		subtitleKey: 'condition.rheumatoid_arthritis.subtitle',
+		introKey: 'condition.rheumatoid_arthritis.intro',
+		symptomGroups: [
+			{ labelKey: 'symptom_group.joint', rationaleKey: 'condition.rheumatoid_arthritis.rationale_joint', items: ['symptom.joint_pain', 'symptom.morning_stiffness', 'symptom.joint_swelling', 'symptom.symmetric_pain', 'symptom.wrist_pain', 'symptom.finger_pain', 'symptom.reduced_grip'] },
+			{ labelKey: 'symptom_group.systemic', rationaleKey: 'condition.rheumatoid_arthritis.rationale_systemic', items: ['symptom.tired', 'symptom.low_grade_fever', 'symptom.weight_loss', 'symptom.malaise'] },
+		],
+		episodesKey: 'condition.rheumatoid_arthritis.episodes_rationale',
+		triggersKey: 'condition.rheumatoid_arthritis.triggers_rationale',
+		vitalsKey: 'condition.rheumatoid_arthritis.vitals_rationale',
+		scales: [
+			{ nameKey: 'condition.scale.das28', descriptionKey: 'condition.scale.das28_desc', url: 'https://pubmed.ncbi.nlm.nih.gov/7779114/' },
+			{ nameKey: 'condition.scale.haq', descriptionKey: 'condition.scale.haq_desc', url: 'https://pubmed.ncbi.nlm.nih.gov/7362664/' },
+		],
+		forDoctorKey: 'condition.rheumatoid_arthritis.for_doctor',
+		relatedConditions: ['chronic_pain', 'long_covid', 'ibd'],
+	},
 };
 
 export const conditionIds = Object.keys(conditionInfoMap);

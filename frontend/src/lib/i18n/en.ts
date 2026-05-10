@@ -2065,6 +2065,14 @@ export default {
 	'condition.pcos.vitals_rationale': 'Cycle day and length (even when irregular), weight, waist circumference, HbA1c and mood are the values endocrinologists and gynecologists follow over time.',
 	'condition.pcos.for_doctor': 'The PDF report shows cycle-length variability, symptom patterns by androgen/metabolic/mood groups, weight and HbA1c trends — supporting endocrinology and gynecology treatment decisions.',
 
+	// CIPH-pi24-4a-full / 4b-full / 4c-full — i18n keys for cancer_treatment,
+	// hashimoto and rheumatoid_arthritis already exist earlier in this file
+	// (lines ~1533+). They were authored when the blueprints were first
+	// drafted but the conditionInfoMap entries were never wired. The PI v24
+	// frontend-conditions story added those conditionInfoMap entries
+	// (conditionInfo.ts) + group entries (conditionGroups.ts); the i18n
+	// re-use is intentional — no duplicate authoring.
+
 	// Cycle phase card (CIPH-401)
 	'cycle.title': 'Cycle phase',
 	'cycle.day_n': 'Day {n}',

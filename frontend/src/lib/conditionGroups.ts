@@ -30,7 +30,8 @@ export const conditionGroups: ConditionGroup[] = [
 		id: 'cardio_metabolic',
 		titleKey: 'condition_group.cardio_metabolic.title',
 		descriptionKey: 'condition_group.cardio_metabolic.description',
-		conditionIds: ['diabetes', 'hypertension'],
+		// CIPH-pi24-4b-full: hashimoto added (endocrine fits under metabolic).
+		conditionIds: ['diabetes', 'hypertension', 'hashimoto'],
 	},
 	{
 		id: 'respiratory',
@@ -60,6 +61,9 @@ export const conditionGroups: ConditionGroup[] = [
 		id: 'systemic',
 		titleKey: 'condition_group.systemic.title',
 		descriptionKey: 'condition_group.systemic.description',
-		conditionIds: ['long_covid'],
+		// CIPH-pi24-4a-full + 4c-full: cancer_treatment + rheumatoid_arthritis
+		// added alongside long_covid in the systemic group (multi-organ
+		// conditions where the diary spans treatment + symptom + recovery).
+		conditionIds: ['long_covid', 'cancer_treatment', 'rheumatoid_arthritis'],
 	},
 ];

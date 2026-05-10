@@ -2075,6 +2075,10 @@ export default {
 	'condition.pcos.vitals_rationale': 'Zyklustag und -länge (auch wenn unregelmässig), Gewicht, Taillenumfang, HbA1c und Stimmung — das sind die Werte, die Endokrinologie und Gynäkologie über die Zeit verfolgen.',
 	'condition.pcos.for_doctor': 'Der PDF-Bericht zeigt Zykluslängen-Variabilität, Symptom-Muster nach Androgen/Stoffwechsel/Stimmung, Gewichts- und HbA1c-Trends — als Grundlage für endokrinologische und gynäkologische Therapieentscheidungen.',
 
+	// CIPH-pi24-4a-full / 4b-full / 4c-full — keys for cancer_treatment,
+	// hashimoto and rheumatoid_arthritis already exist earlier in this file.
+	// PI v24 wired the conditionInfoMap entries; no duplicate authoring here.
+
 	// Zyklusphasen-Karte (CIPH-401)
 	'cycle.title': 'Zyklusphase',
 	'cycle.day_n': 'Tag {n}',

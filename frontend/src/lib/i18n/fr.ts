@@ -2050,6 +2050,10 @@ export default {
 	'condition.pcos.vitals_rationale': 'Jour et longueur du cycle (même irréguliers), poids, tour de taille, HbA1c et humeur sont les valeurs que les endocrinologues et gynécologues suivent dans le temps.',
 	'condition.pcos.for_doctor': 'Le rapport PDF montre la variabilité de la longueur des cycles, les schémas de symptômes androgéniques/métaboliques/humoraux, les tendances du poids et de l\'HbA1c — pour orienter les décisions thérapeutiques en endocrinologie et gynécologie.',
 
+	// CIPH-pi24-4a-full / 4b-full / 4c-full — keys for cancer_treatment,
+	// hashimoto and rheumatoid_arthritis already exist earlier in this file.
+	// PI v24 wired the conditionInfoMap entries; no duplicate authoring here.
+
 	// Carte phase du cycle (CIPH-401)
 	'cycle.title': 'Phase du cycle',
 	'cycle.day_n': 'Jour {n}',
