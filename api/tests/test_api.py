@@ -436,125 +436,110 @@ class TestAdmin:
 # ═══════════════════════════════════════════════════════════════════
 
 class TestRecovery:
-    @patch('server.e2e')
-    @patch('server.RecoveryCode')
-    def test_recovery_success(self, mock_rc, mock_e2e, client, mock_db):
-        mock_rc.validate.return_value = True
-
-        new_vault = MagicMock()
-        new_vault.auth_hash = 'newhash'
-        new_vault.vault_params = '{"b":2}'
-        new_vault.encrypted_master = 'newenc'
-        mock_e2e.recover_account.return_value = new_vault
-
+    @patch('server.verify_auth')
+    def test_recovery_success(self, mock_verify, client, mock_db):
+        mock_verify.return_value = True
+        # /api/recover SELECT shape: id, recovery_auth, recovery_attempts, locked_until
         mock_db.queue({
             'id': 1,
-            'auth_hash': 'oldhash',
-            'vault_params': 'vp',
-            'encrypted_master': 'em',
-            'recovery_vault': 'rv',
-            'recovery_params': 'rp',
+            'recovery_auth': 'storedhash',
+            'recovery_attempts': 0,
+            'locked_until': None,
         })
 
         resp = client.post('/api/recover', json={
             'username': 'alice',
-            'recovery_code': 'able acid aged also area army away baby back ball bird blow',
-            'new_password': 'newpassword123',
+            'recovery_key': VALID_AUTH_KEY,
+            'auth_hash': VALID_AUTH_KEY,
+            'auth_params': 'ap',
+            'vault_params': 'vp',
+            'encrypted_master': 'em',
         })
         assert resp.status_code == 200
         assert resp.get_json()['success'] is True
 
     def test_recovery_missing_fields(self, client, mock_db):
-        resp = client.post('/api/recover', json={
-            'username': 'alice',
-        })
-        assert resp.status_code == 400
+        # Missing recovery_key + auth_hash → fail validation gate (server.py:801).
+        # Anti-enumeration: returns 401, not 400 (same response as bad credentials).
+        resp = client.post('/api/recover', json={'username': 'alice'})
+        assert resp.status_code == 401
 
-    @patch('server.RecoveryCode')
-    def test_recovery_invalid_code_format(self, mock_rc, client, mock_db):
-        mock_rc.validate.return_value = False
-
-        resp = client.post('/api/recover', json={
-            'username': 'alice',
-            'recovery_code': 'bad code',
-            'new_password': 'newpassword123',
-        })
-        assert resp.status_code == 400
-        assert 'Invalid recovery code format' in resp.get_json()['error']
-
-    @patch('server.e2e')
-    @patch('server.RecoveryCode')
-    def test_recovery_wrong_code(self, mock_rc, mock_e2e, client, mock_db):
-        mock_rc.validate.return_value = True
-        mock_e2e.recover_account.side_effect = Exception('bad code')
-
+    @patch('server.verify_auth')
+    def test_recovery_wrong_code(self, mock_verify, client, mock_db):
+        mock_verify.return_value = False
         mock_db.queue({
             'id': 1,
-            'auth_hash': 'hash',
-            'vault_params': 'vp',
-            'encrypted_master': 'em',
-            'recovery_vault': 'rv',
-            'recovery_params': 'rp',
+            'recovery_auth': 'storedhash',
+            'recovery_attempts': 0,
+            'locked_until': None,
         })
 
         resp = client.post('/api/recover', json={
             'username': 'alice',
-            'recovery_code': 'able acid aged also area army away baby back ball bird blow',
-            'new_password': 'newpassword123',
+            'recovery_key': VALID_AUTH_KEY,
+            'auth_hash': VALID_AUTH_KEY,
+            'auth_params': 'ap',
+            'vault_params': 'vp',
+            'encrypted_master': 'em',
         })
         assert resp.status_code == 401
         assert 'Invalid recovery code' in resp.get_json()['error']
 
-    @patch('server.RecoveryCode')
-    def test_recovery_not_enabled(self, mock_rc, client, mock_db):
-        mock_rc.validate.return_value = True
-
+    def test_recovery_not_enabled(self, client, mock_db):
+        # User exists but recovery_auth is None — server.py:820 returns 401 with
+        # 'Invalid recovery code' (anti-enumeration: hides 'no-recovery-set' from
+        # 'wrong-code'). Test verifies the no-recovery branch reaches the same
+        # collapsed response.
         mock_db.queue({
             'id': 1,
-            'auth_hash': 'hash',
+            'recovery_auth': None,
+            'recovery_attempts': 0,
+            'locked_until': None,
+        })
+
+        resp = client.post('/api/recover', json={
+            'username': 'alice',
+            'recovery_key': VALID_AUTH_KEY,
+            'auth_hash': VALID_AUTH_KEY,
+            'auth_params': 'ap',
             'vault_params': 'vp',
             'encrypted_master': 'em',
-            'recovery_vault': None,
-            'recovery_params': None,
         })
+        assert resp.status_code == 401
+        assert 'Invalid recovery code' in resp.get_json()['error']
 
-        resp = client.post('/api/recover', json={
-            'username': 'alice',
-            'recovery_code': 'able acid aged also area army away baby back ball bird blow',
-            'new_password': 'newpassword123',
-        })
-        assert resp.status_code == 400
-        assert 'not enabled' in resp.get_json()['error'].lower()
+    @pytest.mark.skip(reason=(
+        'Recovery code format validation moved client-side to '
+        'frontend/src/lib/wordlist.ts:validateRecoveryCode in the zero-knowledge '
+        'refactor. Server no longer sees the code phrase. '
+        'PI v22 follow-up: add vitest coverage for validateRecoveryCode '
+        '(currently 0 frontend tests).'
+    ))
+    def test_recovery_invalid_code_format(self):
+        pass
 
-    def test_recovery_short_password(self, client, mock_db):
-        resp = client.post('/api/recover', json={
-            'username': 'alice',
-            'recovery_code': 'able acid aged also area army away baby back ball bird blow',
-            'new_password': 'short',
-        })
-        assert resp.status_code == 400
-        assert 'Password' in resp.get_json()['error']
+    @pytest.mark.skip(reason=(
+        'New-password length validation moved client-side. Server never receives '
+        'the new password — only the client-derived auth_hash + re-wrapped '
+        'encrypted_master. No server-side surface to test.'
+    ))
+    def test_recovery_short_password(self):
+        pass
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Validate recovery code
+# Validate recovery code — endpoint removed
 # ═══════════════════════════════════════════════════════════════════
 
+@pytest.mark.skip(reason=(
+    '/api/validate-recovery endpoint removed in zero-knowledge refactor. '
+    'Recovery-code format validation lives in '
+    'frontend/src/lib/wordlist.ts:validateRecoveryCode and runs entirely '
+    'client-side. PI v22 follow-up: vitest coverage for validateRecoveryCode.'
+))
 class TestValidateRecovery:
-    @patch('server.RecoveryCode')
-    def test_validate_valid_code(self, mock_rc, client, mock_db):
-        mock_rc.validate.return_value = True
-        resp = client.post('/api/validate-recovery', json={
-            'recovery_code': 'able acid aged also area army away baby back ball bird blow',
-        })
-        assert resp.status_code == 200
-        assert resp.get_json()['valid'] is True
+    def test_validate_valid_code(self):
+        pass
 
-    @patch('server.RecoveryCode')
-    def test_validate_invalid_code(self, mock_rc, client, mock_db):
-        mock_rc.validate.return_value = False
-        resp = client.post('/api/validate-recovery', json={
-            'recovery_code': 'not a real code',
-        })
-        assert resp.status_code == 200
-        assert resp.get_json()['valid'] is False
+    def test_validate_invalid_code(self):
+        pass

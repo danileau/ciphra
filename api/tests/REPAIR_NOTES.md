@@ -48,7 +48,45 @@ evidence the test failures are not hiding code-side regressions.
 
 ## CIPH-pi21-LB-4b-2 — TestRecovery + TestValidateRecovery
 
-(pending — Sprint 1 next story)
+Live failure capture (pre-rewrite): 6 failed in TestRecovery, 2 failed in
+TestValidateRecovery. **8 tests total → 4 pass + 4 skip after rewrite.**
+
+Two structural findings before per-test classification:
+
+- **`/api/validate-recovery` endpoint is gone.** No matches in `api/server.py`
+  for the route name, the `validate_recovery` function, or `RecoveryCode`
+  imports. Recovery-code format validation moved entirely client-side to
+  `frontend/src/lib/wordlist.ts:validateRecoveryCode` (only caller:
+  `frontend/src/routes/login/+page.svelte:81`).
+- **`server.RecoveryCode` attribute does not exist.** `RecoveryCode` lives in
+  `api/e2e_encryption.py:104` but `server.py` doesn't import it. All 4 tests
+  with `@patch('server.RecoveryCode')` would AttributeError at run time.
+
+Recovery contract changed in the same zero-knowledge refactor that hit
+TestLogin: server now reads `recovery_key` (b64-32) + `auth_hash` (b64-32) +
+`auth_params` + `vault_params` + `encrypted_master`. Server never sees the
+recovery-code phrase or the new password — client decrypts/re-wraps locally
+using `recovery_params` from `/api/recover/init`.
+
+| Test | Mode | Evidence | Rationale |
+|---|---|---|---|
+| `test_recovery_success` | 1 | `server.py:801` (validation gate), `server.py:831` (verify_auth not e2e) | Tests post `recovery_code`+`new_password`; server expects `recovery_key`+`auth_hash`. Rewrite to current contract; patch `verify_auth → True`. |
+| `test_recovery_missing_fields` | 1 | `server.py:801-802` returns 401 not 400 | Anti-enumeration: missing `recovery_key`/`auth_hash` collapses to 401 "Invalid credentials," same response as bad code. Update expected status. |
+| `test_recovery_invalid_code_format` | 1 (skip) | `frontend/src/lib/wordlist.ts:78` | Code format validation moved client-side. No server surface to test. **Skipped** with rationale. PI v22 follow-up: vitest coverage for `validateRecoveryCode`. |
+| `test_recovery_wrong_code` | 1 | `server.py:831, 846` | Patch `verify_auth → False`, queue user with `recovery_auth` set. Reaches the failed-attempt branch and returns 401 "Invalid recovery code." |
+| `test_recovery_not_enabled` | 1 | `server.py:820-821` | Anti-enumeration collapsed "no recovery configured" into 401 "Invalid recovery code" (used to be 400 "not enabled"). Update test assertions to match — purpose preserved (verify the no-recovery branch reaches the collapsed response). |
+| `test_recovery_short_password` | 1 (skip) | client-side; server never sees the new password | Server contract carries only `auth_hash` + re-wrapped `encrypted_master`. No password-length surface to test. **Skipped** with rationale. |
+| `test_validate_valid_code` | 1 (skip) | endpoint removed | `/api/validate-recovery` gone; `RecoveryCode` not imported by server. **Skipped** at class level. |
+| `test_validate_invalid_code` | 1 (skip) | endpoint removed | Same as above. |
+
+**Mode-3 ALERT:** none. All test failures trace to the zero-knowledge
+refactor; no server-side regression detected.
+
+**Anti-enumeration policy is the load-bearing semantic change.** Two pre-PI
+test assertions (`test_recovery_missing_fields` 400→401,
+`test_recovery_not_enabled` "not enabled" → "Invalid recovery code") had to
+update because the server deliberately collapses distinguishable error states
+into one response. This is the docs-promised behavior, not a regression.
 
 ## CIPH-pi21-LB-4b-3 — TestDocuments + TestDocumentsAuth
 
