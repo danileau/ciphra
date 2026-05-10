@@ -1469,6 +1469,11 @@ export function generateDoctorPdf(
 	// migraine PDF leads with the trigger tile, an epilepsy PDF with
 	// rescue-med days, etc. Geometry: 4 × 1 row across 182mm content
 	// width, ~42mm × 22mm per tile.
+	//
+	// NOTE: this switch picks tile *content* within the doctor-glance
+	// section. SECTION-level cohort gating (which sections render at all)
+	// belongs in `$lib/cohortSections.ts:sectionsForCohort()` — add new
+	// cohort-conditional sections there, not as inline branches here.
 	const cohort = cohortOf(blueprint);
 	const tileGap = 3;
 	const tileW = (pageW - 28 - 3 * tileGap) / 4;
