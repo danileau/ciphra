@@ -70,3 +70,30 @@ describe('CIPH-pi22-L-3 JSON-LD structured data', () => {
 		expect(website?.inLanguage).toEqual(['de', 'en', 'fr', 'it']);
 	});
 });
+
+describe('CIPH-pi22-L-4 noscript fallback', () => {
+	it('app.html ships a <noscript> block', () => {
+		expect(APP_HTML).toMatch(/<noscript>[\s\S]+<\/noscript>/);
+	});
+
+	it('noscript block points users at /privacy', () => {
+		const m = APP_HTML.match(/<noscript>([\s\S]+?)<\/noscript>/);
+		expect(m, 'noscript block must exist').toBeTruthy();
+		expect(m![1]).toMatch(/href="\/privacy"/);
+	});
+
+	it('noscript block sits inside <body> before %sveltekit.body%', () => {
+		const noscriptStart = APP_HTML.indexOf('<noscript>');
+		const sveltekitBody = APP_HTML.indexOf('%sveltekit.body%');
+		expect(noscriptStart, 'noscript must be present').toBeGreaterThan(-1);
+		expect(noscriptStart, 'noscript must precede the SvelteKit body slot').toBeLessThan(sveltekitBody);
+	});
+
+	it('noscript explains the JS requirement positively (no "we cant" framing)', () => {
+		// Per feedback_brand_voice.md — frame encryption as an act, not as
+		// a denial. The copy says "your password derives the encryption key
+		// in this browser tab" — not "we can't read your data without JS."
+		const m = APP_HTML.match(/<noscript>([\s\S]+?)<\/noscript>/);
+		expect(m![1]).not.toMatch(/we (cannot|can't|never)|not even (admins?|we)/i);
+	});
+});

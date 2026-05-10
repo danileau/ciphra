@@ -53,6 +53,24 @@
 	%sveltekit.head%
 </head>
 <body data-sveltekit-preload-data="hover" class="bg-surface text-surface-slate font-sans min-h-screen antialiased">
+	<noscript>
+		<!-- CIPH-pi22-L-4 — JS-disabled fallback. Ciphra runs the entire
+		     encryption stack in the browser, so JS is genuinely required.
+		     For privacy-conscious users who reach for noscript first, give
+		     them an honest answer + a path to /privacy explaining why. -->
+		<div style="max-width: 36rem; margin: 4rem auto; padding: 1.5rem; font-family: system-ui, sans-serif; color: #2d2a26; background: #fefcf9; border: 1px solid #d8cdba; border-radius: 0.75rem;">
+			<h1 style="font-size: 1.5rem; margin: 0 0 0.75rem; font-weight: 600;">ciphra needs JavaScript</h1>
+			<p style="margin: 0 0 0.75rem; line-height: 1.55;">
+				Your password derives the encryption key in this browser tab — the
+				server never sees it. Without JavaScript that derivation can't run,
+				so ciphra refuses to load rather than silently weaken its promise.
+			</p>
+			<p style="margin: 0; line-height: 1.55;">
+				The full architecture is documented at
+				<a href="/privacy" style="color: #b23c2c; text-decoration: underline;">/privacy</a>.
+			</p>
+		</div>
+	</noscript>
 	<div style="display: contents">%sveltekit.body%</div>
 	<script>
 		// Perf review (PI v13): defer SW registration to after first
