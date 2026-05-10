@@ -1747,6 +1747,22 @@ export default {
 	'landing.template_parkinson_desc': 'Motor symptoms, ON/OFF periods, dyskinesia, non-motor signs',
 	'landing.template_ibd': "IBD (Crohn's / UC)",
 	'landing.template_ibd_desc': 'Bowel symptoms, flare periods, biologic infusions, lab markers',
+	// CIPH-pi24-4b — Hashimoto
+	'landing.template_hashimoto': 'Hashimoto / Hypothyroidism',
+	'landing.template_hashimoto_desc': 'Thyroid labs (TSH/T4/T3), symptoms, Levothyroxine adherence',
+	'symptom_group.hypothyroid': 'Hypothyroid signs',
+	'symptom_group.goiter': 'Goiter / neck',
+	'symptom.cold_intolerance': 'Cold intolerance',
+	'symptom.throat_lump': 'Lump in throat',
+	'symptom.neck_pain': 'Neck pain',
+	'symptom.hoarse_voice': 'Hoarse voice',
+	'symptom.swallowing_difficulty': 'Swallowing difficulty',
+	'trigger.pregnancy': 'Pregnancy',
+	'vital.tsh': 'TSH',
+	'vital.free_t4': 'Free T4',
+	'vital.free_t3': 'Free T3',
+	'vital.tpo_antibodies': 'TPO antibodies',
+	'vital.heart_rate': 'Heart rate',
 
 	// New group
 	'condition_group.vision.title': 'Vision',

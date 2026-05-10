@@ -31,6 +31,10 @@ const COHORT_MAP: Record<string, Cohort> = {
 	asthma: 'discrete',
 	diabetes: 'discrete',
 	parkinson: 'discrete',
+	// CIPH-pi24-4b — Hashimoto: lab-driven (TSH/T3/T4/TPO) over months.
+	// Stable patients on Levothyroxine; symptom-days flag dose-adjust
+	// conversations rather than multiDay flare patterns. Trend = primary.
+	hashimoto: 'discrete',
 
 	// Cycle-driven: monthly cycle phase is the mental model.
 	endometriosis: 'cycle',

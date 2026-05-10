@@ -1801,6 +1801,69 @@ export const pcos: Blueprint = {
 	primaryBrowseSurface: 'calendar',
 };
 
+// ─── Hashimoto (Autoimmune Thyroiditis) ─────────────────────
+// CIPH-pi24-4b — Discrete cohort. Most patients on Levothyroxine are
+// stable; clinical journey is lab-result-driven over months (TSH/T3/T4/
+// TPO). Symptoms (cold-intolerance, weight, hair, fog, dry skin) flag
+// dose-adjust conversations. No multiDay episode pattern — symptom days
+// are independent. Doctor handover = lab trend + symptom correlation.
+
+export const hashimoto: Blueprint = {
+	version: 1,
+	conditionId: 'hashimoto',
+	conditionLabel: 'landing.template_hashimoto',
+	accentColor: DATA_6,
+	symptomGroups: [
+		{
+			id: 'hypothyroid', label: 'symptom_group.hypothyroid', items: [
+				{ id: 'tired', label: 'symptom.tired' },
+				{ id: 'cold_intolerance', label: 'symptom.cold_intolerance' },
+				{ id: 'weight_gain', label: 'symptom.weight_gain' },
+				{ id: 'hair_loss', label: 'symptom.hair_loss' },
+				{ id: 'brain_fog', label: 'symptom.brain_fog' },
+				{ id: 'dry_skin', label: 'symptom.dry_skin' },
+				{ id: 'constipation', label: 'symptom.constipation' },
+				{ id: 'depressed_mood', label: 'symptom.depressed_mood' },
+			]
+		},
+		{
+			id: 'goiter', label: 'symptom_group.goiter', items: [
+				{ id: 'throat_lump', label: 'symptom.throat_lump' },
+				{ id: 'neck_pain', label: 'symptom.neck_pain' },
+				{ id: 'hoarse_voice', label: 'symptom.hoarse_voice' },
+				{ id: 'swallowing_difficulty', label: 'symptom.swallowing_difficulty' },
+			]
+		},
+	],
+	episodeTypes: [],
+	triggers: [
+		{ id: 'missed_meds', label: 'trigger.missed_meds' },
+		{ id: 'stress', label: 'trigger.stress' },
+		{ id: 'illness', label: 'trigger.illness' },
+		{ id: 'pregnancy', label: 'trigger.pregnancy' },
+		{ id: 'sleep_deprivation', label: 'trigger.sleep_deprivation' },
+	],
+	vitals: [
+		{ id: 'tsh', label: 'vital.tsh', unit: 'mU/L', placeholder: '2.0' },
+		{ id: 'free_t4', label: 'vital.free_t4', unit: 'ng/dL', placeholder: '1.2' },
+		{ id: 'free_t3', label: 'vital.free_t3', unit: 'pg/mL', placeholder: '3.2' },
+		{ id: 'tpo_antibodies', label: 'vital.tpo_antibodies', unit: 'IU/mL', placeholder: '100' },
+		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
+		{ id: 'heart_rate', label: 'vital.heart_rate', unit: 'bpm', placeholder: '72' },
+	],
+	medications: [],
+	gridSymptomColumns: ['tired', 'cold_intolerance', 'weight_gain', 'hair_loss', 'brain_fog', 'constipation'],
+	gridEpisodeColumns: [],
+	streamFilters: [
+		{ key: 'all', label: 'stream_filter.all' },
+		{ key: 'entry', label: 'stream_filter.entry' },
+		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
+	],
+	reportPreference: 'both',
+	primaryBrowseSurface: 'trend',
+};
+
 // ─── Registry ────────────────────────────────────────────────
 
 export interface PresetInfo {
@@ -1851,6 +1914,8 @@ export const presets: PresetInfo[] = [
 	{ id: 'glaucoma', labelKey: 'landing.template_glaucoma', descriptionKey: 'landing.template_glaucoma_desc', icon: 'eye', color: DATA_3, blueprint: glaucoma },
 	{ id: 'parkinson', labelKey: 'landing.template_parkinson', descriptionKey: 'landing.template_parkinson_desc', icon: 'waves', color: DATA_3, blueprint: parkinson },
 	{ id: 'ibd', labelKey: 'landing.template_ibd', descriptionKey: 'landing.template_ibd_desc', icon: 'donut', color: DATA_6, blueprint: ibd },
+	// CIPH-pi24-4b — Hashimoto added to the setup-wizard preset list.
+	{ id: 'hashimoto', labelKey: 'landing.template_hashimoto', descriptionKey: 'landing.template_hashimoto_desc', icon: 'droplet', color: DATA_6, blueprint: hashimoto },
 	// Custom
 	{ id: 'custom', labelKey: 'landing.template_custom', descriptionKey: 'landing.template_custom_desc', icon: 'settings', color: DATA_5, blueprint: custom },
 ];
