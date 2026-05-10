@@ -44,7 +44,7 @@
 		<meta property="og:title" content="{title} — ciphra" />
 		<meta property="og:description" content={subtitle} />
 		<meta property="og:type" content="article" />
-		<meta property="og:url" content="https://ciphra.app/conditions/{conditionId}" />
+		<meta property="og:url" content="https://ciphra.ch/conditions/{conditionId}" />
 		<meta name="twitter:card" content="summary" />
 		<meta name="twitter:title" content="{title} — ciphra" />
 		<meta name="twitter:description" content={subtitle} />
@@ -58,7 +58,7 @@
 			"@type": "MedicalWebPage",
 			"name": title,
 			"description": subtitle,
-			"url": `https://ciphra.app/conditions/${conditionId}`,
+			"url": `https://ciphra.ch/conditions/${conditionId}`,
 			"about": {
 				"@type": "MedicalCondition",
 				"name": title
@@ -66,7 +66,7 @@
 			"publisher": {
 				"@type": "Organization",
 				"name": "ciphra",
-				"url": "https://ciphra.app"
+				"url": "https://ciphra.ch"
 			}
 		}).replace(/<\//g, '<\\/')}</script>`}
 	{/if}

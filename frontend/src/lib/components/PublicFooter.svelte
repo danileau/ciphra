@@ -57,13 +57,6 @@
 					</a></li>
 				</ul>
 			</div>
-			<div>
-				<h3 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">{$t('landing.footer_domains')}</h3>
-				<ul class="space-y-2 text-sm" style="color: var(--text-muted);">
-					<li>ciphra.ch</li>
-					<li>ciphra.app</li>
-				</ul>
-			</div>
 		</div>
 		<div class="asterisk-divider mb-6">
 			<Asterisk size={14} color="muted" />

@@ -1094,7 +1094,6 @@ export default {
 	'terms.contact_heading': 'Kontakt',
 	'terms.contact_body': 'Rechtliches und Missbrauchsmeldungen: abuse@ciphra.ch.',
 	'landing.footer_register': 'Registrieren',
-	'landing.footer_domains': 'Domains',
 
 	// Reports
 	'reports.title': 'Berichte',
@@ -1355,7 +1354,7 @@ export default {
 	'tech.why_hardening_title': 'Defense in Depth',
 	'tech.why_hardening_desc': 'Die Argon2-WASM-Library ist mit Subresource Integrity (SRI) gepinnt — eine manipulierte Datei wird vom Browser abgelehnt. Der Master Key liegt nur im sessionStorage und wird beim Schliessen des Browsers gelöscht, was das XSS-Fenster verkleinert. CSP, X-Frame-Options und Referrer-Policy-Header, strenges CORS, Sperren pro Account bei Login und Recovery sowie 90-Tage-Audit-Log-Retention mit IP-Anonymisierung runden das Bild ab.',
 	'tech.verify_title': 'Überprüfe es selbst',
-	'tech.verify_desc': 'ciphra ist quelloffen. Kein Vertrauen nötig — lies den Code.',
+	'tech.verify_desc': 'ciphra ist Open Source. Kein Vertrauen nötig — lies den Code oder frag eine KI.',
 	'tech.verify_encryption': 'Verschlüsselungsmodul',
 	'tech.verify_api': 'API Server',
 	'tech.verify_crypto': 'Browser-Krypto',

@@ -1072,7 +1072,6 @@ export default {
 	'terms.contact_heading': 'Contact',
 	'terms.contact_body': "Questions légales et signalements d'abus : abuse@ciphra.ch.",
 	'landing.footer_register': 'S\'inscrire',
-	'landing.footer_domains': 'Domaines',
 
 	// Reports
 	'reports.title': 'Rapports',
@@ -1333,7 +1332,7 @@ export default {
 	'tech.why_hardening_title': 'Défense en profondeur',
 	'tech.why_hardening_desc': "La bibliothèque Argon2 WASM est épinglée par Subresource Integrity — un script altéré est refusé par le navigateur. La clé maître ne vit que dans sessionStorage, effacée à la fermeture du navigateur, réduisant la fenêtre XSS. En-têtes CSP, X-Frame-Options et Referrer-Policy, CORS strict, verrouillages par compte en connexion et récupération, rétention 90 jours du journal d'audit avec anonymisation IP complètent le dispositif.",
 	'tech.verify_title': 'Vérifiez par vous-même',
-	'tech.verify_desc': 'ciphra est open source. Aucune confiance requise — lisez le code.',
+	'tech.verify_desc': 'ciphra est open source. Aucune confiance requise — lisez le code ou demande à une IA.',
 	'tech.verify_encryption': 'Module de chiffrement',
 	'tech.verify_api': 'Serveur API',
 	'tech.verify_crypto': 'Crypto navigateur',
