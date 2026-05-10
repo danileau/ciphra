@@ -17,6 +17,10 @@
 	     served from the system stack with woff2 fallbacks; the system
 	     UI font is what most users render at native quality anyway. -->
 	<meta name="description" content="ciphra — the encrypted diary for chronic conditions. Encrypted with your password, right in your browser." />
+	<!-- CIPH-pi22-L-2 — canonical anchors search-engine ranking on the
+	     production origin. Per-route canonicals override via <svelte:head>
+	     where useful (/conditions/[id] etc); this is the site-wide default. -->
+	<link rel="canonical" href="https://ciphra.ch/" />
 	%sveltekit.head%
 </head>
 <body data-sveltekit-preload-data="hover" class="bg-surface text-surface-slate font-sans min-h-screen antialiased">
