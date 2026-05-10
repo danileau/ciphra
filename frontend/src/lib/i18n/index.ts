@@ -8,7 +8,16 @@ export const localeNames: Record<Locale, string> = { de: 'Deutsch', en: 'English
 // `de` is the SSR/fallback dict and is bundled eagerly. The other three are
 // loaded on demand via dynamic import — splits ~130KB gzip off first paint
 // for users whose detected locale is also `de` (the dominant Swiss case).
-const translations: Partial<Record<Locale, Record<string, string>>> = { de };
+//
+// CIPH-pi24-3 — `translations` is a writable store, not a plain object.
+// The previous design wrote `translations[target] = mod.default` inside a
+// dynamic-import .then() and tried to nudge the derived `t` store with
+// `_locale.update((l) => l)`. That trick fails for primitive locale strings
+// because Svelte's writable bails on no-op `set` (`safe_not_equal('en','en')`
+// returns false → no notify → derived doesn't re-run → page stays on the DE
+// fallback even after the EN dict resolves). Making `translations` a writable
+// + deriving `t` from `[locale, translations]` removes the trick entirely.
+const translations = writable<Partial<Record<Locale, Record<string, string>>>>({ de });
 const inflight: Partial<Record<Locale, Promise<Record<string, string>>>> = {};
 
 const localeLoaders: Record<Exclude<Locale, 'de'>, () => Promise<{ default: Record<string, string> }>> = {
@@ -18,17 +27,34 @@ const localeLoaders: Record<Exclude<Locale, 'de'>, () => Promise<{ default: Reco
 };
 
 async function ensureLocale(target: Locale): Promise<void> {
-	if (translations[target]) return;
+	if (get(translations)[target]) return;
 	if (target === 'de') return;
 	if (!inflight[target]) {
-		inflight[target] = localeLoaders[target as Exclude<Locale, 'de'>]().then((mod) => {
-			translations[target] = mod.default;
-			// Force a refresh of derived stores by re-publishing the current locale.
-			_locale.update((l) => l);
-			return mod.default;
-		});
+		inflight[target] = localeLoaders[target as Exclude<Locale, 'de'>]()
+			.then((mod) => {
+				// Single-step write + notify. derived `t` re-runs with the
+				// new dict in scope; no need for the `_locale.update((l)=>l)`
+				// trick that was silently broken for primitive locale values.
+				translations.update((t) => ({ ...t, [target]: mod.default }));
+				return mod.default;
+			})
+			.catch((err) => {
+				// CIPH-pi24-3 — Without this catch a failed import gives a
+				// silent perpetual fallback to DE forever (or until reload).
+				// Clearing `inflight[target]` lets the user retry by switching
+				// away and back.
+				console.warn(`[i18n] locale dict failed to load: ${target}`, err);
+				delete inflight[target];
+				throw err;
+			});
 	}
-	await inflight[target];
+	try {
+		await inflight[target];
+	} catch {
+		// Swallow the rejection at this layer; consumers get DE fallback via
+		// the derived `t` and can retry. Re-throwing here would force every
+		// caller to wrap in try/catch — overkill for an i18n best-effort load.
+	}
 }
 
 function detectLocale(): Locale {
@@ -59,13 +85,15 @@ export const locale = {
 	}
 };
 
-export const t = derived(locale, ($locale) => {
+export const t = derived([locale, translations], ([$locale, $trans]) => {
 	// Prefer the requested locale; fall back to `de` while a pending dict
-	// resolves, then to the raw key. Same lookup order as before, just with
-	// a missing-dict tier added.
-	const dict = translations[$locale];
+	// resolves, then to the raw key. Re-derives whenever `translations`
+	// updates (i.e., a dynamic-import .then() resolved) — fixes the silent
+	// fallback bug at CIPH-pi24-3.
+	const dict = $trans[$locale];
+	const fallback = $trans.de;
 	return (key: string, params?: Record<string, string | number>): string => {
-		let str = (dict && dict[key]) || translations.de![key] || key;
+		let str = (dict && dict[key]) || (fallback && fallback[key]) || key;
 		if (params) {
 			for (const [k, v] of Object.entries(params)) {
 				str = str.replace(`{${k}}`, String(v));
