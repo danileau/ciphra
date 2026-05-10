@@ -1868,17 +1868,90 @@ export function generateDoctorPdf(
 		accent: acc.break,
 	});
 
-	// Per-cohort selection. MVP uses already-aggregated data; cohort-specific
-	// tiles like tileLongestStreak / tilePhasePct in PDF_REWRITE.md §6 will
-	// land in PI v20 once the underlying aggregations exist.
+	// CIPH-pi23-B2-fix-1 — Phase-cohort cohort-day-coverage tiles. Replace
+	// information-poor `tileTopSymptom` (rendered "Most frequent symptom:
+	// Reizbarkeit (8)" for bipolar — clinically uninteresting) with the top-N
+	// multiDay episode types' day-coverage. Generic across all phase cohorts:
+	// bipolar surfaces manic+depressive; MS surfaces flares; chronic_pain
+	// surfaces flare days; etc. Picks the top-2 by day-coverage in the focus
+	// month so silent episode types don't burn tile slots.
+	const phaseTopDayCounts: Array<{ id: string; label: string; days: number }> = (() => {
+		const multiDayEps = blueprint.episodeTypes.filter((ep) => ep.multiDay);
+		if (multiDayEps.length === 0) return [];
+		const dayCount = new Map<string, Set<string>>();
+		for (const ep of multiDayEps) dayCount.set(ep.id, new Set());
+		for (const d of focusMonthDocs) {
+			if (d?.data?.type !== 'entry') continue;
+			const ds = String(d.data.date || '');
+			if (!ds) continue;
+			const eps = (d.data.episodes || {}) as Record<string, unknown>;
+			for (const ep of multiDayEps) {
+				if (Number(eps[ep.id] || 0) > 0) dayCount.get(ep.id)!.add(ds);
+			}
+		}
+		return multiDayEps
+			.map((ep) => ({ id: ep.id, label: ep.label, days: dayCount.get(ep.id)!.size }))
+			.filter((x) => x.days > 0)
+			.sort((a, b) => b.days - a.days);
+	})();
+	const tilePhaseTopN = (n: 0 | 1): Tile => {
+		const top = phaseTopDayCounts[n];
+		if (!top) return tileTopSymptom();  // graceful degrade for silent months
+		const pct = Math.round((top.days / focusDaysInMonth) * 100);
+		return {
+			label: labelOf(t, { id: top.id, label: top.label }),
+			value: `${pct}%`,
+			accent: acc.primary,
+		};
+	};
+
+	// CIPH-pi23-B2-fix-2 — Discrete-cohort duration distribution tile. For
+	// epilepsy / migraine / glaucoma where episodeTypes carry trackDuration,
+	// surface the dominant duration bucket (e.g. "<1min: 87%"). Displaces
+	// `tileTopSymptom` in the discrete-cohort tile set — symptom frequency
+	// is information-poor for seizure tracking; duration distribution is
+	// what drives the status-epilepticus risk conversation with neurology.
+	const tileEpisodeDurationDist = (): Tile => {
+		const durEps = blueprint.episodeTypes.filter((e) => e.trackDuration);
+		if (durEps.length === 0) return tileTopSymptom();
+		let lt1 = 0, m15 = 0, gt5 = 0, total = 0;
+		for (const d of focusMonthDocs) {
+			if (d?.data?.type !== 'entry') continue;
+			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+			const durs = (d.data.episodeDurations || {}) as Record<string, string>;
+			for (const ep of durEps) {
+				const cnt = Number(eps[ep.id] || 0);
+				if (cnt <= 0) continue;
+				const dur = durs[ep.id] || '';
+				total += cnt;
+				if (dur === '<1min') lt1 += cnt;
+				else if (dur === '1-5min') m15 += cnt;
+				else if (dur === '>5min') gt5 += cnt;
+			}
+		}
+		if (total === 0) return { label: t('pdf.duration_distribution'), value: '—', accent: acc.primary };
+		const pct = (n: number) => Math.round((n / total) * 100);
+		const buckets = [
+			{ key: '<1min', n: lt1 }, { key: '1-5min', n: m15 }, { key: '>5min', n: gt5 },
+		].sort((a, b) => b.n - a.n);
+		return {
+			label: t('pdf.duration_distribution'),
+			value: `${buckets[0].key}: ${pct(buckets[0].n)}%`,
+			accent: acc.primary,
+		};
+	};
+
+	// Per-cohort selection. PI v23 B2-fix-1/2 swapped tileTopSymptom out of
+	// the phase + discrete tile sets for cohort-relevant aggregations (per
+	// DOCTOR_PDF_DOGFOOD_pi23.md F-A2 / F-H2 findings).
 	const tiles: Tile[] = (() => {
 		switch (cohort) {
 			case 'discrete':
-				return [tileEpisodes(), tileRescueMed(), tileTopSymptom(), tileTopTrigger()];
+				return [tileEpisodes(), tileEpisodeDurationDist(), tileRescueMed(), tileTopTrigger()];
 			case 'cycle':
 				return [tileTopTrigger(), tileTopSymptom(), tileEpisodes(), tileDaysLogged()];
 			case 'phase':
-				return [tileEpisodes(), tileTopSymptom(), tileTopTrigger(), tileRescueMed()];
+				return [tileEpisodes(), tilePhaseTopN(0), tilePhaseTopN(1), tileTopTrigger()];
 			case 'narrative':
 				return [tileTopTrigger(), tileEpisodes(), tileTopSymptom(), tileDaysLogged()];
 			case 'custom':

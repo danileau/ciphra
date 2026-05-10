@@ -62,10 +62,25 @@ describe('CIPH-pi19-3 per-cohort tile selection', () => {
 		}
 	});
 
-	it('discrete leads with episodes-with-delta + rescue-med-days', () => {
-		// The first two tiles for discrete are the load-bearing ones.
+	it('discrete leads with episodes + duration-distribution (CIPH-pi23-B2-fix-2)', () => {
+		// PI v23 B2' dogfood walkthrough finding F-H2: tileTopSymptom is
+		// information-poor for epilepsy; tileEpisodeDurationDist gives the
+		// clinically-central status-epilepticus risk read instead. New tile
+		// order: [tileEpisodes, tileEpisodeDurationDist, tileRescueMed,
+		// tileTopTrigger] — the first two are the load-bearing ones.
 		expect(PDF).toMatch(
-			/case 'discrete':\s*\n\s*return\s*\[tileEpisodes\(\),\s*tileRescueMed\(\)/,
+			/case 'discrete':\s*\n\s*return\s*\[tileEpisodes\(\),\s*tileEpisodeDurationDist\(\)/,
+		);
+	});
+
+	it('phase leads with episodes + tilePhaseTopN (CIPH-pi23-B2-fix-1)', () => {
+		// PI v23 B2' dogfood walkthrough finding F-A2: tileTopSymptom (e.g.
+		// "Reizbarkeit (8)" for bipolar) is information-poor next to phase
+		// day-coverage. New tile order: [tileEpisodes, tilePhaseTopN(0),
+		// tilePhaseTopN(1), tileTopTrigger] — picks the top-2 multiDay
+		// episode types by day-coverage.
+		expect(PDF).toMatch(
+			/case 'phase':\s*\n\s*return\s*\[tileEpisodes\(\),\s*tilePhaseTopN\(0\),\s*tilePhaseTopN\(1\)/,
 		);
 	});
 
