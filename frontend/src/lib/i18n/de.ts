@@ -187,6 +187,8 @@ export default {
 	'calendar.mini_trigger_days': 'Tage mit Auslösern',
 	'calendar.mini_rescue_days': 'Tage mit Notfallmedikament',
 	'calendar.mini_summary_aria': 'Zusammenfassung für {month}',
+	'calendar.mini_insight_phase_aria': 'Phasen-Tagesabdeckung diesen Monat',
+	'calendar.mini_insight_topep_aria': 'Häufigstes Ereignis diesen Monat',
 	'calendar.mini_summary_empty': 'Für diesen Monat sind keine zusätzlichen Kennzahlen vorhanden.',
 	'calendar.trigger_pressure': 'Auslöser-Verlauf',
 	'calendar.trigger_pressure_aria': 'Auslöser-Verlauf für {month}',

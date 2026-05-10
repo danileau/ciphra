@@ -17,7 +17,9 @@
 -->
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
+	import { isCustomItem } from '$lib/blueprint';
 	import { createEventDispatcher } from 'svelte';
+	import type { MonthSummaryInsight } from '$lib/monthSummaryInsight';
 
 	export let monthName: string;
 	export let triggerDayCount: number;
@@ -32,10 +34,18 @@
 	export let monthPrefix: string = '';
 	export let daysInMonth: number = 0;
 	export let triggerCountByDay: Map<string, number> = new Map();
+	// CIPH-pi23-A3a/A3b — cohort-conditional insight chip. null means the
+	// cohort doesn't have a defined insight surface (cycle/narrative/custom
+	// today; future PIs add their own branches). When null, the chip section
+	// is hidden entirely rather than rendering empty chrome.
+	export let insight: MonthSummaryInsight = null;
 
 	const dispatch = createEventDispatcher<{ selectday: string }>();
 
 	$: hasAnyRow = showTrigger || showRescue;
+	function labelOf(item: { id: string; label: string }): string {
+		return isCustomItem(item.id) ? item.label : $t(item.label);
+	}
 	// Heatmap renders only when the blueprint declares triggers AND the
 	// parent has wired the day-tally inputs. Below lg the component isn't
 	// mounted at all (parent's `hidden lg:block` wrapper handles that).
@@ -53,6 +63,39 @@
 
 <section class="cal-mini" aria-label={$t('calendar.mini_summary_aria', { month: monthName })}>
 	<h3 class="cal-mini-title">{$t('calendar.this_month')}</h3>
+
+	<!-- CIPH-pi23-A3a/A3b — cohort-conditional insight chip. Phase cohort
+	     (Anna's anchor) gets day-coverage segments for top multiDay episode
+	     types; discrete cohort (Hans's anchor) gets the top point-event
+	     count. Cycle / narrative / custom render nothing here. -->
+	{#if insight?.kind === 'phase-day-coverage'}
+		<div class="cal-mini-insight" aria-label={$t('calendar.mini_insight_phase_aria')}>
+			{#each insight.segments.slice(0, 3) as seg}
+				<div class="cal-mini-insight-row">
+					<span
+						class="cal-mini-insight-dot"
+						aria-hidden="true"
+						style="background: {seg.color}"
+					></span>
+					<span class="cal-mini-insight-label">{labelOf(seg)}</span>
+					<span class="cal-mini-insight-value">{Math.round(seg.pct * 100)}%</span>
+				</div>
+			{/each}
+		</div>
+	{:else if insight?.kind === 'top-episode'}
+		<div class="cal-mini-insight" aria-label={$t('calendar.mini_insight_topep_aria')}>
+			<div class="cal-mini-insight-row">
+				<span
+					class="cal-mini-insight-dot"
+					aria-hidden="true"
+					style="background: {insight.color}"
+				></span>
+				<span class="cal-mini-insight-label">{labelOf(insight)}</span>
+				<span class="cal-mini-insight-value">{insight.count}</span>
+			</div>
+		</div>
+	{/if}
+
 	{#if showHeatmap}
 		<!-- CIPH-pi19-C — trigger pressure strip. One cell per day of the
 			 visible month, colored ochre at bucketed opacity. Click jumps
@@ -126,6 +169,40 @@
 		letter-spacing: 0.06em;
 		color: var(--text-secondary);
 		margin: 0;
+	}
+	/* CIPH-pi23-A3a/A3b — cohort insight chip. Sits between the title
+	   and the trigger heatmap; hidden entirely when insight is null. */
+	.cal-mini-insight {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.cal-mini-insight-row {
+		display: grid;
+		grid-template-columns: auto 1fr auto;
+		align-items: center;
+		gap: 8px;
+		padding: 4px 0;
+	}
+	.cal-mini-insight-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+	.cal-mini-insight-label {
+		font-size: 13px;
+		color: var(--text-secondary);
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.cal-mini-insight-value {
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--text-primary);
+		font-variant-numeric: tabular-nums;
 	}
 	.cal-mini-rows {
 		display: flex;

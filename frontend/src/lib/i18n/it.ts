@@ -182,6 +182,8 @@ export default {
 	'calendar.mini_trigger_days': 'Giorni con fattori scatenanti',
 	'calendar.mini_rescue_days': 'Giorni con farmaco di emergenza',
 	'calendar.mini_summary_aria': 'Riepilogo per {month}',
+	'calendar.mini_insight_phase_aria': 'Copertura delle fasi questo mese',
+	'calendar.mini_insight_topep_aria': 'Episodio più frequente questo mese',
 	'calendar.mini_summary_empty': 'Nessuna metrica aggiuntiva per questo mese.',
 	'calendar.trigger_pressure': 'Pressione fattori scatenanti',
 	'calendar.trigger_pressure_aria': 'Pressione dei fattori scatenanti per {month}',

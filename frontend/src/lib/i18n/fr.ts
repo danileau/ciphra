@@ -181,6 +181,8 @@ export default {
 	'calendar.mini_trigger_days': 'Jours avec déclencheurs',
 	'calendar.mini_rescue_days': 'Jours avec médicament de secours',
 	'calendar.mini_summary_aria': 'Résumé pour {month}',
+	'calendar.mini_insight_phase_aria': 'Couverture des phases ce mois-ci',
+	'calendar.mini_insight_topep_aria': 'Épisode le plus fréquent ce mois-ci',
 	'calendar.mini_summary_empty': 'Aucun indicateur supplémentaire pour ce mois.',
 	'calendar.trigger_pressure': 'Pression des déclencheurs',
 	'calendar.trigger_pressure_aria': 'Pression des déclencheurs pour {month}',

@@ -181,6 +181,8 @@ export default {
 	'calendar.mini_trigger_days': 'Days with triggers',
 	'calendar.mini_rescue_days': 'Days with rescue medication',
 	'calendar.mini_summary_aria': 'Summary for {month}',
+	'calendar.mini_insight_phase_aria': 'Phase day-coverage this month',
+	'calendar.mini_insight_topep_aria': 'Top episode this month',
 	'calendar.mini_summary_empty': 'No additional metrics for this month.',
 	'calendar.trigger_pressure': 'Trigger pressure',
 	'calendar.trigger_pressure_aria': 'Trigger pressure across {month}',

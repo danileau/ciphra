@@ -13,6 +13,7 @@
 	// CIPH-pi19-B — month-summary tail of the lg+ persistent rail.
 	import MonthMiniSummary from '$lib/components/MonthMiniSummary.svelte';
 	import { cohortOf } from '$lib/blueprint/cohort';
+	import { monthSummaryInsightFor } from '$lib/monthSummaryInsight';
 	import {
 		computeCycleAnchor,
 		cycleStateForDate,
@@ -893,6 +894,7 @@
 				{monthPrefix}
 				{daysInMonth}
 				{triggerCountByDay}
+				insight={bp ? monthSummaryInsightFor(cohort, bp, monthDocs, daysInMonth) : null}
 				on:selectday={(e) => { selectedDate = e.detail; }}
 			/>
 		</aside>
