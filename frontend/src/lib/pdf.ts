@@ -23,6 +23,8 @@ import type { Blueprint, VitalField } from '$lib/blueprint';
 import { isCustomItem, resolveBlueprint } from '$lib/blueprint';
 import { cohortOf } from '$lib/blueprint/cohort';
 import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
+import { sectionsForCohort } from '$lib/cohortSections';
+import { aggregatePhaseDistribution } from '$lib/pdfPhaseDistribution';
 import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
 import { isExportable } from '$lib/utils/exportable';
@@ -748,6 +750,92 @@ function drawDayCoverageStrip(
 		}
 	}
 	cursorY = stripY + cellH + 4;
+
+	return cursorY;
+}
+
+/**
+ * CIPH-pi21-Track-B-4 — Phase distribution stacked bar.
+ *
+ * Phase cohort only (gated by `sectionsForCohort(cohort).includes(
+ * 'phase-distribution')`). Reads from `aggregatePhaseDistribution` so the
+ * data shape is testable in isolation. Renders nothing on a silent month —
+ * an empty bar would imply "0% manic" which is meaningless when no episodes
+ * were logged.
+ */
+function drawPhaseDistribution(
+	doc: jsPDF,
+	blueprint: Blueprint,
+	focusMonthDocs: CiphraDocument[],
+	year: number,
+	month: number,
+	t: TranslateFn,
+	locale: string,
+	cursorY: number,
+): number {
+	const segments = aggregatePhaseDistribution(blueprint, focusMonthDocs);
+	if (segments.length === 0) return cursorY;
+
+	const pageW = 210;
+	const barX = 14;
+	const barW = pageW - 28;             // 182mm content width
+	const barH = 6;
+
+	// Title row — same vocabulary as drawDayCoverageStrip.
+	const focusMonthName = new Date(year, month).toLocaleDateString(locale, {
+		month: 'long',
+		year: 'numeric',
+	});
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(10);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.phase_distribution_title', { month: focusMonthName }), barX, cursorY);
+	cursorY += 4;
+
+	// Stacked bar. Each segment width is pct × barW; round to avoid sub-pixel
+	// gaps that print as hairlines on cheap lasers. Last segment absorbs the
+	// rounding remainder so the bar always reaches exactly barW.
+	let xCursor = barX;
+	for (let i = 0; i < segments.length; i++) {
+		const isLast = i === segments.length - 1;
+		const segW = isLast ? barX + barW - xCursor : Math.round(segments[i].pct * barW * 100) / 100;
+		doc.setFillColor(...segments[i].color);
+		doc.rect(xCursor, cursorY, segW, barH, 'F');
+		xCursor += segW;
+	}
+	// Hairline border keeps the bar legible against warm paper.
+	doc.setDrawColor(...BRAND.borderSubtle);
+	doc.setLineWidth(0.1);
+	doc.rect(barX, cursorY, barW, barH, 'S');
+	cursorY += barH + 3;
+
+	// Legend row: "● Manic 12%   ● Depressive 31%   ...". Wraps if the line
+	// would exceed barW; rare in practice (≤4 episode types per cohort) but
+	// the wrap keeps the primitive safe for custom blueprints with many types.
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(7.5);
+	const dotR = 0.9;
+	const gap = 4;
+	const wrapMax = barX + barW;
+	let lx = barX;
+	let ly = cursorY + 2;
+	for (const seg of segments) {
+		const labelText = labelOf(t, { id: seg.id, label: seg.label });
+		const pctText = `${Math.round(seg.pct * 100)}%`;
+		const text = `${labelText} ${pctText}`;
+		const textW = doc.getTextWidth(text);
+		const itemW = dotR * 2 + 1.2 + textW;
+		if (lx + itemW > wrapMax && lx > barX) {
+			lx = barX;
+			ly += 4;
+		}
+		doc.setFillColor(...seg.color);
+		doc.circle(lx + dotR, ly - 0.6, dotR, 'F');
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(text, lx + dotR * 2 + 1.2, ly);
+		lx += itemW + gap;
+	}
+	cursorY = ly + 4;
 
 	return cursorY;
 }
@@ -1570,6 +1658,25 @@ export function generateDoctorPdf(
 		drawStatCard(doc, x, cursorY, tileW, tileH, tiles[i].label, tiles[i].value, tiles[i].accent, tiles[i].delta);
 	}
 	cursorY += tileH + 6;
+
+	// CIPH-pi21-Track-B-4 — cohort-conditional middle. The typed gate at
+	// `cohortSections.ts:sectionsForCohort` decides which (if any) primitive
+	// renders here. Phase cohorts (bipolar/MS/IBD/anxiety_depression/...)
+	// land the stacked-bar; cycle cohorts will land drawCycleStrip in the
+	// next commit; discrete/narrative/custom render nothing in this slot.
+	const cohortSections = sectionsForCohort(cohort);
+	if (cohortSections.includes('phase-distribution')) {
+		cursorY = drawPhaseDistribution(
+			doc,
+			blueprint,
+			focusMonthDocs,
+			year,
+			month,
+			t,
+			locale,
+			cursorY,
+		);
+	}
 
 	// CIPH-pi19-2 — Day-coverage strip. 31-cell per-day overview of the focus
 	// month, mirrors calendar v3's cell encoding (symptom-load tint, trigger

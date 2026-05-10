@@ -110,9 +110,12 @@ describe('CIPH-pi19-2 wired into generateDoctorPdf', () => {
 		// Story 2 (CIPH-pi19-3) replaced that block with the 4-tile KPI
 		// glance. The strip's invariant is "after the tiles, before the
 		// trajectory block" — pinned by the `cursorY += tileH + 6` line
-		// that ends the KPI glance.
+		// that ends the KPI glance. CIPH-pi21-Track-B-4 inserted the
+		// cohort-conditional phase-distribution / cycle-strip block between
+		// KPI tiles and day-coverage; the window widened from 800 → 1500
+		// to absorb that block.
 		const callSite = PDF.match(
-			/cursorY \+= tileH \+ 6;[\s\S]{0,800}drawDayCoverageStrip[\s\S]{0,1500}Trajectory metadata/,
+			/cursorY \+= tileH \+ 6;[\s\S]{0,1500}drawDayCoverageStrip[\s\S]{0,1500}Trajectory metadata/,
 		);
 		expect(callSite, 'expected placement after KPI glance, before trajectory block').toBeTruthy();
 	});

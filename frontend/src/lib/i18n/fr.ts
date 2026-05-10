@@ -1156,6 +1156,7 @@ export default {
 	'pdf.episode_free_streak': 'Sans épisode (fin)',
 	'pdf.episode_trend': 'Trajectoire sur 24 mois',
 	'pdf.day_coverage_title': 'Vue du mois · {month}',
+	'pdf.phase_distribution_title': 'Répartition des phases · {month}',
 	'pdf.episode_trend_12m': 'Trajectoire sur 12 mois',
 	'pdf.total_short': 'Total',
 	'pdf.trend_improving': 'Moins d\'épisodes',
