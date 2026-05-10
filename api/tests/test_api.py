@@ -322,8 +322,9 @@ class TestAdmin:
         assert resp.status_code == 403
 
     def test_admin_stats_success(self, client, mock_db, admin_token):
-        # admin_stats executes 8 queries, each returns a count dict
+        # admin_required pwd_version check + admin_stats's 8 count queries
         mock_db.queue(
+            PWD_VERSION_ROW,
             {'total': 10},     # total users
             {'active': 5},     # active 30d
             {'active': 3},     # active 7d
@@ -344,7 +345,7 @@ class TestAdmin:
 
     def test_admin_users_success(self, client, mock_db, admin_token):
         now = datetime.now(timezone.utc)
-        mock_db.queue([{
+        mock_db.queue(PWD_VERSION_ROW, [{
             'id': 1,
             'username': 'alice',
             'created_at': now,
@@ -364,7 +365,7 @@ class TestAdmin:
         assert users[0]['username'] == 'alice'
 
     def test_admin_lock_user(self, client, mock_db, admin_token):
-        mock_db.queue({'id': 2})  # user exists
+        mock_db.queue(PWD_VERSION_ROW, {'id': 2})  # admin pwd_version + user exists
 
         resp = client.post('/api/admin/users/2/lock',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -379,7 +380,7 @@ class TestAdmin:
         assert resp.status_code == 400
 
     def test_admin_unlock_user(self, client, mock_db, admin_token):
-        mock_db.queue({'id': 2})
+        mock_db.queue(PWD_VERSION_ROW, {'id': 2})
 
         resp = client.post('/api/admin/users/2/unlock',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -387,7 +388,7 @@ class TestAdmin:
         assert resp.status_code == 200
 
     def test_admin_delete_user(self, client, mock_db, admin_token):
-        mock_db.queue({'id': 2, 'username': 'bob'})
+        mock_db.queue(PWD_VERSION_ROW, {'id': 2, 'username': 'bob'})
 
         resp = client.delete('/api/admin/users/2',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -401,7 +402,7 @@ class TestAdmin:
         assert resp.status_code == 400
 
     def test_admin_promote_user(self, client, mock_db, admin_token):
-        mock_db.queue({'id': 2, 'username': 'bob'})
+        mock_db.queue(PWD_VERSION_ROW, {'id': 2, 'username': 'bob'})
 
         resp = client.post('/api/admin/users/2/promote',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -409,7 +410,7 @@ class TestAdmin:
         assert resp.status_code == 200
 
     def test_admin_demote_user(self, client, mock_db, admin_token):
-        mock_db.queue({'id': 2, 'username': 'bob'})
+        mock_db.queue(PWD_VERSION_ROW, {'id': 2, 'username': 'bob'})
 
         resp = client.post('/api/admin/users/2/demote',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -424,7 +425,7 @@ class TestAdmin:
 
     def test_admin_audit_log(self, client, mock_db, admin_token):
         now = datetime.now(timezone.utc)
-        mock_db.queue([{
+        mock_db.queue(PWD_VERSION_ROW, [{
             'id': 1,
             'user_id': 1,
             'username': 'alice',

@@ -129,7 +129,31 @@ the empty queue → 404. Coincidentally correct. Updated to queue
 
 ## CIPH-pi21-LB-4b-4 — TestAdmin
 
-(pending — Sprint 1)
+Live failure capture (pre-rewrite): 8 of 13 failed. **All 8 are the same
+Mode 2 fixture-ordering drift as LB-4b-3** — `admin_required` calls
+`_decode_and_verify_token` → `_current_password_version` → fetchone before
+the route runs.
+
+The 5 currently-passing tests (`test_admin_*_requires_admin` ×2,
+`test_admin_cannot_*_self` ×3) work via the `_current_password_version`
+exception fallback to version 1 (`server.py:250-251`): mock_db is empty,
+fetchone returns None, `int(None['password_version'])` raises, fallback
+returns 1, token's `pv=1` matches. Left untouched per "don't refactor what
+already works" — keeping the test surface stable minimizes diff noise.
+
+| Test | Mode | Evidence | Rationale |
+|---|---|---|---|
+| `test_admin_stats_success` | 2 | `server.py:243-249` | Token's pwd_version eats first count row, leaving 7 of 8 stats queries fed → 8th fetchone returns None → 500. Queue PWD_VERSION_ROW first. |
+| `test_admin_users_success` | 2 | `server.py:243-249` | pwd_version eats the user list → fetchall returns []. Queue PWD_VERSION_ROW first. |
+| `test_admin_lock_user` | 2 | `server.py:243-249, 1071-1073` | pwd_version eats the user-found row → SELECT returns None → 404. Queue PWD_VERSION_ROW first. |
+| `test_admin_unlock_user` | 2 | `server.py:243-249, 1093-1095` | Same pattern. |
+| `test_admin_delete_user` | 2 | `server.py:243-249, 1115-1118` | Same pattern. |
+| `test_admin_promote_user` | 2 | `server.py:243-249, 1140-1143` | Same pattern. |
+| `test_admin_demote_user` | 2 | `server.py:243-249, 1160-1163` | Same pattern. |
+| `test_admin_audit_log` | 2 | `server.py:243-249, 1185` | Same pattern. |
+
+**Mode-3 ALERT:** none. Pure middleware-driven fixture-ordering drift; admin
+route logic is unchanged across the entire class.
 
 ## CIPH-pi21-LB-4b-5 — TestHealth + TestRegister
 
