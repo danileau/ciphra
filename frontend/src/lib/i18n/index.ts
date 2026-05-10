@@ -66,7 +66,12 @@ function detectLocale(): Locale {
 		const lang = navigator.language.slice(0, 2) as Locale;
 		if (locales.includes(lang)) return lang;
 	}
-	return 'de';
+	// CIPH-pi24-1C — fall back to EN for unsupported browser locales.
+	// A Polish/Spanish/Portuguese visitor previously got a German page
+	// they couldn't read; English is the more honest international default.
+	// DE remains the explicit choice for German-speaking users via either
+	// `navigator.language` detection or the footer language picker.
+	return 'en';
 }
 
 const _locale = writable<Locale>(detectLocale());

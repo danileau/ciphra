@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { isAuthenticated, authReady, auth, needsUnlock } from '$lib/stores/auth';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
-	import { t, locale, locales, localeNames, translateUnit } from '$lib/i18n';
+	import { t, translateUnit } from '$lib/i18n';
 	import type { Locale } from '$lib/i18n';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -474,10 +474,9 @@
 
 	$: liveLinks = $familyLinks.filter(l => !l.revoked);
 
-	function setLocale(e: Event) {
-		const target = e.currentTarget as HTMLSelectElement;
-		locale.set(target.value);
-	}
+	// CIPH-pi24-1B — `setLocale` removed from the layout. The language
+	// picker now lives only in PublicFooter, which has its own local
+	// copy of the handler.
 
 	function onVaultChange(e: Event) {
 		const target = e.currentTarget as HTMLSelectElement;
@@ -559,26 +558,23 @@
 					<a href="/#how" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_how')}</a>
 					<a href="/#security" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_security')}</a>
 				</div>
-				<div class="w-px h-6 hidden md:block" style="background: var(--border);"></div>
-				<select
-					aria-label={$t('common.language')}
-					class="text-xs rounded-lg px-2 py-1.5 min-h-[36px]"
-					style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-secondary);"
-					value={$locale}
-					on:change={setLocale}
-				>
-					{#each locales as l}
-						<option value={l}>{localeNames[l]}</option>
-					{/each}
-				</select>
-				<!-- CTA hidden on auth-flow pages (/login, /migrate, /stream)
-					 — the user is already inside that funnel; pointing back
-					 to it would be a loop. -->
+				<!-- CIPH-pi24-1B — Language picker lives in PublicFooter only.
+					 Header was the wrong slot: chrome density at 4 nav links +
+					 dropdown + CTA crowded the bar; trust-aware Swiss apps
+					 (Threema, Proton) put language in the footer where users
+					 actually look for it. -->
+				<!-- CIPH-pi24-1A — Header CTA returns returning users to /login.
+					 The "kostenlos starten" CTA appears 3x in landing body
+					 (hero, conditions section, final CTA) — a 4th in the header
+					 wasn't helping new users and was misdirecting returning
+					 ones who needed to log in. Hidden on auth-flow shell
+					 (/login, /migrate, /stream) for the same loop-prevention
+					 reason as before. -->
 				{#if currentShell.shell !== 'auth-flow'}
 					<a
-						href="/login?mode=register"
-						class="btn-primary min-h-[44px] px-5 text-sm font-semibold rounded-lg"
-					>{$t('landing.hero_cta')}</a>
+						href="/login"
+						class="btn-secondary min-h-[44px] px-5 text-sm font-semibold rounded-lg"
+					>{$t('auth.login')}</a>
 				{/if}
 			</div>
 		</div>
