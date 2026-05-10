@@ -8,12 +8,18 @@ All database access is mocked — no PostgreSQL required.
 import sys
 import os
 import json
+import base64
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock
 
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+
+# Valid base64 of exactly 32 raw bytes — server.py:542 requires
+# valid_b64(auth_key, 32, 32) before the login flow proceeds.
+VALID_AUTH_KEY = base64.b64encode(b'\x00' * 32).decode('ascii')
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -97,24 +103,32 @@ class TestRegister:
 # Login
 # ═══════════════════════════════════════════════════════════════════
 
-class TestLogin:
-    @patch('server.e2e')
-    def test_login_success(self, mock_e2e, client, mock_db):
-        mock_e2e.verify_login.return_value = True
+def _user_row(**overrides):
+    """Default user row matching server.py:551 SELECT shape."""
+    row = {
+        'id': 1,
+        'auth_hash': 'storedhash',
+        'auth_params': 'ap',
+        'vault_params': 'vp',
+        'encrypted_master': 'em',
+        'login_attempts': 0,
+        'locked_until': None,
+        'is_admin': False,
+        'password_version': 1,
+    }
+    row.update(overrides)
+    return row
 
-        mock_db.queue({
-            'id': 1,
-            'auth_hash': 'hash',
-            'vault_params': 'vp',
-            'encrypted_master': 'em',
-            'login_attempts': 0,
-            'locked_until': None,
-            'is_admin': False,
-        })
+
+class TestLogin:
+    @patch('server.verify_auth')
+    def test_login_success(self, mock_verify, client, mock_db):
+        mock_verify.return_value = True
+        mock_db.queue(_user_row())
 
         resp = client.post('/api/login', json={
             'username': 'alice',
-            'password': 'securepass123',
+            'auth_key': VALID_AUTH_KEY,
         })
         assert resp.status_code == 200
         data = resp.get_json()
@@ -123,80 +137,58 @@ class TestLogin:
         assert 'vault' in data
         assert data['is_admin'] is False
 
-    @patch('server.e2e')
-    def test_login_wrong_password(self, mock_e2e, client, mock_db):
-        mock_e2e.verify_login.return_value = False
-
-        mock_db.queue({
-            'id': 1,
-            'auth_hash': 'hash',
-            'vault_params': 'vp',
-            'encrypted_master': 'em',
-            'login_attempts': 0,
-            'locked_until': None,
-            'is_admin': False,
-        })
+    @patch('server.verify_auth')
+    def test_login_wrong_password(self, mock_verify, client, mock_db):
+        mock_verify.return_value = False
+        mock_db.queue(_user_row())
 
         resp = client.post('/api/login', json={
             'username': 'alice',
-            'password': 'wrongpassword',
+            'auth_key': VALID_AUTH_KEY,
         })
         assert resp.status_code == 401
         assert 'Invalid credentials' in resp.get_json()['error']
 
-    @patch('server.e2e')
-    def test_login_lockout_after_5_failures(self, mock_e2e, client, mock_db):
-        mock_e2e.verify_login.return_value = False
-
-        mock_db.queue({
-            'id': 1,
-            'auth_hash': 'hash',
-            'vault_params': 'vp',
-            'encrypted_master': 'em',
-            'login_attempts': 4,  # this will be the 5th failure
-            'locked_until': None,
-            'is_admin': False,
-        })
+    @patch('server.verify_auth')
+    def test_login_lockout_after_5_failures(self, mock_verify, client, mock_db):
+        mock_verify.return_value = False
+        # 4 prior failures → this attempt is the 5th, triggers lockout
+        mock_db.queue(_user_row(login_attempts=4))
 
         resp = client.post('/api/login', json={
             'username': 'alice',
-            'password': 'wrongpassword',
+            'auth_key': VALID_AUTH_KEY,
         })
         assert resp.status_code == 429
         assert 'Locked' in resp.get_json()['error']
 
     def test_login_already_locked(self, client, mock_db):
         future = datetime.now(timezone.utc) + timedelta(minutes=10)
-        mock_db.queue({
-            'id': 1,
-            'auth_hash': 'hash',
-            'vault_params': 'vp',
-            'encrypted_master': 'em',
-            'login_attempts': 5,
-            'locked_until': future,
-            'is_admin': False,
-        })
+        mock_db.queue(_user_row(login_attempts=5, locked_until=future))
 
         resp = client.post('/api/login', json={
             'username': 'alice',
-            'password': 'securepass123',
+            'auth_key': VALID_AUTH_KEY,
         })
         assert resp.status_code == 429
         assert 'locked' in resp.get_json()['error'].lower()
 
     def test_login_nonexistent_user(self, client, mock_db):
-        # SELECT returns None
+        # SELECT returns None — user not found path (server.py:556-557)
         mock_db.queue(None)
 
         resp = client.post('/api/login', json={
             'username': 'nobody',
-            'password': 'securepass123',
+            'auth_key': VALID_AUTH_KEY,
         })
         assert resp.status_code == 401
 
     def test_login_missing_fields(self, client, mock_db):
+        # Missing auth_key fails the validation gate (server.py:542-543).
+        # Anti-enumeration policy collapses missing-field and bad-credential
+        # responses into the same 401, so this hits the credentials path.
         resp = client.post('/api/login', json={'username': 'alice'})
-        assert resp.status_code == 400
+        assert resp.status_code == 401
 
 
 # ═══════════════════════════════════════════════════════════════════
