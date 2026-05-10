@@ -1864,6 +1864,74 @@ export const hashimoto: Blueprint = {
 	primaryBrowseSurface: 'trend',
 };
 
+// ─── Rheumatoid arthritis / Psoriatic arthritis ─────────────
+// CIPH-pi24-4c — Phase cohort. Autoimmune flare = multiDay episode
+// pattern (calendar-first browse). Diagnostic-criteria-aligned tracking:
+// symmetric joint pain, morning stiffness >30 min, CRP. Doctor handover
+// at 3-6 month rheumatology visits = the load-bearing artifact.
+
+export const rheumatoid_arthritis: Blueprint = {
+	version: 1,
+	conditionId: 'rheumatoid_arthritis',
+	conditionLabel: 'landing.template_rheumatoid_arthritis',
+	accentColor: DATA_1,
+	symptomGroups: [
+		{
+			id: 'joint', label: 'symptom_group.joint', items: [
+				{ id: 'joint_pain', label: 'symptom.joint_pain' },
+				{ id: 'morning_stiffness', label: 'symptom.morning_stiffness' },
+				{ id: 'joint_swelling', label: 'symptom.joint_swelling' },
+				{ id: 'symmetric_pain', label: 'symptom.symmetric_pain' },
+				{ id: 'wrist_pain', label: 'symptom.wrist_pain' },
+				{ id: 'finger_pain', label: 'symptom.finger_pain' },
+				{ id: 'ankle_pain', label: 'symptom.ankle_pain' },
+				{ id: 'reduced_grip', label: 'symptom.reduced_grip' },
+			]
+		},
+		{
+			id: 'systemic', label: 'symptom_group.systemic', items: [
+				{ id: 'tired', label: 'symptom.tired' },
+				{ id: 'low_grade_fever', label: 'symptom.low_grade_fever' },
+				{ id: 'weight_loss', label: 'symptom.weight_loss' },
+				{ id: 'malaise', label: 'symptom.malaise' },
+				{ id: 'depressed_mood', label: 'symptom.depressed_mood' },
+			]
+		},
+	],
+	episodeTypes: [
+		// CIPH-pi24-4c — `flare` is the load-bearing multiDay episode.
+		// `remission` marks stable windows for the doctor-PDF arc.
+		{ id: 'flare', label: 'episode.ra_flare', color: DATA_1, multiDay: true },
+		{ id: 'remission', label: 'episode.ra_remission', color: DATA_4, multiDay: true },
+	],
+	triggers: [
+		{ id: 'stress', label: 'trigger.stress' },
+		{ id: 'weather_change', label: 'trigger.weather_change' },
+		{ id: 'infection', label: 'trigger.infection' },
+		{ id: 'missed_meds', label: 'trigger.missed_meds' },
+		{ id: 'overexertion', label: 'trigger.overexertion' },
+		{ id: 'sleep_deprivation', label: 'trigger.sleep_deprivation' },
+	],
+	vitals: [
+		{ id: 'pain_level', label: 'vital.pain_level', unit: '0-10', placeholder: '3' },
+		{ id: 'morning_stiffness_minutes', label: 'vital.morning_stiffness_minutes', unit: 'min', placeholder: '15' },
+		{ id: 'fatigue_level', label: 'vital.fatigue_level', unit: '0-10', placeholder: '4' },
+		{ id: 'crp', label: 'vital.crp', unit: 'mg/L', placeholder: '5' },
+		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
+	],
+	medications: [],
+	gridSymptomColumns: ['joint_pain', 'morning_stiffness', 'joint_swelling', 'tired', 'finger_pain'],
+	gridEpisodeColumns: ['flare'],
+	streamFilters: [
+		{ key: 'all', label: 'stream_filter.all' },
+		{ key: 'entry', label: 'stream_filter.entry' },
+		{ key: 'event', label: 'stream_filter.event' },
+		{ key: 'diary', label: 'stream_filter.diary' },
+	],
+	reportPreference: 'both',
+	primaryBrowseSurface: 'calendar',
+};
+
 // ─── Registry ────────────────────────────────────────────────
 
 export interface PresetInfo {
@@ -1916,6 +1984,8 @@ export const presets: PresetInfo[] = [
 	{ id: 'ibd', labelKey: 'landing.template_ibd', descriptionKey: 'landing.template_ibd_desc', icon: 'donut', color: DATA_6, blueprint: ibd },
 	// CIPH-pi24-4b — Hashimoto added to the setup-wizard preset list.
 	{ id: 'hashimoto', labelKey: 'landing.template_hashimoto', descriptionKey: 'landing.template_hashimoto_desc', icon: 'droplet', color: DATA_6, blueprint: hashimoto },
+	// CIPH-pi24-4c — Rheumatoid arthritis added to the setup-wizard preset list.
+	{ id: 'rheumatoid_arthritis', labelKey: 'landing.template_rheumatoid_arthritis', descriptionKey: 'landing.template_rheumatoid_arthritis_desc', icon: 'flame', color: DATA_1, blueprint: rheumatoid_arthritis },
 	// Custom
 	{ id: 'custom', labelKey: 'landing.template_custom', descriptionKey: 'landing.template_custom_desc', icon: 'settings', color: DATA_5, blueprint: custom },
 ];

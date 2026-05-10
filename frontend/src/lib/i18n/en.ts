@@ -1763,6 +1763,27 @@ export default {
 	'vital.free_t3': 'Free T3',
 	'vital.tpo_antibodies': 'TPO antibodies',
 	'vital.heart_rate': 'Heart rate',
+	// CIPH-pi24-4c — Rheumatoid arthritis (only keys not already defined
+	// elsewhere — `symptom_group.systemic`, `symptom.weight_loss`,
+	// `trigger.infection`, `trigger.overexertion`, `vital.crp`,
+	// `symptom.joint_pain` were already in this file for other presets).
+	'landing.template_rheumatoid_arthritis': 'Rheumatoid arthritis',
+	'landing.template_rheumatoid_arthritis_desc': 'Flares, joint symptoms, morning stiffness, DMARDs / biologics',
+	'symptom_group.joint': 'Joint',
+	'symptom.morning_stiffness': 'Morning stiffness',
+	'symptom.joint_swelling': 'Joint swelling',
+	'symptom.symmetric_pain': 'Symmetric pain',
+	'symptom.wrist_pain': 'Wrist pain',
+	'symptom.finger_pain': 'Finger pain',
+	'symptom.ankle_pain': 'Ankle pain',
+	'symptom.reduced_grip': 'Reduced grip strength',
+	'symptom.low_grade_fever': 'Low-grade fever',
+	'symptom.malaise': 'General malaise',
+	'episode.ra_flare': 'Flare',
+	'episode.ra_remission': 'Remission',
+	'trigger.weather_change': 'Weather change',
+	'vital.morning_stiffness_minutes': 'Morning stiffness (minutes)',
+	'vital.fatigue_level': 'Fatigue',
 
 	// New group
 	'condition_group.vision.title': 'Vision',

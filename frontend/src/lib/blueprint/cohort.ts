@@ -50,6 +50,11 @@ const COHORT_MAP: Record<string, Cohort> = {
 	chronic_pain: 'phase',
 	anxiety_depression: 'phase',
 	burnout: 'phase',
+	// CIPH-pi24-4c — Rheumatoid / psoriatic arthritis: autoimmune flares
+	// are multiDay episode patterns; calendar-first browse for "when did
+	// the flare start, when did it remit" tracking. Doctor handover at
+	// 3-6 month rheumatology visits is the load-bearing artifact.
+	rheumatoid_arthritis: 'phase',
 
 	// Narrative: trigger hunting, running notes.
 	migraine: 'narrative',
