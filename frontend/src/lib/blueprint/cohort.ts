@@ -49,6 +49,11 @@ const COHORT_MAP: Record<string, Cohort> = {
 
 	// Narrative: trigger hunting, running notes.
 	migraine: 'narrative',
+	// CIPH-pi24-4a — cancer_treatment fits narrative (journal-primary).
+	// Episode types are point-events (febrile_neutropenia, ER visit, dose
+	// reduction, hospitalization) rather than multiDay flares; side-effects
+	// + emotional load read as journal entries with narrative context.
+	cancer_treatment: 'narrative',
 
 	// Custom: user drives everything.
 	custom: 'custom',

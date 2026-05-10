@@ -1835,8 +1835,11 @@ export const presets: PresetInfo[] = [
 	// { id: 'cardiovascular', labelKey: 'landing.template_cardiovascular', descriptionKey: 'landing.template_cardiovascular_desc', icon: 'heart-pulse', color: DATA_1, blueprint: cardiovascular },
 	// GI & Oncology
 	{ id: 'ibs', labelKey: 'landing.template_ibs', descriptionKey: 'landing.template_ibs_desc', icon: 'shield', color: DATA_3, blueprint: ibs },
-	// Removed per product review — kept blueprint def above for potential future re-enable
-	// { id: 'cancer_treatment', labelKey: 'landing.template_cancer_treatment', descriptionKey: 'landing.template_cancer_treatment_desc', icon: 'shield-plus', color: DATA_4, blueprint: cancer_treatment },
+	// CIPH-pi24-4a — cancer_treatment revived as a setup-wizard preset.
+	// Landing-discovery surface (conditionGroups + conditionInfoMap entry +
+	// /conditions/[id] deep-link page with ~80 i18n strings of rationale
+	// copy) deferred to a follow-up. Selection via /setup works fully.
+	{ id: 'cancer_treatment', labelKey: 'landing.template_cancer_treatment', descriptionKey: 'landing.template_cancer_treatment_desc', icon: 'shield-plus', color: DATA_4, blueprint: cancer_treatment },
 	// Dermatology & Gynecology
 	// Removed per product review — kept blueprint def above for potential future re-enable
 	// { id: 'dermatology', labelKey: 'landing.template_dermatology', descriptionKey: 'landing.template_dermatology_desc', icon: 'scan', color: DATA_6, blueprint: dermatology },
