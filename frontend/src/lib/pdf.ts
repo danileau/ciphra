@@ -25,6 +25,8 @@ import { cohortOf } from '$lib/blueprint/cohort';
 import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
 import { sectionsForCohort } from '$lib/cohortSections';
 import { aggregatePhaseDistribution } from '$lib/pdfPhaseDistribution';
+import { aggregateCycleStrip } from '$lib/pdfCycleStrip';
+import { PHASE_COLORS, type Phase } from '$lib/cycleState';
 import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
 import { isExportable } from '$lib/utils/exportable';
@@ -838,6 +840,103 @@ function drawPhaseDistribution(
 	cursorY = ly + 4;
 
 	return cursorY;
+}
+
+/**
+ * CIPH-pi21-Track-B-4 — Per-day cycle phase strip.
+ *
+ * Cycle cohort only (gated by `sectionsForCohort(cohort).includes(
+ * 'cycle-strip')`). Mirrors the calendar v3 cell tinting so the doctor sees
+ * the same phase encoding the patient sees in-app. PHASE_COLORS comes from
+ * `cycleState.ts` — single source of truth for cycle palette.
+ *
+ * Renders empty (hairline) cells when the anchor has no data — silent month
+ * is honest. Day-number labels are always visible so the strip preserves
+ * temporal position even when uncolored.
+ */
+function drawCycleStrip(
+	doc: jsPDF,
+	blueprint: Blueprint,
+	allDocs: CiphraDocument[],
+	year: number,
+	month: number,
+	daysInMonth: number,
+	t: TranslateFn,
+	locale: string,
+	cursorY: number,
+): number {
+	const cells = aggregateCycleStrip(blueprint, allDocs, year, month, daysInMonth);
+	const pageW = 210;
+	const stripW = pageW - 28;
+	const cellGap = 0.4;
+	const cellW = (stripW - (daysInMonth - 1) * cellGap) / daysInMonth;
+	const cellH = 6;
+
+	// Title.
+	const focusMonthName = new Date(year, month).toLocaleDateString(locale, {
+		month: 'long',
+		year: 'numeric',
+	});
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(10);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.cycle_strip_title', { month: focusMonthName }), 14, cursorY);
+	cursorY += 4;
+
+	// Strip body.
+	const stripY = cursorY;
+	for (const c of cells) {
+		const x = 14 + (c.day - 1) * (cellW + cellGap);
+		if (c.phase) {
+			// Phase color washed at α=0.55 over warm paper — matches calendar
+			// v3 cell tint intensity (light enough for the day number to read).
+			const phaseHex = PHASE_COLORS[c.phase];
+			const fill = softBlendRgb(parseHexToRgb(phaseHex), 0.55);
+			doc.setFillColor(...fill);
+			doc.rect(x, stripY, cellW, cellH, 'F');
+		} else {
+			doc.setDrawColor(...BRAND.borderSubtle);
+			doc.setLineWidth(0.1);
+			doc.rect(x, stripY, cellW, cellH, 'S');
+		}
+		// Day number top-left — same vocabulary as drawDayCoverageStrip.
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(5.5);
+		doc.setTextColor(...BRAND.textPrimary);
+		doc.text(String(c.day), x + 0.6, stripY + 2.2);
+	}
+	cursorY = stripY + cellH + 3;
+
+	// Legend — 4 phases × dot + label, single line.
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(7.5);
+	const dotR = 0.9;
+	const gap = 4;
+	let lx = 14;
+	const ly = cursorY + 2;
+	const phases: Phase[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
+	for (const p of phases) {
+		const labelText = t(`cycle.phase_${p}`);
+		const textW = doc.getTextWidth(labelText);
+		const itemW = dotR * 2 + 1.2 + textW;
+		doc.setFillColor(...softBlendRgb(parseHexToRgb(PHASE_COLORS[p]), 0.55));
+		doc.circle(lx + dotR, ly - 0.6, dotR, 'F');
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(labelText, lx + dotR * 2 + 1.2, ly);
+		lx += itemW + gap;
+	}
+	cursorY = ly + 4;
+
+	return cursorY;
+}
+
+/** Hex `#RRGGBB` → RGB triple. Fallback to black on malformed input
+ *  (caller already validated; this is just a safe parse). */
+function parseHexToRgb(hex: string): RGB {
+	const h = hex.replace('#', '');
+	if (h.length !== 6) return [0, 0, 0];
+	const n = parseInt(h, 16);
+	return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -1672,6 +1771,19 @@ export function generateDoctorPdf(
 			focusMonthDocs,
 			year,
 			month,
+			t,
+			locale,
+			cursorY,
+		);
+	}
+	if (cohortSections.includes('cycle-strip')) {
+		cursorY = drawCycleStrip(
+			doc,
+			blueprint,
+			documents,
+			year,
+			month,
+			focusDaysInMonth,
 			t,
 			locale,
 			cursorY,

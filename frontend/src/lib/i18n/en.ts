@@ -1157,6 +1157,7 @@ export default {
 	'pdf.episode_trend': '24-month trajectory',
 	'pdf.day_coverage_title': 'Day-by-day · {month}',
 	'pdf.phase_distribution_title': 'Phase distribution · {month}',
+	'pdf.cycle_strip_title': 'Cycle phases · {month}',
 	'pdf.episode_trend_12m': '12-month trajectory',
 	'pdf.total_short': 'Sum',
 	'pdf.trend_improving': 'Fewer episodes',

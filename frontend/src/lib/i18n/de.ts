@@ -1180,6 +1180,7 @@ export default {
 	'pdf.episode_trend_12m': 'Verlauf über 12 Monate',
 	'pdf.day_coverage_title': 'Tagesüberblick · {month}',
 	'pdf.phase_distribution_title': 'Phasenverteilung · {month}',
+	'pdf.cycle_strip_title': 'Zyklusphasen · {month}',
 	'pdf.total_short': 'Summe',
 	'pdf.trend_improving': 'Weniger Ereignisse',
 	'pdf.trend_worsening': 'Mehr Ereignisse',

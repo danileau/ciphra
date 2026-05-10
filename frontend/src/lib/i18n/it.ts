@@ -1158,6 +1158,7 @@ export default {
 	'pdf.episode_trend': 'Traiettoria su 24 mesi',
 	'pdf.day_coverage_title': 'Vista del mese · {month}',
 	'pdf.phase_distribution_title': 'Distribuzione delle fasi · {month}',
+	'pdf.cycle_strip_title': 'Fasi del ciclo · {month}',
 	'pdf.episode_trend_12m': 'Traiettoria su 12 mesi',
 	'pdf.total_short': 'Totale',
 	'pdf.trend_improving': 'Meno episodi',
