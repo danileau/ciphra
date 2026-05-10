@@ -155,6 +155,43 @@ already works" — keeping the test surface stable minimizes diff noise.
 **Mode-3 ALERT:** none. Pure middleware-driven fixture-ordering drift; admin
 route logic is unchanged across the entire class.
 
-## CIPH-pi21-LB-4b-5 — TestHealth + TestRegister
+## CIPH-pi21-LB-4b-5 — TestRegister (TestHealth pre-passing, dropped from scope)
 
-(pending — Sprint 1; brings full file to 45/45 green at PI v21 close)
+Live failure capture (pre-rewrite): 4 of 5 failed in TestRegister; TestHealth
+fully passing.
+
+Same zero-knowledge contract drift as TestLogin/TestRecovery: tests post
+`password`; server expects a pre-built vault bundle (`auth_hash` + the four
+encrypted blobs). Server never sees the password — client derives auth_hash
+locally via Argon2 + ships the re-wrapped master_key.
+
+| Test | Mode | Evidence | Rationale |
+|---|---|---|---|
+| `test_register_success` | 1 | `server.py:445-451` (bundle fields), `server.py:492` (response shape) | Drop dead `@patch('server.e2e')`; post `_register_bundle()`; server returns `{success, username, user_id}` — no `recovery_code` (client generates). |
+| `test_register_short_username` | 1 | `server.py:453-454` | Test was failing on auth_hash validation, not username. Send valid bundle so the USERNAME_RE check is the actual short-circuit. |
+| `test_register_short_password` | 1 (skip) | client-side; server never sees the password | Server contract carries only client-derived material. **Skipped** with rationale. |
+| `test_register_duplicate_username` | 1 | `server.py:472-478` | Send valid bundle to reach the SELECT; queue duplicate row. Error string changed from "already exists" to generic `'registration_failed'` (anti-enumeration). |
+
+**Mode-3 ALERT:** none. All failures trace to the same zero-knowledge vault
+contract.
+
+**TestHealth scope drop:** PI v21 plan paired TestHealth + TestRegister as
+LB-4b-5 lifecycle stragglers. TestHealth was already green pre-PI; no work
+needed. Out-of-scope-discipline: not touched.
+
+---
+
+## Sprint 1 final status
+
+`docker compose run --rm api pytest -q tests/` → **48 passed, 5 skipped, 0 failed.**
+
+All 5 skipped tests have explicit `pytest.mark.skip(reason=...)` documenting:
+- where the surface moved (file:line in frontend/src or server.py)
+- the PI v22 follow-up if a coverage gap was created (e.g. vitest for
+  `validateRecoveryCode`).
+
+**Mode-3 (real server bug) findings across all 5 stories: zero.** All 29
+failing tests traced to the zero-knowledge auth refactor (TestLogin/Recovery/
+Register), the new `_current_password_version` token-freshness gate
+(TestDocuments/Admin), or removed surface (TestValidateRecovery,
+recovery-code format / password-length client-side moves).

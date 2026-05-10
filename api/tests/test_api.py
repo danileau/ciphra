@@ -39,60 +39,60 @@ class TestHealth:
 # Registration
 # ═══════════════════════════════════════════════════════════════════
 
+def _register_bundle(**overrides):
+    """Vault bundle the browser uploads to /api/register. Server never sees
+    the password or recovery code — both stay on device. Recovery is optional
+    but all-or-nothing (server.py:462-465)."""
+    bundle = {
+        'username': 'alice',
+        'auth_hash': VALID_AUTH_KEY,
+        'auth_params': 'ap',
+        'vault_params': 'vp',
+        'encrypted_master': 'em',
+    }
+    bundle.update(overrides)
+    return bundle
+
+
 class TestRegister:
-    @patch('server.e2e')
-    def test_register_success(self, mock_e2e, client, mock_db):
-        mock_vault = MagicMock()
-        mock_vault.username = 'alice'
-        mock_vault.auth_hash = 'hash'
-        mock_vault.vault_params = '{"a":1}'
-        mock_vault.encrypted_master = 'enc'
-        mock_vault.recovery_vault = 'rv'
-        mock_vault.recovery_params = 'rp'
+    def test_register_success(self, client, mock_db):
+        # SELECT id WHERE username -> None (no duplicate); INSERT RETURNING id
+        mock_db.queue(None, {'id': 1})
 
-        mock_e2e.register_user.return_value = (mock_vault, 'able acid aged also area army away baby back ball bird blow')
-
-        # SELECT id FROM users WHERE username = %s -> None (no duplicate)
-        mock_db.queue(None)
-        # INSERT ... RETURNING id
-        mock_db.queue({'id': 1})
-
-        resp = client.post('/api/register', json={
-            'username': 'Alice',
-            'password': 'securepass123',
-        })
+        resp = client.post('/api/register', json=_register_bundle(username='Alice'))
         assert resp.status_code == 201
         data = resp.get_json()
         assert data['success'] is True
         assert data['username'] == 'alice'
-        assert 'recovery_code' in data
+        # Server does not return a recovery_code anymore — client generated it
+        # locally from the recovery_vault during pre-registration setup.
+        assert data['user_id'] == 1
 
     def test_register_short_username(self, client, mock_db):
-        resp = client.post('/api/register', json={
-            'username': 'ab',
-            'password': 'securepass123',
-        })
+        # 'ab' fails USERNAME_RE (3-64 chars). Bundle otherwise valid so the
+        # username check is the actual short-circuit.
+        resp = client.post('/api/register', json=_register_bundle(username='ab'))
         assert resp.status_code == 400
-        assert 'Username' in resp.get_json()['error']
+        assert 'username' in resp.get_json()['error'].lower()
 
-    def test_register_short_password(self, client, mock_db):
-        resp = client.post('/api/register', json={
-            'username': 'alice',
-            'password': 'short',
-        })
-        assert resp.status_code == 400
-        assert 'Password' in resp.get_json()['error']
+    @pytest.mark.skip(reason=(
+        'Password length validation moved client-side. Server never receives '
+        'the password — only the client-derived auth_hash + re-wrapped '
+        'encrypted_master. No server-side surface to test.'
+    ))
+    def test_register_short_password(self):
+        pass
 
     def test_register_duplicate_username(self, client, mock_db):
-        # SELECT returns an existing user
+        # SELECT id returns an existing user → 409.
         mock_db.queue({'id': 42})
 
-        resp = client.post('/api/register', json={
-            'username': 'alice',
-            'password': 'securepass123',
-        })
+        resp = client.post('/api/register', json=_register_bundle())
         assert resp.status_code == 409
-        assert 'already exists' in resp.get_json()['error']
+        # Anti-enumeration: error string is generic "registration_failed",
+        # not "already exists". Same response whether the username collides
+        # or the bundle is otherwise rejected (server.py:478).
+        assert resp.get_json()['error'] == 'registration_failed'
 
     def test_register_empty_body(self, client, mock_db):
         resp = client.post('/api/register', json={})
