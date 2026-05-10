@@ -125,6 +125,7 @@ Three quick wins surface at the `pi22-ship` bar. Floor 4.75 / target 4.85.
 - **F3** — full hreflang implementation (after locale-routing decision)
 - **F5** — hero chips condition-name surfacing (with options memo)
 - **F6** — SW registration telemetry (only if dogfood signals issues)
+- **F7** — `MedicalWebPage` schema on `conditions/[id]/+page.svelte:58` re-evaluation. PI v22 L-3 deferred adding NEW `MedicalWebPage` markup to `app.html` after Hans's dry-run flagged MDR/MepV regulatory concern. The PRE-EXISTING `MedicalWebPage` at conditions/[id]:58 was not touched. CIPH-pi24-2 updated its URLs (`ciphra.app` → `ciphra.ch`) but kept the schema type. Decide before compliance review: keep `MedicalWebPage` (better SEO + medical-context discoverability, may invite MDR scrutiny) vs downgrade to `WebPage` + `MedicalCondition` only on `about` (cleaner regulatory posture, slightly weaker SEO signal). Cross-reference: `project_medical_device_assessment.md`.
 
 ## What this audit did NOT cover (out of scope)
 
