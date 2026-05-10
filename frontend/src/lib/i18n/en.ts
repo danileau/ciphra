@@ -2065,13 +2065,40 @@ export default {
 	'condition.pcos.vitals_rationale': 'Cycle day and length (even when irregular), weight, waist circumference, HbA1c and mood are the values endocrinologists and gynecologists follow over time.',
 	'condition.pcos.for_doctor': 'The PDF report shows cycle-length variability, symptom patterns by androgen/metabolic/mood groups, weight and HbA1c trends — supporting endocrinology and gynecology treatment decisions.',
 
-	// CIPH-pi24-4a-full / 4b-full / 4c-full — i18n keys for cancer_treatment,
-	// hashimoto and rheumatoid_arthritis already exist earlier in this file
-	// (lines ~1533+). They were authored when the blueprints were first
-	// drafted but the conditionInfoMap entries were never wired. The PI v24
-	// frontend-conditions story added those conditionInfoMap entries
-	// (conditionInfo.ts) + group entries (conditionGroups.ts); the i18n
-	// re-use is intentional — no duplicate authoring.
+	// CIPH-pi24-4 i18n restore — only cancer_treatment.* base keys pre-existed
+	// at line ~1533; hashimoto + rheumatoid_arthritis title/subtitle/intro
+	// /rationale_* /episodes_rationale /triggers_rationale /vitals_rationale
+	// /for_doctor /scale.* were all missing (initial dedup was over-aggressive).
+	// Restore below.
+	'condition.cancer_treatment.rationale_emotional': 'Anxiety, depression and overwhelm are part of the cancer-treatment journey. Naming them in a diary helps surface when psycho-oncology support or medication adjustment becomes appropriate.',
+	'condition.scale.fact_g': 'FACT-G',
+	'condition.scale.fact_g_desc': 'Functional Assessment of Cancer Therapy – General. 27-item quality-of-life questionnaire covering physical, social, emotional and functional well-being.',
+	'condition.scale.eortc_qlq': 'EORTC QLQ-C30',
+	'condition.scale.eortc_qlq_desc': 'European Organisation for Research and Treatment of Cancer Core Quality-of-Life Questionnaire. 30-item assessment used in oncology trials.',
+	'condition.hashimoto.title': 'Hashimoto / Hypothyroidism',
+	'condition.hashimoto.subtitle': 'Track thyroid labs, symptoms and Levothyroxine adherence across months',
+	'condition.hashimoto.intro': 'Hashimoto thyroiditis is autoimmune and slow-moving. Stable patients on Levothyroxine still benefit from a diary that correlates symptoms with TSH/T4/T3 trends — most dose adjustments come from a pattern, not a single number.',
+	'condition.hashimoto.rationale_hypothyroid': 'Tiredness, cold intolerance, weight gain, hair loss, brain fog, dry skin and constipation are the classic hypothyroid signs. When they cluster between lab visits, that\'s the conversation to bring to your endocrinologist.',
+	'condition.hashimoto.rationale_goiter': 'Throat lump sensation, neck pain, hoarse voice and swallowing difficulty can indicate goiter growth — a signal to flag for thyroid ultrasound or specialist review.',
+	'condition.hashimoto.episodes_rationale': 'Hashimoto doesn\'t have a multi-day episode pattern in the way bipolar or IBD does. Track symptom-days instead; over months they reveal dose-adequacy patterns.',
+	'condition.hashimoto.triggers_rationale': 'Missed Levothyroxine doses (timing relative to food and other meds matters), stress, illness, pregnancy and sleep disruption all interact with thyroid function.',
+	'condition.hashimoto.vitals_rationale': 'TSH (target depends on individual), free T4, free T3, TPO antibodies (autoimmunity marker), weight and resting heart rate are the values endocrinologists follow over time.',
+	'condition.hashimoto.for_doctor': 'The PDF report shows TSH/T4/T3 trend, symptom-day clustering by group, weight and heart-rate trajectory — the lab-plus-symptom synthesis that informs dose adjustment.',
+	'condition.scale.tsq': 'ThyPRO-39',
+	'condition.scale.tsq_desc': 'Thyroid Patient-Reported Outcomes questionnaire (short form). 39-item assessment of thyroid-disease-specific quality of life and symptom burden.',
+	'condition.rheumatoid_arthritis.title': 'Rheumatoid arthritis',
+	'condition.rheumatoid_arthritis.subtitle': 'Track flares, joint symptoms, morning stiffness and DMARD/biologic response',
+	'condition.rheumatoid_arthritis.intro': 'Rheumatoid arthritis is autoimmune — flares come, flares go, and the medication strategy is built around extending remission. A diary that records flare timing, severity and triggers gives rheumatologists the arc they need at 3-6 month visits.',
+	'condition.rheumatoid_arthritis.rationale_joint': 'Joint pain, morning stiffness lasting more than 30 minutes, swelling and symmetric small-joint involvement (wrists, fingers) are the diagnostic-criteria hallmarks. Reduced grip strength is an early sign of progression.',
+	'condition.rheumatoid_arthritis.rationale_systemic': 'Fatigue, low-grade fever and unintended weight loss reflect systemic inflammation. When they cluster, they signal active disease independent of pain scores.',
+	'condition.rheumatoid_arthritis.episodes_rationale': 'Flare and remission are the multi-day episode types — calendar-first browsing makes the arc visible. Knowing when a flare started and ended is what informs the next dose / biologic conversation.',
+	'condition.rheumatoid_arthritis.triggers_rationale': 'Stress, weather changes, infections, missed medications, overexertion and sleep loss are common flare triggers. Tracking surfaces personal patterns the rheumatologist can act on.',
+	'condition.rheumatoid_arthritis.vitals_rationale': 'Pain level, morning stiffness duration (minutes), fatigue level, CRP and sleep hours map directly to the values composite disease-activity scores like DAS28 use.',
+	'condition.rheumatoid_arthritis.for_doctor': 'The PDF report shows flare frequency and duration, joint-symptom distribution, morning-stiffness minutes trend and CRP trajectory — the data rheumatologists use to evaluate DMARD/biologic effectiveness.',
+	'condition.scale.das28': 'DAS28',
+	'condition.scale.das28_desc': 'Disease Activity Score 28 joints. Composite score combining tender + swollen joint counts, ESR/CRP and patient global health — the standard rheumatology disease-activity measure.',
+	'condition.scale.haq': 'HAQ',
+	'condition.scale.haq_desc': 'Health Assessment Questionnaire. 20-item functional-status measure widely used in rheumatology trials and clinical practice.',
 
 	// Cycle phase card (CIPH-401)
 	'cycle.title': 'Cycle phase',
