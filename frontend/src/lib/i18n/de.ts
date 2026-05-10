@@ -1181,6 +1181,8 @@ export default {
 	'pdf.day_coverage_title': 'Tagesüberblick · {month}',
 	'pdf.phase_distribution_title': 'Phasenverteilung · {month}',
 	'pdf.cycle_strip_title': 'Zyklusphasen · {month}',
+	'pdf.daily_month_chart_title': 'Tagesverlauf · {month}',
+	'pdf.no_data': 'Keine Einträge diesen Monat',
 	'pdf.total_short': 'Summe',
 	'pdf.trend_improving': 'Weniger Ereignisse',
 	'pdf.trend_worsening': 'Mehr Ereignisse',

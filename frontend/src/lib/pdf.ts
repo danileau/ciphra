@@ -26,6 +26,7 @@ import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
 import { sectionsForCohort } from '$lib/cohortSections';
 import { aggregatePhaseDistribution } from '$lib/pdfPhaseDistribution';
 import { aggregateCycleStrip } from '$lib/pdfCycleStrip';
+import { aggregateDailyMonthSeries } from '$lib/pdfDailyMonthChart';
 import { PHASE_COLORS, type Phase } from '$lib/cycleState';
 import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
@@ -939,6 +940,140 @@ function parseHexToRgb(hex: string): RGB {
 	return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
 }
 
+/**
+ * CIPH-pi21-Track-B-5 — Daily-month trajectory chart.
+ *
+ * Replaces the implicit 24-month chart for `scope === 'month'`. X-axis is
+ * day-of-month (1..N), one point per day. Reuses `smoothBezierDeltas` so
+ * the line treatment matches the year/2years chart visually. Deliberately
+ * minimal: no dual axis, no event markers, no year divider — those belong
+ * to the long-horizon view, not a single-month focus.
+ */
+function drawDailyMonthChart(
+	doc: jsPDF,
+	documents: CiphraDocument[],
+	year: number,
+	month: number,
+	daysInMonth: number,
+	episodeCols: string[],
+	t: TranslateFn,
+	locale: string,
+	acc: CohortAccents,
+	cursorY: number,
+): number {
+	const { dailyTotals } = aggregateDailyMonthSeries(
+		documents, year, month, daysInMonth, episodeCols,
+	);
+	const pageW = 210;
+	const chartX = 20;
+	const chartW = pageW - 28 - 6;     // leave room for left y-axis label
+	const chartH = 32;
+
+	const focusMonthName = new Date(year, month).toLocaleDateString(locale, {
+		month: 'long',
+		year: 'numeric',
+	});
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(10);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.daily_month_chart_title', { month: focusMonthName }), 14, cursorY);
+	cursorY += 4;
+
+	// Plot background.
+	doc.setFillColor(...BRAND.paper);
+	doc.rect(chartX, cursorY, chartW, chartH, 'F');
+
+	// Horizontal gridlines.
+	doc.setDrawColor(...BRAND.borderSubtle);
+	doc.setLineWidth(0.15);
+	for (let g = 1; g <= 3; g++) {
+		const y = cursorY + (chartH * g) / 4;
+		doc.line(chartX, y, chartX + chartW, y);
+	}
+
+	// Y-axis scale.
+	const dataMax = Math.max(1, ...dailyTotals);
+	const yMax = Math.max(1, Math.ceil(dataMax));
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(6);
+	doc.setTextColor(...BRAND.textMuted);
+	doc.text(String(yMax), chartX - 1, cursorY + 2, { align: 'right' });
+	const midY = Math.round(yMax / 2);
+	if (yMax >= 3 && midY !== yMax && midY !== 0) {
+		doc.text(String(midY), chartX - 1, cursorY + chartH / 2 + 1, { align: 'right' });
+	}
+	doc.text('0', chartX - 1, cursorY + chartH, { align: 'right' });
+
+	// Empty-state placeholder when the month is silent — same vocabulary as
+	// /reports' daily chart (PI v17). The chart frame stays so the doctor
+	// can see "yes, this scope was searched and there's no data" rather
+	// than "the chart is missing."
+	const total = dailyTotals.reduce((a, b) => a + b, 0);
+	if (total === 0) {
+		doc.setFont('helvetica', 'italic');
+		doc.setFontSize(9);
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(t('pdf.no_data'), chartX + chartW / 2, cursorY + chartH / 2 + 1, { align: 'center' });
+		return cursorY + chartH + 6;
+	}
+
+	// Bezier-smoothed line (same tension + clamp as the 24-month chart).
+	const points: Array<[number, number]> = dailyTotals.map((v, i) => [
+		chartX + (i / Math.max(1, daysInMonth - 1)) * chartW,
+		cursorY + chartH - (v / yMax) * chartH,
+	]);
+	const yTop = cursorY;
+	const yBottom = cursorY + chartH;
+	const baseY = yBottom;
+	const bezier = smoothBezierDeltas(points, yTop, yBottom);
+
+	// Area fill matches the trajectory chart: bezier top edge, flat bottom.
+	if (points.length >= 2) {
+		const firstX = points[0][0];
+		const firstY = points[0][1];
+		const lastX = points[points.length - 1][0];
+		const lastY = points[points.length - 1][1];
+		const areaPath: number[][] = [[0, firstY - baseY]];
+		for (const seg of bezier) areaPath.push(seg);
+		areaPath.push([0, baseY - lastY]);
+		areaPath.push([-(lastX - firstX), 0]);
+		doc.setFillColor(...acc.primarySoft);
+		doc.setDrawColor(...acc.primarySoft);
+		doc.lines(areaPath, firstX, baseY, undefined, 'F', true);
+	}
+
+	// Stroke the line.
+	doc.setDrawColor(...acc.primary);
+	doc.setLineWidth(0.6);
+	if (points.length >= 2) {
+		const firstX = points[0][0];
+		const firstY = points[0][1];
+		doc.lines(bezier, firstX, firstY);
+	}
+
+	// Endpoint dot.
+	if (points.length >= 1) {
+		const last = points[points.length - 1];
+		doc.setFillColor(...acc.primary);
+		doc.circle(last[0], last[1], 0.8, 'F');
+	}
+
+	// X-axis day labels — every 5 days when daysInMonth > 20, every 2 otherwise
+	// (mirrors /reports autoSkipPadding behavior added in PI v17).
+	const labelEvery = daysInMonth > 20 ? 5 : 2;
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(6);
+	doc.setTextColor(...BRAND.textMuted);
+	for (let i = 0; i < daysInMonth; i++) {
+		const day = i + 1;
+		if (day !== 1 && day !== daysInMonth && (day % labelEvery) !== 0) continue;
+		const x = chartX + (i / Math.max(1, daysInMonth - 1)) * chartW;
+		doc.text(String(day), x, cursorY + chartH + 3, { align: 'center' });
+	}
+
+	return cursorY + chartH + 6;
+}
+
 /* ────────────────────────────────────────────────────────────────
  * 1) Grid Report — monthly protocol grid (clinical handover)
  * ──────────────────────────────────────────────────────────────── */
@@ -1816,10 +1951,23 @@ export function generateDoctorPdf(
 		| { MONTHS: number; firstAvg: number; lastAvg: number; trendLabel: string; trendDir: TrendDir }
 		| null = null;
 
-	// For 'month' scope, skip the 24-month trajectory + vital-trends section.
-	// A month report should stay focused on that month; the grid appendix has
-	// the day-by-day detail, the stat cards have the comparisons to prev month.
-	// Historical context belongs in the 'year' and '2years' scope reports.
+	// CIPH-pi21-Track-B-5 — scope-branched chart. Per PDF_REWRITE.md §5,
+	// 'month' scope renders a daily chart for the focus month; year/2years
+	// keep the existing 24/12-month trajectory + vital-trends block.
+	if (scope === 'month') {
+		cursorY = drawDailyMonthChart(
+			doc,
+			documents,
+			year,
+			month,
+			focusDaysInMonth,
+			episodeCols,
+			t,
+			locale,
+			acc,
+			cursorY,
+		);
+	}
 	if (scope !== 'month') {
 
 	// ── Chart: 24-month trajectory ──

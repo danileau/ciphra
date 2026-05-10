@@ -1158,6 +1158,8 @@ export default {
 	'pdf.day_coverage_title': 'Vue du mois · {month}',
 	'pdf.phase_distribution_title': 'Répartition des phases · {month}',
 	'pdf.cycle_strip_title': 'Phases du cycle · {month}',
+	'pdf.daily_month_chart_title': 'Trajectoire quotidienne · {month}',
+	'pdf.no_data': 'Aucune entrée ce mois-ci',
 	'pdf.episode_trend_12m': 'Trajectoire sur 12 mois',
 	'pdf.total_short': 'Total',
 	'pdf.trend_improving': 'Moins d\'épisodes',
