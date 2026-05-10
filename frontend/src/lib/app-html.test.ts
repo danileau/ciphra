@@ -33,3 +33,40 @@ describe('CIPH-pi22-L-2 canonical link', () => {
 		expect(canonical, 'canonical must precede %sveltekit.head% so per-route overrides win').toBeLessThan(headEnd);
 	});
 });
+
+describe('CIPH-pi22-L-3 JSON-LD structured data', () => {
+	it('app.html ships exactly one application/ld+json block', () => {
+		const matches = APP_HTML.match(/<script\s+type="application\/ld\+json">/g) || [];
+		expect(matches.length).toBe(1);
+	});
+
+	it('JSON-LD parses as valid JSON', () => {
+		const m = APP_HTML.match(/<script\s+type="application\/ld\+json">([\s\S]*?)<\/script>/);
+		expect(m, 'JSON-LD block must be present').toBeTruthy();
+		expect(() => JSON.parse(m![1])).not.toThrow();
+	});
+
+	it('JSON-LD declares schema.org @context + WebSite + Organization', () => {
+		const m = APP_HTML.match(/<script\s+type="application\/ld\+json">([\s\S]*?)<\/script>/)!;
+		const data = JSON.parse(m[1]);
+		expect(data['@context']).toBe('https://schema.org');
+		const types = (data['@graph'] || []).map((n: { '@type': string }) => n['@type']);
+		expect(types).toContain('WebSite');
+		expect(types).toContain('Organization');
+	});
+
+	it('JSON-LD does NOT declare MedicalWebPage / MedicalApplication (regulatory deferral)', () => {
+		// Per Hans's L-1 persona-dry-run: Schema.org medical markers may
+		// invite MDR/MepV classification scrutiny. Re-introduce only after
+		// the explicit regulatory check at project_medical_device_assessment.md.
+		const m = APP_HTML.match(/<script\s+type="application\/ld\+json">([\s\S]*?)<\/script>/)!;
+		expect(m[1]).not.toMatch(/MedicalWebPage|MedicalApplication|MedicalEntity|MedicalCondition/);
+	});
+
+	it('JSON-LD declares the four supported locales in inLanguage', () => {
+		const m = APP_HTML.match(/<script\s+type="application\/ld\+json">([\s\S]*?)<\/script>/)!;
+		const data = JSON.parse(m[1]);
+		const website = (data['@graph'] || []).find((n: { '@type': string }) => n['@type'] === 'WebSite');
+		expect(website?.inLanguage).toEqual(['de', 'en', 'fr', 'it']);
+	});
+});
