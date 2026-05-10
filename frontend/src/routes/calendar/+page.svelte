@@ -793,7 +793,7 @@
 						{#each monthEvents as ev}
 							<button
 								on:click={() => { selectedDate = ev.date; }}
-								class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px]"
+								class="inline-flex items-center gap-1 px-3 py-2 rounded text-[11px] min-h-[44px]"
 								style="background: var(--ochre-light); color: var(--ochre)"
 								title={ev.notes}
 							>
@@ -833,7 +833,7 @@
 					</button>
 					<a
 						href="/log/{railSelectedDate}"
-						class="text-sm font-medium flex items-center gap-1 ml-1"
+						class="text-sm font-medium flex items-center gap-1 ml-1 min-h-[44px] px-2"
 						style="color: var(--brand)"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -964,7 +964,7 @@
 				</button>
 				<a
 					href="/log/{selectedDate}"
-					class="text-sm font-medium flex items-center gap-1 ml-1"
+					class="text-sm font-medium flex items-center gap-1 ml-1 min-h-[44px] px-2"
 					style="color: var(--brand)"
 				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1078,9 +1078,14 @@
 	/* CIPH-878 — jump-to-today pill next to month name. Subtle by default,
 	   brand-tinted on hover. Only rendered when off the current month. */
 	.cal-today-btn {
+		/* CIPH-pi23-A1 — 44pt min-height per WCAG 2.5.5. Padding pushed
+		   from 2/8 to 11/14 so the 11px font + line-height lands at 44. */
 		font-size: 11px;
 		font-weight: 500;
-		padding: 2px 8px;
+		padding: 11px 14px;
+		min-height: 44px;
+		display: inline-flex;
+		align-items: center;
 		border-radius: 9999px;
 		border: 1px solid var(--border-subtle, rgba(0,0,0,0.1));
 		background: transparent;

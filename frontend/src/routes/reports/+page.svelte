@@ -1554,7 +1554,9 @@
 		border: 1px solid var(--border);
 	}
 	.rpt-toggle-btn {
-		padding: 6px 16px;
+		/* CIPH-pi23-A1 — 44pt min-height per WCAG 2.5.5. Padding pushed
+		   from 6/16 to 11/16 so the 13px font + line-height lands at 44. */
+		padding: 11px 16px;
 		font-size: 13px;
 		font-weight: 500;
 		border: none;
@@ -1563,7 +1565,9 @@
 		color: var(--text-secondary);
 		cursor: pointer;
 		transition: all 0.2s ease-out;
-		min-height: 36px;
+		min-height: 44px;
+		display: inline-flex;
+		align-items: center;
 	}
 	.rpt-toggle-btn--active {
 		background: var(--surface-card);
