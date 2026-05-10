@@ -1773,7 +1773,7 @@ export default {
 	'symptom_group.hypothyroid': 'Unterfunktion',
 	'symptom_group.goiter': 'Struma / Hals',
 	'symptom.cold_intolerance': 'Kälteempfindlichkeit',
-	'symptom.throat_lump': 'Kloßgefühl im Hals',
+	'symptom.throat_lump': 'Klossgefühl im Hals',
 	'symptom.neck_pain': 'Halsschmerzen',
 	'symptom.hoarse_voice': 'Heisere Stimme',
 	'symptom.swallowing_difficulty': 'Schluckbeschwerden',
