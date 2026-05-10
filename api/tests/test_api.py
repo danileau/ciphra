@@ -195,10 +195,16 @@ class TestLogin:
 # Documents CRUD
 # ═══════════════════════════════════════════════════════════════════
 
+# Queued first by every authenticated test: token_required → _current_password_version
+# runs SELECT password_version + fetchone before the route handler (server.py:243-249).
+PWD_VERSION_ROW = {'password_version': 1}
+
+
 class TestDocuments:
     def test_store_document(self, client, mock_db, auth_token):
         now = datetime.now(timezone.utc)
-        mock_db.queue({'id': 10, 'created_at': now})
+        # Queue order: token pwd_version check, then SELECT COUNT, then INSERT RETURNING.
+        mock_db.queue(PWD_VERSION_ROW, {'n': 0}, {'id': 10, 'created_at': now})
 
         resp = client.post('/api/documents',
             json={'encrypted_data': 'ciphertext_blob'},
@@ -210,6 +216,7 @@ class TestDocuments:
         assert data['id'] == 10
 
     def test_store_document_no_data(self, client, mock_db, auth_token):
+        mock_db.queue(PWD_VERSION_ROW)
         resp = client.post('/api/documents',
             json={},
             headers={'Authorization': f'Bearer {auth_token}'},
@@ -218,10 +225,14 @@ class TestDocuments:
 
     def test_get_documents(self, client, mock_db, auth_token):
         now = datetime.now(timezone.utc)
-        mock_db.queue([
-            {'id': 1, 'encrypted_data': 'enc1', 'created_at': now, 'updated_at': now},
-            {'id': 2, 'encrypted_data': 'enc2', 'created_at': now, 'updated_at': now},
-        ])
+        # Queue: token pwd_version, then fetchall payload.
+        mock_db.queue(
+            PWD_VERSION_ROW,
+            [
+                {'id': 1, 'encrypted_data': 'enc1', 'created_at': now, 'updated_at': now},
+                {'id': 2, 'encrypted_data': 'enc2', 'created_at': now, 'updated_at': now},
+            ],
+        )
 
         resp = client.get('/api/documents',
             headers={'Authorization': f'Bearer {auth_token}'},
@@ -232,7 +243,7 @@ class TestDocuments:
         assert docs[0]['id'] == 1
 
     def test_update_document(self, client, mock_db, auth_token):
-        mock_db.queue({'id': 5})
+        mock_db.queue(PWD_VERSION_ROW, {'id': 5})
 
         resp = client.put('/api/documents/5',
             json={'encrypted_data': 'new_ciphertext'},
@@ -242,7 +253,7 @@ class TestDocuments:
         assert resp.get_json()['success'] is True
 
     def test_update_document_not_found(self, client, mock_db, auth_token):
-        mock_db.queue(None)
+        mock_db.queue(PWD_VERSION_ROW, None)
 
         resp = client.put('/api/documents/999',
             json={'encrypted_data': 'blob'},
@@ -251,7 +262,7 @@ class TestDocuments:
         assert resp.status_code == 404
 
     def test_delete_document(self, client, mock_db, auth_token):
-        mock_db.queue({'id': 5})
+        mock_db.queue(PWD_VERSION_ROW, {'id': 5})
 
         resp = client.delete('/api/documents/5',
             headers={'Authorization': f'Bearer {auth_token}'},
@@ -260,7 +271,7 @@ class TestDocuments:
         assert resp.get_json()['success'] is True
 
     def test_delete_document_not_found(self, client, mock_db, auth_token):
-        mock_db.queue(None)
+        mock_db.queue(PWD_VERSION_ROW, None)
 
         resp = client.delete('/api/documents/999',
             headers={'Authorization': f'Bearer {auth_token}'},

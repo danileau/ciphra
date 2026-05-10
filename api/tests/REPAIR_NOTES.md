@@ -90,7 +90,42 @@ into one response. This is the docs-promised behavior, not a regression.
 
 ## CIPH-pi21-LB-4b-3 — TestDocuments + TestDocumentsAuth
 
-(pending — Sprint 1)
+Live failure capture (pre-rewrite): 4 failed in TestDocuments
+(`test_store_document`, `test_get_documents`, `test_update_document`,
+`test_delete_document`). TestDocumentsAuth fully passing.
+
+**Single root cause across all 4 failures:** `token_required` middleware now
+calls `_current_password_version` (`server.py:243-249`) which runs
+`SELECT password_version` + `fetchone` **before every authenticated route
+runs**. Tests written before this middleware extension queue only the
+route's own rows, so the pwd_version fetchone consumes the first queued row
+and the route gets `None` from its own fetchone.
+
+This is global drift across every authenticated test. The fix is
+ordering-only — every authenticated test must queue `PWD_VERSION_ROW` first.
+Module-level constant `PWD_VERSION_ROW = {'password_version': 1}` introduced
+to make the contract visible at the call site.
+
+| Test | Mode | Evidence | Rationale |
+|---|---|---|---|
+| `test_store_document` | 2 | `server.py:243-249` (pwd_version), `server.py:626` (COUNT before INSERT) | Two extra fetchones now: token's pwd_version + new quota COUNT. Queue order: pwd_version → COUNT → INSERT. |
+| `test_get_documents` | 2 | `server.py:243-249` | Token's pwd_version eats the queued list before fetchall reaches it. Queue pwd_version first. |
+| `test_update_document` | 2 | `server.py:243-249` | Token eats `{'id': 5}`, UPDATE RETURNING fetchone gets None → 404. Queue pwd_version first. |
+| `test_delete_document` | 2 | `server.py:243-249` | Same as update. |
+
+**Mode-3 ALERT:** none. Pure fixture-ordering drift caused by the new token
+freshness gate (PI v15 password-change → token-invalidation feature). The
+quota COUNT in `test_store_document` is also new (DOC_QUOTA_PER_USER from
+PI v9-era — kicks in at 8000 docs; `{'n': 0}` is sufficient fixture).
+
+**Why 3 of 7 tests in the class were already passing:**
+`test_store_document_no_data` returns 400 before any DB access (defensive
+short-circuit). `test_update_document_not_found` and
+`test_delete_document_not_found` queue `None` — pwd_version's `try/except`
+falls back to version 1 on the type error from `None['password_version']`,
+token check passes, and the route's UPDATE/DELETE fetchone gets None from
+the empty queue → 404. Coincidentally correct. Updated to queue
+`PWD_VERSION_ROW` explicitly so the path is no longer accidental.
 
 ## CIPH-pi21-LB-4b-4 — TestAdmin
 
