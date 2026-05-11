@@ -63,6 +63,22 @@ const COHORT_MAP: Record<string, Cohort> = {
 	// reduction, hospitalization) rather than multiDay flares; side-effects
 	// + emotional load read as journal entries with narrative context.
 	cancer_treatment: 'narrative',
+	// pi24 dashboard rework (Codex + Claude campfire consensus):
+	// dermatology fits narrative — food / contact triggers + flare-pattern
+	// tracking is trigger-hunt behavior. Dashboard primary = top recorded
+	// triggers.
+	dermatology: 'narrative',
+
+	// Cardiovascular fits discrete — BP measurements + acute events
+	// (arrhythmia, syncope). Dashboard primary = BP vital trend.
+	cardiovascular: 'discrete',
+
+	// Autism fits phase IFF the product language frames around sensory
+	// overload / regulation episodes (multi-day), NOT autism-as-flare-
+	// model. i18n MUST keep "overload" / "regulation period" framing on
+	// any autism-cohort card text. Mapping ships now; copy discipline is
+	// enforced via i18n key naming and dynamic-key prefixes.
+	autism: 'phase',
 
 	// Custom: user drives everything.
 	custom: 'custom',
