@@ -253,6 +253,19 @@ route kind.
   blueprint where the pinned primitive can't fire yet). No
   coverage %, no streak counters, no "nothing recorded yet"
   copy — mirrors what's there, not gaps.
+- **VitalTrendCard.svelte** (pi24 dashboard) — 12-month monthly-
+  mean line chart for a pinned primary vital (`primaryVitalId`).
+  Used by hashimoto (TSH), hypertension (bp_systolic),
+  cardiovascular (bp_systolic), diabetes (blood_sugar),
+  parkinson (tremor_intensity), bipolar between flares
+  (mood_polarity). Headline shows last value + delta from
+  previous month. Sparse months render as gaps (`spanGaps: true`
+  on the dataset) so a quarterly lab-cohort like Hashimoto stays
+  readable. Pinned default vital — no chip selector on dashboard
+  per campfire consensus. Multi-vital cohorts get a footer
+  "{N} more values on /reports" link via plural() if
+  secondaries have data. Mounted by `CompanionMain` when
+  `resolvePrimaryDashboardCard` returns `kind: 'vital-trend'`.
 - **MonthMiniSummary.svelte** (CIPH-pi19-B) — calendar right-rail
   tail. Shows trigger-day + rescue-med-day counts for the visible
   month, gated on `showTrigger` / `showRescue` props (which the

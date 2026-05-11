@@ -18,6 +18,8 @@
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import PhaseContextCard from '$lib/components/PhaseContextCard.svelte';
 	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
+	import VitalTrendCard from '$lib/components/VitalTrendCard.svelte';
+	import { cohortPalette } from '$lib/cohortPalette';
 	import type { Cohort } from '$lib/blueprint/cohort';
 	import type { DashboardCardSpec } from '$lib/blueprint/dashboardPrimary';
 	import type { CiphraDocument } from '$lib/stores/documents';
@@ -64,6 +66,12 @@
 	export let primarySpec: DashboardCardSpec | null = null;
 	export let allDocs: CiphraDocument[] = [];
 	export let bp: Blueprint | null = null;
+
+	// Cohort palette read locally so VitalTrendCard gets the same accent
+	// the existing trend chart uses on the dashboard. Source of truth is
+	// `cohortOf(bp)` upstream — we mirror it via the `cohort` prop.
+	$: vitalAccentHex = cohortPalette(cohort)[0];
+	$: vitalNeutralHex = cohortPalette(cohort)[4];
 
 	// CIPH-763b — concrete number types for sr-only caption reductions
 	// (inline annotations aren't allowed in {expression} blocks).
@@ -168,10 +176,19 @@
 			})}
 		</p>
 	</a>
-{:else if primarySpec?.kind === 'last-entries' || primarySpec?.kind === 'vital-trend' || primarySpec?.kind === 'top-triggers' || primarySpec?.kind === 'treatment-cycle'}
-	<!-- pi24 fall-through: until VitalTrendCard / TopTriggersCard /
-	     TreatmentCycleCard ship, route those resolved-kind cases to
-	     LastEntriesStrip so Helena and friends see real content. -->
+{:else if primarySpec?.kind === 'vital-trend'}
+	<VitalTrendCard
+		docs={allDocs}
+		{bp}
+		primaryVitalId={primarySpec.primaryVitalId}
+		secondaryVitalIds={primarySpec.secondaryVitalIds}
+		accentHex={vitalAccentHex}
+		neutralHex={vitalNeutralHex}
+	/>
+{:else if primarySpec?.kind === 'last-entries' || primarySpec?.kind === 'top-triggers' || primarySpec?.kind === 'treatment-cycle'}
+	<!-- pi24 fall-through: until TopTriggersCard / TreatmentCycleCard
+	     ship, route those resolved-kind cases to LastEntriesStrip so
+	     migraine / cancer users still see content. -->
 	<LastEntriesStrip docs={allDocs} {bp} />
 {/if}
 
