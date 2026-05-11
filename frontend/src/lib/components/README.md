@@ -253,6 +253,16 @@ route kind.
   blueprint where the pinned primitive can't fire yet). No
   coverage %, no streak counters, no "nothing recorded yet"
   copy — mirrors what's there, not gaps.
+- **WithinPhaseRollupCard.svelte** (pi24 dashboard) — sits in
+  the primary slot when `resolvePrimaryDashboardCard` returns
+  `kind: 'active-phase'`. Co-renders with PhaseContextCard
+  (anchor block above): anchor carries the phase identity
+  ("you're in a flare, day N"), this card carries the within-
+  episode data layer ("top symptoms inside this flare, episode
+  count, rescue-med tally"). Date window = `activePhase.
+  startedOn` to today. No pressure language; if everything is
+  zero (a healthy day inside an ongoing flare), the card mounts
+  with a single "{N} days logged" line via plural().
 - **TopTriggersCard.svelte** (pi24 dashboard) — observational
   top-5 trigger list with horizontal bar weights + total-days
   footer. Used by migraine + dermatology when triggers have been

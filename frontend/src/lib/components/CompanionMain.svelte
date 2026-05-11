@@ -20,6 +20,7 @@
 	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
 	import VitalTrendCard from '$lib/components/VitalTrendCard.svelte';
 	import TopTriggersCard from '$lib/components/TopTriggersCard.svelte';
+	import WithinPhaseRollupCard from '$lib/components/WithinPhaseRollupCard.svelte';
 	import { cohortPalette } from '$lib/cohortPalette';
 	import type { Cohort } from '$lib/blueprint/cohort';
 	import type { DashboardCardSpec } from '$lib/blueprint/dashboardPrimary';
@@ -188,6 +189,11 @@
 	/>
 {:else if primarySpec?.kind === 'top-triggers'}
 	<TopTriggersCard docs={allDocs} {bp} />
+{:else if primarySpec?.kind === 'active-phase'}
+	<!-- pi24 dashboard: active-phase resolver kind = PhaseContextCard
+	     (anchor block above) + WithinPhaseRollupCard (here). Two cards
+	     co-render during a flare: anchor for identity, rollup for data. -->
+	<WithinPhaseRollupCard docs={allDocs} {bp} {activePhase} />
 {:else if primarySpec?.kind === 'last-entries' || primarySpec?.kind === 'treatment-cycle'}
 	<!-- pi24 fall-through: until TreatmentCycleCard ships, cancer users
 	     get LastEntriesStrip — journal-primary cohort anyway, so the
