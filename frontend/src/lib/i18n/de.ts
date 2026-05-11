@@ -254,6 +254,27 @@ export default {
 	'companion.medications_count': '{count} Medikamente',
 	'companion.streak_no_episodes': 'Tage ohne Episoden',
 	'companion.streak_no_type': 'Tage ohne {type}',
+	'companion.trigger_days': 'Auslöser-Tage',
+	'companion.marker_best': 'Längster Abstand bisher: {days} Tage',
+	'companion.marker_sr': 'Abstand zwischen den letzten {noun}-Ereignissen: {gaps}. Aktuell {current} Tage.',
+	'companion.completeness_title': 'Heute',
+	'companion.completeness_done': '{done} von {total} erfasst',
+	'companion.completeness_continue': 'Weiterführen',
+	'companion.completeness_all_done': 'Alles erfasst',
+	'companion.cat_symptoms': 'Symptome',
+	'companion.cat_episodes': 'Episoden',
+	'companion.cat_vitals': 'Vitalwerte',
+	'companion.cat_diary': 'Tagebucheintrag',
+	'companion.cat_cycle': 'Zyklustag',
+	'companion.cat_phase': 'Phase',
+
+	'marker_noun.seizure': 'Anfall',
+	'marker_noun.attack': 'Attacke',
+	'marker_noun.episode': 'Episode',
+	'marker_noun.relapse': 'Schub',
+	'marker_noun.crash': 'Crash',
+	'marker_noun.flare': 'Schub',
+	'marker_noun.hypo': 'Hypoglykämie',
 
 	// Protocol
 	'protocol.title': 'Eintrag',
@@ -1968,13 +1989,10 @@ export default {
 	'companion.compliance_low': 'Du hast {logged} von {total} Tagen erfasst.',
 	'companion.compliance_subtitle': 'Mehr Einträge machen die Werte aussagekräftiger.',
 
-	// FAB onboarding (first 3 sessions)
-	'fab.tooltip_text': 'Schnelleintrag — tippe zum Hinzufügen.',
-	'fab.tooltip_dismiss': 'Verstanden',
-	'fab.aria_label': 'Schnell-Erfassung öffnen',
-
-	// One-time event-line tooltip after first daily log
-	'tooltip.event_line_intro': 'Tipp: Notizen die du hier eingibst (z.B. "Neue Medikation") erscheinen als senkrechte Linien in deinem Verlauf-Diagramm — perfekt für deine Ärztin.',
+	// CIPH-pi24-5d — Desktop FAB removed; its 4 i18n keys removed too:
+	// fab.tooltip_text / fab.tooltip_dismiss / fab.aria_label /
+	// tooltip.event_line_intro. Mobile BottomNav add affordance uses
+	// nav.add.
 
 	// CIPH-301 — Setup wizard (3-screen with skip)
 	'setup.step_label': 'Schritt {n} von 4',

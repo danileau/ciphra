@@ -81,11 +81,14 @@ describe('CIPH-pi24-1B — language picker is footer-only', () => {
 
 	it('PublicFooter still exposes the language picker (regression check)', () => {
 		// The picker has to live somewhere; PublicFooter is the canonical home.
+		// CIPH-pi24-5e — native <select> replaced by <LocaleSelect> (custom
+		// listbox primitive); the picker is still in PublicFooter, just via
+		// the component import.
 		const FOOTER = readFileSync(
 			join(__dirname, '..', 'lib', 'components', 'PublicFooter.svelte'),
 			'utf8',
 		);
-		expect(FOOTER).toMatch(/<select[\s\S]+?on:change=\{setLocale\}/);
+		expect(FOOTER).toMatch(/<LocaleSelect[\s/>]/);
 	});
 });
 

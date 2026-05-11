@@ -226,6 +226,23 @@ route kind.
   is the calendar's concern (panel-header link → `/log/{date}`
   for entries; events/diaries use the journal moment-modal).
   Used only by `routes/calendar/+page.svelte`.
+- **LocaleSelect.svelte** (CIPH-pi24-5e) — custom listbox replacing
+  the native `<select>` for the locale switcher on `/login` and
+  `PublicFooter`. Native `<select>` can be styled at rest but the
+  open option-panel is browser chrome the CSS cascade cannot reach;
+  this component implements a `role="combobox"` button + `role=
+  "listbox"` popover with keyboard nav (Up/Down/Home/End/Esc) and
+  outside-click dismissal. Form-context selects (settings, EntryComposer)
+  keep the native control on purpose.
+- **GapTrendSpark.svelte** (CIPH-pi24-5c) — dashboard rail card
+  showing the gap (days) between successive marker events as an
+  inline-SVG sparkline. Last 5 historical gaps render as filled
+  dots; the trailing in-progress current gap renders as a hollow
+  dot. "Längster Abstand bisher" sits below as a reference line
+  (no leaderboard reset). Only mounts when the active preset
+  declares `markerEvent` AND ≥3 marker events exist — wraps the
+  Klara objection at Companion.svelte:124 by showing trend, not a
+  resetting counter. Used by `CompanionRail.svelte`.
 - **MonthMiniSummary.svelte** (CIPH-pi19-B) — calendar right-rail
   tail. Shows trigger-day + rescue-med-day counts for the visible
   month, gated on `showTrigger` / `showRescue` props (which the

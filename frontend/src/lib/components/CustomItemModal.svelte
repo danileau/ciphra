@@ -182,7 +182,7 @@
 				>
 				<select
 					bind:value={groupId}
-					class="input mt-1 w-full"
+					class="input select-chevron mt-1 w-full cursor-pointer"
 					data-testid="custom-item-group"
 				>
 					<option value="">{$t('customization.no_group')}</option>

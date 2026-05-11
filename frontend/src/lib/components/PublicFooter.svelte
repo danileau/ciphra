@@ -10,14 +10,10 @@
 	skip the footer — they're focus surfaces.
 -->
 <script lang="ts">
-	import { t, locale, locales, localeNames } from '$lib/i18n';
+	import { t } from '$lib/i18n';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
-
-	function setLocale(e: Event) {
-		const target = e.currentTarget as HTMLSelectElement;
-		locale.set(target.value);
-	}
+	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
 </script>
 
 <footer class="py-12" style="background: var(--surface-card); border-top: 1px solid var(--border);">
@@ -67,17 +63,7 @@
 		<div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm" style="color: var(--text-muted);">
 			<span>&copy; 2026 ciphra</span>
 			<div class="flex items-center gap-4">
-				<select
-					class="text-xs rounded-lg px-2 py-1.5 min-h-[36px]"
-					style="background: var(--surface-card); border: 1px solid var(--border); color: var(--text-muted);"
-					value={$locale}
-					on:change={setLocale}
-					aria-label={$t('common.language')}
-				>
-					{#each locales as l}
-						<option value={l}>{localeNames[l]}</option>
-					{/each}
-				</select>
+				<LocaleSelect />
 			</div>
 		</div>
 	</div>

@@ -165,6 +165,16 @@ export interface Blueprint {
 	 *  (Swiss/EU) when unset, matching the existing PI v17 behavior. */
 	dateFormat?: 'dd.mm.yyyy' | 'dd/mm/yyyy' | 'iso' | 'us';
 
+	/** CIPH-pi24-5c — Marker event for the dashboard gap-trend sparkline
+	 *  ("Tage ohne {Anfall|Attacke|Episode|Schub|...}"). Only declared for
+	 *  presets where a clean episodic marker exists; absence hides the card.
+	 *  Klara's prior objection to "days since last episode" framing is met
+	 *  by showing a gap *trend* (treatment-efficacy signal) rather than a
+	 *  bare counter — see Companion.svelte:124. `episodeIds` are matched
+	 *  against entry.data.episodes; `nounKey` is the i18n singular noun
+	 *  rendered through `companion.streak_no_type`. */
+	markerEvent?: { episodeIds: string[]; nounKey: string };
+
 	/** CIPH-301b / CIPH-882 — User customizations from the setup wizard
 	 *  or settings. Two layers:
 	 *

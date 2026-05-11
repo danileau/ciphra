@@ -27,6 +27,7 @@
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
+	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { fade } from 'svelte/transition';
@@ -368,7 +369,22 @@
 </script>
 
 <div class="layout-data pt-4">
-	<h1 class="text-2xl font-bold mb-4" style="color: var(--text-primary)">{$t('stream.title')}</h1>
+	<div class="flex items-center justify-between gap-3 mb-4">
+		<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('stream.title')}</h1>
+		<!-- CIPH-pi24-5d — Desktop add affordance. Replaces the dropped
+			 global FAB for the one surface where it was uniquely useful
+			 (calendar has day-click; dashboard has the S5+S1 CTA). Hidden
+			 on mobile because BottomNav center-+ already covers the role. -->
+		<button
+			type="button"
+			on:click={() => quickAddOpen.set(true)}
+			class="btn-primary px-4 py-2 text-sm hidden md:inline-flex items-center gap-1.5 shrink-0"
+			data-testid="journal-add"
+		>
+			<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+			{$t('nav.add')}
+		</button>
+	</div>
 
 	<!-- Search + filter row (CIPH-424) — filter chips are now cohort-aware
 		 via --accent; the previous hardcoded olive bled brand-discrete color

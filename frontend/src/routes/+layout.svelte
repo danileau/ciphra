@@ -749,52 +749,15 @@
 		 BottomNav (mobile) and safe-area (desktop). -->
 	<AuthedFooter />
 
-	<!-- FAB (+) button -->
+	<!-- CIPH-pi24-5d — Desktop FAB + its 2 onboarding tooltips removed.
+		 Dogfood read it as "off-grid (too far right) and breaks the style
+		 of the page" — the floating accent circle pinned at `right: 1rem`
+		 (viewport edge, not content grid) felt orphaned against the
+		 max-w-6xl content. Mobile BottomNav center-+ stays (it's grid-
+		 native). Per-page add affordances replace the desktop FAB:
+		 dashboard CTA (S5+S1 hero) + /journal header button. Calendar
+		 already has day-cell click → /log/{date} as its add path. -->
 	{#if bp && $hasBlueprint && currentPath !== '/login' && currentPath !== '/setup'}
-		{#if fabShowTooltip}
-			<!-- First-session onboarding tooltip: dismissable, never shown after. -->
-			<button
-				type="button"
-				on:click={dismissFabTooltip}
-				class="fab-tooltip"
-				style="bottom: calc(8rem + env(safe-area-inset-bottom, 0px)); right: 1rem;"
-				transition:fade={{ duration: 200 }}
-				aria-label={$t('fab.tooltip_dismiss')}
-			>
-				<p class="text-xs leading-snug">{$t('fab.tooltip_text')}</p>
-				<p class="text-[10px] mt-1 opacity-80 underline">{$t('fab.tooltip_dismiss')}</p>
-			</button>
-		{/if}
-		{#if showEventLineTooltip}
-			<!-- One-time event-line onboarding tooltip after the user's first
-				 daily_log. Points at the FAB; click to dismiss forever. -->
-			<button
-				type="button"
-				on:click={dismissEventLineTooltip}
-				class="fab-tooltip fab-tooltip--event"
-				style="bottom: calc(8rem + env(safe-area-inset-bottom, 0px)); right: 1rem;"
-				transition:fade={{ duration: 200 }}
-				aria-label={$t('fab.tooltip_dismiss')}
-			>
-				<p class="text-xs leading-snug">{$t('tooltip.event_line_intro')}</p>
-				<p class="text-[10px] mt-1 opacity-80 underline">{$t('fab.tooltip_dismiss')}</p>
-			</button>
-		{/if}
-		<button
-			on:click={onFabClick}
-			on:pointerdown={onFabPointerDown}
-			on:pointerup={onFabPointerUp}
-			on:pointerleave={onFabPointerCancel}
-			on:pointercancel={onFabPointerCancel}
-			data-testid="fab-quickadd"
-			class="fab hidden md:flex"
-			class:fab-pulse={fabPulse}
-			style="bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); right: 1rem;"
-			aria-label={$t('fab.aria_label')}
-		>
-			<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-		</button>
-
 		{#if showQuickAdd}
 			<button
 				class="fixed inset-0 z-[55] bg-black/40 backdrop-blur-sm"

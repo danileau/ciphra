@@ -248,6 +248,27 @@ export default {
 	'companion.medications_count': '{count} médicaments',
 	'companion.streak_no_episodes': 'Jours sans épisodes',
 	'companion.streak_no_type': 'Jours sans {type}',
+	'companion.trigger_days': 'Jours déclencheurs',
+	'companion.marker_best': 'Plus long intervalle jusqu’ici : {days} jours',
+	'companion.marker_sr': 'Intervalles entre les derniers événements {noun} : {gaps}. Actuellement {current} jours.',
+	'companion.completeness_title': 'Aujourd’hui',
+	'companion.completeness_done': '{done} sur {total} saisis',
+	'companion.completeness_continue': 'Continuer',
+	'companion.completeness_all_done': 'Tout est saisi',
+	'companion.cat_symptoms': 'Symptômes',
+	'companion.cat_episodes': 'Épisodes',
+	'companion.cat_vitals': 'Mesures',
+	'companion.cat_diary': 'Note de journal',
+	'companion.cat_cycle': 'Jour du cycle',
+	'companion.cat_phase': 'Phase',
+
+	'marker_noun.seizure': 'crise',
+	'marker_noun.attack': 'crise',
+	'marker_noun.episode': 'épisode',
+	'marker_noun.relapse': 'poussée',
+	'marker_noun.crash': 'crash',
+	'marker_noun.flare': 'poussée',
+	'marker_noun.hypo': 'hypoglycémie',
 
 	'protocol.title': 'Entrée',
 	'entry_preview.show_details': 'Afficher les détails',
@@ -1943,13 +1964,7 @@ export default {
 	'companion.compliance_low': 'Vous avez enregistré {logged} jours sur {total}.',
 	'companion.compliance_subtitle': 'Plus d\'entrées rendent les valeurs plus significatives.',
 
-	// FAB onboarding (first 3 sessions)
-	'fab.tooltip_text': 'Ajout rapide — touchez pour saisir.',
-	'fab.tooltip_dismiss': 'Compris',
-	'fab.aria_label': 'Ouvrir l\'ajout rapide',
-
-	// One-time event-line tooltip after first daily log
-	'tooltip.event_line_intro': 'Astuce : les notes que vous entrez ici (par ex. « Nouvelle médication ») apparaissent comme lignes verticales dans votre graphique — parfait pour votre médecin.',
+	// CIPH-pi24-5d — Desktop FAB removed; its 4 i18n keys removed too.
 
 	// CIPH-301 — Assistant de configuration
 	'setup.step_label': 'Étape {n} sur 4',

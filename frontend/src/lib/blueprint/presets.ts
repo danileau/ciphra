@@ -78,6 +78,10 @@ export const epilepsy: Blueprint = {
 		{ id: 'midazolam_buccal', label: 'rescue_med.midazolam', unit: 'mg', defaultDose: '5' },
 		{ id: 'diazepam_rectal', label: 'rescue_med.diazepam', unit: 'mg', defaultDose: '10' },
 	],
+	markerEvent: {
+		episodeIds: ['focal', 'generalized', 'absence', 'myoclonic', 'unknown'],
+		nounKey: 'marker_noun.seizure',
+	},
 };
 
 // ─── ADHD ────────────────────────────────────────────────────
@@ -227,6 +231,10 @@ export const diabetes: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
+	markerEvent: {
+		episodeIds: ['hypoglycemia'],
+		nounKey: 'marker_noun.hypo',
+	},
 };
 
 // ─── Burnout ─────────────────────────────────────────────────
@@ -383,6 +391,10 @@ export const migraine: Blueprint = {
 		{ id: 'sumatriptan', label: 'rescue_med.sumatriptan', unit: 'mg', defaultDose: '50' },
 		{ id: 'rizatriptan', label: 'rescue_med.rizatriptan', unit: 'mg', defaultDose: '10' },
 	],
+	markerEvent: {
+		episodeIds: ['migraine_with_aura', 'migraine_without_aura', 'cluster_headache'],
+		nounKey: 'marker_noun.attack',
+	},
 };
 
 // ─── Empty starter for fully custom blueprints ───────────────
@@ -571,6 +583,10 @@ export const ms: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
+	markerEvent: {
+		episodeIds: ['relapse'],
+		nounKey: 'marker_noun.relapse',
+	},
 };
 
 // ─── Anxiety & Depression ───────────────────────────────────
@@ -730,6 +746,10 @@ export const ibs: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
+	markerEvent: {
+		episodeIds: ['flare'],
+		nounKey: 'marker_noun.flare',
+	},
 };
 
 // ─── Asthma / COPD ──────────────────────────────────────────
@@ -806,6 +826,10 @@ export const asthma: Blueprint = {
 		{ id: 'salbutamol_puff', label: 'rescue_med.salbutamol', unit: 'puff', defaultDose: '2' },
 		{ id: 'prednisolone', label: 'rescue_med.prednisolone', unit: 'mg', defaultDose: '30' },
 	],
+	markerEvent: {
+		episodeIds: ['asthma_attack', 'copd_exacerbation'],
+		nounKey: 'marker_noun.attack',
+	},
 };
 
 // ─── Endometriosis ──────────────────────────────────────────
@@ -1349,6 +1373,10 @@ export const long_covid: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
+	markerEvent: {
+		episodeIds: ['crash', 'flare'],
+		nounKey: 'marker_noun.crash',
+	},
 };
 
 // ─── Menopause / Perimenopause ───────────────────────────────
@@ -1512,6 +1540,10 @@ export const bipolar: Blueprint = {
 		{ id: 'lorazepam', label: 'rescue_med.lorazepam', unit: 'mg', defaultDose: '1' },
 		{ id: 'quetiapine_prn', label: 'rescue_med.quetiapine', unit: 'mg', defaultDose: '25' },
 	],
+	markerEvent: {
+		episodeIds: ['manic', 'depressive', 'hypomanic'],
+		nounKey: 'marker_noun.episode',
+	},
 };
 
 // ─── Glaucoma ───────────────────────────────────────────────
@@ -1721,6 +1753,10 @@ export const ibd: Blueprint = {
 		{ id: 'prednisone_burst', label: 'rescue_med.prednisone', unit: 'mg', defaultDose: '40' },
 		{ id: 'loperamide', label: 'rescue_med.loperamide', unit: 'mg', defaultDose: '4' },
 	],
+	markerEvent: {
+		episodeIds: ['flare'],
+		nounKey: 'marker_noun.flare',
+	},
 };
 
 // ─── PCOS (Polycystic Ovary Syndrome) ───────────────────────
@@ -1930,6 +1966,10 @@ export const rheumatoid_arthritis: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
+	markerEvent: {
+		episodeIds: ['flare'],
+		nounKey: 'marker_noun.flare',
+	},
 };
 
 // ─── Registry ────────────────────────────────────────────────

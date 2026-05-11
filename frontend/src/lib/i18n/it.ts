@@ -248,6 +248,27 @@ export default {
 	'companion.medications_count': '{count} farmaci',
 	'companion.streak_no_episodes': 'Giorni senza episodi',
 	'companion.streak_no_type': 'Giorni senza {type}',
+	'companion.trigger_days': 'Giorni con fattori scatenanti',
+	'companion.marker_best': 'Intervallo più lungo finora: {days} giorni',
+	'companion.marker_sr': 'Intervalli tra i recenti eventi {noun}: {gaps}. Attualmente {current} giorni.',
+	'companion.completeness_title': 'Oggi',
+	'companion.completeness_done': '{done} di {total} registrati',
+	'companion.completeness_continue': 'Continua',
+	'companion.completeness_all_done': 'Tutto registrato',
+	'companion.cat_symptoms': 'Sintomi',
+	'companion.cat_episodes': 'Episodi',
+	'companion.cat_vitals': 'Parametri',
+	'companion.cat_diary': 'Voce di diario',
+	'companion.cat_cycle': 'Giorno del ciclo',
+	'companion.cat_phase': 'Fase',
+
+	'marker_noun.seizure': 'crisi',
+	'marker_noun.attack': 'attacco',
+	'marker_noun.episode': 'episodio',
+	'marker_noun.relapse': 'ricaduta',
+	'marker_noun.crash': 'crash',
+	'marker_noun.flare': 'riacutizzazione',
+	'marker_noun.hypo': 'ipoglicemia',
 
 	'protocol.title': 'Voce',
 	'entry_preview.show_details': 'Mostra dettagli',
@@ -1943,13 +1964,7 @@ export default {
 	'companion.compliance_low': 'Hai registrato {logged} giorni su {total}.',
 	'companion.compliance_subtitle': 'Più voci rendono i valori più significativi.',
 
-	// FAB onboarding (first 3 sessions)
-	'fab.tooltip_text': 'Inserimento rapido — tocca per aggiungere.',
-	'fab.tooltip_dismiss': 'Ho capito',
-	'fab.aria_label': 'Apri aggiunta rapida',
-
-	// One-time event-line tooltip after first daily log
-	'tooltip.event_line_intro': 'Suggerimento: le note che inserisci qui (ad es. «Nuova terapia») appaiono come linee verticali nel tuo grafico — perfetto per il tuo medico.',
+	// CIPH-pi24-5d — Desktop FAB removed; its 4 i18n keys removed too.
 
 	// CIPH-301 — Assistente di configurazione
 	'setup.step_label': 'Passo {n} di 4',

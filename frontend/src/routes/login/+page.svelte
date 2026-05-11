@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t, locale, locales, localeNames } from '$lib/i18n';
+	import { t } from '$lib/i18n';
 	import * as api from '$lib/api';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -9,11 +9,7 @@
 	import LoginForm from '$lib/components/LoginForm.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import PasswordField from '$lib/components/PasswordField.svelte';
-
-	function setLocale(e: Event) {
-		const val = (e.currentTarget as HTMLSelectElement).value;
-		locale.set(val);
-	}
+	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
 
 	// Default to the register tab when arriving via /login?mode=register
 	// (primary landing-page CTA routes here). Anything else → login.
@@ -221,16 +217,7 @@
 
 		<!-- Footer controls -->
 		<div class="flex items-center justify-center gap-4 mt-6">
-			<select
-				class="text-xs rounded-lg px-2 py-1.5 min-h-[36px] cursor-pointer"
-				style="background: var(--surface-muted); border: 1px solid var(--border) ; color: var(--text-secondary)"
-				value={$locale}
-				on:change={setLocale}
-			>
-				{#each locales as l}
-					<option value={l}>{localeNames[l]}</option>
-				{/each}
-			</select>
+			<LocaleSelect />
 		</div>
 
 		<p class="text-center text-xs mt-4" style="color: var(--text-muted)">

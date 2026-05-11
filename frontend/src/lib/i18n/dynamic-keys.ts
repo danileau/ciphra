@@ -47,6 +47,12 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 	'seizure.',
 	'seizures.',
 
+	// CIPH-pi24-5c — Marker-event noun labels are blueprint-driven:
+	// each preset's `markerEvent.nounKey` is looked up at render via
+	// `$t(markerGapTrend.nounKey)` in CompanionRail. Static analysis
+	// can't trace through the data attribute.
+	'marker_noun.',
+
 	// Cycle phase keys — `$t('cycle.phase_' + cs.phase)` in
 	// CompanionMain; phases are follicular, luteal, ovulation, menstrual.
 	'cycle.phase_',

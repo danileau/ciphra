@@ -12,6 +12,7 @@
 	// the main 2/3 column alongside the other charts.
 	import { t } from '$lib/i18n';
 	import EntryPreview from '$lib/components/EntryPreview.svelte';
+	import GapTrendSpark from '$lib/components/GapTrendSpark.svelte';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint } from '$lib/blueprint/types';
 
@@ -44,6 +45,17 @@
 	// so the card stays out of presets without a clinical rescue protocol.
 	export let rescueMedsThisMonth: number = 0;
 
+	// CIPH-pi24-5c — Marker-event gap-trend sparkline data. Null when the
+	// active preset doesn't declare `markerEvent` or when <3 events have
+	// been logged yet (gate enforced upstream in Companion.svelte).
+	export let markerGapTrend: {
+		historicalGaps: number[];
+		currentGap: number;
+		bestGap: number;
+		nounKey: string;
+	} | null = null;
+	export let markerAccentHex: string = '';
+
 	// Reports / export. Doctor PDF + Open reports. Moved in from CompanionMain.
 	export let canExport: boolean;
 	// CIPH-873 — `onExportForDoctor` prop removed. Export is now a deep-link
@@ -51,10 +63,28 @@
 </script>
 
 <div class="space-y-6">
+	<!-- ═══ MARKER GAP TREND (CIPH-pi24-5c) ═══
+		 Top of the rail: the morbus-AI signal — "is the treatment working?"
+		 Reordered above compliance because the clinically-meaningful gap
+		 trend should anchor the rail; data-reliability is supporting
+		 context. Renders only when the preset declares `markerEvent` AND
+		 ≥3 marker events have been logged. Gap trend (treatment efficacy)
+		 wraps Klara's prior streak objection (Companion.svelte:124) — show
+		 trend, not a resetting counter. -->
+	{#if markerGapTrend}
+		<GapTrendSpark
+			historicalGaps={markerGapTrend.historicalGaps}
+			currentGap={markerGapTrend.currentGap}
+			bestGap={markerGapTrend.bestGap}
+			accentHex={markerAccentHex}
+			nounLabel={$t(markerGapTrend.nounKey)}
+		/>
+	{/if}
+
 	<!-- ═══ COMPLIANCE (data-reliability) ═══
-		 At the top of the rail: the "how am I doing with logging" answer
-		 users glance at first. CIPH-904 — suppressed for first-day users
-		 so 0% doesn't read as failure on their first visit. -->
+		 "How am I doing with logging" — supporting context below the
+		 outcome signal. CIPH-904 — suppressed for first-day users so 0%
+		 doesn't read as failure on their first visit. -->
 	{#if complianceVisible}
 		<section class="card-anchor">
 			<div class="flex items-center gap-3">

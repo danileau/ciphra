@@ -530,6 +530,54 @@
 		color: var(--text-muted);
 	}
 
+	/* ═══ STYLED SELECT (CIPH-pi24-5d) ═══
+	   Browser-native <select> chrome is the single most jarring un-styled
+	   surface in the app. Two layers:
+	   - `.select-chevron` strips the native chevron + paints a brand SVG one.
+	     Apply alongside `.input` for form selects, or alongside any custom
+	     wrapper for inline selects.
+	   - `.select-styled` is the standalone chip variant (login/footer locale
+	     pickers, etc.) — includes its own surface/border. */
+	.select-chevron {
+		appearance: none;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		background-repeat: no-repeat;
+		background-position: right 0.625rem center;
+		background-size: 12px 12px;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='3,4.5 6,7.5 9,4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		padding-right: 2rem;
+	}
+	.select-styled {
+		appearance: none;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		padding: 0.5rem 2rem 0.5rem 0.75rem;
+		min-height: 36px;
+		font-size: 0.75rem;
+		line-height: 1.25;
+		background-color: var(--surface-muted);
+		color: var(--text-secondary);
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		cursor: pointer;
+		background-repeat: no-repeat;
+		background-position: right 0.625rem center;
+		background-size: 12px 12px;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='3,4.5 6,7.5 9,4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, background-color 0.15s ease-out;
+	}
+	.select-styled:hover {
+		background-color: var(--surface-card);
+		border-color: var(--text-muted);
+	}
+	.select-styled:focus,
+	.select-styled:focus-visible {
+		outline: none;
+		border-color: var(--accent);
+		box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+	}
+
 	/* ═══ NUMBER DISPLAY ═══ */
 	/* Data numbers use ochre — "information is ochre" */
 	.num-data {

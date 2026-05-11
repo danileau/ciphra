@@ -248,6 +248,27 @@ export default {
 	'companion.medications_count': '{count} medications',
 	'companion.streak_no_episodes': 'Days without episodes',
 	'companion.streak_no_type': 'Days without {type}',
+	'companion.trigger_days': 'Trigger days',
+	'companion.marker_best': 'Longest gap so far: {days} days',
+	'companion.marker_sr': 'Gap between recent {noun} events: {gaps}. Currently {current} days.',
+	'companion.completeness_title': 'Today',
+	'companion.completeness_done': '{done} of {total} logged',
+	'companion.completeness_continue': 'Continue',
+	'companion.completeness_all_done': 'All logged',
+	'companion.cat_symptoms': 'Symptoms',
+	'companion.cat_episodes': 'Episodes',
+	'companion.cat_vitals': 'Vitals',
+	'companion.cat_diary': 'Diary entry',
+	'companion.cat_cycle': 'Cycle day',
+	'companion.cat_phase': 'Phase',
+
+	'marker_noun.seizure': 'seizure',
+	'marker_noun.attack': 'attack',
+	'marker_noun.episode': 'episode',
+	'marker_noun.relapse': 'relapse',
+	'marker_noun.crash': 'crash',
+	'marker_noun.flare': 'flare',
+	'marker_noun.hypo': 'hypo',
 
 	'entry_preview.show_details': 'Show details',
 	'entry_preview.phase_continues': 'Phase still active',
@@ -1958,13 +1979,7 @@ export default {
 	'companion.compliance_low': 'You have logged {logged} of {total} days.',
 	'companion.compliance_subtitle': 'More entries make the values more meaningful.',
 
-	// FAB onboarding (first 3 sessions)
-	'fab.tooltip_text': 'Quick add — tap to log.',
-	'fab.tooltip_dismiss': 'Got it',
-	'fab.aria_label': 'Open quick add',
-
-	// One-time event-line tooltip after first daily log
-	'tooltip.event_line_intro': 'Tip: notes you enter here (e.g. "New medication") appear as vertical lines in your timeline chart — perfect for your doctor.',
+	// CIPH-pi24-5d — Desktop FAB removed; its 4 i18n keys removed too.
 
 	// CIPH-301 — Setup wizard (3-screen with skip)
 	'setup.step_label': 'Step {n} of 4',

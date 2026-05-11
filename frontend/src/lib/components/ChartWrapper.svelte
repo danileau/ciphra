@@ -97,10 +97,44 @@
 		};
 	}
 
+	// CIPH-pi24-5e — Tick-row plugin: a single row at the bottom of the
+	// chart frame showing one tick per trigger day. Earlier drafts also
+	// drew an episode-tick row, but episodes are already visible in the
+	// line going up — the redundant row read as visual noise. The
+	// remaining trigger row carries the new "what caused this?" signal
+	// the line alone can't show. A legend entry is added via the chart
+	// options' `generateLabels` (caller-side) so the swatch matches the
+	// tick color. Payload `markersTrigger` is read off chart.options
+	// (fractional x positions in category-axis units) so the plugin is
+	// surface-agnostic and reusable on /reports.
+	const eventMarkerPlugin = {
+		id: 'eventMarker',
+		afterDatasetsDraw(c: any) {
+			const opt = c.options || {};
+			const trg: number[] = opt.markersTrigger || [];
+			if (trg.length === 0) return;
+			const ctx = c.ctx;
+			const x = c.scales.x;
+			const ca = c.chartArea;
+			if (!x || !ca) return;
+			const tickH = 6;
+			const trgY = ca.bottom - tickH;
+			ctx.save();
+			ctx.fillStyle = opt.markerTriggerColor || '#9F630B';
+			ctx.globalAlpha = 0.7;
+			for (const t of trg) {
+				const px = x.getPixelForValue(t);
+				if (px < ca.left || px > ca.right) continue;
+				ctx.fillRect(px - 0.75, trgY, 1.5, tickH);
+			}
+			ctx.restore();
+		},
+	};
+
 	onMount(async () => {
 		const mod = await import('chart.js');
 		Chart = mod.Chart;
-		Chart.register(...mod.registerables);
+		Chart.register(...mod.registerables, eventMarkerPlugin);
 
 		chart = new Chart(canvas, {
 			type,

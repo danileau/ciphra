@@ -1501,6 +1501,19 @@
 	.log-detail-input:focus {
 		border-color: var(--brand);
 	}
+	/* CIPH-pi24-5d — Bring <select.log-detail-input> in line with the rest
+	   of the app: strip the native chevron + paint the brand SVG one. */
+	select.log-detail-input {
+		appearance: none;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		padding-right: 32px;
+		background-repeat: no-repeat;
+		background-position: right 10px center;
+		background-size: 12px 12px;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='3,4.5 6,7.5 9,4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		cursor: pointer;
+	}
 
 	/* ─── Vitals ─── */
 	.log-vitals-grid {

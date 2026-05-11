@@ -649,7 +649,7 @@
 				<label class="text-sm mb-1.5 block" style="color: var(--text-secondary)" for="settings-language-select">{$t('common.language')}</label>
 				<select
 					id="settings-language-select"
-					class="input cursor-pointer"
+					class="input select-chevron cursor-pointer"
 					value={$locale}
 					on:change={(e) => locale.set(e.currentTarget.value)}
 				>
@@ -668,7 +668,7 @@
 				<p class="text-xs mb-1.5" style="color: var(--text-muted)">{$t('settings.date_format_desc')}</p>
 				<select
 					id="date-format-select"
-					class="input cursor-pointer"
+					class="input select-chevron cursor-pointer"
 					value={currentDateFormat}
 					on:change={onDateFormatChange}
 				>
@@ -938,7 +938,7 @@
 		<label class="sr-only" for="primary-surface-select">{$t('settings.primary_surface_title')}</label>
 		<select
 			id="primary-surface-select"
-			class="input cursor-pointer"
+			class="input select-chevron cursor-pointer"
 			value={currentSurfaceChoice}
 			on:change={onSurfaceChange}
 		>
