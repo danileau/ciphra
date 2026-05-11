@@ -36,7 +36,6 @@ export type DashboardCardKind =
 	| 'cycle-phase'
 	| 'active-phase'
 	| 'top-triggers'
-	| 'treatment-cycle'
 	| 'last-entries';
 
 export type DashboardCardSpec =
@@ -45,7 +44,6 @@ export type DashboardCardSpec =
 	| { kind: 'cycle-phase' }
 	| { kind: 'active-phase' }
 	| { kind: 'top-triggers' }
-	| { kind: 'treatment-cycle' }
 	| { kind: 'last-entries' };
 
 /**
@@ -160,11 +158,15 @@ export function resolvePrimaryDashboardCard(
 		return { kind: 'active-phase' };
 	}
 
-	// 3) Cancer treatment: dedicated treatment-arc card. Distinct from
-	//    every other narrative cohort because the regimen IS the story.
-	if (conditionId === 'cancer_treatment') {
-		return { kind: 'treatment-cycle' };
-	}
+	// 3) Cancer treatment routes to last-entries via the final fallback.
+	//    The campfire matrix called for a "treatment-cycle" card, but the
+	//    cancer_treatment blueprint has no regimen / cycle data primitive —
+	//    it tracks symptoms / episodes / triggers / vitals like every
+	//    other cohort. Inferring cycles from `chemo_day` trigger events
+	//    would be fragile (many users won't log it reliably). Cancer is
+	//    `primaryBrowseSurface: 'journal'`, so LastEntriesStrip is the
+	//    honest cohort-aligned fit until real cohort feedback drives a
+	//    dedicated card. Falls through to step 7 below.
 
 	// 4) Trigger-hunt cohorts: top-triggers primary, gated on having any
 	//    trigger data. Observational copy is enforced in the i18n keys

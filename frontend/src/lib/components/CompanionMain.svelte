@@ -194,10 +194,7 @@
 	     (anchor block above) + WithinPhaseRollupCard (here). Two cards
 	     co-render during a flare: anchor for identity, rollup for data. -->
 	<WithinPhaseRollupCard docs={allDocs} {bp} {activePhase} />
-{:else if primarySpec?.kind === 'last-entries' || primarySpec?.kind === 'treatment-cycle'}
-	<!-- pi24 fall-through: until TreatmentCycleCard ships, cancer users
-	     get LastEntriesStrip — journal-primary cohort anyway, so the
-	     strip is on-cohort. -->
+{:else if primarySpec?.kind === 'last-entries'}
 	<LastEntriesStrip docs={allDocs} {bp} />
 {/if}
 

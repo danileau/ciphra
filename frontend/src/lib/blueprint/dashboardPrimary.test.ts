@@ -59,8 +59,8 @@ describe('resolvePrimaryDashboardCard — cohort anchors', () => {
 		expect(resolvePrimaryDashboardCard(bp('autism'), s)?.kind).toBe('active-phase');
 	});
 
-	it('cancer_treatment → treatment-cycle', () => {
-		expect(resolvePrimaryDashboardCard(bp('cancer_treatment'), summary({ hasAnyEntry: true }))?.kind).toBe('treatment-cycle');
+	it('cancer_treatment → last-entries (journal-primary cohort, no regimen primitive)', () => {
+		expect(resolvePrimaryDashboardCard(bp('cancer_treatment'), summary({ hasAnyEntry: true }))?.kind).toBe('last-entries');
 	});
 });
 
