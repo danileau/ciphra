@@ -14,6 +14,11 @@
 	// Replaced by CIPH-790 (settings-based opt-in help section).
 	import { familyLinks } from '$lib/stores/familyLinks';
 	import { cohortOf } from '$lib/blueprint/cohort';
+	import {
+		resolvePrimaryDashboardCard,
+		type DashboardSummary,
+		type DashboardCardSpec,
+	} from '$lib/blueprint/dashboardPrimary';
 	import { computeCycleStateToday, hasCycleTracking, PHASE_COLORS } from '$lib/cycleState';
 	import { cohortPalette } from '$lib/cohortPalette';
 
@@ -36,6 +41,60 @@
 	// CIPH-854 — Cohort drives home card ordering + which extra context
 	// cards render. `cohortOf` reads blueprint.conditionId.
 	$: cohort = cohortOf(bp);
+
+	// pi24 dashboard rework — primary card slot is governed by
+	// resolvePrimaryDashboardCard(bp, summary). The summary is computed
+	// here from $documents + bp. CompanionMain switches on primarySpec.kind
+	// to render the right card in the primary slot (or nothing, when the
+	// cohort anchor blocks above already carry the answer).
+	$: dashboardSummary = ((): DashboardSummary => {
+		const presentVitalIds = new Set<string>();
+		let hasAnyEntry = false;
+		let hasEpisodeData = false;
+		let hasSymptomData = false;
+		let hasTriggerData = false;
+		const triggerIds = bp?.triggers?.map((tr) => tr.id) ?? [];
+		for (const d of allDocs) {
+			const type = d.data?.type;
+			if (type === 'entry' || type === 'event' || type === 'diary') {
+				hasAnyEntry = true;
+			}
+			if (type !== 'entry') continue;
+			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+			for (const v of Object.values(eps)) {
+				if (Number(v) > 0) { hasEpisodeData = true; break; }
+			}
+			const syms = (d.data.symptoms || {}) as Record<string, unknown>;
+			for (const v of Object.values(syms)) {
+				if (v) { hasSymptomData = true; break; }
+			}
+			if (!hasTriggerData) {
+				const trs = d.data.triggers as unknown;
+				if (Array.isArray(trs)) {
+					if (trs.length > 0) hasTriggerData = true;
+				} else if (trs && typeof trs === 'object') {
+					const obj = trs as Record<string, unknown>;
+					for (const id of triggerIds) {
+						if (obj[id] === true) { hasTriggerData = true; break; }
+					}
+				}
+			}
+			const vitals = (d.data.vitals || {}) as Record<string, unknown>;
+			for (const [k, v] of Object.entries(vitals)) {
+				if (v === '' || v === null || v === undefined) continue;
+				presentVitalIds.add(k);
+			}
+		}
+		return {
+			hasAnyEntry,
+			hasEpisodeData,
+			hasSymptomData,
+			hasTriggerData,
+			hasActivePhase: !!activePhase,
+			presentVitalIds,
+		};
+	})();
+	$: primarySpec = resolvePrimaryDashboardCard(bp, dashboardSummary) as DashboardCardSpec | null;
 
 	// CIPH-854 — Active multi-day phase. For phase-band cohort only: find
 	// the most-recent entry-streak where any multiDay episode type has
@@ -607,6 +666,9 @@
 				{howAreYouTrend}
 				{howAreYouHeadlineParts}
 				{episodeNoun}
+				{primarySpec}
+				{allDocs}
+				{bp}
 			/>
 		</div>
 		<aside class="min-w-0">

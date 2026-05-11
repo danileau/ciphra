@@ -45,10 +45,15 @@ describe('CIPH-854 Companion cohort ordering', () => {
 		expect(phaseIdx).toBeLessThan(cycleIdx);
 	});
 
-	it('cycle card renders above the main trend chart', () => {
+	it('cycle card renders above the primary card slot', () => {
 		const cycleIdx = SOURCE.indexOf('CYCLE PHASE');
-		const trendIdx = SOURCE.indexOf("WIE GEHT'S DIR?");
-		expect(cycleIdx).toBeLessThan(trendIdx);
+		// pi24 dashboard rework — the trend chart no longer has a fixed
+		// "WIE GEHT'S DIR?" comment anchor; it's one branch of a primary-
+		// slot switch driven by `resolvePrimaryDashboardCard`. The anchor
+		// for the slot itself is the `PRIMARY CARD SLOT` comment block.
+		const primaryIdx = SOURCE.indexOf('PRIMARY CARD SLOT');
+		expect(primaryIdx).toBeGreaterThan(-1);
+		expect(cycleIdx).toBeLessThan(primaryIdx);
 	});
 
 	// CIPH-900 — Episode bar-chart and Top-symptoms bar-chart removed

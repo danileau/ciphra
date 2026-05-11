@@ -58,6 +58,10 @@ export interface DashboardSummary {
 	hasAnyEntry: boolean;
 	/** At least one entry has a positive episodeType count. */
 	hasEpisodeData: boolean;
+	/** At least one entry has any positive symptom value. Used to keep
+	 *  the episode-trend slot rendering for users who track symptoms but
+	 *  no episodes (matching pre-pi24 chart behavior). */
+	hasSymptomData: boolean;
 	/** At least one entry recorded a trigger (array or object-map shape). */
 	hasTriggerData: boolean;
 	/** A multiDay phase episode is currently ongoing today. */
@@ -183,10 +187,14 @@ export function resolvePrimaryDashboardCard(
 		};
 	}
 
-	// 6) Episode trend: any blueprint with episodes AND episode data.
-	//    Covers epilepsy / adhd / asthma / glaucoma (discrete cohorts
-	//    without a vital pin) and phase cohorts between flares.
-	if (bp.episodeTypes?.length && summary.hasEpisodeData) {
+	// 6) Episode trend: any blueprint with episodes AND (episode OR
+	//    symptom data). Covers epilepsy / adhd / asthma / glaucoma
+	//    (discrete cohorts without a vital pin) and phase cohorts
+	//    between flares. Symptom-only days still render the trend
+	//    because the symptom-days line is half the existing chart's
+	//    payload — keeps the pre-pi24 visible behavior for users who
+	//    track symptoms but no episodes.
+	if (bp.episodeTypes?.length && (summary.hasEpisodeData || summary.hasSymptomData)) {
 		return { kind: 'episode-trend' };
 	}
 

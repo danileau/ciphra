@@ -17,7 +17,11 @@
 	import { t } from '$lib/i18n';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import PhaseContextCard from '$lib/components/PhaseContextCard.svelte';
+	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
 	import type { Cohort } from '$lib/blueprint/cohort';
+	import type { DashboardCardSpec } from '$lib/blueprint/dashboardPrimary';
+	import type { CiphraDocument } from '$lib/stores/documents';
+	import type { Blueprint } from '$lib/blueprint/types';
 
 	// CIPH-854 — cohort drives ordering + which extra cards render.
 	export let cohort: Cohort;
@@ -47,6 +51,19 @@
 	export let howAreYouTrend: any;
 	export let howAreYouHeadlineParts: { arrow: string; text: string } | null;
 	export let episodeNoun: string;
+
+	// pi24 dashboard rework — primary-card spec from
+	// resolvePrimaryDashboardCard. Drives the switch in the primary slot
+	// below. When spec.kind is 'cycle-phase' or 'active-phase', the
+	// existing anchor blocks above already carry the answer; the primary
+	// slot stays empty in those cases. When spec.kind is 'episode-trend'
+	// the HowAreYou sparkline-hero renders as before. Other kinds will
+	// route to dedicated cards in subsequent commits (VitalTrendCard,
+	// TopTriggersCard, WithinPhaseRollup, TreatmentCycleCard); until
+	// those ship the fall-through is LastEntriesStrip.
+	export let primarySpec: DashboardCardSpec | null = null;
+	export let allDocs: CiphraDocument[] = [];
+	export let bp: Blueprint | null = null;
 
 	// CIPH-763b — concrete number types for sr-only caption reductions
 	// (inline annotations aren't allowed in {expression} blocks).
@@ -110,42 +127,52 @@
 	</section>
 {/if}
 
-<!-- ═══ "WIE GEHT'S DIR?" SPARKLINE-HERO (CIPH-900) ═══
-     Headline + arrow carry the takeaway. Sparkline below is glance-only
-     (no axes, no legend, no scope picker — "Verlauf ansehen →" routes
-     to /reports for the full presentation). The whole card is a link:
-     1 click from dashboard to deep trend view. -->
-{#if howAreYouChartData && howAreYouTrend}
-<a
-	href="/reports"
-	class="card card-rhythmic hay-hero block no-underline"
-	aria-label={$t('companion.how_aria')}
->
-	<div class="flex items-baseline justify-between gap-2 mb-2">
-		<h2 class="text-sm font-semibold" style="color: var(--text-primary)">{$t('companion.how_title')}</h2>
-		<span class="text-xs hay-link" style="color: var(--accent)">
-			{$t('companion.how_view_trend')} →
-		</span>
-	</div>
-	{#if howAreYouHeadlineParts}
-		<p class="text-base font-medium mb-3" style="color: var(--text-primary)">
-			<span aria-hidden="true">{howAreYouHeadlineParts.arrow}</span>
-			{howAreYouHeadlineParts.text}
+<!-- ═══ PRIMARY CARD SLOT (pi24 resolver-driven) ═══
+     resolvePrimaryDashboardCard picks the kind based on cohort + data.
+     - 'episode-trend' (CIPH-900): existing HowAreYou sparkline-hero
+     - 'last-entries': universal fallback strip
+     - 'cycle-phase' / 'active-phase': anchor blocks above already handle
+       it; primary slot stays empty
+     - 'vital-trend' / 'top-triggers' / 'treatment-cycle': dedicated
+       cards land in later commits — until they do, fall through to
+       LastEntriesStrip so no Helena-style void appears
+     - null: silent empty state (hero only, per no-gaslight rule) -->
+{#if primarySpec?.kind === 'episode-trend' && howAreYouChartData && howAreYouTrend}
+	<a
+		href="/reports"
+		class="card card-rhythmic hay-hero block no-underline"
+		aria-label={$t('companion.how_aria')}
+	>
+		<div class="flex items-baseline justify-between gap-2 mb-2">
+			<h2 class="text-sm font-semibold" style="color: var(--text-primary)">{$t('companion.how_title')}</h2>
+			<span class="text-xs hay-link" style="color: var(--accent)">
+				{$t('companion.how_view_trend')} →
+			</span>
+		</div>
+		{#if howAreYouHeadlineParts}
+			<p class="text-base font-medium mb-3" style="color: var(--text-primary)">
+				<span aria-hidden="true">{howAreYouHeadlineParts.arrow}</span>
+				{howAreYouHeadlineParts.text}
+			</p>
+		{/if}
+		<div class="hay-spark">
+			<ChartWrapper type="line" data={howAreYouChartData} options={howAreYouChartOptions} />
+		</div>
+		<p class="sr-only">
+			{$t('companion.how_sr_caption', {
+				last: howAreYouTrend.last,
+				prev: howAreYouTrend.prev,
+				total: howAreYouEpisodesTotal,
+				symptomDays: howAreYouSymptomDaysTotal,
+				noun: episodeNoun,
+			})}
 		</p>
-	{/if}
-	<div class="hay-spark">
-		<ChartWrapper type="line" data={howAreYouChartData} options={howAreYouChartOptions} />
-	</div>
-	<p class="sr-only">
-		{$t('companion.how_sr_caption', {
-			last: howAreYouTrend.last,
-			prev: howAreYouTrend.prev,
-			total: howAreYouEpisodesTotal,
-			symptomDays: howAreYouSymptomDaysTotal,
-			noun: episodeNoun,
-		})}
-	</p>
-</a>
+	</a>
+{:else if primarySpec?.kind === 'last-entries' || primarySpec?.kind === 'vital-trend' || primarySpec?.kind === 'top-triggers' || primarySpec?.kind === 'treatment-cycle'}
+	<!-- pi24 fall-through: until VitalTrendCard / TopTriggersCard /
+	     TreatmentCycleCard ship, route those resolved-kind cases to
+	     LastEntriesStrip so Helena and friends see real content. -->
+	<LastEntriesStrip docs={allDocs} {bp} />
 {/if}
 
 <!-- CIPH-900 — Episode bar-chart + Top-symptoms bar-chart removed. The

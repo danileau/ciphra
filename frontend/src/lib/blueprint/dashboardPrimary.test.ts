@@ -35,6 +35,7 @@ function summary(overrides: Partial<DashboardSummary> = {}): DashboardSummary {
 	return {
 		hasAnyEntry: false,
 		hasEpisodeData: false,
+		hasSymptomData: false,
 		hasTriggerData: false,
 		hasActivePhase: false,
 		presentVitalIds: new Set<string>(),
@@ -226,6 +227,18 @@ describe('resolvePrimaryDashboardCard — episode-trend fallback', () => {
 				s,
 			)?.kind,
 		).toBe('episode-trend');
+	});
+});
+
+describe('resolvePrimaryDashboardCard — symptom-only fallback', () => {
+	it('discrete cohort with symptom-only entries (no episodes logged) → episode-trend', () => {
+		const spec = resolvePrimaryDashboardCard(
+			bp('epilepsy', { episodeTypes: [{ id: 'focal', label: '', color: '' }] }),
+			summary({ hasAnyEntry: true, hasEpisodeData: false, hasSymptomData: true }),
+		);
+		// Matches pre-pi24 behavior: the chart still renders because the
+		// symptom-days line is half its payload.
+		expect(spec?.kind).toBe('episode-trend');
 	});
 });
 
