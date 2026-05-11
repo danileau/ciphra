@@ -243,6 +243,7 @@ export default {
 	'companion.today_summary': 'Today\'s summary',
 	'companion.today_filled': 'Today completed',
 	'companion.today_logged': 'Today logged',
+	'companion.last_entries_title': 'Recent entries',
 	'companion.recap_symptoms_one': '1 symptom',
 	'companion.recap_symptoms_other': '{count} symptoms',
 	'companion.recap_vitals_one': '1 vital',

@@ -243,6 +243,7 @@ export default {
 	'companion.today_summary': 'Résumé du jour',
 	'companion.today_filled': 'Aujourd\'hui complété',
 	'companion.today_logged': 'Aujourd\'hui noté',
+	'companion.last_entries_title': 'Entrées récentes',
 	'companion.recap_symptoms_one': '1 symptôme',
 	'companion.recap_symptoms_other': '{count} symptômes',
 	'companion.recap_vitals_one': '1 mesure',

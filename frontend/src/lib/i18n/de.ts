@@ -249,6 +249,7 @@ export default {
 	'companion.today_summary': 'Heute zusammengefasst',
 	'companion.today_filled': 'Heute ausgefüllt',
 	'companion.today_logged': 'Heute geloggt',
+	'companion.last_entries_title': 'Zuletzt notiert',
 	'companion.recap_symptoms_one': '1 Symptom',
 	'companion.recap_symptoms_other': '{count} Symptome',
 	'companion.recap_vitals_one': '1 Vitalwert',

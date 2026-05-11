@@ -243,6 +243,7 @@ export default {
 	'companion.today_summary': 'Riepilogo di oggi',
 	'companion.today_filled': 'Oggi compilato',
 	'companion.today_logged': 'Oggi registrato',
+	'companion.last_entries_title': 'Voci recenti',
 	'companion.recap_symptoms_one': '1 sintomo',
 	'companion.recap_symptoms_other': '{count} sintomi',
 	'companion.recap_vitals_one': '1 parametro',

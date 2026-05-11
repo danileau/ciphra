@@ -243,6 +243,16 @@ route kind.
   declares `markerEvent` AND ≥3 marker events exist — wraps the
   Klara objection at Companion.svelte:124 by showing trend, not a
   resetting counter. Used by `CompanionRail.svelte`.
+- **LastEntriesStrip.svelte** (pi24 dashboard) — universal
+  fallback for the dashboard primary slot. Renders up to 3 most-
+  recent entry/event/diary docs as compact rows: date · type ·
+  1-line summary. Mounts only when `docs.length > 0` — silent
+  empty state per `feedback_no_gaslight_good_days.md`. Picked by
+  `resolvePrimaryDashboardCard` when no cohort-specific card has
+  signal (Helena pre-labs, day-1ish users, custom cohort, any
+  blueprint where the pinned primitive can't fire yet). No
+  coverage %, no streak counters, no "nothing recorded yet"
+  copy — mirrors what's there, not gaps.
 - **MonthMiniSummary.svelte** (CIPH-pi19-B) — calendar right-rail
   tail. Shows trigger-day + rescue-med-day counts for the visible
   month, gated on `showTrigger` / `showRescue` props (which the
