@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t, locale } from '$lib/i18n';
+	import { t, locale, plural } from '$lib/i18n';
 	import { auth } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint } from '$lib/blueprint';
@@ -238,29 +238,31 @@
 		return sum + Object.values(vs).filter((v) => v !== '' && v !== null && v !== undefined).length;
 	}, 0);
 
-	// CIPH-pi24-5c — S5+S1: cohort-aware completeness gauge merged into the
-	// hero header. Categories are derived from what the active blueprint
-	// declares (symptoms/episodes/vitals) so day-1 users without episodes
-	// don't see an unfillable "Episodes" slot. The hero shows a single block:
-	// greeting → progress → unfilled chips → continue CTA.
-	$: todayCategories = (() => {
-		if (!bp) return [];
-		const cats: { id: string; labelKey: string; filled: boolean }[] = [];
-		if (bp.symptomGroups?.length) {
-			cats.push({ id: 'symptoms', labelKey: 'companion.cat_symptoms', filled: todaySymptomCount > 0 });
+	// pi24 dogfood: the cohort-completeness chip-bar was removed. The
+	// previous design treated "filled = N positive values today" — which
+	// punished good days (no symptoms, no episodes = "you missed it"),
+	// and forced 3 categories on cohorts whose users don't measure all
+	// three daily. The new hero shows ONLY a positive recap when the
+	// day has been logged; "no log = good day too" is also a valid state
+	// and the hero stays silent rather than nagging. The "+ Eintrag"
+	// affordances on BottomNav and /journal cover the add-today path.
+	$: todayRecapParts = (() => {
+		if (!todayLog) return [] as string[];
+		const parts: string[] = [];
+		if (todaySymptomCount > 0) {
+			parts.push(plural($t, $locale, 'companion.recap_symptoms', todaySymptomCount));
 		}
-		if (bp.episodeTypes?.length) {
-			cats.push({ id: 'episodes', labelKey: 'companion.cat_episodes', filled: todayEpisodeCount > 0 });
+		if (todayEpisodeCount > 0) {
+			// episodeNoun is cohort-aware (e.g. "Anfall", "Migräne"). Singular
+			// form is used regardless of count — declining the noun in 4
+			// locales for every blueprint isn't worth the i18n surface.
+			parts.push(`${todayEpisodeCount} ${episodeNoun}`);
 		}
-		if (bp.vitals?.length) {
-			cats.push({ id: 'vitals', labelKey: 'companion.cat_vitals', filled: todayVitalCount > 0 });
+		if (todayVitalCount > 0) {
+			parts.push(plural($t, $locale, 'companion.recap_vitals', todayVitalCount));
 		}
-		return cats;
+		return parts;
 	})();
-	$: todayDoneCount = todayCategories.filter((c) => c.filled).length;
-	$: todayTotalCount = todayCategories.length;
-	$: todayAllDone = todayTotalCount > 0 && todayDoneCount === todayTotalCount;
-	$: todayNothingYet = todayDoneCount === 0;
 
 	// CIPH-900 — Episode bar-chart and Top-symptoms bar-chart removed from
 	// the dashboard. Both lived as scope-pickered charts on Companion since
@@ -363,97 +365,49 @@
 		],
 	} : null;
 
-	// CIPH-pi24-5e — Vertical event-markers for the "Wie geht's dir?" line
-	// chart. Per user dogfood: "a fine line every time a Episode/trigger
-	// has been created. so the diagram instantly tells 'something happened
-	// here'". For each day in the 12-month window that has at least one
-	// episode (any episodeType, count > 0) OR at least one trigger, we
-	// emit a fractional x-position (0..11.999 — the chart's category
-	// axis indexes months 0-11, so day-13 of month 3 ≈ 3 + 13/30 = 3.43).
-	// The plugin reads `markersEpisode` / `markersTrigger` off the chart
-	// options and draws hairlines via `afterDatasetsDraw`. Hairlines do
-	// not shift the y-scale because they're drawn after the dataset pass.
-	$: eventMarkers = (() => {
-		if (!howAreYouTrend) return { episodes: [] as number[], triggers: [] as number[] };
+	// pi24 dogfood: tick-row visualization removed. The trigger-day count
+	// per month bin is surfaced via tooltip enrichment instead (see the
+	// tooltip callbacks below). Triggers carry a dual write shape — array
+	// (DayDetail.svelte:71) or object map (EntryComposer.svelte:139,
+	// Record<string, boolean>) — and EntryComposer's spread-merge can
+	// graft list ids onto numeric keys with truthy string values, so a
+	// naive `Object.values(trs).some(v => v)` over-counts. The detection
+	// below treats the array shape as authoritative and only consults
+	// known blueprint ids when reading the object shape.
+	$: triggerIds = bp?.triggers?.map((t) => t.id) ?? [];
+	$: monthlyTriggerDays = (() => {
+		if (!howAreYouTrend || triggerIds.length === 0) return [] as number[];
 		const months = howAreYouTrend.months as { y: number; m: number; key: string }[];
-		const eps: number[] = [];
-		const trg: number[] = [];
+		const counts = months.map(() => 0);
 		for (const d of allDocs) {
 			if (d.data?.type !== 'entry') continue;
 			const ds = String(d.data.date || '').slice(0, 10);
 			if (!ds) continue;
 			const moIdx = months.findIndex((mo) => ds.startsWith(mo.key));
 			if (moIdx < 0) continue;
-			const dayN = Math.max(1, Number(ds.slice(8, 10)) || 1);
-			const daysInMonth = new Date(months[moIdx].y, months[moIdx].m + 1, 0).getDate();
-			const x = moIdx + (dayN - 1) / daysInMonth;
-			const epMap = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
-			if (Object.values(epMap).some((v) => Number(v) > 0)) eps.push(x);
-			// Triggers are dual-shape: array of ids (DayDetail.svelte:71) OR
-			// object map (EntryComposer.svelte:139 — Record<string, boolean>).
-			// Earlier draft only detected the array shape, so dashboard tick
-			// marks went missing for any entry written via EntryComposer.
 			const trs = d.data.triggers as unknown;
 			let hasTrigger = false;
 			if (Array.isArray(trs)) {
 				hasTrigger = trs.length > 0;
 			} else if (trs && typeof trs === 'object') {
-				for (const v of Object.values(trs as Record<string, unknown>)) {
-					if (v) { hasTrigger = true; break; }
+				const obj = trs as Record<string, unknown>;
+				for (const id of triggerIds) {
+					if (obj[id] === true) { hasTrigger = true; break; }
 				}
 			}
-			if (hasTrigger) trg.push(x);
+			if (hasTrigger) counts[moIdx]++;
 		}
-		return { episodes: eps, triggers: trg };
+		return counts;
 	})();
 
 	$: howAreYouChartOptions = {
 		responsive: true,
 		maintainAspectRatio: false,
-		// Plugin payload — read by the inline `eventMarkerPlugin` registered
-		// at chart creation in ChartWrapper. Kept off the standard plugins
-		// namespace so Chart.js' built-in plugin discovery doesn't try to
-		// validate them as legend / tooltip / etc.
-		markersTrigger: eventMarkers.triggers,
-		markerTriggerColor: '#9F630B',
-		markerTriggerLabel: $t('companion.trigger_days'),
 		plugins: {
 			legend: {
 				display: true,
 				position: 'bottom' as const,
-				labels: {
-					boxWidth: 10,
-					font: { size: 11 },
-					// CIPH-pi24-5e — inject a synthetic legend entry for the
-					// trigger-tick row so the user can decode what the marks
-					// at the chart bottom mean. Dataset entries come first
-					// (the two existing lines), then the trigger swatch.
-					generateLabels(chart: { data: { datasets: Array<{ label: string; borderColor?: string; backgroundColor?: string }> }; isDatasetVisible: (i: number) => boolean; options: Record<string, unknown> }) {
-						const datasets = chart.data.datasets || [];
-						const items = datasets.map((d, i) => ({
-							text: d.label,
-							fillStyle: d.borderColor || d.backgroundColor,
-							strokeStyle: d.borderColor || d.backgroundColor,
-							lineWidth: 0,
-							hidden: !chart.isDatasetVisible(i),
-							datasetIndex: i,
-						}));
-						const trgColor = (chart.options.markerTriggerColor as string) || '#9F630B';
-						const trgLabel = (chart.options.markerTriggerLabel as string) || 'Triggers';
-						const trgs = (chart.options.markersTrigger as number[]) || [];
-						if (trgs.length > 0) {
-							items.push({
-								text: trgLabel,
-								fillStyle: trgColor,
-								strokeStyle: trgColor,
-								lineWidth: 0,
-								hidden: false,
-								datasetIndex: -1,
-							});
-						}
-						return items;
-					},
-				},
+				labels: { boxWidth: 10, font: { size: 11 } },
 			},
 			tooltip: {
 				callbacks: {
@@ -461,6 +415,15 @@
 						if (!howAreYouTrend || !items.length) return '';
 						const mo = howAreYouTrend.months[items[0].dataIndex];
 						return new Date(mo.y, mo.m, 1).toLocaleDateString($locale, { month: 'long', year: 'numeric' });
+					},
+					// pi24 dogfood: trigger-day count surfaces as a hover line
+					// instead of a sub-pixel tick row. Only renders when the
+					// blueprint declares triggers and the month has at least one.
+					afterBody: (items: Array<{ dataIndex: number }>) => {
+						if (!items.length || monthlyTriggerDays.length === 0) return [];
+						const n = monthlyTriggerDays[items[0].dataIndex] || 0;
+						if (n === 0) return [];
+						return [plural($t, $locale, 'companion.tooltip_trigger_days', n)];
 					},
 				},
 			},
@@ -600,14 +563,11 @@
 		 are thin render-only wrappers to de-risk the split that was
 		 deferred twice by keeping the reactive cascade in one place. -->
 	<div class="layout-data py-6 fade-in space-y-6">
-		<!-- CIPH-pi24-5c — S5+S1 merged hero: greeting + cohort-aware
-		     completeness in a single full-width card. Previously two
-		     separate sections (header + today-status); the consolidation
-		     drops one surface while adding named missing-category chips
-		     when partially filled (the morbus-AI "what should I log next"
-		     answer). Three states: nothing-yet → CTA banner, partial →
-		     progress bar + unfilled chips, all-done → green check + edit
-		     link. -->
+		<!-- pi24 dogfood: hero is greeting + a positive recap WHEN today is
+		     logged. When today isn't logged, the hero stays silent — a
+		     blank day is also a valid good day. "+ Eintrag" affordances
+		     on BottomNav and /journal cover the add-today path; no nag
+		     here, no progress bar, no chips. -->
 		<section class="card p-6">
 			<div class="flex items-center justify-between gap-3">
 				<div class="min-w-0">
@@ -617,59 +577,18 @@
 				{#if bp}<span class="badge badge-olive shrink-0">{$t(bp.conditionLabel)}</span>{/if}
 			</div>
 
-			{#if todayTotalCount > 0}
-				<div class="mt-5 pt-5" style="border-top: 1px solid var(--border)">
-					{#if todayNothingYet}
-						<div class="flex items-center gap-4">
-							<div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style="background: var(--brand-light, rgba(176,75,47,0.08))">
-								<Asterisk size={24} color="brand" />
-							</div>
-							<div class="flex-1 min-w-0">
-								<p class="font-medium" style="color: var(--brand)">{$t('companion.today_not_filled')}</p>
-								<p class="text-sm mt-0.5" style="color: var(--text-secondary)">~3 min</p>
-							</div>
-							<a href="/log/today" class="btn-primary px-5 py-2 text-sm shrink-0">
-								{$t('companion.fill_today')}
-							</a>
-						</div>
-					{:else if todayAllDone}
-						<div class="flex items-center justify-between gap-3">
-							<div class="flex items-center gap-2 min-w-0">
-								<div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style="background: var(--olive)">
-									<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-								</div>
-								<span class="text-sm font-medium" style="color: var(--olive)">{$t('companion.completeness_all_done')}</span>
-							</div>
-							<a href="/log/today" class="text-xs font-medium hover:underline shrink-0" style="color: var(--brand)">{$t('common.edit')}</a>
-						</div>
-					{:else}
-						<div class="flex items-center justify-between gap-3 mb-3">
-							<p class="text-sm font-medium" style="color: var(--text-primary)">
-								{$t('companion.completeness_done', { done: todayDoneCount, total: todayTotalCount })}
-							</p>
-							<a href="/log/today" class="btn-primary px-4 py-1.5 text-xs shrink-0">
-								{$t('companion.completeness_continue')}
-							</a>
-						</div>
-						<div class="w-full rounded-full h-1.5 mb-3" style="background: var(--surface-inset)">
-							<div class="h-1.5 rounded-full transition-all duration-500" style="background: var(--olive); width: {(todayDoneCount / todayTotalCount) * 100}%"></div>
-						</div>
-						<div class="flex flex-wrap gap-1.5">
-							{#each todayCategories as cat}
-								<span
-									class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full"
-									style="background: {cat.filled ? 'rgba(132,154,84,0.12)' : 'var(--surface-muted)'}; color: {cat.filled ? 'var(--olive)' : 'var(--text-muted)'};"
-								>
-									{#if cat.filled}
-										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-									{:else}
-										<span class="inline-block w-1.5 h-1.5 rounded-full" style="background: var(--text-muted); opacity: 0.5" aria-hidden="true"></span>
-									{/if}
-									{$t(cat.labelKey)}
-								</span>
-							{/each}
-						</div>
-					{/if}
+			{#if todayLog}
+				<div class="mt-5 pt-5 flex items-center justify-between gap-3 flex-wrap" style="border-top: 1px solid var(--border)">
+					<div class="flex items-baseline gap-2 flex-wrap min-w-0">
+						<span class="inline-flex items-center gap-1.5 text-sm font-medium" style="color: var(--olive)">
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							{$t('companion.today_logged')}
+						</span>
+						{#each todayRecapParts as part}
+							<span class="text-sm" style="color: var(--text-muted)">· {part}</span>
+						{/each}
+					</div>
+					<a href="/log/today" class="text-xs font-medium hover:underline shrink-0" style="color: var(--brand)">{$t('common.edit')}</a>
 				</div>
 			{/if}
 		</section>

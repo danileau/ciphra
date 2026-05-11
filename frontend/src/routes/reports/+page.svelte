@@ -665,39 +665,40 @@
 			],
 		};
 	})();
-	// CIPH-pi24-5e+ — Trigger-tick markers for the /reports trend chart,
-	// mirroring the dashboard ChartWrapper plugin contract. Companion
-	// emits fractional x in [0, 12) for a 12-month axis; here we mirror
-	// the shape per viewMode: month-view emits [0, daysInMo-1] aligned
-	// to the day-N labels (1-indexed labels, 0-indexed positions); year-
-	// view emits fractional [0, 24) for the 24-month axis. A doc has a
-	// trigger if `data.triggers` is a non-empty array OR an object with
-	// any truthy value (DayDetail / EntryComposer dual-shape).
-	function docHasTrigger(d: CiphraDocument): boolean {
+	// pi24 dogfood: tick-row visualization removed. The trigger-day count
+	// per chart bin (day in month-view, month in year-view) surfaces via
+	// tooltip enrichment instead. `docHasTrigger` consults known blueprint
+	// trigger ids when reading the object shape — EntryComposer's spread-
+	// merge can graft list ids onto numeric keys with truthy string values,
+	// and a naive truthy scan would over-count those.
+	$: trendTriggerIds = bp?.triggers?.map((tr) => tr.id) ?? [];
+	function docHasTrigger(d: CiphraDocument, ids: string[]): boolean {
 		const trs = d.data?.triggers as unknown;
 		if (Array.isArray(trs)) return trs.length > 0;
 		if (trs && typeof trs === 'object') {
-			for (const v of Object.values(trs as Record<string, unknown>)) if (v) return true;
+			const obj = trs as Record<string, unknown>;
+			for (const id of ids) if (obj[id] === true) return true;
 		}
 		return false;
 	}
-	$: trendTriggerMarkers = (() => {
-		if (!trendChartData || !bp) return [] as number[];
+	$: trendTriggerByBin = (() => {
+		if (!trendChartData || !bp || trendTriggerIds.length === 0) return [] as number[];
 		if (viewMode === 'month') {
 			const d = new Date(currentDate + 'T12:00:00');
 			const y = d.getFullYear();
 			const m = d.getMonth();
 			const monthPrefix = `${y}-${String(m + 1).padStart(2, '0')}`;
-			const xs: number[] = [];
+			const daysInMo = new Date(y, m + 1, 0).getDate();
+			const out = Array.from({ length: daysInMo }, () => 0);
 			for (const doc of exportableDocs) {
 				if (doc.data?.type !== 'entry') continue;
 				const ds = String(doc.data.date || '');
 				if (!ds.startsWith(monthPrefix)) continue;
-				if (!docHasTrigger(doc)) continue;
+				if (!docHasTrigger(doc, trendTriggerIds)) continue;
 				const dayN = Math.max(1, Number(ds.slice(8, 10)) || 1);
-				xs.push(dayN - 1);
+				out[dayN - 1]++;
 			}
-			return xs;
+			return out;
 		}
 		// Year-view: 24-month rolling window ending at trendAnchor.
 		const months: { y: number; m: number; key: string }[] = [];
@@ -711,26 +712,24 @@
 		}
 		const keyToIdx = new Map<string, number>();
 		for (let i = 0; i < months.length; i++) keyToIdx.set(months[i].key, i);
-		const xs: number[] = [];
+		const out = months.map(() => 0);
 		for (const doc of exportableDocs) {
 			if (doc.data?.type !== 'entry') continue;
 			const ds = String(doc.data.date || '');
-			if (ds.length < 10) continue;
+			if (ds.length < 7) continue;
 			const idx = keyToIdx.get(ds.slice(0, 7));
 			if (idx === undefined) continue;
-			if (!docHasTrigger(doc)) continue;
-			const dayN = Math.max(1, Number(ds.slice(8, 10)) || 1);
-			const daysInMo = new Date(months[idx].y, months[idx].m + 1, 0).getDate();
-			xs.push(idx + (dayN - 1) / daysInMo);
+			if (!docHasTrigger(doc, trendTriggerIds)) continue;
+			out[idx]++;
 		}
-		return xs;
+		return out;
 	})();
 	// Cheap signature so the trendChartOptions memo (below) busts when the
-	// trigger window changes — length + first + last is enough to detect
-	// any user-visible change without an O(n) JSON.stringify on each tick.
-	$: trendTriggerSig = trendTriggerMarkers.length === 0
+	// trigger window changes — sum is enough to detect any user-visible
+	// change without an O(n) JSON.stringify on each tick.
+	$: trendTriggerSig = trendTriggerByBin.length === 0
 		? '0'
-		: `${trendTriggerMarkers.length}:${trendTriggerMarkers[0]}:${trendTriggerMarkers[trendTriggerMarkers.length - 1]}`;
+		: `${trendTriggerByBin.length}:${trendTriggerByBin.reduce((a, b) => a + b, 0)}`;
 
 	// PI v15 LB-4 — Screen-reader data-table mirror for the trend chart.
 	// PI v17 — caption + headers track viewMode so SR users get the right
@@ -769,12 +768,14 @@
 	let _prevAccent = '';
 	let _prevNeutral = '';
 	let _prevTrigSig = '';
+	let _prevLocale = '';
 	let _trendOpts: Record<string, unknown> | null = null;
 	$: trendChartOptions = (() => {
 		if (
 			trendAccentHex === _prevAccent &&
 			trendNeutralHex === _prevNeutral &&
 			trendTriggerSig === _prevTrigSig &&
+			$locale === _prevLocale &&
 			_trendOpts
 		) {
 			return _trendOpts;
@@ -782,50 +783,31 @@
 		_prevAccent = trendAccentHex;
 		_prevNeutral = trendNeutralHex;
 		_prevTrigSig = trendTriggerSig;
-		const triggerLabel = $t('companion.trigger_days');
-		const triggerColor = '#9F630B';
+		_prevLocale = $locale;
+		// Capture by value so the memoized options object holds onto its
+		// own snapshot of trigger counts AND its own ($t, $locale) view —
+		// when the sig (or accent/neutral) changes the memo rebuilds and
+		// grabs fresh snapshots. Locale changes also bust this through the
+		// store-driven reactive chain in the script's reactive scope.
+		const triggerSnapshot = trendTriggerByBin;
+		const tt = $t;
+		const lc = $locale;
 		_trendOpts = {
 			responsive: true,
 			maintainAspectRatio: false,
-			// Plugin payload — read by ChartWrapper's inline eventMarkerPlugin.
-			// Off the standard plugins namespace so Chart.js' built-in plugin
-			// discovery doesn't try to validate it.
-			markersTrigger: trendTriggerMarkers,
-			markerTriggerColor: triggerColor,
-			markerTriggerLabel: triggerLabel,
 			plugins: {
-				legend: {
-					display: true,
-					position: 'bottom' as const,
-					labels: {
-						boxWidth: 10,
-						font: { size: 11 },
-						// CIPH-pi24-5e+ — synthetic legend entry for the trigger
-						// tick row. Matches the dashboard wiring in
-						// Companion.svelte:419 so users see the same swatch +
-						// label on both surfaces.
-						generateLabels(chart: { data: { datasets: Array<{ label: string; borderColor?: string; backgroundColor?: string }> }; isDatasetVisible: (i: number) => boolean; options: Record<string, unknown> }) {
-							const datasets = chart.data.datasets || [];
-							const items = datasets.map((d, i) => ({
-								text: d.label,
-								fillStyle: d.borderColor || d.backgroundColor,
-								strokeStyle: d.borderColor || d.backgroundColor,
-								lineWidth: 0,
-								hidden: !chart.isDatasetVisible(i),
-								datasetIndex: i,
-							}));
-							const trgs = (chart.options.markersTrigger as number[]) || [];
-							if (trgs.length > 0) {
-								items.push({
-									text: (chart.options.markerTriggerLabel as string) || triggerLabel,
-									fillStyle: (chart.options.markerTriggerColor as string) || triggerColor,
-									strokeStyle: (chart.options.markerTriggerColor as string) || triggerColor,
-									lineWidth: 0,
-									hidden: false,
-									datasetIndex: -1,
-								});
-							}
-							return items;
+				legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
+				tooltip: {
+					callbacks: {
+						// pi24 dogfood: trigger-day count surfaces as a hover
+						// line instead of a sub-pixel tick row. Renders only
+						// when the blueprint declares triggers and the bin
+						// has at least one.
+						afterBody: (items: Array<{ dataIndex: number }>) => {
+							if (!items.length || triggerSnapshot.length === 0) return [];
+							const n = triggerSnapshot[items[0].dataIndex] || 0;
+							if (n === 0) return [];
+							return [plural(tt, lc, 'companion.tooltip_trigger_days', n)];
 						},
 					},
 				},
