@@ -665,6 +665,73 @@
 			],
 		};
 	})();
+	// CIPH-pi24-5e+ — Trigger-tick markers for the /reports trend chart,
+	// mirroring the dashboard ChartWrapper plugin contract. Companion
+	// emits fractional x in [0, 12) for a 12-month axis; here we mirror
+	// the shape per viewMode: month-view emits [0, daysInMo-1] aligned
+	// to the day-N labels (1-indexed labels, 0-indexed positions); year-
+	// view emits fractional [0, 24) for the 24-month axis. A doc has a
+	// trigger if `data.triggers` is a non-empty array OR an object with
+	// any truthy value (DayDetail / EntryComposer dual-shape).
+	function docHasTrigger(d: CiphraDocument): boolean {
+		const trs = d.data?.triggers as unknown;
+		if (Array.isArray(trs)) return trs.length > 0;
+		if (trs && typeof trs === 'object') {
+			for (const v of Object.values(trs as Record<string, unknown>)) if (v) return true;
+		}
+		return false;
+	}
+	$: trendTriggerMarkers = (() => {
+		if (!trendChartData || !bp) return [] as number[];
+		if (viewMode === 'month') {
+			const d = new Date(currentDate + 'T12:00:00');
+			const y = d.getFullYear();
+			const m = d.getMonth();
+			const monthPrefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+			const xs: number[] = [];
+			for (const doc of exportableDocs) {
+				if (doc.data?.type !== 'entry') continue;
+				const ds = String(doc.data.date || '');
+				if (!ds.startsWith(monthPrefix)) continue;
+				if (!docHasTrigger(doc)) continue;
+				const dayN = Math.max(1, Number(ds.slice(8, 10)) || 1);
+				xs.push(dayN - 1);
+			}
+			return xs;
+		}
+		// Year-view: 24-month rolling window ending at trendAnchor.
+		const months: { y: number; m: number; key: string }[] = [];
+		for (let i = 23; i >= 0; i--) {
+			const d = new Date(trendAnchor.getFullYear(), trendAnchor.getMonth() - i, 1);
+			months.push({
+				y: d.getFullYear(),
+				m: d.getMonth(),
+				key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+			});
+		}
+		const keyToIdx = new Map<string, number>();
+		for (let i = 0; i < months.length; i++) keyToIdx.set(months[i].key, i);
+		const xs: number[] = [];
+		for (const doc of exportableDocs) {
+			if (doc.data?.type !== 'entry') continue;
+			const ds = String(doc.data.date || '');
+			if (ds.length < 10) continue;
+			const idx = keyToIdx.get(ds.slice(0, 7));
+			if (idx === undefined) continue;
+			if (!docHasTrigger(doc)) continue;
+			const dayN = Math.max(1, Number(ds.slice(8, 10)) || 1);
+			const daysInMo = new Date(months[idx].y, months[idx].m + 1, 0).getDate();
+			xs.push(idx + (dayN - 1) / daysInMo);
+		}
+		return xs;
+	})();
+	// Cheap signature so the trendChartOptions memo (below) busts when the
+	// trigger window changes — length + first + last is enough to detect
+	// any user-visible change without an O(n) JSON.stringify on each tick.
+	$: trendTriggerSig = trendTriggerMarkers.length === 0
+		? '0'
+		: `${trendTriggerMarkers.length}:${trendTriggerMarkers[0]}:${trendTriggerMarkers[trendTriggerMarkers.length - 1]}`;
+
 	// PI v15 LB-4 — Screen-reader data-table mirror for the trend chart.
 	// PI v17 — caption + headers track viewMode so SR users get the right
 	// context (24-month summary vs. daily-resolution-for-this-month).
@@ -696,20 +763,72 @@
 	// change. Without this, ChartWrapper's ref-equality short-circuit
 	// (ChartWrapper.svelte:104-108) was always falling through to a chart
 	// .update() on every $documents mutation — chart-update storm on save.
+	// CIPH-pi24-5e+ — trigger-tick marker signature is a third dep so the
+	// memo also busts when triggers appear/disappear in the scope window
+	// (e.g. user adds an entry with triggers on the visible month).
 	let _prevAccent = '';
 	let _prevNeutral = '';
+	let _prevTrigSig = '';
 	let _trendOpts: Record<string, unknown> | null = null;
 	$: trendChartOptions = (() => {
-		if (trendAccentHex === _prevAccent && trendNeutralHex === _prevNeutral && _trendOpts) {
+		if (
+			trendAccentHex === _prevAccent &&
+			trendNeutralHex === _prevNeutral &&
+			trendTriggerSig === _prevTrigSig &&
+			_trendOpts
+		) {
 			return _trendOpts;
 		}
 		_prevAccent = trendAccentHex;
 		_prevNeutral = trendNeutralHex;
+		_prevTrigSig = trendTriggerSig;
+		const triggerLabel = $t('companion.trigger_days');
+		const triggerColor = '#9F630B';
 		_trendOpts = {
 			responsive: true,
 			maintainAspectRatio: false,
+			// Plugin payload — read by ChartWrapper's inline eventMarkerPlugin.
+			// Off the standard plugins namespace so Chart.js' built-in plugin
+			// discovery doesn't try to validate it.
+			markersTrigger: trendTriggerMarkers,
+			markerTriggerColor: triggerColor,
+			markerTriggerLabel: triggerLabel,
 			plugins: {
-				legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
+				legend: {
+					display: true,
+					position: 'bottom' as const,
+					labels: {
+						boxWidth: 10,
+						font: { size: 11 },
+						// CIPH-pi24-5e+ — synthetic legend entry for the trigger
+						// tick row. Matches the dashboard wiring in
+						// Companion.svelte:419 so users see the same swatch +
+						// label on both surfaces.
+						generateLabels(chart: { data: { datasets: Array<{ label: string; borderColor?: string; backgroundColor?: string }> }; isDatasetVisible: (i: number) => boolean; options: Record<string, unknown> }) {
+							const datasets = chart.data.datasets || [];
+							const items = datasets.map((d, i) => ({
+								text: d.label,
+								fillStyle: d.borderColor || d.backgroundColor,
+								strokeStyle: d.borderColor || d.backgroundColor,
+								lineWidth: 0,
+								hidden: !chart.isDatasetVisible(i),
+								datasetIndex: i,
+							}));
+							const trgs = (chart.options.markersTrigger as number[]) || [];
+							if (trgs.length > 0) {
+								items.push({
+									text: (chart.options.markerTriggerLabel as string) || triggerLabel,
+									fillStyle: (chart.options.markerTriggerColor as string) || triggerColor,
+									strokeStyle: (chart.options.markerTriggerColor as string) || triggerColor,
+									lineWidth: 0,
+									hidden: false,
+									datasetIndex: -1,
+								});
+							}
+							return items;
+						},
+					},
+				},
 			},
 			scales: {
 				y: {
