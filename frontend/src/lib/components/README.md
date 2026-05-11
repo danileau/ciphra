@@ -253,6 +253,17 @@ route kind.
   blueprint where the pinned primitive can't fire yet). No
   coverage %, no streak counters, no "nothing recorded yet"
   copy — mirrors what's there, not gaps.
+- **TopTriggersCard.svelte** (pi24 dashboard) — observational
+  top-5 trigger list with horizontal bar weights + total-days
+  footer. Used by migraine + dermatology when triggers have been
+  recorded in the last 12 months. Title is "Top recorded
+  triggers" / "Häufigste erfasste Auslöser" — observational
+  ONLY, never "Your triggers" / "Causes" (Codex's caveat on
+  the campfire). Counts blueprint-declared trigger ids across
+  both data shapes (array + object-map), skipping the
+  EntryComposer merge-shape false positives. Mounted by
+  `CompanionMain` when `resolvePrimaryDashboardCard` returns
+  `kind: 'top-triggers'`.
 - **VitalTrendCard.svelte** (pi24 dashboard) — 12-month monthly-
   mean line chart for a pinned primary vital (`primaryVitalId`).
   Used by hashimoto (TSH), hypertension (bp_systolic),

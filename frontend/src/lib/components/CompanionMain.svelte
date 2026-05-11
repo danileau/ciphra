@@ -19,6 +19,7 @@
 	import PhaseContextCard from '$lib/components/PhaseContextCard.svelte';
 	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
 	import VitalTrendCard from '$lib/components/VitalTrendCard.svelte';
+	import TopTriggersCard from '$lib/components/TopTriggersCard.svelte';
 	import { cohortPalette } from '$lib/cohortPalette';
 	import type { Cohort } from '$lib/blueprint/cohort';
 	import type { DashboardCardSpec } from '$lib/blueprint/dashboardPrimary';
@@ -185,10 +186,12 @@
 		accentHex={vitalAccentHex}
 		neutralHex={vitalNeutralHex}
 	/>
-{:else if primarySpec?.kind === 'last-entries' || primarySpec?.kind === 'top-triggers' || primarySpec?.kind === 'treatment-cycle'}
-	<!-- pi24 fall-through: until TopTriggersCard / TreatmentCycleCard
-	     ship, route those resolved-kind cases to LastEntriesStrip so
-	     migraine / cancer users still see content. -->
+{:else if primarySpec?.kind === 'top-triggers'}
+	<TopTriggersCard docs={allDocs} {bp} />
+{:else if primarySpec?.kind === 'last-entries' || primarySpec?.kind === 'treatment-cycle'}
+	<!-- pi24 fall-through: until TreatmentCycleCard ships, cancer users
+	     get LastEntriesStrip — journal-primary cohort anyway, so the
+	     strip is on-cohort. -->
 	<LastEntriesStrip docs={allDocs} {bp} />
 {/if}
 
