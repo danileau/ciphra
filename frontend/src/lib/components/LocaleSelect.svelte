@@ -23,15 +23,38 @@
 	let trigger: HTMLButtonElement;
 	let listbox: HTMLUListElement;
 	let activeIdx = -1;
+	// CIPH-pi24-5e+ — popover placement. Defaults to 'below' (the form-aware
+	// choice: don't cover the field above the trigger on /login). Flips to
+	// 'above' only when there genuinely isn't room below — most relevant
+	// on PublicFooter where the trigger sits near the viewport bottom on
+	// short windows / mobile.
+	let placement: 'below' | 'above' = 'below';
 
 	$: items = locales.map((l) => ({ id: l, label: localeNames[l] }));
 	$: currentLocale = $locale as Locale;
 	$: currentLabel = localeNames[currentLocale];
 	$: currentIdx = items.findIndex((i) => i.id === currentLocale);
 
+	function updatePlacement() {
+		if (!trigger || typeof window === 'undefined') return;
+		const rect = trigger.getBoundingClientRect();
+		// Estimate: 4 locales × ~36px row + 8px padding ≈ 152px. Add a
+		// buffer so we don't flip when there's barely enough — the
+		// popover would still touch the viewport edge with no room to
+		// breathe.
+		const POPOVER_HEIGHT = 160;
+		const BUFFER = 24;
+		const spaceBelow = window.innerHeight - rect.bottom;
+		const spaceAbove = rect.top;
+		placement = spaceBelow < POPOVER_HEIGHT + BUFFER && spaceAbove > spaceBelow
+			? 'above'
+			: 'below';
+	}
+
 	function toggle() {
 		open = !open;
 		if (open) {
+			updatePlacement();
 			activeIdx = currentIdx >= 0 ? currentIdx : 0;
 			tick().then(() => listbox?.querySelector<HTMLButtonElement>(`[data-i="${activeIdx}"]`)?.focus());
 		}
@@ -73,9 +96,17 @@
 		if (trigger?.contains(t) || listbox?.contains(t)) return;
 		open = false;
 	}
+	function onWindowResize() {
+		if (!open) return;
+		updatePlacement();
+	}
 	onMount(() => {
 		window.addEventListener('click', onWindowClick);
-		return () => window.removeEventListener('click', onWindowClick);
+		window.addEventListener('resize', onWindowResize);
+		return () => {
+			window.removeEventListener('click', onWindowClick);
+			window.removeEventListener('resize', onWindowResize);
+		};
 	});
 </script>
 
@@ -100,7 +131,7 @@
 	{#if open}
 		<ul
 			bind:this={listbox}
-			class="locale-select-listbox"
+			class="locale-select-listbox placement-{placement}"
 			role="listbox"
 			aria-label={$t('common.language')}
 		>
@@ -169,7 +200,6 @@
 
 	.locale-select-listbox {
 		position: absolute;
-		top: calc(100% + 6px);
 		right: 0;
 		min-width: 10rem;
 		margin: 0;
@@ -180,6 +210,14 @@
 		border-radius: 12px;
 		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
 		z-index: 50;
+	}
+	.locale-select-listbox.placement-below {
+		top: calc(100% + 6px);
+		bottom: auto;
+	}
+	.locale-select-listbox.placement-above {
+		bottom: calc(100% + 6px);
+		top: auto;
 	}
 	.locale-select-option {
 		display: flex;
