@@ -389,8 +389,20 @@
 			const x = moIdx + (dayN - 1) / daysInMonth;
 			const epMap = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
 			if (Object.values(epMap).some((v) => Number(v) > 0)) eps.push(x);
-			const trList = (d.data.triggers || []) as unknown[];
-			if (Array.isArray(trList) && trList.length > 0) trg.push(x);
+			// Triggers are dual-shape: array of ids (DayDetail.svelte:71) OR
+			// object map (EntryComposer.svelte:139 — Record<string, boolean>).
+			// Earlier draft only detected the array shape, so dashboard tick
+			// marks went missing for any entry written via EntryComposer.
+			const trs = d.data.triggers as unknown;
+			let hasTrigger = false;
+			if (Array.isArray(trs)) {
+				hasTrigger = trs.length > 0;
+			} else if (trs && typeof trs === 'object') {
+				for (const v of Object.values(trs as Record<string, unknown>)) {
+					if (v) { hasTrigger = true; break; }
+				}
+			}
+			if (hasTrigger) trg.push(x);
 		}
 		return { episodes: eps, triggers: trg };
 	})();
