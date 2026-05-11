@@ -1392,7 +1392,6 @@ export default {
 	'condition.seo_description': 'Erfasse Symptome, Episoden und Auslöser mit Ende-zu-Ende-Verschlüsselung. Deine Gesundheitsdaten gehören dir.',
 	'condition.not_found': 'Erkrankung nicht gefunden',
 	'condition.back_home': 'Zurück zur Startseite',
-	'condition.open_source': 'Open Source',
 	'condition.what_tracked': 'Was ciphra für dich erfasst',
 	'condition.section_episodes': 'Episoden & Ereignisse',
 	'condition.section_triggers': 'Auslöser',

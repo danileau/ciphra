@@ -1370,7 +1370,6 @@ export default {
 	'condition.seo_description': 'Suivez symptômes, épisodes et déclencheurs avec un chiffrement de bout en bout. Vos données de santé vous appartiennent.',
 	'condition.not_found': 'Condition non trouvée',
 	'condition.back_home': "Retour à l'accueil",
-	'condition.open_source': 'Open source',
 	'condition.what_tracked': 'Ce que ciphra suit pour vous',
 	'condition.section_episodes': 'Épisodes & Événements',
 	'condition.section_triggers': 'Déclencheurs',

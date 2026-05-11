@@ -113,16 +113,6 @@
 					<p class="text-lg mt-1" style="color: var(--text-muted);">{subtitle}</p>
 				</div>
 			</div>
-			<div class="flex items-center gap-2 mb-8">
-				<span class="badge-olive">
-					<Asterisk size={10} color="olive" />
-					{$t('encryption.badge')}
-				</span>
-				<span class="badge" style="background: var(--surface-muted); color: var(--text-secondary);">
-					{$t('condition.open_source')}
-				</span>
-			</div>
-
 			{#if $isAuthenticated && matchingPreset}
 				<div class="mb-8 card-olive rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
 					<p class="text-sm" style="color: var(--text-primary);">{$t('conditions.switch_logged_in_hint')}</p>

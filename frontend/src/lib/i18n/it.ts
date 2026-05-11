@@ -1370,7 +1370,6 @@ export default {
 	'condition.seo_description': 'Monitora sintomi, episodi e fattori scatenanti con crittografia end-to-end. I tuoi dati sanitari appartengono a te.',
 	'condition.not_found': 'Condizione non trovata',
 	'condition.back_home': 'Torna alla home',
-	'condition.open_source': 'Open source',
 	'condition.what_tracked': 'Cosa monitora ciphra per te',
 	'condition.section_episodes': 'Episodi & Eventi',
 	'condition.section_triggers': 'Fattori scatenanti',

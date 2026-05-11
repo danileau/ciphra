@@ -1371,7 +1371,6 @@ export default {
 	'condition.seo_description': 'Track symptoms, episodes and triggers with end-to-end encryption. Your health data belongs to you.',
 	'condition.not_found': 'Condition not found',
 	'condition.back_home': 'Back to home',
-	'condition.open_source': 'Open source',
 	'condition.what_tracked': 'What ciphra tracks for you',
 	'condition.section_episodes': 'Episodes & Events',
 	'condition.section_triggers': 'Triggers',
