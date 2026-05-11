@@ -18,9 +18,14 @@
 		total_documents: number;
 		avg_docs_per_user: number;
 		lockouts_30d: number;
+		lockouts_today: number;
 		logins_success_30d: number;
 		logins_failed_30d: number;
+		logins_failed_today: number;
 		new_users_7d: number;
+		new_users_today: number;
+		deletions_30d: number;
+		deletions_today: number;
 	}
 
 	interface AdminUser {
@@ -177,7 +182,7 @@
 		{#if stats}
 			<section>
 				<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted); letter-spacing: 0.04em;">{$t('admin.stats')}</h2>
-				<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+				<div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
 					<div class="card rounded-xl p-4">
 						<p class="text-2xl font-bold num-data">{stats.total_users}</p>
 						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.total_users')}</p>
@@ -193,6 +198,16 @@
 					<div class="card rounded-xl p-4">
 						<p class="text-2xl font-bold num-danger">{stats.lockouts_30d}</p>
 						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.lockouts')} (30d)</p>
+						<p class="text-xs mt-0.5" style="color: {stats.lockouts_today > 0 ? 'var(--danger)' : 'var(--text-muted)'};">
+							{stats.lockouts_today} {$t('admin.today')}
+						</p>
+					</div>
+					<div class="card rounded-xl p-4">
+						<p class="text-2xl font-bold num-danger">{stats.deletions_30d}</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.deletions')} (30d)</p>
+						<p class="text-xs mt-0.5" style="color: {stats.deletions_today > 0 ? 'var(--danger)' : 'var(--text-muted)'};">
+							{stats.deletions_today} {$t('admin.today')}
+						</p>
 					</div>
 				</div>
 				<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
@@ -203,6 +218,9 @@
 					<div class="card rounded-xl p-4">
 						<p class="text-2xl font-bold num-data">{stats.new_users_7d}</p>
 						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.new_users')} (7d)</p>
+						<p class="text-xs mt-0.5" style="color: var(--text-muted);">
+							{stats.new_users_today} {$t('admin.today')}
+						</p>
 					</div>
 					<div class="card rounded-xl p-4">
 						<p class="text-2xl font-bold" style="color: var(--success); font-variant-numeric: tabular-nums;">{stats.logins_success_30d}</p>
@@ -211,6 +229,9 @@
 					<div class="card rounded-xl p-4">
 						<p class="text-2xl font-bold num-danger">{stats.logins_failed_30d}</p>
 						<p class="text-xs mt-1" style="color: var(--text-muted);">{$t('admin.logins_failed')}</p>
+						<p class="text-xs mt-0.5" style="color: {stats.logins_failed_today > 0 ? 'var(--danger)' : 'var(--text-muted)'};">
+							{stats.logins_failed_today} {$t('admin.today')}
+						</p>
 					</div>
 				</div>
 			</section>

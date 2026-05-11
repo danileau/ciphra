@@ -1284,6 +1284,8 @@ export default {
 	'admin.new_users': 'Nouveaux utilisateurs',
 	'admin.total_docs': 'Documents au total',
 	'admin.lockouts': 'Verrouillages',
+	'admin.deletions': 'Suppressions',
+	'admin.today': "aujourd'hui",
 	'admin.logins_success': 'Connexions réussies (30j)',
 	'admin.logins_failed': 'Connexions échouées (30j)',
 	'admin.username': 'Nom d\'utilisateur',

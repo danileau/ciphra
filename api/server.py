@@ -1011,6 +1011,45 @@ def admin_stats():
                 """)
                 new_users_7d = cur.fetchone()['cnt']
 
+                # CIPH-pi24-5b — today-lens + deletions-count.
+                # Failed-logins 30d hides a today spike behind a 30d denominator;
+                # today counters are the signal layer for an operator scanning
+                # the dashboard once a day. Deletions covers a gap that wasn't
+                # being surfaced at all.
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM audit_log
+                    WHERE action = 'LOGIN_FAILED'
+                    AND created_at >= NOW() - INTERVAL '24 hours'
+                """)
+                logins_failed_today = cur.fetchone()['cnt']
+
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM audit_log
+                    WHERE action = 'ACCOUNT_LOCKED'
+                    AND created_at >= NOW() - INTERVAL '24 hours'
+                """)
+                lockouts_today = cur.fetchone()['cnt']
+
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM users
+                    WHERE created_at >= NOW() - INTERVAL '24 hours'
+                """)
+                new_users_today = cur.fetchone()['cnt']
+
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM audit_log
+                    WHERE action LIKE 'ADMIN_DELETE_USER%'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                """)
+                deletions_30d = cur.fetchone()['cnt']
+
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM audit_log
+                    WHERE action LIKE 'ADMIN_DELETE_USER%'
+                    AND created_at >= NOW() - INTERVAL '24 hours'
+                """)
+                deletions_today = cur.fetchone()['cnt']
+
         return jsonify({
             'total_users': total_users,
             'active_users_30d': active_30d,
@@ -1018,9 +1057,14 @@ def admin_stats():
             'total_documents': total_docs,
             'avg_docs_per_user': round(total_docs / total_users, 1) if total_users > 0 else 0,
             'lockouts_30d': lockouts_30d,
+            'lockouts_today': lockouts_today,
             'logins_success_30d': logins_success,
             'logins_failed_30d': logins_failed,
+            'logins_failed_today': logins_failed_today,
             'new_users_7d': new_users_7d,
+            'new_users_today': new_users_today,
+            'deletions_30d': deletions_30d,
+            'deletions_today': deletions_today,
         }), 200
     except Exception:
         logger.exception("Admin stats failed")

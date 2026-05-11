@@ -1285,6 +1285,8 @@ export default {
 	'admin.new_users': 'New Users',
 	'admin.total_docs': 'Total Documents',
 	'admin.lockouts': 'Lockouts',
+	'admin.deletions': 'Deletions',
+	'admin.today': 'today',
 	'admin.logins_success': 'Successful Logins (30d)',
 	'admin.logins_failed': 'Failed Logins (30d)',
 	'admin.username': 'Username',
