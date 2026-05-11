@@ -1286,6 +1286,7 @@ export default {
 	'admin.lockouts': 'Blocchi',
 	'admin.deletions': 'Eliminazioni',
 	'admin.today': 'oggi',
+	'admin.group_since': 'da',
 	'admin.logins_success': 'Accessi riusciti (30g)',
 	'admin.logins_failed': 'Accessi falliti (30g)',
 	'admin.username': 'Nome utente',

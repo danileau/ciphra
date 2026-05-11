@@ -164,6 +164,74 @@
 		if (sortBy !== col) return '';
 		return sortAsc ? ' \u2191' : ' \u2193';
 	}
+
+	// CIPH-pi24-5b+ \u2014 Failed-login burst grouping. A brute-force attempt
+	// against one username can fill the audit log with 30+ near-identical
+	// LOGIN_FAILED rows in the same hour, drowning every other signal.
+	// Collapse runs of consecutive LOGIN_FAILED rows that share the same
+	// (username, hour) into a single rendered row with a "\u00d7N" count. The
+	// API stays a raw event stream \u2014 grouping is presentation only, so
+	// raw rows remain available for forensic queries.
+	type GroupedRow =
+		| { kind: 'single'; entry: AuditEntry; key: string }
+		| {
+				kind: 'group';
+				key: string;
+				username: string;
+				count: number;
+				firstTime: string | null; // chronologically earliest in the burst
+				lastTime: string | null; // chronologically latest in the burst
+				ipCount: number;
+				sampleIp: string | null;
+		  };
+
+	function groupAudit(entries: AuditEntry[]): GroupedRow[] {
+		const out: GroupedRow[] = [];
+		let i = 0;
+		while (i < entries.length) {
+			const e = entries[i];
+			if (e.action !== 'LOGIN_FAILED' || !e.created_at) {
+				out.push({ kind: 'single', entry: e, key: `s-${e.id}` });
+				i++;
+				continue;
+			}
+			const hour = e.created_at.slice(0, 13); // "YYYY-MM-DDTHH"
+			const username = e.username || '';
+			let j = i + 1;
+			const ips = new Set<string>();
+			if (e.ip_address) ips.add(e.ip_address);
+			while (
+				j < entries.length &&
+				entries[j].action === 'LOGIN_FAILED' &&
+				(entries[j].username || '') === username &&
+				(entries[j].created_at || '').slice(0, 13) === hour
+			) {
+				const ip = entries[j].ip_address;
+				if (ip) ips.add(ip);
+				j++;
+			}
+			const count = j - i;
+			if (count >= 2) {
+				// audit_log comes back ORDER BY created_at DESC, so the
+				// first index `i` is the latest, `j-1` is the earliest.
+				out.push({
+					kind: 'group',
+					key: `g-${e.id}`,
+					username,
+					count,
+					firstTime: entries[j - 1].created_at,
+					lastTime: e.created_at,
+					ipCount: ips.size,
+					sampleIp: ips.size === 1 ? [...ips][0] : null,
+				});
+			} else {
+				out.push({ kind: 'single', entry: e, key: `s-${e.id}` });
+			}
+			i = j;
+		}
+		return out;
+	}
+	$: groupedAudit = groupAudit(auditLog);
 </script>
 
 <div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
@@ -352,23 +420,49 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each auditLog as entry (entry.id)}
-								<tr style="border-bottom: 1px solid var(--border-subtle);">
-									<td class="px-4 py-2 whitespace-nowrap" style="color: var(--text-muted);">{formatDateTime(entry.created_at)}</td>
-									<td class="px-4 py-2" style="color: var(--text-primary);">{entry.username || '-'}</td>
-									<td class="px-4 py-2">
-										{#if entry.action.includes('FAILED') || entry.action.includes('LOCKED')}
-											<span class="badge-danger">{entry.action}</span>
-										{:else if entry.action.includes('SUCCESS') || entry.action === 'REGISTER'}
-											<span class="badge-olive">{entry.action}</span>
-										{:else if entry.action.startsWith('ADMIN_')}
-											<span class="badge-ochre">{entry.action}</span>
-										{:else}
-											<span class="badge" style="background: var(--surface-muted); color: var(--text-secondary);">{entry.action}</span>
-										{/if}
-									</td>
-									<td class="px-4 py-2 font-mono text-xs hidden sm:table-cell" style="color: var(--text-muted);">{entry.ip_address || '-'}</td>
-								</tr>
+							{#each groupedAudit as row (row.key)}
+								{#if row.kind === 'single'}
+									<tr style="border-bottom: 1px solid var(--border-subtle);">
+										<td class="px-4 py-2 whitespace-nowrap" style="color: var(--text-muted);">{formatDateTime(row.entry.created_at)}</td>
+										<td class="px-4 py-2" style="color: var(--text-primary);">{row.entry.username || '-'}</td>
+										<td class="px-4 py-2">
+											{#if row.entry.action.includes('FAILED') || row.entry.action.includes('LOCKED')}
+												<span class="badge-danger">{row.entry.action}</span>
+											{:else if row.entry.action.includes('SUCCESS') || row.entry.action === 'REGISTER'}
+												<span class="badge-olive">{row.entry.action}</span>
+											{:else if row.entry.action.startsWith('ADMIN_')}
+												<span class="badge-ochre">{row.entry.action}</span>
+											{:else}
+												<span class="badge" style="background: var(--surface-muted); color: var(--text-secondary);">{row.entry.action}</span>
+											{/if}
+										</td>
+										<td class="px-4 py-2 font-mono text-xs hidden sm:table-cell" style="color: var(--text-muted);">{row.entry.ip_address || '-'}</td>
+									</tr>
+								{:else}
+									<!-- CIPH-pi24-5b+ — Grouped failed-login burst. The "×N" count
+										 reads as a quantity glyph (locale-neutral); the time cell
+										 carries a range; the IP cell shows the single IP if all
+										 attempts shared one, otherwise "(N)". -->
+									<tr style="border-bottom: 1px solid var(--border-subtle);">
+										<td class="px-4 py-2 whitespace-nowrap" style="color: var(--text-muted);">
+											<span>{formatDateTime(row.lastTime)}</span>
+											<span class="block text-xs" style="color: var(--text-muted); opacity: 0.65;">{$t('admin.group_since')} {formatDateTime(row.firstTime)}</span>
+										</td>
+										<td class="px-4 py-2" style="color: var(--text-primary);">{row.username || '-'}</td>
+										<td class="px-4 py-2">
+											<span class="badge-danger">LOGIN_FAILED ×{row.count}</span>
+										</td>
+										<td class="px-4 py-2 font-mono text-xs hidden sm:table-cell" style="color: var(--text-muted);">
+											{#if row.ipCount === 1 && row.sampleIp}
+												{row.sampleIp}
+											{:else if row.ipCount > 1}
+												({row.ipCount})
+											{:else}
+												-
+											{/if}
+										</td>
+									</tr>
+								{/if}
 							{/each}
 						</tbody>
 					</table>

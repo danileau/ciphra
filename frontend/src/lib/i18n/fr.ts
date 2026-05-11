@@ -1286,6 +1286,7 @@ export default {
 	'admin.lockouts': 'Verrouillages',
 	'admin.deletions': 'Suppressions',
 	'admin.today': "aujourd'hui",
+	'admin.group_since': 'depuis',
 	'admin.logins_success': 'Connexions réussies (30j)',
 	'admin.logins_failed': 'Connexions échouées (30j)',
 	'admin.username': 'Nom d\'utilisateur',

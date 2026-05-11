@@ -1308,6 +1308,7 @@ export default {
 	'admin.lockouts': 'Sperrungen',
 	'admin.deletions': 'Löschungen',
 	'admin.today': 'heute',
+	'admin.group_since': 'seit',
 	'admin.logins_success': 'Erfolgreiche Logins (30d)',
 	'admin.logins_failed': 'Fehlgeschlagene Logins (30d)',
 	'admin.username': 'Benutzername',
