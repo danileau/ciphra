@@ -665,6 +665,40 @@
 			],
 		};
 	})();
+	// pi24 dogfood: trend-chart tooltip needs the underlying Date for each
+	// bin so the title callback can format month-view as a full date
+	// (honoring bp.dateFormat) and year-view as full month name + 4-digit
+	// year — same pattern as the dashboard /. Labels alone aren't enough:
+	// month view labels are bare day numbers ("5", "12") and year view
+	// labels are short month-year ("Mai 26").
+	$: trendBinDates = (() => {
+		if (!trendChartData) return [] as Date[];
+		if (viewMode === 'month') {
+			const d = new Date(currentDate + 'T12:00:00');
+			const y = d.getFullYear();
+			const m = d.getMonth();
+			const daysInMo = new Date(y, m + 1, 0).getDate();
+			return Array.from({ length: daysInMo }, (_, i) => new Date(y, m, i + 1));
+		}
+		const dates: Date[] = [];
+		for (let i = 23; i >= 0; i--) {
+			dates.push(new Date(trendAnchor.getFullYear(), trendAnchor.getMonth() - i, 1));
+		}
+		return dates;
+	})();
+	function formatDateChoice(d: Date, choice: Blueprint['dateFormat'] | undefined): string {
+		const dd = String(d.getDate()).padStart(2, '0');
+		const mm = String(d.getMonth() + 1).padStart(2, '0');
+		const yyyy = d.getFullYear();
+		switch (choice) {
+			case 'iso': return `${yyyy}-${mm}-${dd}`;
+			case 'us': return `${mm}/${dd}/${yyyy}`;
+			case 'dd/mm/yyyy': return `${dd}/${mm}/${yyyy}`;
+			case 'dd.mm.yyyy':
+			default: return `${dd}.${mm}.${yyyy}`;
+		}
+	}
+
 	// pi24 dogfood: tick-row visualization removed. The trigger-day count
 	// per chart bin (day in month-view, month in year-view) surfaces via
 	// tooltip enrichment instead. `docHasTrigger` consults known blueprint
@@ -769,13 +803,18 @@
 	let _prevNeutral = '';
 	let _prevTrigSig = '';
 	let _prevLocale = '';
+	let _prevViewMode = '';
+	let _prevDateFmt = '';
 	let _trendOpts: Record<string, unknown> | null = null;
 	$: trendChartOptions = (() => {
+		const dateFmt = bp?.dateFormat || '';
 		if (
 			trendAccentHex === _prevAccent &&
 			trendNeutralHex === _prevNeutral &&
 			trendTriggerSig === _prevTrigSig &&
 			$locale === _prevLocale &&
+			viewMode === _prevViewMode &&
+			dateFmt === _prevDateFmt &&
 			_trendOpts
 		) {
 			return _trendOpts;
@@ -784,12 +823,15 @@
 		_prevNeutral = trendNeutralHex;
 		_prevTrigSig = trendTriggerSig;
 		_prevLocale = $locale;
+		_prevViewMode = viewMode;
+		_prevDateFmt = dateFmt;
 		// Capture by value so the memoized options object holds onto its
 		// own snapshot of trigger counts AND its own ($t, $locale) view —
-		// when the sig (or accent/neutral) changes the memo rebuilds and
-		// grabs fresh snapshots. Locale changes also bust this through the
-		// store-driven reactive chain in the script's reactive scope.
+		// when any dep changes, the memo rebuilds and grabs fresh snapshots.
 		const triggerSnapshot = trendTriggerByBin;
+		const binDates = trendBinDates;
+		const view = viewMode;
+		const fmt = bp?.dateFormat;
 		const tt = $t;
 		const lc = $locale;
 		_trendOpts = {
@@ -799,10 +841,23 @@
 				legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
 				tooltip: {
 					callbacks: {
-						// pi24 dogfood: trigger-day count surfaces as a hover
-						// line instead of a sub-pixel tick row. Renders only
-						// when the blueprint declares triggers and the bin
-						// has at least one.
+						// pi24 dogfood: tooltip title mirrors the dashboard
+						// / chart — full date in month-view (respecting
+						// bp.dateFormat) and full month name + 4-digit year
+						// in year-view. Default Chart.js title is the bare
+						// x-axis label ("5" or "Mai 26"); neither carries
+						// enough context to read on hover.
+						title: (items: Array<{ dataIndex: number }>) => {
+							if (!items.length || binDates.length === 0) return '';
+							const d = binDates[items[0].dataIndex];
+							if (!d) return '';
+							if (view === 'month') return formatDateChoice(d, fmt);
+							return d.toLocaleDateString(lc, { month: 'long', year: 'numeric' });
+						},
+						// Trigger-day count surfaces as a hover line instead
+						// of a sub-pixel tick row. Renders only when the
+						// blueprint declares triggers and the bin has at
+						// least one.
 						afterBody: (items: Array<{ dataIndex: number }>) => {
 							if (!items.length || triggerSnapshot.length === 0) return [];
 							const n = triggerSnapshot[items[0].dataIndex] || 0;
