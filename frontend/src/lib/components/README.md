@@ -274,6 +274,15 @@ route kind.
   EntryComposer merge-shape false positives. Mounted by
   `CompanionMain` when `resolvePrimaryDashboardCard` returns
   `kind: 'top-triggers'`.
+- **VitalTrendReportsCard.svelte** (pi24 reports) — the /reports
+  counterpart to VitalTrendCard. Same monthly-mean aggregation but
+  larger chart canvas, chip selector for 4+ vitals (chips not tabs —
+  filter affordance within section), and a diverging-bar variant
+  when the primary vital's range crosses zero (`min < 0`, e.g.
+  bipolar mood_polarity). Per-bar color by sign in diverging mode
+  so positive and negative halves read distinctly without a legend.
+  Mounted by `routes/reports/+page.svelte` when
+  `resolveReportsPrimaryCard` returns `kind: 'vital-trend'`.
 - **VitalTrendCard.svelte** (pi24 dashboard) — 12-month monthly-
   mean line chart for a pinned primary vital (`primaryVitalId`).
   Used by hashimoto (TSH), hypertension (bp_systolic),

@@ -256,6 +256,8 @@ export default {
 	'companion.within_phase_rescue_meds': 'rescue medication',
 	'companion.within_phase_days_logged_one': '1 day logged',
 	'companion.within_phase_days_logged_other': '{count} days logged',
+	'reports.vital_secondary_count_one': '1 more value recorded in this window',
+	'reports.vital_secondary_count_other': '{count} more values recorded in this window',
 	'companion.recap_symptoms_one': '1 symptom',
 	'companion.recap_symptoms_other': '{count} symptoms',
 	'companion.recap_vitals_one': '1 vital',

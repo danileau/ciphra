@@ -262,6 +262,8 @@ export default {
 	'companion.within_phase_rescue_meds': 'Notfallmedikament',
 	'companion.within_phase_days_logged_one': '1 Tag protokolliert',
 	'companion.within_phase_days_logged_other': '{count} Tage protokolliert',
+	'reports.vital_secondary_count_one': '1 weiterer Wert in dieser Phase erfasst',
+	'reports.vital_secondary_count_other': '{count} weitere Werte in dieser Phase erfasst',
 	'companion.recap_symptoms_one': '1 Symptom',
 	'companion.recap_symptoms_other': '{count} Symptome',
 	'companion.recap_vitals_one': '1 Vitalwert',
