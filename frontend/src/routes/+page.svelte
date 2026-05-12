@@ -303,6 +303,26 @@
 					</div>
 				</section>
 			{/if}
+
+			<!-- pi24 P-Land-1 — Blueprint-request escape hatch. The "is this
+			     for me?" question peaks here; if the visitor's condition
+			     isn't in the grid above, this is where they need a path.
+			     Mailto (not a server form) because a server endpoint here
+			     would create the wrong affordance on a "we can't read your
+			     data" page. Boundary copy belongs in the footer mailto;
+			     this card just opens the same mailto with a prefilled
+			     subject so the email lands sorted. -->
+			<div class="mt-10 text-center text-sm" style="color: var(--text-muted);">
+				<p class="mb-2">{$t('landing.blueprint_request_prompt')}</p>
+				<a
+					href="mailto:info@ciphra.ch?subject=Blueprint%20request"
+					class="inline-flex items-center gap-1.5 font-medium hover:underline"
+					style="color: var(--brand);"
+				>
+					{$t('landing.blueprint_request_cta')}
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9 6 9-6m-18 0v10a2 2 0 002 2h14a2 2 0 002-2V8m-18 0a2 2 0 012-2h14a2 2 0 012 2"/></svg>
+				</a>
+			</div>
 		</div>
 	</section>
 

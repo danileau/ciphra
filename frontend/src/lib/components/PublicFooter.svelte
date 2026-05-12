@@ -54,6 +54,24 @@
 				</ul>
 			</div>
 		</div>
+		<!-- pi24 P-Land-1 — Contact strip with explicit privacy-boundary
+		     copy. Mailto, not a server form: a server endpoint here would
+		     create the wrong affordance on a "we can't read your data"
+		     page. The boundary copy makes the difference legible — the
+		     user leaves the encrypted app context when emailing the team. -->
+		<div class="text-sm text-center mb-6">
+			<a
+				href="mailto:info@ciphra.ch"
+				class="inline-flex items-center gap-1.5 font-medium hover:underline"
+				style="color: var(--brand);"
+			>
+				{$t('landing.contact_mailto_label')}
+				<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9 6 9-6m-18 0v10a2 2 0 002 2h14a2 2 0 002-2V8m-18 0a2 2 0 012-2h14a2 2 0 012 2"/></svg>
+			</a>
+			<p class="text-xs mt-1.5 max-w-md mx-auto" style="color: var(--text-muted);">
+				{$t('landing.contact_boundary')}
+			</p>
+		</div>
 		<div class="asterisk-divider mb-6">
 			<Asterisk size={14} color="muted" />
 		</div>
