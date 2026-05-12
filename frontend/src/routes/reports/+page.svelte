@@ -7,8 +7,15 @@
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
+	import VitalTrendReportsCard from '$lib/components/VitalTrendReportsCard.svelte';
+	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
 	import { cohortPalette } from '$lib/cohortPalette';
 	import { cohortOf } from '$lib/blueprint/cohort';
+	import {
+		resolveReportsPrimaryCard,
+		type ReportsSummary,
+		type ReportsCardSpec,
+	} from '$lib/blueprint/reportsPrimary';
 	import type { Blueprint } from '$lib/blueprint';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -76,6 +83,48 @@
 	// `exportableDocs` (diary excluded, private excluded). `$documents` is
 	// only used for editing actions where we DO need to find private entries.
 	$: exportableDocs = $documents.filter(isExportable);
+
+	// pi24 reports rework — primary trend slot is governed by
+	// resolveReportsPrimaryCard(bp, summary). Same pattern as the dashboard
+	// resolver but with /reports' clinician-pattern routing context
+	// (vital-pinned cohorts take priority over episode trend here).
+	$: reportsSummary = ((): ReportsSummary => {
+		const presentVitalIds = new Set<string>();
+		let hasAnyEntry = false;
+		let hasEpisodeData = false;
+		let hasSymptomData = false;
+		for (const d of exportableDocs) {
+			const type = d.data?.type;
+			if (type === 'entry' || type === 'event') {
+				hasAnyEntry = true;
+			}
+			if (type !== 'entry') continue;
+			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
+			for (const v of Object.values(eps)) {
+				if (Number(v) > 0) { hasEpisodeData = true; break; }
+			}
+			const syms = (d.data.symptoms || {}) as Record<string, unknown>;
+			for (const v of Object.values(syms)) {
+				if (v) { hasSymptomData = true; break; }
+			}
+			const vitals = (d.data.vitals || {}) as Record<string, unknown>;
+			for (const [k, v] of Object.entries(vitals)) {
+				if (v === '' || v === null || v === undefined) continue;
+				// For multi-entry vitals stored as objects, check at least
+				// one inner value is non-empty.
+				if (typeof v === 'object') {
+					const innerHas = Object.values(v as Record<string, unknown>).some(
+						(iv) => iv !== '' && iv !== null && iv !== undefined,
+					);
+					if (innerHas) presentVitalIds.add(k);
+				} else {
+					presentVitalIds.add(k);
+				}
+			}
+		}
+		return { hasAnyEntry, hasEpisodeData, hasSymptomData, presentVitalIds };
+	})();
+	$: reportsPrimarySpec = resolveReportsPrimaryCard(bp, reportsSummary) as ReportsCardSpec | null;
 
 	onMount(async () => {
 		if (!$isAuthenticated) { goto('/login'); return; }
@@ -1093,43 +1142,81 @@
 		</div>
 	</div>
 
-	<!-- CIPH-914 — 24-month trend chart. The "complexity of all
-		 aggregated data" view that scored highest in epilepc. Renders
-		 above the recent events block. Episodes line + symptom-days
-		 line, dual y-axis so a low episode count stays readable when
-		 symptom-days dwarf it. Hides when there's no signal yet. -->
-	<!-- PI v17 — chart card always renders in either view (month/year). The
-	     daily-month chart can collapse to "no entries" mid-month and used
-	     to vanish the whole card, breaking page silhouette + trust. Empty
-	     state now shows the title + range chip + a muted line. -->
-	<div class="card mb-4 p-4">
-		<div class="rpt-trend-header">
-			<h2 class="rpt-trend-title" style="color: var(--text-primary)">{trendTitle}</h2>
-			<span class="rpt-trend-range" style="color: var(--text-muted)">{trendRange}</span>
+	<!-- pi24 reports rework — primary trend slot is resolver-driven.
+	     resolveReportsPrimaryCard picks the kind from cohort + data:
+	     - 'episode-trend' (CIPH-914): existing dual-axis chart
+	     - 'vital-trend': VitalTrendReportsCard (line OR diverging-bar
+	       depending on active vital's range; carries chip selector for
+	       4+ vitals, secondary footer for 2-3)
+	     - 'last-entries': LastEntriesStrip — for Hashimoto pre-labs /
+	       Cancer / Custom / sparse-data states. Same fallback shape as
+	       dashboard.
+	     - null: silent empty state (day-1 user). -->
+	{#if reportsPrimarySpec?.kind === 'episode-trend'}
+		<!-- CIPH-914 — 24-month trend chart. The "complexity of all
+		     aggregated data" view that scored highest in epilepc.
+		     Renders above the recent events block. Episodes line +
+		     symptom-days line, dual y-axis so a low episode count stays
+		     readable when symptom-days dwarf it. Hides when there's no
+		     signal yet.
+		     PI v17 — chart card always renders in either view (month/year).
+		     The daily-month chart can collapse to "no entries" mid-month
+		     and used to vanish the whole card, breaking page silhouette
+		     + trust. Empty state now shows the title + range chip + a
+		     muted line. -->
+		<div class="card mb-4 p-4">
+			<div class="rpt-trend-header">
+				<h2 class="rpt-trend-title" style="color: var(--text-primary)">{trendTitle}</h2>
+				<span class="rpt-trend-range" style="color: var(--text-muted)">{trendRange}</span>
+			</div>
+			{#if trendChartData}
+				<div class="rpt-trend-chart">
+					<ChartWrapper
+						type="line"
+						data={trendChartData}
+						options={trendChartOptions}
+						ariaLabel={trendAria}
+						srTable={trendChartSrTable}
+					/>
+				</div>
+			{:else}
+				<!-- PI v17 (Jonas dry-run #2) — distinguish "no entries
+				     at all" from "entries exist but no episodes/symptoms
+				     triggering signal". The latter is the common mid-month
+				     case where the user has logged diary days but no
+				     flares yet, and the previous "Keine Daten" copy
+				     gaslit them into thinking their entries weren't saved. -->
+				{@const scopeDocs = viewMode === 'year' ? yearDocs : monthDocs}
+				<div class="rpt-trend-empty" role="status" style="color: var(--text-muted)">
+					{scopeDocs.length > 0 ? $t('reports.no_signal') : $t('reports.no_data')}
+				</div>
+			{/if}
 		</div>
-		{#if trendChartData}
-			<div class="rpt-trend-chart">
-				<ChartWrapper
-					type="line"
-					data={trendChartData}
-					options={trendChartOptions}
-					ariaLabel={trendAria}
-					srTable={trendChartSrTable}
-				/>
-			</div>
-		{:else}
-			<!-- PI v17 (Jonas dry-run #2) — distinguish "no entries at all"
-			     from "entries exist but no episodes/symptoms triggering
-			     signal". The latter is the common mid-month case where
-			     the user has logged diary days but no flares yet, and
-			     the previous "Keine Daten" copy gaslit them into thinking
-			     their entries weren't saved. -->
-			{@const scopeDocs = viewMode === 'year' ? yearDocs : monthDocs}
-			<div class="rpt-trend-empty" role="status" style="color: var(--text-muted)">
-				{scopeDocs.length > 0 ? $t('reports.no_signal') : $t('reports.no_data')}
-			</div>
-		{/if}
-	</div>
+	{:else if reportsPrimarySpec?.kind === 'vital-trend'}
+		<!-- pi24 reports — vital-trend primary for Hashimoto / hypertension /
+		     cardiovascular / diabetes / parkinson / bipolar. Card carries
+		     its own header + chart chrome. -->
+		<div class="mb-4">
+			<VitalTrendReportsCard
+				docs={exportableDocs}
+				{bp}
+				primaryVitalId={reportsPrimarySpec.primaryVitalId}
+				secondaryVitalIds={reportsPrimarySpec.secondaryVitalIds}
+				accentHex={trendAccentHex}
+				neutralHex={trendNeutralHex}
+				dateFormatChoice={bp?.dateFormat}
+			/>
+		</div>
+	{:else if reportsPrimarySpec?.kind === 'last-entries'}
+		<!-- pi24 reports — last-entries fallback for cancer / custom /
+		     Hashimoto-pre-labs / any blueprint that hasn't accrued
+		     primary-section data yet. Universal silent-empty-state pattern. -->
+		<div class="mb-4">
+			<LastEntriesStrip docs={exportableDocs} {bp} limit={5} />
+		</div>
+	{/if}
+	<!-- reportsPrimarySpec === null → render nothing (day-1, no data,
+	     no nag). The KPI block and stats above stand on their own. -->
 
 	<!-- Recent note-marker events — closes the visibility gap. Users who
 		 create "Treatment adjusted" style markers couldn't see them anywhere
