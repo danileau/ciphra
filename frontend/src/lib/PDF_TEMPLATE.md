@@ -16,11 +16,12 @@ applies all 72 fixes. The campfire history is preserved in
 ## Philosophy
 
 ciphra is a **data-gathering tool, not a medical analysis tool — not
-even implicitly**. The doctor PDF is **a patient-entered data summary
-for clinician review**. It organizes the patient's logged
-observations, formats them for fast scanning, and presents source
-metadata so the clinician can read the underlying record more
-efficiently.
+even implicitly**. The doctor PDF is **a summary of the patient's
+own logged entries** — a printable / shareable export of the record
+the user has been keeping. It organizes those entries, formats
+them for fast scanning, and presents source metadata. The user
+decides who to share it with; ciphra does not pre-declare the
+audience.
 
 **ciphra does not diagnose, interpret, classify risk, evaluate
 treatment response, score symptoms, label values normal or abnormal,
@@ -83,9 +84,12 @@ These apply to every section, every cohort, every mode:
    triage.
 
 7. **Provenance and disclaimer attach to every report.** Every PDF
-   carries the line "Patient-entered data summary for clinician
-   review. ciphra does not diagnose, interpret, classify risk,
-   evaluate treatment response, or recommend action."
+   carries the line "Patient-entered data summary. ciphra organizes
+   the user's recorded entries into a printable summary. ciphra
+   does not diagnose, interpret, classify risk, evaluate treatment
+   response, or recommend action." Sharing the export with anyone
+   — including a clinician — is the user's choice; ciphra does not
+   pre-declare the audience.
 
 ---
 
@@ -198,7 +202,7 @@ evaluation**.
 
 **Watchlist content** is opt-in via `supportsWatchlistFields` +
 `showsWatchlistSection`. When rendered, it lives in the appendix
-(Section 16) as a flat table of matching entries with their literal
+(Section 15) as a flat table of matching entries with their literal
 matching criterion. No Page 1 surfacing, no markers on charts, no
 "triggered" language.
 
@@ -215,11 +219,11 @@ mU/L mean") or omits when data is insufficient.
 
 **Gate:** `report-eligibility` (`canRenderPdf`)
 **Renders:** Patient name or initials, cohort name, report window,
-generation date, a "patient-entered data summary for clinician
-review" label, and a compact data-coverage line. In onboarding mode
-the coverage line states this is a baseline setup view rather than
-a longitudinal data summary. The section never renders inferred
-diagnoses, status labels, or condition assessments. It identifies
+generation date, a "patient-entered data summary" label, and a
+compact data-coverage line. In onboarding mode the coverage line
+states this is a baseline setup view rather than a longitudinal
+data summary. The section never renders inferred diagnoses, status
+labels, or condition assessments. It identifies
 the report, the cohort, and the entry window only.
 **Modes:** all
 **Page:** 1
@@ -423,24 +427,7 @@ logging are all distinguishable in the display.
 Single-role reports may render compact attribution in the footer or
 appendix rather than repeated inline labels.
 
-### 14. For-the-clinician summary bullets
-
-**Gate:** `universal` (when `hasMinimumReportData`)
-**Renders:** Up to 6 bullets stating **counted facts only**, each
-in the form "ciphra recorded X over the window" or "the most-
-recently entered Y was Z" or "the user logged W triggers in this
-window." The bullets do **not** ask clinical questions, do not
-suggest possible diagnoses, do not point at causes, do not assess
-treatment, do not flag concerns. They restate counted data to
-orient the clinician quickly.
-**Modes:** all
-**Page:** 2-N
-**Notes:** The previous draft framed this as "Für deine Ärztin"
-clinician-facing Q&A. Q&A framing was removed because it implied
-the PDF answers clinical questions. The bullets now state recorded
-facts; the clinician brings the questions.
-
-### 15. Cohort-specific appendix
+### 14. Cohort-specific appendix
 
 **Gate:** `data-capability` (`hasCohortAppendix`)
 **Renders:** Cohort-defined supplemental display: raw event tables,
@@ -455,7 +442,7 @@ escalation-rule explanations. ciphra does not compute clinical
 scores; if a user-entered scale value exists, it displays the
 recorded value with the user-entered scale definition.
 
-### 16. Watchlist matches table
+### 15. Watchlist matches table
 
 **Gate:** `data-capability` + `derived`
 (`supportsWatchlistFields`, `showsWatchlistSection`,
@@ -472,19 +459,23 @@ never used as alerting.**
 **Notes:** Opt-in per cohort. If no entries match in the window,
 the section is omitted (no negative status statement).
 
-### 17. Footer and provenance
+### 16. Footer and provenance
 
 **Gate:** `report-eligibility` (`canRenderPdf`)
 **Renders:** Page number, patient/report identifier, report window,
 generation timestamp, and the controlling provenance statement:
-**"Patient-entered data summary for clinician review. ciphra
-summarizes recorded observations from the patient and proxy authors.
+**"Patient-entered data summary. ciphra organizes the user's
+recorded entries and proxy-author entries into a printable summary.
 ciphra does not diagnose, interpret, classify risk, evaluate
-treatment response, or recommend action."**
+treatment response, or recommend action. Sharing this export
+with anyone — including a clinician — is the user's choice."**
 **Modes:** all
 **Page:** Every page
 **Notes:** This is the load-bearing line. Promote it to Section 1
-identity copy as well.
+identity copy as well. The audience is deliberately left to the
+user — naming the clinician as the intended reader would bake
+"intended for clinical decision-making" into ciphra's documented
+purpose, which is exactly the MDR Rule 11 trap.
 
 ---
 
@@ -506,6 +497,19 @@ For clarity, the spec EXPLICITLY rejects:
   improvement, stability, or escalation rules
 - Q&A clinician-facing sections that imply the PDF answers
   clinical questions
+- Curated "most important facts" / "top N highlights" /
+  "key takeaways" sections that select WHICH counts to surface
+  for an external reader's attention. Selecting which 6 of 50
+  populated metrics to highlight is editorial curation of clinical
+  relevance, even when each surfaced fact is itself neutral. The
+  layout is allowed to pre-declare WHICH SLOTS exist (per static
+  blueprint template); it is not allowed to rank populated data
+  by importance at render time.
+- Pre-declared "intended audience" labels that bake a clinical
+  use case into ciphra's documented purpose (e.g. "for clinician
+  review," "for doctor visits," "doctor handover artifact"). The
+  user decides who reads the export; the artifact itself is just
+  a data summary.
 
 ## What this spec accepts
 
