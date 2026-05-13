@@ -1830,44 +1830,62 @@ export function generateDoctorPdf(
 		return days.size;
 	})();
 
+	// pi24 P-PDF-4 — Tile factories return `Tile | null` so the cohort
+	// selector below can fall through to a populated alternative
+	// instead of rendering "—" with confidence. The 5-doctor agents
+	// campfire universally flagged "—" tiles as pure decoration; the
+	// pi24 doctor-glance audit on the actual Hans PDF (P-PDF-4 entry)
+	// confirmed 3 of 4 tiles rendered "—" in real output. Each tile
+	// now returns null when it has no clinical signal; the priority-
+	// list selector picks the first 4 non-null candidates per cohort.
 	type Tile = { label: string; value: string; accent: RGB; delta?: StatCardDelta };
-	const tileEpisodes = (): Tile => ({
-		label: t('pdf.total_episodes'),
-		value: String(totalEpisodes),
-		accent: acc.primary,
-		delta: scope !== '2years' && episodeChange !== 0
-			? {
-				sign: episodeChange > 0 ? '+' : '-',
-				value: String(Math.abs(episodeChange)),
-				// Episode increase is bad (more events); decrease is good.
-				semantic: episodeChange > 0 ? 'bad' : 'good',
-			}
-			: undefined,
-	});
-	const tileTopSymptom = (): Tile => ({
-		label: t('pdf.most_frequent_symptom'),
-		value: mostFrequentSymptom
-			? `${mostFrequentSymptom.label} (${mostFrequentSymptom.count})`
-			: '—',
-		accent: acc.primary,
-	});
-	const tileTopTrigger = (): Tile => ({
-		label: t('pdf.most_frequent_trigger'),
-		value: mostFrequentTrigger
-			? `${mostFrequentTrigger.label} (${mostFrequentTrigger.count})`
-			: '—',
-		accent: acc.break,
-	});
+	const tileEpisodes = (): Tile | null => {
+		// Cohorts that don't track episodes (Hashimoto, custom-no-episodes)
+		// → null. Cohorts that DO track but have zero events → still
+		// useful as "no events this scope" → populate.
+		if (!blueprint.episodeTypes || blueprint.episodeTypes.length === 0) return null;
+		return {
+			label: t('pdf.total_episodes'),
+			value: String(totalEpisodes),
+			accent: acc.primary,
+			delta: scope !== '2years' && episodeChange !== 0
+				? {
+					sign: episodeChange > 0 ? '+' : '-',
+					value: String(Math.abs(episodeChange)),
+					semantic: episodeChange > 0 ? 'bad' : 'good',
+				}
+				: undefined,
+		};
+	};
+	const tileTopSymptom = (): Tile | null => {
+		if (!mostFrequentSymptom) return null;
+		return {
+			label: t('pdf.most_frequent_symptom'),
+			value: `${mostFrequentSymptom.label} (${mostFrequentSymptom.count})`,
+			accent: acc.primary,
+		};
+	};
+	const tileTopTrigger = (): Tile | null => {
+		if (!mostFrequentTrigger) return null;
+		return {
+			label: t('pdf.most_frequent_trigger'),
+			value: `${mostFrequentTrigger.label} (${mostFrequentTrigger.count})`,
+			accent: acc.break,
+		};
+	};
 	const tileDaysLogged = (): Tile => ({
 		label: t('pdf.days_logged'),
 		value: `${daysLogged}/${daysInMonth}`,
 		accent: acc.break,
 	});
-	const tileRescueMed = (): Tile => ({
-		label: t('pdf.rescue_med_days'),
-		value: rescueMedDays > 0 ? String(rescueMedDays) : '—',
-		accent: acc.break,
-	});
+	const tileRescueMed = (): Tile | null => {
+		if (rescueMedDays === 0) return null;
+		return {
+			label: t('pdf.rescue_med_days'),
+			value: String(rescueMedDays),
+			accent: acc.break,
+		};
+	};
 
 	// CIPH-pi23-B2-fix-1 — Phase-cohort cohort-day-coverage tiles. Replace
 	// information-poor `tileTopSymptom` (rendered "Most frequent symptom:
@@ -1895,9 +1913,9 @@ export function generateDoctorPdf(
 			.filter((x) => x.days > 0)
 			.sort((a, b) => b.days - a.days);
 	})();
-	const tilePhaseTopN = (n: 0 | 1): Tile => {
+	const tilePhaseTopN = (n: 0 | 1): Tile | null => {
 		const top = phaseTopDayCounts[n];
-		if (!top) return tileTopSymptom();  // graceful degrade for silent months
+		if (!top) return null;
 		const pct = Math.round((top.days / focusDaysInMonth) * 100);
 		return {
 			label: labelOf(t, { id: top.id, label: top.label }),
@@ -1912,10 +1930,13 @@ export function generateDoctorPdf(
 	// `tileTopSymptom` in the discrete-cohort tile set — symptom frequency
 	// is information-poor for seizure tracking; duration distribution is
 	// what drives the status-epilepticus risk conversation with neurology.
-	const tileEpisodeDurationDist = (): Tile => {
+	const tileEpisodeDurationDist = (): Tile | null => {
 		const durEps = blueprint.episodeTypes.filter((e) => e.trackDuration);
-		if (durEps.length === 0) return tileTopSymptom();
+		if (durEps.length === 0) return null;
 		let lt1 = 0, m15 = 0, gt5 = 0, total = 0;
+		// Only count duration-bucketed events; "keine Dauer erfasst" doesn't
+		// contribute to the dominant-duration question.
+		let bucketed = 0;
 		for (const d of focusMonthDocs) {
 			if (d?.data?.type !== 'entry') continue;
 			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
@@ -1925,13 +1946,16 @@ export function generateDoctorPdf(
 				if (cnt <= 0) continue;
 				const dur = durs[ep.id] || '';
 				total += cnt;
-				if (dur === '<1min') lt1 += cnt;
-				else if (dur === '1-5min') m15 += cnt;
-				else if (dur === '>5min') gt5 += cnt;
+				if (dur === '<1min') { lt1 += cnt; bucketed += cnt; }
+				else if (dur === '1-5min') { m15 += cnt; bucketed += cnt; }
+				else if (dur === '>5min') { gt5 += cnt; bucketed += cnt; }
 			}
 		}
-		if (total === 0) return { label: t('pdf.duration_distribution'), value: '—', accent: acc.primary };
-		const pct = (n: number) => Math.round((n / total) * 100);
+		// Pre-pi24-P-PDF-4 this returned "{label}: —" with full pill
+		// chrome — the dogfood-flagged decorative state. Now: if no
+		// duration data exists, yield the slot to a populated tile.
+		if (total === 0 || bucketed === 0) return null;
+		const pct = (n: number) => Math.round((n / bucketed) * 100);
 		const buckets = [
 			{ key: '<1min', n: lt1 }, { key: '1-5min', n: m15 }, { key: '>5min', n: gt5 },
 		].sort((a, b) => b.n - a.n);
@@ -1942,30 +1966,162 @@ export function generateDoctorPdf(
 		};
 	};
 
-	// Per-cohort selection. PI v23 B2-fix-1/2 swapped tileTopSymptom out of
-	// the phase + discrete tile sets for cohort-relevant aggregations (per
-	// DOCTOR_PDF_DOGFOOD_pi23.md F-A2 / F-H2 findings).
-	const tiles: Tile[] = (() => {
+	// pi24 P-PDF-4 — Vital-pinned tile factory. The 5-doctor agents
+	// campfire flagged that vital-pinned cohorts (Hashimoto, hypertension,
+	// cardiovascular, diabetes, parkinson, bipolar) need their clinical-
+	// primary vital as a tile, not generic "episodes" / "top symptom".
+	// Steiner: "last TSH + delta from previous." Müller: "SBP AM/PM."
+	// Brunner: "polarity index / euthymia %." Returns null if the
+	// blueprint doesn't carry that vital OR no values logged → falls
+	// through to the next priority in the cohort list.
+	const tileVitalLastValue = (vitalId: string): Tile | null => {
+		const vital = blueprint.vitals?.find((v) => v.id === vitalId);
+		if (!vital) return null;
+		// Collect (date, numeric) pairs from entries with that vital
+		// present; pick the two most-recent for last + previous delta.
+		const readings: { date: string; v: number }[] = [];
+		for (const d of documents) {
+			if (d.data?.type !== 'entry') continue;
+			const ds = String(d.data.date || '');
+			if (!ds) continue;
+			const raw = (d.data.vitals || {})[vitalId] as unknown;
+			if (raw === '' || raw === null || raw === undefined) continue;
+			const values: number[] = [];
+			if (typeof raw === 'number') values.push(raw);
+			else if (typeof raw === 'string' && raw.trim() !== '') {
+				const n = Number(raw);
+				if (!Number.isNaN(n)) values.push(n);
+			} else if (typeof raw === 'object') {
+				for (const v of Object.values(raw as Record<string, unknown>)) {
+					if (v === '' || v === null || v === undefined) continue;
+					const n = Number(v);
+					if (!Number.isNaN(n)) values.push(n);
+				}
+			}
+			if (values.length === 0) continue;
+			// For multi-entry vitals (BP AM+PM), take the mean of the day's
+			// readings as the "value of the day" — the doctor-glance tile
+			// is a snapshot, not the AM/PM split (that lives on the chart).
+			const dayMean = values.reduce((a, b) => a + b, 0) / values.length;
+			readings.push({ date: ds, v: dayMean });
+		}
+		if (readings.length === 0) return null;
+		readings.sort((a, b) => b.date.localeCompare(a.date));
+		const last = readings[0].v;
+		const prev = readings.length > 1 ? readings[1].v : null;
+		const unitStr = vital.unit ? ` ${vital.unit}` : '';
+		// Format: 1-decimal under 20, integer at/above 20 (BP / pulse).
+		const fmt = (n: number) => (Math.abs(n) >= 20 ? String(Math.round(n)) : n.toFixed(1));
+		const value = `${fmt(last)}${unitStr}`;
+		let delta: StatCardDelta | undefined;
+		if (prev !== null && Math.abs(last - prev) >= 0.05) {
+			const d = last - prev;
+			delta = {
+				sign: d > 0 ? '+' : '-',
+				value: fmt(Math.abs(d)),
+				// Vital cohorts: neutral semantic (no good/bad). Direction
+				// interpretation depends on biology — TSH falling on a
+				// hypothyroid patient is good, on a hyperthyroid patient is
+				// bad. The tile shows direction; doctor interprets.
+				semantic: 'neutral',
+			};
+		}
+		return { label: t(vital.label), value, accent: acc.primary, delta };
+	};
+
+	// pi24 P-PDF-4 — Per-cohort tile priority list. Picks first 4 tiles
+	// that return non-null. Pre-pi24 a fixed 4-tile slate let 3 of 4
+	// tiles render "—" on a real Hans PDF — pure decoration with
+	// confidence. The new priority lists carry 5-7 candidates each so
+	// there's always a populated fallback. Order matches campfire
+	// consensus (vital-primary first for vital cohorts, episode-first
+	// for episode cohorts, etc.).
+	const conditionId = blueprint.conditionId;
+	const vitalPinPerCondition: Record<string, string> = {
+		hashimoto: 'tsh',
+		hypertension: 'bp_systolic',
+		cardiovascular: 'bp_systolic',
+		diabetes: 'blood_sugar',
+		parkinson: 'tremor_intensity',
+		bipolar: 'mood_polarity',
+	};
+	const candidatesForCohort = (): (Tile | null)[] => {
+		const vitalPin = vitalPinPerCondition[conditionId];
+		const vitalFirst = vitalPin ? [tileVitalLastValue(vitalPin)] : [];
 		switch (cohort) {
 			case 'discrete':
-				return [tileEpisodes(), tileEpisodeDurationDist(), tileRescueMed(), tileTopTrigger()];
+				// Vital-pinned discrete (hashimoto / hypertension / cardio /
+				// diabetes / parkinson): pinned-vital first, then episodes,
+				// duration, rescue-med, trigger, symptom, days-logged.
+				// Non-vital discrete (epilepsy / adhd / asthma / glaucoma):
+				// episodes first.
+				return [
+					...vitalFirst,
+					tileEpisodes(),
+					tileEpisodeDurationDist(),
+					tileRescueMed(),
+					tileTopTrigger(),
+					tileTopSymptom(),
+					tileDaysLogged(),
+				];
 			case 'cycle':
-				return [tileTopTrigger(), tileTopSymptom(), tileEpisodes(), tileDaysLogged()];
+				return [
+					tileTopTrigger(),
+					tileTopSymptom(),
+					tileEpisodes(),
+					tileRescueMed(),
+					tileDaysLogged(),
+				];
 			case 'phase':
-				return [tileEpisodes(), tilePhaseTopN(0), tilePhaseTopN(1), tileTopTrigger()];
+				// Bipolar gets polarity-vital tile FIRST (campfire consensus
+				// — polarity index is the bipolar clinical primary). Other
+				// phase cohorts (MS / IBD / etc.) lead with episodes.
+				return [
+					...vitalFirst,
+					tileEpisodes(),
+					tilePhaseTopN(0),
+					tilePhaseTopN(1),
+					tileTopTrigger(),
+					tileTopSymptom(),
+					tileDaysLogged(),
+				];
 			case 'narrative':
-				return [tileTopTrigger(), tileEpisodes(), tileTopSymptom(), tileDaysLogged()];
+				return [
+					tileTopTrigger(),
+					tileEpisodes(),
+					tileTopSymptom(),
+					tileRescueMed(),
+					tileDaysLogged(),
+				];
 			case 'custom':
 			default:
-				return [tileEpisodes(), tileTopSymptom(), tileTopTrigger(), tileDaysLogged()];
+				return [
+					tileEpisodes(),
+					tileTopSymptom(),
+					tileTopTrigger(),
+					tileRescueMed(),
+					tileDaysLogged(),
+				];
 		}
-	})();
+	};
+	const tiles: Tile[] = candidatesForCohort()
+		.filter((t): t is Tile => t !== null)
+		.slice(0, 4);
 
-	for (let i = 0; i < tiles.length; i++) {
-		const x = 14 + i * (tileW + tileGap);
-		drawStatCard(doc, x, cursorY, tileW, tileH, tiles[i].label, tiles[i].value, tiles[i].accent, tiles[i].delta);
+	// pi24 P-PDF-4 — Geometry adapts to actual tile count so fewer
+	// than 4 populated candidates renders a clean N-up row instead of
+	// padding with "—". Edge: zero tiles → skip the section entirely.
+	const renderTileCount = tiles.length;
+	if (renderTileCount > 0) {
+		const tileWAdaptive = renderTileCount === 4
+			? tileW
+			: (pageW - 28 - (renderTileCount - 1) * tileGap) / renderTileCount;
+		for (let i = 0; i < renderTileCount; i++) {
+			const x = 14 + i * (tileWAdaptive + tileGap);
+			drawStatCard(doc, x, cursorY, tileWAdaptive, tileH, tiles[i].label, tiles[i].value, tiles[i].accent, tiles[i].delta);
+		}
+		cursorY += tileH + 6;
 	}
-	cursorY += tileH + 6;
 
 	// CIPH-pi21-Track-B-4 — cohort-conditional middle. The typed gate at
 	// `cohortSections.ts:sectionsForCohort` decides which (if any) primitive

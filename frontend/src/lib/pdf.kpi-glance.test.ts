@@ -53,47 +53,67 @@ describe('CIPH-pi19-3 KPI glance layout (1 row × 4 tiles)', () => {
 	});
 });
 
-describe('CIPH-pi19-3 per-cohort tile selection', () => {
-	it('switch covers all 5 cohorts (discrete / cycle / phase / narrative / custom)', () => {
-		const sw = PDF.match(/switch \(cohort\) \{[\s\S]*?\n\t\t\}\n\t\}\)\(\)/);
-		expect(sw, 'expected cohort switch in pickKpiTiles').toBeTruthy();
+describe('CIPH-pi19-3 / pi24 P-PDF-4 per-cohort tile selection', () => {
+	it('candidatesForCohort switch covers all 5 cohorts', () => {
+		// pi24 P-PDF-4 — refactored from a fixed 4-tile slate to a
+		// priority list. `candidatesForCohort` returns 5-7 candidates;
+		// caller picks first 4 non-null. Switch shape unchanged.
+		const sw = PDF.match(/switch \(cohort\) \{[\s\S]*?\n\t\t\}\n\t\};/);
+		expect(sw, 'expected cohort switch in candidatesForCohort').toBeTruthy();
 		for (const c of ['discrete', 'cycle', 'phase', 'narrative', 'custom']) {
 			expect(sw![0]).toMatch(new RegExp(`case '${c}':`));
 		}
 	});
 
-	it('discrete leads with episodes + duration-distribution (CIPH-pi23-B2-fix-2)', () => {
-		// PI v23 B2' dogfood walkthrough finding F-H2: tileTopSymptom is
-		// information-poor for epilepsy; tileEpisodeDurationDist gives the
-		// clinically-central status-epilepticus risk read instead. New tile
-		// order: [tileEpisodes, tileEpisodeDurationDist, tileRescueMed,
-		// tileTopTrigger] — the first two are the load-bearing ones.
+	it('discrete contains episodes + duration-distribution in order (CIPH-pi23-B2-fix-2 preserved)', () => {
+		// PI v23 B2' clinical primary order preserved. pi24 P-PDF-4 spreads
+		// `vitalFirst` at the head for vital-pinned discrete conditions
+		// (hashimoto, hypertension etc.) — the regex below tolerates any
+		// prefix as long as tileEpisodes comes before tileEpisodeDurationDist
+		// inside the discrete case.
 		expect(PDF).toMatch(
-			/case 'discrete':\s*\n\s*return\s*\[tileEpisodes\(\),\s*tileEpisodeDurationDist\(\)/,
+			/case 'discrete':[\s\S]*?tileEpisodes\(\)[\s\S]*?tileEpisodeDurationDist\(\)/,
 		);
 	});
 
-	it('phase leads with episodes + tilePhaseTopN (CIPH-pi23-B2-fix-1)', () => {
-		// PI v23 B2' dogfood walkthrough finding F-A2: tileTopSymptom (e.g.
-		// "Reizbarkeit (8)" for bipolar) is information-poor next to phase
-		// day-coverage. New tile order: [tileEpisodes, tilePhaseTopN(0),
-		// tilePhaseTopN(1), tileTopTrigger] — picks the top-2 multiDay
-		// episode types by day-coverage.
+	it('phase contains episodes + tilePhaseTopN in order (CIPH-pi23-B2-fix-1 preserved)', () => {
 		expect(PDF).toMatch(
-			/case 'phase':\s*\n\s*return\s*\[tileEpisodes\(\),\s*tilePhaseTopN\(0\),\s*tilePhaseTopN\(1\)/,
+			/case 'phase':[\s\S]*?tileEpisodes\(\)[\s\S]*?tilePhaseTopN\(0\)[\s\S]*?tilePhaseTopN\(1\)/,
 		);
 	});
 
 	it('narrative leads with topTrigger (memo §1: trigger frequency IS page 1)', () => {
 		expect(PDF).toMatch(
-			/case 'narrative':\s*\n\s*return\s*\[tileTopTrigger\(\)/,
+			/case 'narrative':\s*\n\s*return\s*\[\s*tileTopTrigger\(\)/,
 		);
 	});
 
 	it('cycle leads with topTrigger (memo §1: trigger × phase intersection)', () => {
 		expect(PDF).toMatch(
-			/case 'cycle':\s*\n\s*return\s*\[tileTopTrigger\(\)/,
+			/case 'cycle':\s*\n\s*return\s*\[\s*tileTopTrigger\(\)/,
 		);
+	});
+
+	it('vital-pinned conditions get vitalFirst spread before generic tiles', () => {
+		// pi24 P-PDF-4 — Hashimoto/hypertension/cardiovascular/diabetes/
+		// parkinson/bipolar each pin a clinical-primary vital that takes
+		// the leading tile slot when the vital has data. Empty pin map
+		// would silently drop this discipline.
+		expect(PDF).toMatch(/vitalPinPerCondition[\s\S]*?hashimoto:\s*'tsh'/);
+		expect(PDF).toMatch(/vitalPinPerCondition[\s\S]*?hypertension:\s*'bp_systolic'/);
+		expect(PDF).toMatch(/vitalPinPerCondition[\s\S]*?bipolar:\s*'mood_polarity'/);
+	});
+
+	it('tile factories return Tile | null so the selector can fall through', () => {
+		// pi24 P-PDF-4 — pre-pi24 each factory returned `Tile` with
+		// "—" placeholder values; now each returns `Tile | null` so the
+		// priority-list selector can pick the next populated alternative.
+		// The 5-doctor agents campfire flagged "—" tiles as pure
+		// decoration with confidence (3 of 4 empty on real Hans PDF).
+		expect(PDF).toMatch(/tileEpisodes\s*=\s*\(\):\s*Tile\s*\|\s*null/);
+		expect(PDF).toMatch(/tileTopSymptom\s*=\s*\(\):\s*Tile\s*\|\s*null/);
+		expect(PDF).toMatch(/tileTopTrigger\s*=\s*\(\):\s*Tile\s*\|\s*null/);
+		expect(PDF).toMatch(/tileRescueMed\s*=\s*\(\):\s*Tile\s*\|\s*null/);
 	});
 
 	it('episode delta semantic — increase=bad, decrease=good (more events = worse)', () => {
