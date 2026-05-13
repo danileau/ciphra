@@ -3440,14 +3440,43 @@ export function generateDoctorPdf(
 	// ── Append day-by-day grid(s). 'month' scope = one grid for the focus
 	// month. 'year' / '2years' scope = one grid per month in the window, so
 	// the doctor can spot-check any specific month without extra exports.
+	//
+	// pi24 P-PDF-9 — Cohort-aware grid culling. Per PDF_TEMPLATE.md
+	// Section 14 (Cohort-specific appendix), the daily symptom grid is
+	// appendix material and only belongs when daily binary symptom-
+	// tracking is the cohort's logging convention. Vital-pinned cohorts
+	// (Hashimoto, hypertension, cardiovascular, diabetes, parkinson)
+	// log labs / vitals on irregular schedules, not daily symptom
+	// checkboxes — their data is already on the vital chart. Cancer
+	// (narrative-treatment) is journal-primary and irregular. Custom
+	// cohorts have no convention to fall back on.
+	//
+	// Before pi24-P-PDF-9: every cohort got 12-24 pages of monthly
+	// grids regardless of clinical convention. Helena (Hashimoto) on
+	// year-scope produced a 24-page PDF mostly of empty grid cells.
+	// After P-PDF-9: those cohorts skip the grid entirely; their PDFs
+	// shrink to the 3-page summary + vital chart pages.
+	const COHORTS_WITHOUT_GRID = new Set<string>([
+		'hashimoto',
+		'cancer_treatment',
+		'hypertension',
+		'cardiovascular',
+		'diabetes',
+		'parkinson',
+	]);
+	const skipGrids =
+		cohortOf(blueprint) === 'custom' || COHORTS_WITHOUT_GRID.has(blueprint.conditionId);
 	const gridMonths: Array<{ y: number; m: number }> = [];
-	if (scope === 'month') {
-		gridMonths.push({ y: year, m: month });
-	} else {
-		// Iterate from oldest to newest so the appendix reads chronologically.
-		for (let i = scopeMonths - 1; i >= 0; i--) {
-			const d = new Date(year, month - i, 1);
-			gridMonths.push({ y: d.getFullYear(), m: d.getMonth() });
+	if (!skipGrids) {
+		if (scope === 'month') {
+			gridMonths.push({ y: year, m: month });
+		} else {
+			// Iterate from oldest to newest so the appendix reads
+			// chronologically.
+			for (let i = scopeMonths - 1; i >= 0; i--) {
+				const d = new Date(year, month - i, 1);
+				gridMonths.push({ y: d.getFullYear(), m: d.getMonth() });
+			}
 		}
 	}
 	for (const gm of gridMonths) {
