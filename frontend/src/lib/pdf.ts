@@ -2984,6 +2984,33 @@ export function generateDoctorPdf(
 	}
 
 	// ── Episode duration breakdown ──
+	// pi24 P-PDF-10 — Locale-aware unit conversion footnote for thyroid
+	// labs. Steiner's specific call-out from the 5-doctor agents
+	// campfire: Swiss endocrinology reads free T4 / free T3 in pmol/L
+	// (SI convention), but the Hashimoto preset stores values in
+	// ng/dL / pg/mL (US convention). Rather than convert values at
+	// render time (which would require migrating stored data + changing
+	// future input fields), the footnote displays the conversion
+	// factors so a DE/FR/IT reader can compute pmol/L mentally without
+	// looking up the factor. Display is annotation only — no value
+	// transformation, no abnormality computation. Spec-aligned per
+	// PDF_TEMPLATE.md Section 10.
+	const showThyroidConversionNote =
+		blueprint.conditionId === 'hashimoto'
+		&& (locale === 'de' || locale === 'fr' || locale === 'it');
+	if (showThyroidConversionNote) {
+		if (cursorY + 6 > pageH - 20) {
+			doc.addPage();
+			paintPaper(doc);
+			cursorY = 20;
+		}
+		doc.setFont('helvetica', 'italic');
+		doc.setFontSize(7);
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(t('pdf.unit_conv_thyroid'), 14, cursorY);
+		cursorY += 5;
+	}
+
 	// For episode types with `trackDuration: true` (epilepsy, migraine,
 	// glaucoma episodes), aggregate the duration buckets across the last 12
 	// months. A 5-minute focal vs a 30-second focal mean different things —

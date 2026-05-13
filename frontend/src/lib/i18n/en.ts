@@ -1208,6 +1208,7 @@ export default {
 	'pdf.trend_polarity_more_manic': 'Polarity: more manic',
 	'pdf.trend_polarity_more_depressive': 'Polarity: more depressive',
 	'pdf.trend_polarity_closer_to_baseline': 'Polarity: closer to baseline',
+	'pdf.unit_conv_thyroid': 'Conversion factors: free T4 (ng/dL) × 12.87 = pmol/L  ·  free T3 (pg/mL) × 1.54 = pmol/L',
 	'pdf.trajectory_narrative': 'Over the last {months} months, average monthly episode count moved from {first} to {last} — overall trend: {trend}.',
 	'pdf.for_doctor_title': 'For your doctor',
 	'pdf.for_doctor_subtitle': 'Four things to look at first',
