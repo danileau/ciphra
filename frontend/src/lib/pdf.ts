@@ -1117,16 +1117,49 @@ function drawGridSection(
 	const symptomCols = effectiveSymptomColumns(blueprint, documents, monthPrefix, POSITIVE_MARKERS);
 	const episodeCols = effectiveEpisodeColumns(blueprint, documents, monthPrefix);
 
+	// pi24 P-PDF-bug — Monthly-grid headers wrapped mid-word at narrow
+	// column widths (e.g. "Schlecht g eschlafen", "Generalisier t (GM)";
+	// the Notes column collapsed to vertical letter-stacks "N o ti z e n").
+	// Two fixes paired: explicit per-column cellWidth below + label
+	// abbreviation here. Trim long words at the last space within the
+	// limit so we get clean breaks like "Schlecht gesch." rather than
+	// "Schlecht g eschlafen". Bracketed suffixes ("(GM)") are preserved
+	// because they're load-bearing for episode-type disambiguation.
+	const abbreviateHeader = (s: string, max = 12): string => {
+		if (s.length <= max) return s;
+		// Bracketed suffix at the end → preserve it, trim the body.
+		const bracketMatch = s.match(/^(.*?)(\s*\([^)]+\))\s*$/);
+		if (bracketMatch) {
+			const body = bracketMatch[1];
+			const suffix = bracketMatch[2];
+			if (suffix.length + 1 < max) {
+				const bodyMax = max - suffix.length - 1;
+				const bodyTrim = body.length <= bodyMax ? body : body.slice(0, bodyMax - 1) + '.';
+				return `${bodyTrim}${suffix}`;
+			}
+		}
+		// Multi-word → take first word + abbreviated second
+		const words = s.split(/\s+/);
+		if (words.length > 1) {
+			const first = words[0];
+			if (first.length >= max) return first.slice(0, max - 1) + '.';
+			const remaining = max - first.length - 1;
+			if (remaining < 2) return first;
+			return `${first} ${words[1].slice(0, remaining - 1)}.`;
+		}
+		return s.slice(0, max - 1) + '.';
+	};
+
 	const symptomLabels = symptomCols.map((id) => {
 		for (const g of blueprint.symptomGroups) {
 			const item = g.items.find((i) => i.id === id);
-			if (item) return labelOf(t, item);
+			if (item) return abbreviateHeader(labelOf(t, item));
 		}
 		return id;
 	});
 	const episodeLabels = episodeCols.map((id) => {
 		const ep = blueprint.episodeTypes.find((e) => e.id === id);
-		return ep ? labelOf(t, ep) : id;
+		return ep ? abbreviateHeader(labelOf(t, ep)) : id;
 	});
 
 	const allHeaders = [t('pdf.day'), ...symptomLabels, ...episodeLabels, t('pdf.notes')];
@@ -1255,9 +1288,27 @@ function drawGridSection(
 		alternateRowStyles: {
 			fillColor: [252, 250, 248] as any,
 		},
-		columnStyles: {
-			0: { cellWidth: 10, fontStyle: 'bold', halign: 'center' },
-		},
+		// pi24 P-PDF-bug — Per-column explicit widths to prevent autoTable
+		// from squeezing data columns and char-wrapping headers. Day
+		// 10mm + Notes 32mm = 42mm fixed; remainder distributes across
+		// symptom+episode columns (~140mm available content width →
+		// ~10-14mm per data column for typical 8-12 col blueprints).
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		columnStyles: (() => {
+			const styles: Record<number, any> = {
+				0: { cellWidth: 10, fontStyle: 'bold', halign: 'center' },
+			};
+			const notesColIdx = 1 + symptomCols.length + episodeCols.length;
+			styles[notesColIdx] = { cellWidth: 32 };
+			const dataColCount = symptomCols.length + episodeCols.length;
+			if (dataColCount > 0) {
+				const dataColW = Math.max(10, Math.min(14, 140 / dataColCount));
+				for (let i = 1; i <= dataColCount; i++) {
+					styles[i] = { cellWidth: dataColW, halign: 'center' };
+				}
+			}
+			return styles;
+		})(),
 		didParseCell: (data: any) => {
 			const rowIdx = data.row.index;
 			const colIdx = data.column.index;
