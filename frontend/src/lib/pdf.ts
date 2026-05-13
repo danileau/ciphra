@@ -2701,7 +2701,26 @@ export function generateDoctorPdf(
 
 	type MiniSeries = { label: string; color: string; values: (number | null)[] };
 	type RefLine = { value: number; label: string };
-	type MiniChart = { title: string; series: MiniSeries[]; yLabel?: string; referenceLines?: RefLine[] };
+	// pi24 P-PDF-3 — `kind` discriminates the renderer. 'line' is the default
+	// (current behavior). 'diverging-bars' renders signed-magnitude data
+	// centered on a zero baseline — added for bipolar mood_polarity (-5..+5)
+	// per Brunner's 5-doctor campfire critique: a line chart oscillating
+	// across zero reads as noise, while bars above/below zero answer the
+	// "how much manic vs how much depressed" question at a glance. The
+	// `yMin` / `yMax` overrides pin the y-axis to the vital's declared
+	// range so the zero baseline stays centered and bar magnitudes compare
+	// across months. Diverging-bar charts must declare both yMin and yMax;
+	// the renderer asserts that yMin < 0 < yMax.
+	type MiniChart = {
+		title: string;
+		series: MiniSeries[];
+		yLabel?: string;
+		referenceLines?: RefLine[];
+		kind?: 'line' | 'diverging-bars';
+		yMin?: number;
+		yMax?: number;
+		negativeColor?: string;
+	};
 
 	const miniCharts: MiniChart[] = [];
 
@@ -2780,11 +2799,33 @@ export function generateDoctorPdf(
 		const refLines: RefLine[] = v.referenceLine
 			? [{ value: v.referenceLine.value, label: t(v.referenceLine.labelKey) }]
 			: [];
-		miniCharts.push({
-			title: `${vitalLabelOf(t, v)}${v.unit ? ` (${translateUnit(t, v.unit)})` : ''}`,
-			series: [{ label: vitalLabelOf(t, v), color: DATA_HEX.d1, values }],
-			referenceLines: refLines.length ? refLines : undefined,
-		});
+		// pi24 P-PDF-3 — Polarity vitals (declared `min < 0`, e.g. bipolar
+		// mood_polarity at -5..+5) render as diverging bars on a zero
+		// baseline instead of a line. Brunner's 5-doctor campfire
+		// critique: a line through zero reads as noise on sign+magnitude
+		// data; bars above/below zero communicate "how much manic vs how
+		// much depressed" at a glance without a clinical label. The chart
+		// remains pure display (raw values, neutral colors, no
+		// classification). yMin/yMax pin the axis so the zero baseline is
+		// centered and bar heights compare across months.
+		const isPolarVital = typeof v.min === 'number' && typeof v.max === 'number' && v.min < 0;
+		if (isPolarVital) {
+			miniCharts.push({
+				title: `${vitalLabelOf(t, v)}${v.unit ? ` (${translateUnit(t, v.unit)})` : ''}`,
+				series: [{ label: vitalLabelOf(t, v), color: DATA_HEX.d1, values }],
+				referenceLines: refLines.length ? refLines : undefined,
+				kind: 'diverging-bars',
+				yMin: v.min,
+				yMax: v.max,
+				negativeColor: DATA_HEX.d5,
+			});
+		} else {
+			miniCharts.push({
+				title: `${vitalLabelOf(t, v)}${v.unit ? ` (${translateUnit(t, v.unit)})` : ''}`,
+				series: [{ label: vitalLabelOf(t, v), color: DATA_HEX.d1, values }],
+				referenceLines: refLines.length ? refLines : undefined,
+			});
+		}
 		seenVitalIds.add(v.id);
 	}
 
@@ -2882,6 +2923,93 @@ export function generateDoctorPdf(
 				}
 			}
 			cursorY += 2;
+
+			// pi24 P-PDF-3 — Diverging-bars renderer for polarity vitals
+			// (e.g. bipolar mood_polarity). Per-bar color by sign; y-axis
+			// pinned to the vital's declared [min, max] so zero is
+			// centered. Brunner's 5-doctor campfire critique: a line chart
+			// on signed-magnitude data overstates continuity and reads as
+			// noise. Bars communicate "how much above zero / how much
+			// below zero" directly. The chart is pure display — neutral
+			// colors per sign, no clinical labels, no value judgment in
+			// the legend.
+			if (chart.kind === 'diverging-bars'
+				&& typeof chart.yMin === 'number'
+				&& typeof chart.yMax === 'number'
+				&& chart.yMin < 0
+				&& chart.yMax > 0) {
+				// Plot area background.
+				doc.setFillColor(...BRAND.paper);
+				doc.rect(cx, cursorY, cw, ch, 'F');
+				// Zero baseline — explicit, slightly stronger than the
+				// midline of a normal line chart because bars hang from it.
+				const yMin = chart.yMin;
+				const yMax = chart.yMax;
+				const yRange = yMax - yMin;
+				const zeroY = cursorY + ch - ((0 - yMin) / yRange) * ch;
+				doc.setDrawColor(...BRAND.borderSubtle);
+				doc.setLineWidth(0.3);
+				doc.line(cx, zeroY, cx + cw, zeroY);
+
+				// Y-labels (min, 0, max).
+				doc.setFont('helvetica', 'normal');
+				doc.setFontSize(6);
+				doc.setTextColor(...BRAND.textMuted);
+				const fmtPolar = (n: number) => n.toFixed(1);
+				doc.text(fmtPolar(yMax), cx - 1, cursorY + 2, { align: 'right' });
+				doc.text('0', cx - 1, zeroY + 1.2, { align: 'right' });
+				doc.text(fmtPolar(yMin), cx - 1, cursorY + ch, { align: 'right' });
+
+				// Bars: per-month one bar per value (single-series only;
+				// diverging bars don't compose with multi-series the way
+				// line charts do).
+				const series = chart.series[0];
+				if (series) {
+					const posRgb = hexToRGB(series.color);
+					const negRgb = hexToRGB(chart.negativeColor || series.color);
+					const n = series.values.length;
+					const barSlot = cw / Math.max(1, n);
+					const barWidth = Math.max(0.6, barSlot * 0.55);
+					for (let i = 0; i < n; i++) {
+						const v = series.values[i];
+						if (v === null) continue;
+						const cxBar = cx + (i + 0.5) * barSlot - barWidth / 2;
+						const valY = cursorY + ch - ((v - yMin) / yRange) * ch;
+						const top = Math.min(zeroY, valY);
+						const height = Math.abs(zeroY - valY);
+						if (height < 0.1) continue; // skip near-zero
+						const rgb = v >= 0 ? posRgb : negRgb;
+						doc.setFillColor(...rgb);
+						doc.rect(cxBar, top, barWidth, height, 'F');
+					}
+				}
+
+				// Shared chart frame + event lines + month labels — same
+				// chrome as the line-rendered charts so this section reads
+				// as one visual group.
+				drawEventLines(cx, cursorY, cw, ch, false);
+				doc.setDrawColor(...BRAND.ochreSoft);
+				doc.setLineWidth(0.4);
+				doc.roundedRect(cx - 0.3, cursorY - 0.3, cw + 0.6, ch + 0.6, 0.8, 0.8, 'S');
+
+				doc.setFont('helvetica', 'normal');
+				doc.setFontSize(5.5);
+				doc.setTextColor(...BRAND.textMuted);
+				const labelEvery = MONTHS <= 12 ? 1 : 2;
+				for (let i = 0; i < monthBuckets.length; i++) {
+					if (i % labelEvery !== 0 && i !== monthBuckets.length - 1) continue;
+					const b = monthBuckets[i];
+					const lx = cx + (i / Math.max(1, MONTHS - 1)) * cw;
+					const dt = new Date(b.y, b.m, 1);
+					const showYear = b.m === 0 || i === 0 || i === monthBuckets.length - 1;
+					const lbl = dt.toLocaleDateString(locale, showYear
+						? { month: 'short', year: '2-digit' }
+						: { month: 'short' });
+					doc.text(lbl, lx, cursorY + ch + 3, { align: 'center' });
+				}
+				cursorY += ch + 9;
+				continue;  // skip the default line-chart render below
+			}
 
 			// Plot area
 			doc.setFillColor(...BRAND.paper);
