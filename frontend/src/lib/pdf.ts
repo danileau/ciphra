@@ -27,6 +27,7 @@ import { sectionsForCohort } from '$lib/cohortSections';
 import { aggregatePhaseDistribution } from '$lib/pdfPhaseDistribution';
 import { aggregateCycleStrip } from '$lib/pdfCycleStrip';
 import { aggregateDailyMonthSeries } from '$lib/pdfDailyMonthChart';
+import { resolveTrajectoryPill } from '$lib/pdfTrajectory';
 import { PHASE_COLORS, type Phase } from '$lib/cycleState';
 import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
@@ -2082,57 +2083,79 @@ export function generateDoctorPdf(
 	const monthlyTotals = monthBuckets.map(b => b.total);
 	const monthlySymptomDays = monthBuckets.map(b => b.symptomDays);
 
-	// Trend: first 6 months vs last 6 months (only months with data)
-	const first6 = monthlyTotals.slice(0, 6).filter(v => v >= 0);
-	const last6 = monthlyTotals.slice(-6).filter(v => v >= 0);
-	const firstAvg = first6.length ? first6.reduce((a, b) => a + b, 0) / first6.length : 0;
-	const lastAvg = last6.length ? last6.reduce((a, b) => a + b, 0) / last6.length : 0;
-	const trendDelta = lastAvg - firstAvg;
-	const trendEps = Math.max(0.5, firstAvg * 0.1);
-	let trendLabelKey = 'pdf.trend_stable';
-	let trendColor: RGB = BRAND.textMuted;
-	let trendDir: TrendDir = 'flat';
-	if (trendDelta > trendEps) {
-		trendLabelKey = 'pdf.trend_worsening';
-		trendColor = BRAND.brick;
-		trendDir = 'up';
-	} else if (trendDelta < -trendEps) {
-		trendLabelKey = 'pdf.trend_improving';
-		trendColor = BRAND.olive;
-		trendDir = 'down';
-	}
+	// pi24 P-PDF-2 — Cohort-aware trajectory pill. The pre-pi24 algorithm
+	// computed first-6 vs last-6 average on episode counts and labeled it
+	// improving/stable/worsening for every cohort. The 5-doctor agents
+	// campfire (see `feedback_pdf_clinician_lens.md`) universally flagged
+	// this as the single most-cited concern: STABIL on Helena mid-
+	// titration, VERBESSERUNG on Hans with a recent GTC, VERSCHLECHTERUNG
+	// on Anna's normal-rhythm bipolar quarter, STABIL on Klaus with home
+	// BP above target. Each one a clinical mis-cue with green-pill
+	// confidence. resolveTrajectoryPill returns a typed spec OR null
+	// (omit pill). A wrong pill is worse than no pill.
+	const pillSpec = resolveTrajectoryPill(blueprint, documents, monthBuckets, episodeCols);
+	if (pillSpec) {
+		let trendLabel: string;
+		let trendColor: RGB;
+		let pillBg: RGB;
+		if (pillSpec.kind === 'episode') {
+			trendLabel = t(pillSpec.labelKey);
+			trendColor = pillSpec.trendDir === 'up' ? BRAND.brick
+				: pillSpec.trendDir === 'down' ? BRAND.olive
+				: BRAND.textMuted;
+			pillBg = pillSpec.trendDir === 'up' ? [249, 229, 224]
+				: pillSpec.trendDir === 'down' ? [238, 239, 213]
+				: BRAND.paperInset;
+			// Episode trajectory keeps the downstream narrative bullet
+			// (still episode-shaped copy); other kinds skip the bullet
+			// until P-PDF-8 lands data-driven vital + polarity copy.
+			chartContext = {
+				MONTHS,
+				firstAvg: pillSpec.firstAvg,
+				lastAvg: pillSpec.lastAvg,
+				trendLabel,
+				trendDir: pillSpec.trendDir,
+			};
+		} else if (pillSpec.kind === 'vital') {
+			// Neutral wording for vital cohorts — no "improving / worsening"
+			// value judgment in the label OR the color. Direction
+			// semantics depend on biology (TSH falling = good for hypothyroid
+			// on supplementation; rising = bad). Let the doctor read the
+			// number and interpret. Steiner's caveat from the campfire.
+			trendLabel = t(pillSpec.labelKey, { vital: t(pillSpec.vitalLabel) });
+			trendColor = BRAND.textPrimary;
+			pillBg = BRAND.paperInset;
+		} else {
+			// Polarity pill — both poles are clinically meaningful;
+			// "improving" and "worsening" don't map onto bipolar. Brunner:
+			// "treats bipolar like hypertension; cry wolf on every stable
+			// patient." Neutral color, label carries the meaning.
+			trendLabel = t(pillSpec.labelKey);
+			trendColor = BRAND.textPrimary;
+			pillBg = BRAND.paperInset;
+		}
 
-	// Trend badge: a soft-pill label on the right edge. No arrow — color
-	// + explicit text ("Weniger / Mehr Ereignisse") carry the direction.
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(9);
-	const trendLabel = t(trendLabelKey);
-	// Stash for bullet rendering outside this block.
-	chartContext = { MONTHS, firstAvg, lastAvg, trendLabel, trendDir };
-	const pillPadX = 3;
-	const pillPadY = 1.8;
-	const pillW = doc.getTextWidth(trendLabel) + pillPadX * 2;
-	const pillH = 6;
-	const pillX = pageW - 14 - pillW;
-	const pillY = cursorY - pillH + pillPadY;
-	const pillBg: RGB = trendDir === 'up' ? [249, 229, 224]
-		: trendDir === 'down' ? [238, 239, 213]
-		: BRAND.paperInset;
-	doc.setFillColor(...pillBg);
-	doc.roundedRect(pillX, pillY, pillW, pillH, 2, 2, 'F');
-	doc.setTextColor(...trendColor);
-	doc.text(trendLabel, pillX + pillW / 2, pillY + pillH - pillPadY, { align: 'center' });
+		// Trend badge: a soft-pill label on the right edge. No arrow —
+		// color + explicit text carry the direction (or, for vital /
+		// polarity pills, neutral color + text-with-direction-word).
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(9);
+		const pillPadX = 3;
+		const pillPadY = 1.8;
+		const pillW = doc.getTextWidth(trendLabel) + pillPadX * 2;
+		const pillH = 6;
+		const pillX = pageW - 14 - pillW;
+		const pillY = cursorY - pillH + pillPadY;
+		doc.setFillColor(...pillBg);
+		doc.roundedRect(pillX, pillY, pillW, pillH, 2, 2, 'F');
+		doc.setTextColor(...trendColor);
+		doc.text(trendLabel, pillX + pillW / 2, pillY + pillH - pillPadY, { align: 'center' });
+	}
+	// pillSpec === null → no pill drawn. The explicit safe-omit path
+	// for sparse data + narrative-no-episodes + custom cohort. The
+	// chart still renders below; only the pill is suppressed.
 
 	cursorY += 6;
-
-	// CIPH-pi19-3-fix — Narrative paragraph dropped (was 2-3 italic lines
-	// restating firstAvg → lastAvg → trend, all already conveyed by the
-	// trend pill above + the KPI tiles + the chart itself). Screen readers
-	// announce the trend pill text; the paragraph was redundant under the
-	// new KPI vocabulary. Variables `firstAvg`/`lastAvg`/`trendLabel` are
-	// retained because chartContext still exposes them to the bullet block
-	// later in the report.
-	void firstAvg; void lastAvg; void trendLabel;
 
 	const chartX = 22;
 	const chartW = pageW - 28 - 8;
