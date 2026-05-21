@@ -394,6 +394,45 @@ function drawWordmark(
 }
 
 /**
+ * DSPEC-4 — Series marker shape + stroke pattern per series index.
+ * Multi-series line charts must remain decipherable in grayscale, so
+ * each series gets a unique (shape × dash) pair. Per PDF_DESIGN_SPEC.md
+ * §9-10: primary circle, secondary square, third diamond, then hollow
+ * variants cycle through the same shapes. Stroke pattern shifts solid
+ * → dashed → dotted to give a second redundant signal.
+ */
+type SeriesMarkerShape = 'circle' | 'square' | 'diamond';
+type SeriesStyle = {
+	shape: SeriesMarkerShape;
+	filled: boolean;
+	dash: number[]; // empty = solid line
+};
+const SERIES_STYLES: SeriesStyle[] = [
+	{ shape: 'circle', filled: true, dash: [] },
+	{ shape: 'square', filled: true, dash: [1.2, 1.2] },
+	{ shape: 'diamond', filled: true, dash: [0.4, 0.8] },
+	{ shape: 'circle', filled: false, dash: [] },
+	{ shape: 'square', filled: false, dash: [1.2, 1.2] },
+	{ shape: 'diamond', filled: false, dash: [0.4, 0.8] },
+];
+function seriesStyleFor(i: number): SeriesStyle {
+	return SERIES_STYLES[i % SERIES_STYLES.length];
+}
+function drawMarker(doc: jsPDF, x: number, y: number, r: number, shape: SeriesMarkerShape, filled: boolean): void {
+	const op = filled ? 'F' : 'S';
+	if (shape === 'circle') {
+		doc.circle(x, y, r, op);
+	} else if (shape === 'square') {
+		doc.rect(x - r, y - r, r * 2, r * 2, op);
+	} else {
+		// Diamond — top vertex → right → bottom → left, auto-close back to top.
+		const deltas: number[][] = [[r, r], [-r, r], [-r, -r]];
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		doc.lines(deltas as any, x, y - r, undefined, op, true);
+	}
+}
+
+/**
  * DSPEC-5 — autoTable `didDrawCell` hook factory that draws a small
  * italic continuation label on the right edge of the first head row
  * for every continuation page (per PDF_DESIGN_SPEC.md §8, §12). The
@@ -2612,8 +2651,11 @@ export function generateDoctorPdf(
 		const sBezier = smoothBezierDeltas(sPoints, yTop, yBottom);
 		doc.lines(sBezier, sPoints[0][0], sPoints[0][1], undefined, 'S', false);
 		doc.setLineDashPattern([], 0);
+		// DSPEC-4 — secondary-series marker is a square (the primary
+		// episodes series uses circles above). Pairs with the dashed
+		// stroke so the two series stay distinguishable in grayscale.
 		doc.setFillColor(...BRAND.textMuted);
-		for (const [px, py] of sPoints) doc.circle(px, py, 0.4, 'F');
+		for (const [px, py] of sPoints) drawMarker(doc, px, py, 0.5, 'square', true);
 
 		// Right-edge scale disclosure: "max Symptom-Tage: 28"
 		doc.setFont('helvetica', 'normal');
@@ -2932,9 +2974,14 @@ export function generateDoctorPdf(
 			if (chart.series.length > 1) {
 				let lx = 14 + doc.getTextWidth(chart.title) + 6;
 				doc.setFontSize(7);
-				for (const s of chart.series) {
-					doc.setFillColor(...hexToRGB(s.color));
-					doc.circle(lx, cursorY - 1.2, 1, 'F');
+				for (let si = 0; si < chart.series.length; si++) {
+					const s = chart.series[si];
+					const style = seriesStyleFor(si);
+					const rgb = hexToRGB(s.color);
+					doc.setFillColor(...rgb);
+					doc.setDrawColor(...rgb);
+					doc.setLineWidth(0.3);
+					drawMarker(doc, lx, cursorY - 1.2, 1, style.shape, style.filled);
 					doc.setTextColor(...BRAND.textMuted);
 					doc.text(s.label, lx + 2, cursorY);
 					lx += doc.getTextWidth(s.label) + 7;
@@ -3076,13 +3123,17 @@ export function generateDoctorPdf(
 			// Each series — CIPH-pi19-3-fix: bezier-smoothed segments to
 			// match the rounded /reports Chart.js style. Same tension/clamp
 			// discipline as the trajectory line so overshoot can't dip below
-			// the chart frame.
+			// the chart frame. DSPEC-4: per-series (shape × dash) pair so
+			// the chart stays decipherable in grayscale.
 			const yTopMini = cursorY;
 			const yBottomMini = cursorY + ch;
-			for (const s of chart.series) {
+			for (let si = 0; si < chart.series.length; si++) {
+				const s = chart.series[si];
+				const style = seriesStyleFor(si);
 				const rgb = hexToRGB(s.color);
 				doc.setDrawColor(...rgb);
-				doc.setLineWidth(0.5);
+				doc.setLineWidth(si === 0 ? 0.5 : 0.4);
+				if (style.dash.length) doc.setLineDashPattern(style.dash, 0);
 				const pts: [number, number][] = [];
 				for (let i = 0; i < s.values.length; i++) {
 					const v = s.values[i];
@@ -3095,8 +3146,9 @@ export function generateDoctorPdf(
 					const bezier = smoothBezierDeltas(pts, yTopMini, yBottomMini);
 					doc.lines(bezier, pts[0][0], pts[0][1], undefined, 'S', false);
 				}
+				if (style.dash.length) doc.setLineDashPattern([], 0);
 				doc.setFillColor(...rgb);
-				for (const [x, y] of pts) doc.circle(x, y, 0.55, 'F');
+				for (const [x, y] of pts) drawMarker(doc, x, y, 0.55, style.shape, style.filled);
 			}
 			// Event markers (no labels — too cramped on mini charts) and the
 			// shared-axis ochre frame so the doctor sees this chart belongs
