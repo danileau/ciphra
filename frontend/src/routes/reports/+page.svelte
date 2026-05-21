@@ -300,6 +300,26 @@
 	async function exportForDoctor() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
+		// Feature flag for the CLINICAL_HANDOFF.md rewrite. Toggle via
+		// localStorage `ciphra_handoff_v2=1` to opt into the new
+		// single-page renderer. Legacy generateDoctorPdf stays the
+		// default until the new path reaches feature parity.
+		const useHandoffV2 =
+			typeof localStorage !== 'undefined' && localStorage.getItem('ciphra_handoff_v2') === '1';
+		if (useHandoffV2) {
+			const { generateClinicalHandoff } = await import('$lib/pdfHandoff');
+			generateClinicalHandoff(
+				bp,
+				exportableDocs,
+				d.getFullYear(),
+				d.getMonth(),
+				$t,
+				$locale,
+				$auth.username || '',
+				pdfScope,
+			);
+			return;
+		}
 		const { generateDoctorPdf } = await loadPdfLib();
 		generateDoctorPdf(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
 	}

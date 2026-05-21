@@ -139,9 +139,12 @@ export function generateClinicalHandoff(
 	// Primary block — dispatch on cohort. Returns the bottom Y.
 	cursorY = drawPrimaryBlock(doc, blueprint, documents, periodRange, t, locale, cursorY);
 
-	// Patient notes block (§2 block 5).
-	const notesStartY = cursorY;
-	cursorY = drawPatientNotes(doc, blueprint, documents, periodRange, t, locale, notesStartY);
+	// Secondary patient-notes block (§2 block 5). Narrative + custom
+	// cohorts ABSORB the notes into their primary block (entries ARE
+	// the page), so the secondary block stays suppressed for them.
+	if (!cohortAbsorbsNotes(blueprint)) {
+		cursorY = drawPatientNotes(doc, blueprint, documents, periodRange, t, locale, cursorY);
+	}
 
 	// Scope statement at the bottom. Drawn from the page edge upward
 	// regardless of where cursorY landed — §5 mandates bottom placement.
@@ -508,72 +511,860 @@ export function drawDoseChangeStrip(
 
 /* ─── Other cohort primary blocks (stubs — to be filled in next sessions) ─── */
 
+/**
+ * §3.2 — Episode cohort primary block.
+ * B&W calendar over the trailing 90 days. Empty cells = calm days
+ * (thin black border, white fill). Event days = black marker + 2-letter
+ * code. Same-day same-type collisions compress to `SZ x3`; multi-type
+ * collisions show the most-frequent code + `+N` suffix.
+ * Counts side-by-side below: `Previous: X · This: Y` over equal-length
+ * windows (no labeled delta).
+ */
 function drawEpisodeCohortPrimary(
 	doc: jsPDF,
 	blueprint: Blueprint,
-	_documents: CiphraDocument[],
-	_periodRange: { startISO: string; endISO: string },
+	documents: CiphraDocument[],
+	periodRange: { startISO: string; endISO: string },
 	t: TranslateFn,
-	_locale: string,
+	locale: string,
 	y: number,
 ): number {
-	return drawStubPrimary(doc, t('handoff.cohort_stub_episode'), y);
+	// Calendar window: trailing 90 days ending at periodRange.endISO, but
+	// never extending before periodRange.startISO. For month scope this
+	// collapses to the month; for year scope it caps at 90 days.
+	const window = computeCalendarWindow(periodRange, 90);
+	const previous = computePreviousWindow(window);
+	const eventsByDay = aggregateEpisodesByDay(documents, blueprint, window);
+	const thisCount = countEpisodesInWindow(documents, blueprint, window);
+	const prevCount = countEpisodesInWindow(documents, blueprint, previous);
+	const thisDaysWithEvents = countDaysWithEpisodes(documents, blueprint, window);
+	const prevDaysWithEvents = countDaysWithEpisodes(documents, blueprint, previous);
+
+	// Heading.
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.head);
+	doc.setTextColor(...INK.primary);
+	doc.text(t('handoff.episodes_title'), GEO.marginX, y + 4);
+
+	// Calendar grid.
+	const gridX = GEO.marginX;
+	const gridY = y + 10;
+	const labelColW = 20;
+	const cellW = (GEO.contentW - labelColW) / 7;
+	const cellH = 7.5;
+	drawEpisodeCalendar(doc, gridX, gridY, labelColW, cellW, cellH, window, eventsByDay, locale, t);
+
+	// Counts row.
+	const calendarBottomY = gridY + 5 /* header */ + numWeeksInWindow(window) * cellH + 4;
+	let yi = calendarBottomY;
+
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.compact);
+	doc.setTextColor(...INK.primary);
+	const row1 = `${t('handoff.episodes_recorded')}    ${t('handoff.previous')}: ${prevCount}  ·  ${t('handoff.this_window')}: ${thisCount}`;
+	doc.text(row1, GEO.marginX, yi);
+	yi += 4;
+	const row2 = `${t('handoff.days_with_events')}    ${t('handoff.previous')}: ${prevDaysWithEvents}  ·  ${t('handoff.this_window')}: ${thisDaysWithEvents}`;
+	doc.text(row2, GEO.marginX, yi);
+	yi += 4;
+
+	return Math.max(yi, y + GEO.primaryH);
 }
 
+interface DayCell {
+	codeBuckets: Map<string, number>;
+}
+
+function drawEpisodeCalendar(
+	doc: jsPDF,
+	x: number,
+	y: number,
+	labelColW: number,
+	cellW: number,
+	cellH: number,
+	window: { startISO: string; endISO: string },
+	eventsByDay: Map<string, DayCell>,
+	locale: string,
+	_t: TranslateFn,
+): void {
+	// Header row: weekday names (M T W T F S S). Always 7 cells.
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.axis);
+	doc.setTextColor(...INK.muted);
+	const headerY = y + 3;
+	const weekdayInitials = computeWeekdayInitials(locale);
+	for (let i = 0; i < 7; i++) {
+		const cellX = x + labelColW + i * cellW;
+		doc.text(weekdayInitials[i], cellX + cellW / 2, headerY, { align: 'center' });
+	}
+
+	const gridTopY = y + 5;
+	const startDate = parseISO(window.startISO);
+	const endDate = parseISO(window.endISO);
+
+	// Pad startDate back to the previous Monday so column = day-of-week
+	// alignment holds across the whole grid. Padded cells are drawn as
+	// dimmed empty placeholders.
+	const startDow = (startDate.getDay() + 6) % 7; // Mon=0..Sun=6
+	const gridStart = new Date(startDate);
+	gridStart.setDate(gridStart.getDate() - startDow);
+
+	const weeks = numWeeksInWindow(window);
+	doc.setDrawColor(...INK.hairline);
+	doc.setLineWidth(0.15);
+
+	for (let w = 0; w < weeks; w++) {
+		const rowY = gridTopY + w * cellH;
+
+		// Row label: first day of the week (Mon).
+		const rowDate = new Date(gridStart);
+		rowDate.setDate(rowDate.getDate() + w * 7);
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.axis);
+		doc.setTextColor(...INK.muted);
+		doc.text(formatMonDayLocale(rowDate, locale), x + labelColW - 2, rowY + cellH / 2 + 1, { align: 'right' });
+
+		// 7 day cells.
+		for (let d = 0; d < 7; d++) {
+			const cellX = x + labelColW + d * cellW;
+			const cellY = rowY;
+			const dayDate = new Date(gridStart);
+			dayDate.setDate(dayDate.getDate() + w * 7 + d);
+			const dayISO = formatDateISOFromDate(dayDate);
+
+			const isInWindow = dayISO >= window.startISO && dayISO <= window.endISO;
+			if (!isInWindow) {
+				// Out-of-window pad cell — leave blank (no border).
+				continue;
+			}
+
+			// Cell border (calm-day affordance, §1.5 + §3.2).
+			doc.setDrawColor(...INK.hairline);
+			doc.setLineWidth(0.15);
+			doc.rect(cellX + 0.3, cellY + 0.3, cellW - 0.6, cellH - 0.6, 'S');
+
+			// Event content, if any.
+			const dayCell = eventsByDay.get(dayISO);
+			if (!dayCell || dayCell.codeBuckets.size === 0) continue;
+
+			// In-cell label: the most-frequent code (collision compress).
+			const sortedCodes = Array.from(dayCell.codeBuckets.entries()).sort((a, b) => b[1] - a[1]);
+			const [topCode, topN] = sortedCodes[0];
+			const extraTypes = sortedCodes.length - 1;
+			let label = topN > 1 ? `${topCode} x${topN}` : topCode;
+			if (extraTypes > 0) label += ` +${extraTypes}`;
+
+			doc.setFont('helvetica', 'bold');
+			doc.setFontSize(TYPE.axis);
+			doc.setTextColor(...INK.primary);
+			doc.text(label, cellX + cellW / 2, cellY + cellH / 2 + 1, { align: 'center' });
+
+			// Filled black dot to the left of the label (event marker
+			// affordance, B&W safe per §1.5 + tribunal split 2 spirit).
+			doc.setFillColor(...INK.primary);
+			doc.circle(cellX + 1.4, cellY + cellH / 2, 0.7, 'F');
+		}
+	}
+}
+
+export function computeCalendarWindow(
+	periodRange: { startISO: string; endISO: string },
+	maxDays: number,
+): { startISO: string; endISO: string } {
+	const end = parseISO(periodRange.endISO);
+	const minStart = parseISO(periodRange.startISO);
+	const trailing = new Date(end);
+	trailing.setDate(trailing.getDate() - (maxDays - 1));
+	const start = trailing > minStart ? trailing : minStart;
+	return { startISO: formatDateISOFromDate(start), endISO: periodRange.endISO };
+}
+
+export function computePreviousWindow(window: { startISO: string; endISO: string }): { startISO: string; endISO: string } {
+	const start = parseISO(window.startISO);
+	const end = parseISO(window.endISO);
+	const lengthDays = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+	const prevEnd = new Date(start);
+	prevEnd.setDate(prevEnd.getDate() - 1);
+	const prevStart = new Date(prevEnd);
+	prevStart.setDate(prevStart.getDate() - (lengthDays - 1));
+	return { startISO: formatDateISOFromDate(prevStart), endISO: formatDateISOFromDate(prevEnd) };
+}
+
+function numWeeksInWindow(window: { startISO: string; endISO: string }): number {
+	const start = parseISO(window.startISO);
+	const end = parseISO(window.endISO);
+	const startDow = (start.getDay() + 6) % 7;
+	const padded = new Date(start);
+	padded.setDate(padded.getDate() - startDow);
+	const days = Math.round((end.getTime() - padded.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+	return Math.ceil(days / 7);
+}
+
+export function aggregateEpisodesByDay(
+	documents: CiphraDocument[],
+	blueprint: Blueprint,
+	window: { startISO: string; endISO: string },
+): Map<string, DayCell> {
+	const map = new Map<string, DayCell>();
+	const epTypes = blueprint.episodeTypes ?? [];
+
+	for (const d of documents) {
+		const data = d.data as Record<string, unknown> & { date?: string; type?: string; episodes?: Record<string, unknown> };
+		const dateISO = String(data?.date || '');
+		if (!dateISO || dateISO < window.startISO || dateISO > window.endISO) continue;
+		const eps = data?.episodes;
+		if (!eps || typeof eps !== 'object') continue;
+
+		let cell = map.get(dateISO);
+		if (!cell) {
+			cell = { codeBuckets: new Map() };
+			map.set(dateISO, cell);
+		}
+
+		for (const ep of epTypes) {
+			const raw = (eps as Record<string, unknown>)[ep.id];
+			const n = Number(raw);
+			if (!Number.isFinite(n) || n <= 0) continue;
+			const code = shortCodeForEpisode(ep.id, ep.label);
+			cell.codeBuckets.set(code, (cell.codeBuckets.get(code) ?? 0) + n);
+		}
+	}
+
+	return map;
+}
+
+export function countEpisodesInWindow(
+	documents: CiphraDocument[],
+	blueprint: Blueprint,
+	window: { startISO: string; endISO: string },
+): number {
+	const epIds = (blueprint.episodeTypes ?? []).map((e) => e.id);
+	let total = 0;
+	for (const d of documents) {
+		const data = d.data as Record<string, unknown> & { date?: string; episodes?: Record<string, unknown> };
+		const dateISO = String(data?.date || '');
+		if (!dateISO || dateISO < window.startISO || dateISO > window.endISO) continue;
+		const eps = data?.episodes;
+		if (!eps || typeof eps !== 'object') continue;
+		for (const id of epIds) {
+			const n = Number((eps as Record<string, unknown>)[id]);
+			if (Number.isFinite(n) && n > 0) total += n;
+		}
+	}
+	return total;
+}
+
+export function countDaysWithEpisodes(
+	documents: CiphraDocument[],
+	blueprint: Blueprint,
+	window: { startISO: string; endISO: string },
+): number {
+	const epIds = (blueprint.episodeTypes ?? []).map((e) => e.id);
+	const days = new Set<string>();
+	for (const d of documents) {
+		const data = d.data as Record<string, unknown> & { date?: string; episodes?: Record<string, unknown> };
+		const dateISO = String(data?.date || '');
+		if (!dateISO || dateISO < window.startISO || dateISO > window.endISO) continue;
+		const eps = data?.episodes;
+		if (!eps || typeof eps !== 'object') continue;
+		for (const id of epIds) {
+			const n = Number((eps as Record<string, unknown>)[id]);
+			if (Number.isFinite(n) && n > 0) {
+				days.add(dateISO);
+				break;
+			}
+		}
+	}
+	return days.size;
+}
+
+/**
+ * Derive a 2-letter event code for an episode type.
+ * - `tonic_clonic` → `TC`
+ * - `focal_aware` → `FA`
+ * - `migraine` → `MI`
+ * - `aura` → `AU`
+ * Underscore-separated → initials of first two parts; single word →
+ * first two letters. Always uppercase. Collisions within a blueprint
+ * are possible but acceptable for the first-glance read; the doctor
+ * resolves on the day-by-day list which lives in the patient app.
+ */
+export function shortCodeForEpisode(id: string, _label: string): string {
+	const parts = id.split('_').filter((p) => p.length > 0);
+	if (parts.length >= 2) {
+		return (parts[0][0] + parts[1][0]).toUpperCase();
+	}
+	return (parts[0] ?? id).slice(0, 2).toUpperCase();
+}
+
+function computeWeekdayInitials(locale: string): string[] {
+	// Mon..Sun. Use the locale's short weekday label, take the first
+	// character (uppercase). Sunday is the last column per ISO 8601.
+	const out: string[] = [];
+	const base = new Date(2026, 0, 5); // Monday 2026-01-05
+	for (let i = 0; i < 7; i++) {
+		const d = new Date(base);
+		d.setDate(d.getDate() + i);
+		const short = d.toLocaleDateString(locale, { weekday: 'short' });
+		out.push((short[0] ?? '·').toUpperCase());
+	}
+	return out;
+}
+
+function parseISO(iso: string): Date {
+	const [y, m, d] = iso.split('-').map(Number);
+	return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
+function formatDateISOFromDate(d: Date): string {
+	return formatDateISO(d);
+}
+
+function formatMonDayLocale(d: Date, locale: string): string {
+	return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+}
+
+/**
+ * §3.3 — Cycle cohort primary block.
+ * Per-month horizontal strip showing bleeding-vs-calm days. Bleeding
+ * days = filled black dots; calm days = empty cells with thin black
+ * border. Side-by-side counts below: `Cycles: P · T` and `Bleeding
+ * days: P · T`. No interpretation of regularity.
+ *
+ * Bleeding-day detection: `vitals.bleeding_intensity > 0` OR
+ * `symptoms.heavy_bleeding === true` OR `triggers.menstruation`.
+ */
 function drawCycleCohortPrimary(
 	doc: jsPDF,
 	_blueprint: Blueprint,
-	_documents: CiphraDocument[],
-	_periodRange: { startISO: string; endISO: string },
+	documents: CiphraDocument[],
+	periodRange: { startISO: string; endISO: string },
 	t: TranslateFn,
-	_locale: string,
+	locale: string,
 	y: number,
 ): number {
-	return drawStubPrimary(doc, t('handoff.cohort_stub_cycle'), y);
+	const window = computeCalendarWindow(periodRange, 90);
+	const previous = computePreviousWindow(window);
+	const bleedingDays = aggregateBleedingDays(documents, window);
+	const prevBleedingDays = aggregateBleedingDays(documents, previous);
+	const cyclesThis = countCycles(bleedingDays);
+	const cyclesPrev = countCycles(prevBleedingDays);
+
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.head);
+	doc.setTextColor(...INK.primary);
+	doc.text(t('handoff.cycle_title'), GEO.marginX, y + 4);
+
+	const stripsY = y + 10;
+	const labelColW = 14;
+	const monthsInWindow = enumerateMonthsInWindow(window);
+	const stripH = 6;
+
+	for (let i = 0; i < monthsInWindow.length; i++) {
+		const m = monthsInWindow[i];
+		const stripY = stripsY + i * (stripH + 2);
+		drawCycleMonthStrip(
+			doc,
+			GEO.marginX,
+			stripY,
+			labelColW,
+			GEO.contentW - labelColW,
+			stripH,
+			m,
+			bleedingDays,
+			locale,
+		);
+	}
+
+	const stripsBottomY = stripsY + monthsInWindow.length * (stripH + 2) + 4;
+	let yi = stripsBottomY;
+
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.compact);
+	doc.setTextColor(...INK.primary);
+	const row1 = `${t('handoff.cycles_in_period')}    ${t('handoff.previous')}: ${cyclesPrev}  ·  ${t('handoff.this_window')}: ${cyclesThis}`;
+	doc.text(row1, GEO.marginX, yi);
+	yi += 4;
+	const row2 = `${t('handoff.bleeding_days_count')}    ${t('handoff.previous')}: ${prevBleedingDays.size}  ·  ${t('handoff.this_window')}: ${bleedingDays.size}`;
+	doc.text(row2, GEO.marginX, yi);
+	yi += 4;
+
+	return Math.max(yi, y + GEO.primaryH);
 }
 
+function drawCycleMonthStrip(
+	doc: jsPDF,
+	x: number,
+	y: number,
+	labelColW: number,
+	stripW: number,
+	stripH: number,
+	month: { year: number; month: number; daysInMonth: number },
+	bleedingDays: Set<string>,
+	locale: string,
+): void {
+	// Month label (left of strip).
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.axis);
+	doc.setTextColor(...INK.muted);
+	const monthLabel = new Date(month.year, month.month, 1).toLocaleDateString(locale, { month: 'short' });
+	doc.text(monthLabel, x, y + stripH / 2 + 1);
+
+	// Day cells.
+	const cellW = stripW / 31; // pad to 31 for consistent width across months
+	for (let d = 1; d <= month.daysInMonth; d++) {
+		const cellX = x + labelColW + (d - 1) * cellW;
+		const dayISO = `${month.year}-${String(month.month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+		const isBleeding = bleedingDays.has(dayISO);
+
+		// Cell border (calm-day affordance).
+		doc.setDrawColor(...INK.hairline);
+		doc.setLineWidth(0.15);
+		doc.rect(cellX + 0.2, y + 0.2, cellW - 0.4, stripH - 0.4, 'S');
+
+		if (isBleeding) {
+			doc.setFillColor(...INK.primary);
+			doc.circle(cellX + cellW / 2, y + stripH / 2, Math.min(cellW, stripH) * 0.28, 'F');
+		}
+	}
+}
+
+export function aggregateBleedingDays(
+	documents: CiphraDocument[],
+	window: { startISO: string; endISO: string },
+): Set<string> {
+	const days = new Set<string>();
+	for (const d of documents) {
+		const data = d.data as Record<string, unknown> & { date?: string };
+		const dateISO = String(data?.date || '');
+		if (!dateISO || dateISO < window.startISO || dateISO > window.endISO) continue;
+
+		const vitals = (data as Record<string, unknown>).vitals as Record<string, unknown> | undefined;
+		const bi = parseFirstNumber(vitals?.bleeding_intensity);
+		if (bi !== null && bi > 0) {
+			days.add(dateISO);
+			continue;
+		}
+
+		const symptoms = (data as Record<string, unknown>).symptoms as Record<string, unknown> | undefined;
+		if (symptoms?.heavy_bleeding === true || symptoms?.heavy_bleeding === 1) {
+			days.add(dateISO);
+			continue;
+		}
+
+		const triggers = (data as Record<string, unknown>).triggers;
+		if (Array.isArray(triggers) && triggers.includes('menstruation')) {
+			days.add(dateISO);
+		} else if (triggers && typeof triggers === 'object') {
+			const trig = triggers as Record<string, unknown>;
+			if (trig.menstruation === true || trig.menstruation === 1) days.add(dateISO);
+		}
+	}
+	return days;
+}
+
+/**
+ * Count menstrual cycles by detecting bleeding-day runs separated by
+ * at least 14 calm days. A cycle is one bleeding episode; runs of
+ * consecutive bleeding days count as a single cycle.
+ */
+export function countCycles(bleedingDays: Set<string>): number {
+	if (bleedingDays.size === 0) return 0;
+	const sorted = Array.from(bleedingDays).sort();
+	let cycles = 1;
+	for (let i = 1; i < sorted.length; i++) {
+		const prev = parseISO(sorted[i - 1]);
+		const cur = parseISO(sorted[i]);
+		const gapDays = Math.round((cur.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000));
+		if (gapDays > 14) cycles += 1;
+	}
+	return cycles;
+}
+
+function enumerateMonthsInWindow(
+	window: { startISO: string; endISO: string },
+): { year: number; month: number; daysInMonth: number }[] {
+	const out: { year: number; month: number; daysInMonth: number }[] = [];
+	const start = parseISO(window.startISO);
+	const end = parseISO(window.endISO);
+	const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+	while (cur <= end) {
+		const next = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+		const daysInMonth = Math.round((next.getTime() - cur.getTime()) / (24 * 60 * 60 * 1000));
+		out.push({ year: cur.getFullYear(), month: cur.getMonth(), daysInMonth });
+		cur.setMonth(cur.getMonth() + 1);
+	}
+	return out;
+}
+
+/**
+ * §3.4 — Phase cohort primary block.
+ * The spec's "stripe-band timeline" (active/transition/baseline) is
+ * aspirational: the data schema does not yet support patient-authored
+ * phase labels. Per §1.3 software MUST NOT derive phase from symptoms.
+ * Until a phase-logging UI lands, phase cohorts reuse the episode
+ * calendar primitive — the patient's logged episode events are the
+ * most-honest available signal. Mirrors §3.2 exactly; only the
+ * section heading differs.
+ */
 function drawPhaseCohortPrimary(
 	doc: jsPDF,
-	_blueprint: Blueprint,
-	_documents: CiphraDocument[],
-	_periodRange: { startISO: string; endISO: string },
+	blueprint: Blueprint,
+	documents: CiphraDocument[],
+	periodRange: { startISO: string; endISO: string },
 	t: TranslateFn,
-	_locale: string,
+	locale: string,
 	y: number,
 ): number {
-	return drawStubPrimary(doc, t('handoff.cohort_stub_phase'), y);
+	const window = computeCalendarWindow(periodRange, 90);
+	const previous = computePreviousWindow(window);
+	const eventsByDay = aggregateEpisodesByDay(documents, blueprint, window);
+	const thisCount = countEpisodesInWindow(documents, blueprint, window);
+	const prevCount = countEpisodesInWindow(documents, blueprint, previous);
+	const thisDaysWithEvents = countDaysWithEpisodes(documents, blueprint, window);
+	const prevDaysWithEvents = countDaysWithEpisodes(documents, blueprint, previous);
+
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.head);
+	doc.setTextColor(...INK.primary);
+	doc.text(t('handoff.phase_title'), GEO.marginX, y + 4);
+
+	const gridX = GEO.marginX;
+	const gridY = y + 10;
+	const labelColW = 20;
+	const cellW = (GEO.contentW - labelColW) / 7;
+	const cellH = 7.5;
+	drawEpisodeCalendar(doc, gridX, gridY, labelColW, cellW, cellH, window, eventsByDay, locale, t);
+
+	const calendarBottomY = gridY + 5 + numWeeksInWindow(window) * cellH + 4;
+	let yi = calendarBottomY;
+
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.compact);
+	doc.setTextColor(...INK.primary);
+	doc.text(
+		`${t('handoff.episodes_recorded')}    ${t('handoff.previous')}: ${prevCount}  ·  ${t('handoff.this_window')}: ${thisCount}`,
+		GEO.marginX,
+		yi,
+	);
+	yi += 4;
+	doc.text(
+		`${t('handoff.days_with_events')}    ${t('handoff.previous')}: ${prevDaysWithEvents}  ·  ${t('handoff.this_window')}: ${thisDaysWithEvents}`,
+		GEO.marginX,
+		yi,
+	);
+	yi += 4;
+
+	return Math.max(yi, y + GEO.primaryH);
 }
 
+/**
+ * §3.5 — Narrative cohort primary block.
+ * Top 5 dated patient-authored entries, reverse-chronological. No
+ * derivation, no ranking, no frequency counts on the primary surface.
+ * Software does not curate — entries shown in the order the patient
+ * wrote them (newest first), truncated at 280 chars per entry.
+ */
 function drawNarrativeCohortPrimary(
 	doc: jsPDF,
 	_blueprint: Blueprint,
-	_documents: CiphraDocument[],
-	_periodRange: { startISO: string; endISO: string },
+	documents: CiphraDocument[],
+	periodRange: { startISO: string; endISO: string },
 	t: TranslateFn,
-	_locale: string,
+	locale: string,
 	y: number,
 ): number {
-	return drawStubPrimary(doc, t('handoff.cohort_stub_narrative'), y);
+	const notes = extractPatientNotes(documents, periodRange);
+
+	// Section heading is the only "label" we add — no count, no summary.
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.head);
+	doc.setTextColor(...INK.primary);
+	doc.text(t('handoff.diary_entries_title'), GEO.marginX, y + 4);
+
+	if (notes.length === 0) {
+		doc.setFont('helvetica', 'italic');
+		doc.setFontSize(TYPE.body);
+		doc.setTextColor(...INK.muted);
+		doc.text(t('handoff.no_entries_in_period'), GEO.marginX, y + 12);
+		return y + GEO.primaryH;
+	}
+
+	let yi = y + 10;
+	const shown = notes.slice(0, 5);
+	for (const n of shown) {
+		const dateLabel = formatDateLocale(new Date(n.dateISO), locale);
+		// Date row — bold, small.
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(TYPE.compact);
+		doc.setTextColor(...INK.primary);
+		doc.text(dateLabel, GEO.marginX, yi);
+		yi += 4;
+
+		// Entry body — quoted, wrapped, truncated to 280 chars.
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.body);
+		doc.setTextColor(...INK.primary);
+		const truncated = n.text.length > 280 ? n.text.slice(0, 277) + '…' : n.text;
+		const wrapped = doc.splitTextToSize(`"${truncated}"`, GEO.contentW - 6);
+		doc.text(wrapped, GEO.marginX + 3, yi);
+		yi += wrapped.length * 4.2 + 3;
+
+		// Guard against running off the page area allotted to the
+		// primary block. If we exceed, truncate the remaining entries
+		// with a "+N not printed" suffix.
+		if (yi > y + GEO.primaryH - 6) {
+			const remaining = shown.length - (shown.indexOf(n) + 1) + (notes.length - shown.length);
+			if (remaining > 0) {
+				doc.setFont('helvetica', 'italic');
+				doc.setFontSize(TYPE.compact);
+				doc.setTextColor(...INK.muted);
+				doc.text(
+					t('handoff.entries_truncated', { n: String(remaining) }),
+					GEO.marginX,
+					y + GEO.primaryH - 2,
+				);
+			}
+			return y + GEO.primaryH;
+		}
+	}
+
+	if (notes.length > shown.length) {
+		doc.setFont('helvetica', 'italic');
+		doc.setFontSize(TYPE.compact);
+		doc.setTextColor(...INK.muted);
+		doc.text(
+			t('handoff.entries_truncated', { n: String(notes.length - shown.length) }),
+			GEO.marginX,
+			yi + 2,
+		);
+		yi += 6;
+	}
+
+	return Math.max(yi, y + GEO.primaryH);
 }
 
+/**
+ * Cohorts whose primary block already contains the patient-authored
+ * entries (narrative diaries, custom inventory). They suppress the
+ * secondary `drawPatientNotes` block at the page bottom so we don't
+ * duplicate the same content.
+ */
+function cohortAbsorbsNotes(blueprint: Blueprint): boolean {
+	// Vital-pinned blueprints always use the vital primary block, even
+	// if their cohort family happens to be 'narrative' (none today, but
+	// future presets might). The vital block does not include the notes.
+	if (blueprint.primaryBrowseSurface === 'trend') return false;
+	const c = cohortOf(blueprint);
+	return c === 'narrative' || c === 'custom';
+}
+
+/**
+ * §3.6 — Custom cohort primary block.
+ * Inventory table (`Type · Entries · Date span`) + 5 most recent
+ * dated patient-authored entries. Safe fallback: no chart, no
+ * aggregate beyond raw counts. The system does not pretend to know
+ * the clinical shape of an unknown notebook.
+ */
 function drawCustomCohortPrimary(
 	doc: jsPDF,
-	_blueprint: Blueprint,
-	_documents: CiphraDocument[],
-	_periodRange: { startISO: string; endISO: string },
+	blueprint: Blueprint,
+	documents: CiphraDocument[],
+	periodRange: { startISO: string; endISO: string },
 	t: TranslateFn,
-	_locale: string,
+	locale: string,
 	y: number,
 ): number {
-	return drawStubPrimary(doc, t('handoff.cohort_stub_custom'), y);
+	// Inventory — fixed categories present in every blueprint. Each row
+	// is a raw count + date span over the selected period. No ranking,
+	// no derivation.
+	const inventory = computeCustomInventory(documents, blueprint, periodRange);
+
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.head);
+	doc.setTextColor(...INK.primary);
+	doc.text(t('handoff.inventory_title'), GEO.marginX, y + 4);
+
+	let yi = y + 10;
+
+	// Inventory header row.
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.compact);
+	doc.setTextColor(...INK.primary);
+	doc.text(t('handoff.inv_col_type'), GEO.marginX, yi);
+	doc.text(t('handoff.inv_col_count'), GEO.marginX + 90, yi);
+	doc.text(t('handoff.inv_col_span'), GEO.marginX + 115, yi);
+	yi += 1.5;
+
+	doc.setDrawColor(...INK.hairline);
+	doc.setLineWidth(0.15);
+	doc.line(GEO.marginX, yi, GEO.pageW - GEO.marginX, yi);
+	yi += 4;
+
+	// Inventory body — raw counts, never ranked.
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.compact);
+	for (const row of inventory) {
+		doc.setTextColor(...INK.primary);
+		doc.text(t(row.labelKey), GEO.marginX, yi);
+		doc.text(String(row.count), GEO.marginX + 90, yi);
+		if (row.count > 0 && row.firstISO && row.lastISO) {
+			const span = `${formatDateLocale(new Date(row.firstISO), locale)} – ${formatDateLocale(new Date(row.lastISO), locale)}`;
+			doc.text(span, GEO.marginX + 115, yi);
+		} else {
+			doc.setTextColor(...INK.muted);
+			doc.text('—', GEO.marginX + 115, yi);
+		}
+		yi += 4;
+	}
+
+	yi += 4;
+	doc.setDrawColor(...INK.hairline);
+	doc.setLineWidth(0.15);
+	doc.line(GEO.marginX, yi, GEO.pageW - GEO.marginX, yi);
+	yi += 5;
+
+	// Recent entries — same selection as the narrative block but capped
+	// at 5 with a shorter per-entry truncation since the inventory has
+	// already eaten part of the primary-block height budget.
+	const notes = extractPatientNotes(documents, periodRange);
+	if (notes.length > 0) {
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(TYPE.compact);
+		doc.setTextColor(...INK.primary);
+		doc.text(t('handoff.recent_entries_title'), GEO.marginX, yi);
+		yi += 5;
+
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.compact);
+		doc.setTextColor(...INK.primary);
+		const shown = notes.slice(0, 5);
+		for (const n of shown) {
+			const dateLabel = formatDateLocale(new Date(n.dateISO), locale);
+			const truncated = n.text.length > 120 ? n.text.slice(0, 117) + '…' : n.text;
+			const wrapped = doc.splitTextToSize(`${dateLabel} · "${truncated}"`, GEO.contentW);
+			doc.text(wrapped, GEO.marginX, yi);
+			yi += wrapped.length * 3.6 + 1;
+			if (yi > y + GEO.primaryH - 6) break;
+		}
+		if (notes.length > shown.length) {
+			doc.setFont('helvetica', 'italic');
+			doc.setTextColor(...INK.muted);
+			doc.text(
+				t('handoff.entries_truncated', { n: String(notes.length - shown.length) }),
+				GEO.marginX,
+				yi,
+			);
+			yi += 4;
+		}
+	}
+
+	return Math.max(yi, y + GEO.primaryH);
 }
 
-function drawStubPrimary(doc: jsPDF, label: string, y: number): number {
-	doc.setFont('helvetica', 'italic');
-	doc.setFontSize(TYPE.body);
-	doc.setTextColor(...INK.muted);
-	doc.text(label, GEO.marginX, y + 8);
-	return y + GEO.primaryH;
+interface InventoryRow {
+	labelKey: string;
+	count: number;
+	firstISO?: string;
+	lastISO?: string;
+}
+
+export function computeCustomInventory(
+	documents: CiphraDocument[],
+	blueprint: Blueprint,
+	periodRange: { startISO: string; endISO: string },
+): InventoryRow[] {
+	// One row per data category: entries (logs), episodes (count),
+	// vitals (any value), triggers (any logged), notes (patient text).
+	const rows: InventoryRow[] = [];
+	const inPeriod = (iso: string): boolean =>
+		iso.length === 10 && iso >= periodRange.startISO && iso <= periodRange.endISO;
+
+	let entriesCount = 0;
+	let episodesCount = 0;
+	let vitalsCount = 0;
+	let triggersCount = 0;
+	let notesCount = 0;
+	const dateSpans: Record<string, { first: string; last: string }> = {
+		entries: { first: '', last: '' },
+		episodes: { first: '', last: '' },
+		vitals: { first: '', last: '' },
+		triggers: { first: '', last: '' },
+		notes: { first: '', last: '' },
+	};
+
+	function updateSpan(category: string, iso: string): void {
+		const s = dateSpans[category];
+		if (!s.first || iso < s.first) s.first = iso;
+		if (!s.last || iso > s.last) s.last = iso;
+	}
+
+	for (const d of documents) {
+		const data = d.data as Record<string, unknown> & { date?: string; type?: string };
+		const dateISO = String(data?.date || '');
+		if (!inPeriod(dateISO)) continue;
+		if (data?.type !== 'entry') continue;
+
+		entriesCount += 1;
+		updateSpan('entries', dateISO);
+
+		const episodes = (data as Record<string, unknown>).episodes;
+		if (episodes && typeof episodes === 'object') {
+			const total = Object.values(episodes as Record<string, unknown>)
+				.map((v) => Number(v))
+				.filter((n) => Number.isFinite(n) && n > 0)
+				.reduce((a, b) => a + b, 0);
+			if (total > 0) {
+				episodesCount += total;
+				updateSpan('episodes', dateISO);
+			}
+		}
+
+		const vitals = (data as Record<string, unknown>).vitals;
+		if (vitals && typeof vitals === 'object') {
+			for (const v of Object.values(vitals as Record<string, unknown>)) {
+				if (parseFirstNumber(v) !== null) {
+					vitalsCount += 1;
+					updateSpan('vitals', dateISO);
+					break;
+				}
+			}
+		}
+
+		const triggers = (data as Record<string, unknown>).triggers;
+		if (triggers && Array.isArray(triggers) && triggers.length > 0) {
+			triggersCount += 1;
+			updateSpan('triggers', dateISO);
+		} else if (triggers && typeof triggers === 'object') {
+			const anyOn = Object.values(triggers as Record<string, unknown>).some((v) => !!v);
+			if (anyOn) {
+				triggersCount += 1;
+				updateSpan('triggers', dateISO);
+			}
+		}
+
+		for (const k of ['notes', 'narrative', 'diary', 'text']) {
+			const v = (data as Record<string, unknown>)[k];
+			if (typeof v === 'string' && v.trim().length > 0) {
+				notesCount += 1;
+				updateSpan('notes', dateISO);
+				break;
+			}
+		}
+	}
+
+	rows.push({ labelKey: 'handoff.inv_row_entries', count: entriesCount, firstISO: dateSpans.entries.first || undefined, lastISO: dateSpans.entries.last || undefined });
+	if (blueprint.episodeTypes && blueprint.episodeTypes.length > 0) {
+		rows.push({ labelKey: 'handoff.inv_row_episodes', count: episodesCount, firstISO: dateSpans.episodes.first || undefined, lastISO: dateSpans.episodes.last || undefined });
+	}
+	if (blueprint.vitals && blueprint.vitals.length > 0) {
+		rows.push({ labelKey: 'handoff.inv_row_vitals', count: vitalsCount, firstISO: dateSpans.vitals.first || undefined, lastISO: dateSpans.vitals.last || undefined });
+	}
+	if (blueprint.triggers && blueprint.triggers.length > 0) {
+		rows.push({ labelKey: 'handoff.inv_row_triggers', count: triggersCount, firstISO: dateSpans.triggers.first || undefined, lastISO: dateSpans.triggers.last || undefined });
+	}
+	rows.push({ labelKey: 'handoff.inv_row_notes', count: notesCount, firstISO: dateSpans.notes.first || undefined, lastISO: dateSpans.notes.last || undefined });
+	return rows;
 }
 
 /* ─── Aggregators (pure, testable) ─── */
