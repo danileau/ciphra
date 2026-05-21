@@ -414,6 +414,39 @@ function drawWordmark(
 }
 
 /**
+ * DSPEC-6 — Declared component-break contracts per PDF_DESIGN_SPEC.md
+ * §8. Each component type owns a `minPresence` value: the minimum space
+ * (mm) it must have on the current page or it migrates to a fresh one.
+ * Centralising this kills the scattered `if (cursorY > pageH - X)`
+ * checks where every section guessed its own breakpoint. The numbers
+ * come straight from §8.
+ */
+const PAGE_BOTTOM_MARGIN = 20;
+const PAGE_TOP_AFTER_BREAK = 20;
+const BREAK = {
+	sectionHead: 24,        // §8: section head + 24mm following content
+	chartTitle: 35,         // §8: chart title + legend + 35mm chart body
+	tileRow: 22,            // §8: summary tile row never splits (height ~22mm)
+	tableHeader: 18,        // §8: table header + 3 body rows × ~6mm
+	monthlyGridHeader: 18,  // §8: month header + 1 full week row
+	noteBlock: 12,          // §8: note label + first two lines
+};
+function reserveSpace(
+	doc: jsPDF,
+	cursorY: number,
+	minPresence: number,
+	onBreak?: () => number,
+): number {
+	const pageH = doc.internal.pageSize.getHeight();
+	if (cursorY + minPresence > pageH - PAGE_BOTTOM_MARGIN) {
+		doc.addPage();
+		paintPaper(doc);
+		return onBreak ? onBreak() : PAGE_TOP_AFTER_BREAK;
+	}
+	return cursorY;
+}
+
+/**
  * DSPEC-4 — Series marker shape + stroke pattern per series index.
  * Multi-series line charts must remain decipherable in grayscale, so
  * each series gets a unique (shape × dash) pair. Per PDF_DESIGN_SPEC.md
@@ -2961,11 +2994,11 @@ export function generateDoctorPdf(
 	const charts = miniCharts.slice(0, 4);
 
 	if (charts.length > 0) {
-		if (cursorY > pageH - 80) {
-			doc.addPage();
-			paintPaper(doc);
-			cursorY = 20;
-		}
+		// Section head needs at least one chart's worth of follow-on
+		// space, otherwise the title gets orphaned. chartTitle (35mm)
+		// gives head + first chart body; the loop below re-reserves
+		// per-chart.
+		cursorY = reserveSpace(doc, cursorY, BREAK.sectionHead + BREAK.chartTitle);
 		doc.setFont('helvetica', 'bold');
 		doc.setFontSize(TYPE.head);
 		doc.setTextColor(...BRAND.textPrimary);
@@ -2977,16 +3010,16 @@ export function generateDoctorPdf(
 		const ch = 24;
 
 		for (const chart of charts) {
-			if (cursorY + ch + 14 > pageH - 20) {
-				doc.addPage();
-				paintPaper(doc);
-				cursorY = 20;
+			// Per-chart break: title + legend + body. On continuation
+			// pages re-render the section title so the chart never
+			// appears without its group header (§8 orphan-prevention).
+			cursorY = reserveSpace(doc, cursorY, BREAK.chartTitle, () => {
 				doc.setFont('helvetica', 'bold');
 				doc.setFontSize(TYPE.head);
 				doc.setTextColor(...BRAND.textPrimary);
-				doc.text(t(scope === 'year' ? 'pdf.vital_trends_title_12m' : 'pdf.vital_trends_title'), 14, cursorY);
-				cursorY += 5;
-			}
+				doc.text(t(scope === 'year' ? 'pdf.vital_trends_title_12m' : 'pdf.vital_trends_title'), 14, PAGE_TOP_AFTER_BREAK);
+				return PAGE_TOP_AFTER_BREAK + 5;
+			});
 			// Title + inline legend
 			doc.setFont('helvetica', 'normal');
 			doc.setFontSize(TYPE.table);
@@ -3218,11 +3251,7 @@ export function generateDoctorPdf(
 		blueprint.conditionId === 'hashimoto'
 		&& (locale === 'de' || locale === 'fr' || locale === 'it');
 	if (showThyroidConversionNote) {
-		if (cursorY + 6 > pageH - 20) {
-			doc.addPage();
-			paintPaper(doc);
-			cursorY = 20;
-		}
+		cursorY = reserveSpace(doc, cursorY, BREAK.noteBlock);
 		doc.setFont('helvetica', 'italic');
 		doc.setFontSize(TYPE.compact);
 		doc.setTextColor(...BRAND.textMuted);
@@ -3273,11 +3302,7 @@ export function generateDoctorPdf(
 		}
 		const hasAny = Object.values(durBuckets).some((b) => b.total > 0);
 		if (hasAny) {
-			if (cursorY > pageH - 50) {
-				doc.addPage();
-				paintPaper(doc);
-				cursorY = 20;
-			}
+			cursorY = reserveSpace(doc, cursorY, BREAK.sectionHead + BREAK.tableHeader);
 			doc.setFont('helvetica', 'bold');
 			doc.setFontSize(TYPE.head);
 			doc.setTextColor(...BRAND.textPrimary);
@@ -3342,11 +3367,7 @@ export function generateDoctorPdf(
 	} // end of `if (scope !== 'month')` — skip trajectory + vital-trends + duration for month scope
 
 	// ── Symptom frequency table ──
-	if (cursorY > pageH - 60) {
-		doc.addPage();
-		paintPaper(doc);
-		cursorY = 20;
-	}
+	cursorY = reserveSpace(doc, cursorY, BREAK.sectionHead + BREAK.tableHeader);
 
 	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(TYPE.head);
@@ -3419,11 +3440,7 @@ export function generateDoctorPdf(
 
 	// ── Medication adherence ──
 	if (blueprint.medications.length > 0) {
-		if (cursorY > pageH - 50) {
-			doc.addPage();
-			paintPaper(doc);
-			cursorY = 20;
-		}
+		cursorY = reserveSpace(doc, cursorY, BREAK.sectionHead + BREAK.tableHeader);
 
 		doc.setFont('helvetica', 'bold');
 		doc.setFontSize(TYPE.head);
