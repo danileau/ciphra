@@ -71,6 +71,26 @@ const BRAND: Record<string, RGB> = {
 	borderSubtle: [240, 236, 231],
 };
 
+/**
+ * DSPEC-3 — Codified type scale per PDF_DESIGN_SPEC.md §5. All body /
+ * heading / numeric copy must resolve to one of these tokens; charts
+ * get a separate sub-scale (axis labels need finer granularity than
+ * the prose hierarchy). Page titles and other "hero" text snap down
+ * to `summary` (14pt) — the spec caps named text tiers there and
+ * forbids oversized hero typography (§5 "Do not use oversized hero
+ * numerics", "Do not use display typography inside compact panels").
+ */
+const TYPE = {
+	compact: 7,         // §5 compact labels / footnotes / continuation labels
+	table: 8,           // §5 table text
+	body: 9,            // §5 body text
+	head: 11,           // §5 section heads
+	summary: 14,        // §5 summary numerics (also: page titles, largest named tier)
+	chartLegend: 7,     // chart legend = compact label
+	chartAxis: 6,       // chart sub-scale (axis labels)
+	chartAxisMicro: 5.5,// chart sub-scale (dense axis labels — 24-month minor ticks)
+};
+
 /* ────────────────────────────────────────────────────────────────
  * CIPH-pi18-2 Chunk 2 — Cohort accent resolver.
  *
@@ -451,7 +471,7 @@ function continuationLabelHook(label: string) {
 		}
 		const d = data.doc as jsPDF;
 		d.setFont('helvetica', 'italic');
-		d.setFontSize(6.5);
+		d.setFontSize(TYPE.compact);
 		d.setTextColor(...BRAND.textMuted);
 		d.text(label, data.cell.x + data.cell.width, data.cell.y - 0.8, { align: 'right' });
 	};
@@ -477,13 +497,13 @@ function drawHeaderBand(
 
 	// title on right
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(13);
+	doc.setFontSize(TYPE.summary);
 	doc.setTextColor(...BRAND.paper);
 	doc.text(opts.title, pageW - 14, 14, { align: 'right' });
 
 	if (opts.subtitle) {
 		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(9);
+		doc.setFontSize(TYPE.body);
 		doc.setTextColor(255, 255, 255);
 		doc.text(opts.subtitle, pageW - 14, 20, { align: 'right' });
 	}
@@ -509,7 +529,7 @@ function drawFooter(doc: jsPDF, t: TranslateFn, footerKey = 'pdf.footer'): void 
 		doc.line(14, pageH - 12, pageW - 14, pageH - 12);
 
 		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(7.5);
+		doc.setFontSize(TYPE.compact);
 		doc.setTextColor(...BRAND.textMuted);
 		doc.text(t(footerKey), 14, pageH - 7);
 
@@ -534,7 +554,8 @@ function paintPaper(doc: jsPDF): void {
 function drawWatermarkPattern(doc: jsPDF): void {
 	const pageW = doc.internal.pageSize.getWidth();
 	const pageH = doc.internal.pageSize.getHeight();
-	// very light ink
+	// very light ink — display-graphic watermark, not text typography, so
+	// it sits outside the TYPE scale by design.
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(48);
 	doc.setTextColor(235, 228, 222); // 3-5% effective contrast
@@ -582,7 +603,7 @@ function drawStatCard(
 	// the 35mm usable width at 7.5pt; truncation is a defense-in-depth
 	// against future long-label additions.
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(6.5);
+	doc.setFontSize(TYPE.compact);
 	doc.setTextColor(...BRAND.textMuted);
 	const labelPadLeft = 5;
 	const labelPadRight = 3;
@@ -603,7 +624,7 @@ function drawStatCard(
 	// (Gesicht/Körper…)" previously bled into the neighbouring card.
 	// CIPH-pi19-3-fix: 13pt (was 15pt) for the narrower 4-tile context.
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(13);
+	doc.setFontSize(TYPE.summary);
 	doc.setTextColor(...accent);
 	const valPadLeft = 5;
 	const valPadRight = 3;
@@ -635,7 +656,7 @@ function drawStatCard(
 					? BRAND.brick
 					: BRAND.textMuted;
 		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(7.5);
+		doc.setFontSize(TYPE.compact);
 		doc.setTextColor(...dColor);
 		const text = delta.sign === '=' ? delta.value : `${delta.sign}${delta.value}`;
 		doc.text(text, x + valPadLeft, y + h - 4);
@@ -758,7 +779,7 @@ function drawDayCoverageStrip(
 	// textPrimary) used elsewhere in generateDoctorPdf.
 	const focusMonthName = new Date(year, month).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(10);
+	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(t('pdf.day_coverage_title', { month: focusMonthName }), 14, cursorY);
 	cursorY += 4;
@@ -793,7 +814,7 @@ function drawDayCoverageStrip(
 
 		// Day number top-left.
 		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(5.5);
+		doc.setFontSize(TYPE.chartAxisMicro);
 		doc.setTextColor(...BRAND.textPrimary);
 		doc.text(String(day), x + 0.6, stripY + 2.2);
 
@@ -855,7 +876,7 @@ function drawPhaseDistribution(
 		year: 'numeric',
 	});
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(10);
+	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(t('pdf.phase_distribution_title', { month: focusMonthName }), barX, cursorY);
 	cursorY += 4;
@@ -881,7 +902,7 @@ function drawPhaseDistribution(
 	// would exceed barW; rare in practice (≤4 episode types per cohort) but
 	// the wrap keeps the primitive safe for custom blueprints with many types.
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(7.5);
+	doc.setFontSize(TYPE.compact);
 	const dotR = 0.9;
 	const gap = 4;
 	const wrapMax = barX + barW;
@@ -944,7 +965,7 @@ function drawCycleStrip(
 		year: 'numeric',
 	});
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(10);
+	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(t('pdf.cycle_strip_title', { month: focusMonthName }), 14, cursorY);
 	cursorY += 4;
@@ -967,7 +988,7 @@ function drawCycleStrip(
 		}
 		// Day number top-left — same vocabulary as drawDayCoverageStrip.
 		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(5.5);
+		doc.setFontSize(TYPE.chartAxisMicro);
 		doc.setTextColor(...BRAND.textPrimary);
 		doc.text(String(c.day), x + 0.6, stripY + 2.2);
 	}
@@ -975,7 +996,7 @@ function drawCycleStrip(
 
 	// Legend — 4 phases × dot + label, single line.
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(7.5);
+	doc.setFontSize(TYPE.compact);
 	const dotR = 0.9;
 	const gap = 4;
 	let lx = 14;
@@ -1039,7 +1060,7 @@ function drawDailyMonthChart(
 		year: 'numeric',
 	});
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(10);
+	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(t('pdf.daily_month_chart_title', { month: focusMonthName }), 14, cursorY);
 	cursorY += 4;
@@ -1060,7 +1081,7 @@ function drawDailyMonthChart(
 	const dataMax = Math.max(1, ...dailyTotals);
 	const yMax = Math.max(1, Math.ceil(dataMax));
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(6);
+	doc.setFontSize(TYPE.chartAxis);
 	doc.setTextColor(...BRAND.textMuted);
 	doc.text(String(yMax), chartX - 1, cursorY + 2, { align: 'right' });
 	const midY = Math.round(yMax / 2);
@@ -1076,7 +1097,7 @@ function drawDailyMonthChart(
 	const total = dailyTotals.reduce((a, b) => a + b, 0);
 	if (total === 0) {
 		doc.setFont('helvetica', 'italic');
-		doc.setFontSize(9);
+		doc.setFontSize(TYPE.body);
 		doc.setTextColor(...BRAND.textMuted);
 		doc.text(t('pdf.no_data'), chartX + chartW / 2, cursorY + chartH / 2 + 1, { align: 'center' });
 		return cursorY + chartH + 6;
@@ -1127,7 +1148,7 @@ function drawDailyMonthChart(
 	// (mirrors /reports autoSkipPadding behavior added in PI v17).
 	const labelEvery = daysInMonth > 20 ? 5 : 2;
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(6);
+	doc.setFontSize(TYPE.chartAxis);
 	doc.setTextColor(...BRAND.textMuted);
 	for (let i = 0; i < daysInMonth; i++) {
 		const day = i + 1;
@@ -1288,14 +1309,14 @@ function drawGridSection(
 
 	// Title on the right — "Monat <month> <year>"
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(18);
+	doc.setFontSize(TYPE.summary);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(monthName, pageW - 14, 15, { align: 'right' });
 
 	// Condition label + report type
 	const conditionLabel = blueprint.conditionLabel ? t(blueprint.conditionLabel) : blueprint.conditionId;
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textSecondary);
 	doc.text(`${conditionLabel} · ${t('pdf.grid_title')}`, pageW - 14, 21, { align: 'right' });
 
@@ -1305,7 +1326,7 @@ function drawGridSection(
 		month: 'short',
 		day: 'numeric',
 	});
-	doc.setFontSize(8);
+	doc.setFontSize(TYPE.table);
 	doc.setTextColor(...BRAND.textMuted);
 	const metaParts: string[] = [];
 	if (username) metaParts.push(`${t('pdf.account')}: ${username}`);
@@ -1314,7 +1335,7 @@ function drawGridSection(
 
 	// Summary line
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9.5);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textPrimary);
 	const summary = `${daysLogged} ${t('pdf.days_logged_short')}  ·  ${totalEpisodes} ${t('pdf.total_episodes_short')}  ·  ${symptomEntries} ${t('pdf.symptom_entries')}`;
 	doc.text(summary, 14, 30);
@@ -1334,7 +1355,7 @@ function drawGridSection(
 		body: rows,
 		theme: 'plain',
 		styles: {
-			fontSize: 7.5,
+			fontSize: TYPE.compact,
 			cellPadding: 1.8,
 			lineColor: BRAND.borderSubtle as any,
 			lineWidth: 0.1,
@@ -1345,7 +1366,7 @@ function drawGridSection(
 			fillColor: BRAND.paperInset as any,
 			textColor: BRAND.textPrimary as any,
 			fontStyle: 'bold',
-			fontSize: 7.5,
+			fontSize: TYPE.compact,
 			lineWidth: 0.1,
 			lineColor: BRAND.border as any,
 		},
@@ -1778,13 +1799,13 @@ export function generateDoctorPdf(
 	drawWordmark(doc, 14, 16, { size: 14 });
 
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(18);
+	doc.setFontSize(TYPE.summary);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(monthName, pageW - 14, 15, { align: 'right' });
 
 	const conditionLabel = blueprint.conditionLabel ? t(blueprint.conditionLabel) : blueprint.conditionId;
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textSecondary);
 	doc.text(`${conditionLabel} · ${t('pdf.analytics_title')}`, pageW - 14, 21, { align: 'right' });
 
@@ -1793,7 +1814,7 @@ export function generateDoctorPdf(
 		month: 'short',
 		day: 'numeric',
 	});
-	doc.setFontSize(8);
+	doc.setFontSize(TYPE.table);
 	doc.setTextColor(...BRAND.textMuted);
 	const metaParts: string[] = [];
 	if (username) metaParts.push(`${t('pdf.account')}: ${username}`);
@@ -1811,7 +1832,7 @@ export function generateDoctorPdf(
 	const discTextX = 18.5; // 14 + 3pt rule + 1.5mm padding
 	const discTextW = pageW - discTextX - 14;
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	const discText = t('pdf.disclaimer_medical_long');
 	const discLines = doc.splitTextToSize(discText, discTextW);
 	const lineH = 3.7;
@@ -1931,7 +1952,7 @@ export function generateDoctorPdf(
 	// AFTER the disclaimer banner so it doesn't overlap. Position is right
 	// above the KPI tiles.
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(7.5);
+	doc.setFontSize(TYPE.compact);
 	doc.setTextColor(...BRAND.textMuted);
 	doc.text(
 		`${t('pdf.days_logged_short')}: ${daysLogged}/${daysInMonth}`,
@@ -2331,7 +2352,7 @@ export function generateDoctorPdf(
 	// counts per month across the last 24 months ending with the selected
 	// month, and plot one point per month.
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(10);
+	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(t(scope === 'year' ? 'pdf.episode_trend_12m' : 'pdf.episode_trend'), 14, cursorY);
 
@@ -2401,7 +2422,7 @@ export function generateDoctorPdf(
 		// Trajectory label on the right edge: white fill + hairline border,
 		// neutral text. Reads as a quiet display affordance, not a badge.
 		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(7);
+		doc.setFontSize(TYPE.compact);
 		const labelPadX = 2.4;
 		const labelPadY = 1.4;
 		const labelW = doc.getTextWidth(trendLabel) + labelPadX * 2;
@@ -2534,7 +2555,7 @@ export function generateDoctorPdf(
 		}
 		if (withLabels) {
 			doc.setFont('helvetica', 'normal');
-			doc.setFontSize(6);
+			doc.setFontSize(TYPE.chartAxis);
 			doc.setTextColor(...BRAND.brick);
 			for (const m of markers) {
 				doc.text(m.label, m.x + 1, boxY - 1.5);
@@ -2560,7 +2581,7 @@ export function generateDoctorPdf(
 
 	// Y-axis labels
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(6);
+	doc.setFontSize(TYPE.chartAxis);
 	doc.setTextColor(...BRAND.textMuted);
 	doc.text(String(yMax), chartX - 1, cursorY + 2, { align: 'right' });
 	// Skip the middle label when yMax is small enough that rounding would
@@ -2659,7 +2680,7 @@ export function generateDoctorPdf(
 
 		// Right-edge scale disclosure: "max Symptom-Tage: 28"
 		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(5.5);
+		doc.setFontSize(TYPE.chartAxisMicro);
 		doc.setTextColor(...BRAND.textMuted);
 		doc.text(String(symptomMax), chartX + chartW + 0.5, cursorY + 2, { align: 'left' });
 		doc.text('0', chartX + chartW + 0.5, cursorY + chartH, { align: 'left' });
@@ -2676,7 +2697,7 @@ export function generateDoctorPdf(
 
 	// X-axis labels: every month for 12-month scope, every other for 24.
 	// All-month labels at 24mo scope cram into each other and become unreadable.
-	doc.setFontSize(6);
+	doc.setFontSize(TYPE.chartAxis);
 	doc.setTextColor(...BRAND.textMuted);
 	const labelEvery = MONTHS <= 12 ? 1 : 2;
 	for (let i = 0; i < monthBuckets.length; i++) {
@@ -2946,7 +2967,7 @@ export function generateDoctorPdf(
 			cursorY = 20;
 		}
 		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(10);
+		doc.setFontSize(TYPE.head);
 		doc.setTextColor(...BRAND.textPrimary);
 		doc.text(t(scope === 'year' ? 'pdf.vital_trends_title_12m' : 'pdf.vital_trends_title'), 14, cursorY);
 		cursorY += 5;
@@ -2961,19 +2982,19 @@ export function generateDoctorPdf(
 				paintPaper(doc);
 				cursorY = 20;
 				doc.setFont('helvetica', 'bold');
-				doc.setFontSize(10);
+				doc.setFontSize(TYPE.head);
 				doc.setTextColor(...BRAND.textPrimary);
 				doc.text(t(scope === 'year' ? 'pdf.vital_trends_title_12m' : 'pdf.vital_trends_title'), 14, cursorY);
 				cursorY += 5;
 			}
 			// Title + inline legend
 			doc.setFont('helvetica', 'normal');
-			doc.setFontSize(8);
+			doc.setFontSize(TYPE.table);
 			doc.setTextColor(...BRAND.textSecondary);
 			doc.text(chart.title, 14, cursorY);
 			if (chart.series.length > 1) {
 				let lx = 14 + doc.getTextWidth(chart.title) + 6;
-				doc.setFontSize(7);
+				doc.setFontSize(TYPE.compact);
 				for (let si = 0; si < chart.series.length; si++) {
 					const s = chart.series[si];
 					const style = seriesStyleFor(si);
@@ -3018,7 +3039,7 @@ export function generateDoctorPdf(
 
 				// Y-labels (min, 0, max).
 				doc.setFont('helvetica', 'normal');
-				doc.setFontSize(6);
+				doc.setFontSize(TYPE.chartAxis);
 				doc.setTextColor(...BRAND.textMuted);
 				const fmtPolar = (n: number) => n.toFixed(1);
 				doc.text(fmtPolar(yMax), cx - 1, cursorY + 2, { align: 'right' });
@@ -3058,7 +3079,7 @@ export function generateDoctorPdf(
 				doc.roundedRect(cx - 0.3, cursorY - 0.3, cw + 0.6, ch + 0.6, 0.8, 0.8, 'S');
 
 				doc.setFont('helvetica', 'normal');
-				doc.setFontSize(5.5);
+				doc.setFontSize(TYPE.chartAxisMicro);
 				doc.setTextColor(...BRAND.textMuted);
 				const labelEvery = MONTHS <= 12 ? 1 : 2;
 				for (let i = 0; i < monthBuckets.length; i++) {
@@ -3095,7 +3116,7 @@ export function generateDoctorPdf(
 
 			// y-labels
 			doc.setFont('helvetica', 'normal');
-			doc.setFontSize(6);
+			doc.setFontSize(TYPE.chartAxis);
 			doc.setTextColor(...BRAND.textMuted);
 			const fmt = (n: number) => (Math.abs(n) >= 100 ? n.toFixed(0) : n.toFixed(1));
 			doc.text(fmt(yMax), cx - 1, cursorY + 2, { align: 'right' });
@@ -3112,7 +3133,7 @@ export function generateDoctorPdf(
 					doc.line(cx, refY, cx + cw, refY);
 				}
 				doc.setLineDashPattern([], 0);
-				doc.setFontSize(5.5);
+				doc.setFontSize(TYPE.chartAxisMicro);
 				doc.setTextColor(...BRAND.olive);
 				for (const ref of chart.referenceLines) {
 					const refY = cursorY + ch - ((ref.value - yMin) / ySpan) * ch;
@@ -3162,7 +3183,7 @@ export function generateDoctorPdf(
 			// Without these the mini-charts read as abstract lines with no
 			// temporal anchor (Klara called this out, screenshot confirmed).
 			doc.setFont('helvetica', 'normal');
-			doc.setFontSize(5.5);
+			doc.setFontSize(TYPE.chartAxisMicro);
 			doc.setTextColor(...BRAND.textMuted);
 			const miniLabelEvery = MONTHS <= 12 ? 1 : 2;
 			for (let i = 0; i < monthBuckets.length; i++) {
@@ -3203,7 +3224,7 @@ export function generateDoctorPdf(
 			cursorY = 20;
 		}
 		doc.setFont('helvetica', 'italic');
-		doc.setFontSize(7);
+		doc.setFontSize(TYPE.compact);
 		doc.setTextColor(...BRAND.textMuted);
 		doc.text(t('pdf.unit_conv_thyroid'), 14, cursorY);
 		cursorY += 5;
@@ -3258,7 +3279,7 @@ export function generateDoctorPdf(
 				cursorY = 20;
 			}
 			doc.setFont('helvetica', 'bold');
-			doc.setFontSize(10);
+			doc.setFontSize(TYPE.head);
 			doc.setTextColor(...BRAND.textPrimary);
 			doc.text(t('pdf.episode_duration_title'), 14, cursorY);
 			cursorY += 2;
@@ -3290,7 +3311,7 @@ export function generateDoctorPdf(
 				body: durRows,
 				theme: 'plain',
 				styles: {
-					fontSize: 8,
+					fontSize: TYPE.table,
 					cellPadding: 2,
 					lineColor: BRAND.borderSubtle as any,
 					lineWidth: 0.1,
@@ -3300,7 +3321,7 @@ export function generateDoctorPdf(
 					fillColor: BRAND.paperInset as any,
 					textColor: BRAND.textPrimary as any,
 					fontStyle: 'bold',
-					fontSize: 8,
+					fontSize: TYPE.table,
 				},
 				alternateRowStyles: { fillColor: [252, 250, 248] as any },
 				columnStyles: {
@@ -3328,7 +3349,7 @@ export function generateDoctorPdf(
 	}
 
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(10);
+	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(t('pdf.symptom_frequency'), 14, cursorY);
 	cursorY += 2;
@@ -3346,7 +3367,7 @@ export function generateDoctorPdf(
 			body: symptomRows,
 			theme: 'plain',
 			styles: {
-				fontSize: 8,
+				fontSize: TYPE.table,
 				cellPadding: 2,
 				lineColor: BRAND.borderSubtle as any,
 				lineWidth: 0.1,
@@ -3356,7 +3377,7 @@ export function generateDoctorPdf(
 				fillColor: BRAND.paperInset as any,
 				textColor: BRAND.textPrimary as any,
 				fontStyle: 'bold',
-				fontSize: 8,
+				fontSize: TYPE.table,
 			},
 			alternateRowStyles: {
 				fillColor: [252, 250, 248] as any,
@@ -3390,7 +3411,7 @@ export function generateDoctorPdf(
 	} else {
 		cursorY += 4;
 		doc.setFont('helvetica', 'italic');
-		doc.setFontSize(9);
+		doc.setFontSize(TYPE.body);
 		doc.setTextColor(...BRAND.textMuted);
 		doc.text(t('pdf.no_symptoms'), 14, cursorY);
 		cursorY += 6;
@@ -3405,7 +3426,7 @@ export function generateDoctorPdf(
 		}
 
 		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(10);
+		doc.setFontSize(TYPE.head);
 		doc.setTextColor(...BRAND.textPrimary);
 		doc.text(t('pdf.medication_adherence'), 14, cursorY);
 		cursorY += 2;
@@ -3426,7 +3447,7 @@ export function generateDoctorPdf(
 			body: medRows,
 			theme: 'plain',
 			styles: {
-				fontSize: 8,
+				fontSize: TYPE.table,
 				cellPadding: 2,
 				lineColor: BRAND.borderSubtle as any,
 				lineWidth: 0.1,
@@ -3436,7 +3457,7 @@ export function generateDoctorPdf(
 				fillColor: BRAND.paperInset as any,
 				textColor: BRAND.textPrimary as any,
 				fontStyle: 'bold',
-				fontSize: 8,
+				fontSize: TYPE.table,
 			},
 			alternateRowStyles: {
 				fillColor: [252, 250, 248] as any,
@@ -3470,11 +3491,11 @@ export function generateDoctorPdf(
 	paintPaper(doc);
 	drawWordmark(doc, 14, 16, { size: 14 });
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(18);
+	doc.setFontSize(TYPE.summary);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(t('pdf.for_doctor_title'), pageW - 14, 15, { align: 'right' });
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textSecondary);
 	doc.text(t('pdf.for_doctor_subtitle'), pageW - 14, 21, { align: 'right' });
 
@@ -3633,7 +3654,7 @@ export function generateDoctorPdf(
 		doc.setFillColor(...acc.primary);
 		doc.circle(18, byY + 2, 3, 'F');
 		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(10);
+		doc.setFontSize(TYPE.head);
 		doc.setTextColor(255, 255, 255);
 		doc.text(String(num), 18, byY + 3.5, { align: 'center' });
 
@@ -3642,7 +3663,7 @@ export function generateDoctorPdf(
 		// Unicode arrow (→) which renders as !' and breaks splitTextToSize.
 		const factWidth = pageW - 26 - 14 - 6; // left=26, right=14, 6mm safety
 		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(10);
+		doc.setFontSize(TYPE.head);
 		doc.setTextColor(...BRAND.textPrimary);
 		const factLines = doc.splitTextToSize(b.fact, factWidth);
 		doc.text(factLines, 26, byY + 3);
@@ -3650,7 +3671,7 @@ export function generateDoctorPdf(
 		// Question underneath — prefix with "Q:" (ASCII) instead of the
 		// Unicode arrow which the font cannot render.
 		doc.setFont('helvetica', 'italic');
-		doc.setFontSize(9.5);
+		doc.setFontSize(TYPE.body);
 		doc.setTextColor(...BRAND.ochre);
 		const qY = byY + 3 + factLines.length * 4.5;
 		const qLines = doc.splitTextToSize('Q:  ' + b.question, factWidth);
@@ -3661,7 +3682,7 @@ export function generateDoctorPdf(
 
 	// Footnote
 	doc.setFont('helvetica', 'italic');
-	doc.setFontSize(8);
+	doc.setFontSize(TYPE.table);
 	doc.setTextColor(...BRAND.textMuted);
 	doc.text(t('pdf.for_doctor_footnote'), pageW / 2, pageH - 28, { align: 'center' });
 
@@ -3753,7 +3774,7 @@ export function generateRecoveryPdf(
 		day: 'numeric',
 	});
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textMuted);
 	doc.text(
 		`${t('pdf.account')}: ${username}   ·   ${t('pdf.export_date')}: ${issuedAt}`,
@@ -3764,7 +3785,7 @@ export function generateRecoveryPdf(
 
 	// Context
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(10.5);
+	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textSecondary);
 	const contextLines = doc.splitTextToSize(t('pdf.recovery_context'), pageW - 50);
 	doc.text(contextLines, pageW / 2, bandH + 20, { align: 'center' });
@@ -3794,13 +3815,13 @@ export function generateRecoveryPdf(
 
 		// index number — brick
 		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(8);
+		doc.setFontSize(TYPE.table);
 		doc.setTextColor(...BRAND.brick);
 		doc.text(String(i + 1).padStart(2, '0'), cx, cy);
 
 		// word — monospace
 		doc.setFont('courier', 'bold');
-		doc.setFontSize(12);
+		doc.setFontSize(TYPE.head);
 		doc.setTextColor(...BRAND.textPrimary);
 		doc.text(words[i], cx + 8, cy);
 	}
@@ -3814,12 +3835,12 @@ export function generateRecoveryPdf(
 	];
 
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(t('pdf.recovery_instructions_heading'), boxMargin, instY);
 
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9.5);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textSecondary);
 	let sy = instY + 6;
 	for (const step of steps) {
@@ -3842,11 +3863,11 @@ export function generateRecoveryPdf(
 	doc.roundedRect(boxMargin, warnY, boxW, 14, 2, 2, 'FD');
 
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.brick);
 	doc.text('*', boxMargin + 4, warnY + 9);
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.brickDark);
 	const warnLines = doc.splitTextToSize(t('pdf.recovery_warning'), boxW - 10);
 	doc.text(warnLines, boxMargin + 8, warnY + 6);
@@ -3889,7 +3910,7 @@ export function generateFamilyInvitePdf(
 		day: 'numeric',
 	});
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textMuted);
 	doc.text(
 		`${t('pdf.export_date')}: ${issuedAt}`,
@@ -3900,7 +3921,7 @@ export function generateFamilyInvitePdf(
 
 	// Context
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(10.5);
+	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textSecondary);
 	const contextLines = doc.splitTextToSize(t('pdf.family_context'), pageW - 50);
 	doc.text(contextLines, pageW / 2, bandH + 20, { align: 'center' });
@@ -3919,13 +3940,13 @@ export function generateFamilyInvitePdf(
 	doc.roundedRect(boxMargin, boxesY, boxW, boxH, 3, 3, 'FD');
 
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(7.5);
+	doc.setFontSize(TYPE.compact);
 	doc.setTextColor(...BRAND.ochre);
 	doc.text(t('pdf.family_code_label').toUpperCase(), boxMargin + 4, boxesY + 6);
 
 	const words = familyCode.trim().split(/\s+/);
 	doc.setFont('courier', 'bold');
-	doc.setFontSize(11);
+	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textPrimary);
 	const wordCols = 2;
 	const wordRows = Math.ceil(words.length / wordCols);
@@ -3938,12 +3959,12 @@ export function generateFamilyInvitePdf(
 		const cy = boxesY + 12 + r * cellH + cellH / 2 + 1.5;
 
 		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(7);
+		doc.setFontSize(TYPE.compact);
 		doc.setTextColor(...BRAND.brick);
 		doc.text(String(i + 1).padStart(2, '0'), cx, cy);
 
 		doc.setFont('courier', 'bold');
-		doc.setFontSize(10.5);
+		doc.setFontSize(TYPE.head);
 		doc.setTextColor(...BRAND.textPrimary);
 		doc.text(words[i], cx + 7, cy);
 	}
@@ -3956,12 +3977,12 @@ export function generateFamilyInvitePdf(
 	doc.roundedRect(rightX, boxesY, boxW, boxH, 3, 3, 'FD');
 
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(7.5);
+	doc.setFontSize(TYPE.compact);
 	doc.setTextColor(...BRAND.brick);
 	doc.text(t('pdf.family_url_label').toUpperCase(), rightX + 4, boxesY + 6);
 
 	doc.setFont('courier', 'normal');
-	doc.setFontSize(8);
+	doc.setFontSize(TYPE.table);
 	doc.setTextColor(...BRAND.textPrimary);
 	const urlLines = doc.splitTextToSize(shareLink, boxW - 8);
 	doc.text(urlLines, rightX + 4, boxesY + 13);
@@ -3969,7 +3990,7 @@ export function generateFamilyInvitePdf(
 	// ── "How <recipient> accepts" steps ──
 	const stepsY = boxesY + boxH + 10;
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(10);
+	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(t('pdf.family_how_to_accept', { label }), boxMargin, stepsY);
 
@@ -3979,19 +4000,19 @@ export function generateFamilyInvitePdf(
 		t('pdf.family_step_3'),
 	];
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9.5);
+	doc.setFontSize(TYPE.body);
 	let sy = stepsY + 7;
 	for (let i = 0; i < steps.length; i++) {
 		// numbered circle
 		doc.setFillColor(...BRAND.brick);
 		doc.circle(boxMargin + 2.5, sy - 1.5, 2.5, 'F');
 		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(8);
+		doc.setFontSize(TYPE.table);
 		doc.setTextColor(255, 255, 255);
 		doc.text(String(i + 1), boxMargin + 2.5, sy + 0.5, { align: 'center' });
 
 		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(9.5);
+		doc.setFontSize(TYPE.body);
 		doc.setTextColor(...BRAND.textSecondary);
 		const lines = doc.splitTextToSize(steps[i], pageW - 2 * boxMargin - 10);
 		doc.text(lines, boxMargin + 8, sy);
@@ -4007,11 +4028,11 @@ export function generateFamilyInvitePdf(
 	doc.roundedRect(boxMargin, warnY, warnBoxW, 14, 2, 2, 'FD');
 
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.brick);
 	doc.text('*', boxMargin + 4, warnY + 9);
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(9);
+	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.brickDark);
 	const warnLines = doc.splitTextToSize(t('pdf.family_warning'), warnBoxW - 10);
 	doc.text(warnLines, boxMargin + 8, warnY + 6);

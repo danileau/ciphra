@@ -94,7 +94,8 @@ describe('CIPH-pi19-2 empty-day hairline + readability defaults', () => {
 	});
 
 	it('day number is helvetica 5.5pt textPrimary', () => {
-		expect(PDF).toMatch(/setFontSize\(5\.5\)[\s\S]{0,80}setTextColor\(\.\.\.BRAND\.textPrimary\)[\s\S]{0,80}text\(String\(day\)/);
+		// DSPEC-3 consolidated font sizes to a TYPE.* scale; chartAxisMicro = 5.5pt.
+		expect(PDF).toMatch(/setFontSize\((?:5\.5|TYPE\.chartAxisMicro)\)[\s\S]{0,80}setTextColor\(\.\.\.BRAND\.textPrimary\)[\s\S]{0,80}text\(String\(day\)/);
 	});
 });
 
