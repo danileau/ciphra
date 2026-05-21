@@ -1293,6 +1293,7 @@ export default {
 	'pdf.family_url_label': 'Oppure apri questo link',
 	'pdf.disclaimer_medical': 'ciphra è un taccuino personale, non un dispositivo medico.',
 	'pdf.disclaimer_medical_long': 'Taccuino personale — non un dispositivo medico ai sensi del Regolamento UE 2017/745 o dell\'ODmed svizzero. Dati auto-inseriti. Non sostituisce il parere medico professionale.',
+	'pdf.table_continued': 'segue',
 	'protocol.export_pdf': 'Esporta PDF',
 
 	// Admin

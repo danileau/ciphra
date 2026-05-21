@@ -394,6 +394,31 @@ function drawWordmark(
 }
 
 /**
+ * DSPEC-5 — autoTable `didDrawCell` hook factory that draws a small
+ * italic continuation label on the right edge of the first head row
+ * for every continuation page (per PDF_DESIGN_SPEC.md §8, §12). The
+ * marker sits ABOVE the head cell so it never clashes with column
+ * text; first page (data.pageNumber === 1) is untouched.
+ */
+function continuationLabelHook(label: string) {
+	return (data: any) => {
+		if (
+			data.section !== 'head' ||
+			data.row.index !== 0 ||
+			data.pageNumber <= 1 ||
+			data.column.index !== data.table.columns.length - 1
+		) {
+			return;
+		}
+		const d = data.doc as jsPDF;
+		d.setFont('helvetica', 'italic');
+		d.setFontSize(6.5);
+		d.setTextColor(...BRAND.textMuted);
+		d.text(label, data.cell.x + data.cell.width, data.cell.y - 0.8, { align: 'right' });
+	};
+}
+
+/**
  * Top band used on cover-style pages (recovery, invite). Brick fill,
  * reverse wordmark on the left, page metadata on the right.
  */
@@ -1372,6 +1397,7 @@ function drawGridSection(
 				}
 			}
 		},
+		didDrawCell: continuationLabelHook(t('pdf.table_continued')),
 	});
 
 }
@@ -3233,6 +3259,7 @@ export function generateDoctorPdf(
 					4: { cellWidth: 32, halign: 'center' },
 					5: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
 				},
+				didDrawCell: continuationLabelHook(t('pdf.table_continued')),
 			});
 			cursorY = (doc as any).lastAutoTable?.finalY ?? cursorY + 10;
 			cursorY += 6;
@@ -3304,6 +3331,7 @@ export function generateDoctorPdf(
 					}
 				}
 			},
+			didDrawCell: continuationLabelHook(t('pdf.table_continued')),
 		});
 		cursorY = (doc as any).lastAutoTable?.finalY ?? cursorY + 10;
 		cursorY += 6;
@@ -3377,6 +3405,7 @@ export function generateDoctorPdf(
 					}
 				}
 			},
+			didDrawCell: continuationLabelHook(t('pdf.table_continued')),
 		});
 	}
 

@@ -1293,6 +1293,7 @@ export default {
 	'pdf.family_url_label': 'Ou ouvrez ce lien',
 	'pdf.disclaimer_medical': "ciphra est un carnet personnel, pas un dispositif médical.",
 	'pdf.disclaimer_medical_long': "Carnet personnel — pas un dispositif médical au sens du Règlement UE 2017/745 ou de l'ODim suisse. Données auto-déclarées. Ne remplace pas un avis médical professionnel.",
+	'pdf.table_continued': 'suite',
 	'protocol.export_pdf': 'Exporter PDF',
 
 	// Admin

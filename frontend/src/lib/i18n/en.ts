@@ -1294,6 +1294,7 @@ export default {
 	'pdf.family_url_label': 'Or open this link',
 	'pdf.disclaimer_medical': 'ciphra is a personal notebook, not a medical device.',
 	'pdf.disclaimer_medical_long': 'Personal notebook — not a medical device under EU MDR 2017/745 or Swiss MepV. Self-entered data. Not a substitute for professional medical advice.',
+	'pdf.table_continued': 'continued',
 	'protocol.export_pdf': 'Export PDF',
 
 	// Admin

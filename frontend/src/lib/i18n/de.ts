@@ -1315,6 +1315,7 @@ export default {
 	'pdf.family_url_label': 'Oder diesen Link öffnen',
 	'pdf.disclaimer_medical': 'ciphra ist ein persönliches Notizbuch, kein Medizinprodukt.',
 	'pdf.disclaimer_medical_long': 'Persönliches Notizbuch — kein Medizinprodukt nach EU-MDR 2017/745 oder schweizerischer MepV. Selbst erfasste Daten. Kein Ersatz für professionelle medizinische Beratung.',
+	'pdf.table_continued': 'Fortsetzung',
 	'protocol.export_pdf': 'PDF exportieren',
 
 	// Admin
