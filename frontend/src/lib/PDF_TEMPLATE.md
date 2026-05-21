@@ -1,6 +1,13 @@
 # PDF_TEMPLATE — ciphra doctor PDF spec
 
-Status: **load-bearing**. This document is the contract for what the
+> **SUPERSEDED 2026-05-21** by `CLINICAL_HANDOFF.md` after the 5-round
+> "design from scratch" campfire + tribunal. The new spec replaces
+> both this file and `PDF_DESIGN_SPEC.md`. This file is kept only as
+> historical reference for the current `pdf.ts` implementation while
+> the rewrite is in progress. Do not extend this spec; extend
+> `CLINICAL_HANDOFF.md` instead.
+
+Status: **superseded**. This document was the contract for what the
 doctor PDF renders for any cohort. Cohort developers, future P-PDF-X
 commits, and downstream tribunal reviewers read this file to know
 what each section is allowed to do.

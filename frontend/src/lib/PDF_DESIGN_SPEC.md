@@ -1,5 +1,12 @@
 # PDF Design Spec
 
+> **SUPERSEDED 2026-05-21** by `CLINICAL_HANDOFF.md` after the 5-round
+> "design from scratch" campfire + tribunal. The new spec replaces
+> both this file and `PDF_TEMPLATE.md`. This file is kept only as
+> historical reference for the current `pdf.ts` implementation while
+> the rewrite is in progress. Do not extend this spec; extend
+> `CLINICAL_HANDOFF.md` instead.
+
 This appendix is binding for ciphra PDF output. Read alongside
 `PDF_TEMPLATE.md` (the section + predicate contract) and
 `memory/feedback_pdf_clinician_lens.md` (the user-facing framing
