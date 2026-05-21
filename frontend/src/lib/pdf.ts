@@ -2302,17 +2302,13 @@ export function generateDoctorPdf(
 	// (omit pill). A wrong pill is worse than no pill.
 	const pillSpec = resolveTrajectoryPill(blueprint, documents, monthBuckets, episodeCols);
 	if (pillSpec) {
+		// DSPEC-2 — Trajectory LABEL, not pill. PDF_DESIGN_SPEC.md §7:
+		// white fill, hairline border, 7pt, neutral text always. The
+		// clinical-assessment implication that lived in the directional
+		// color is gone; the doctor reads the chart numbers for direction.
 		let trendLabel: string;
-		let trendColor: RGB;
-		let pillBg: RGB;
 		if (pillSpec.kind === 'episode') {
 			trendLabel = t(pillSpec.labelKey);
-			trendColor = pillSpec.trendDir === 'up' ? BRAND.brick
-				: pillSpec.trendDir === 'down' ? BRAND.olive
-				: BRAND.textMuted;
-			pillBg = pillSpec.trendDir === 'up' ? [249, 229, 224]
-				: pillSpec.trendDir === 'down' ? [238, 239, 213]
-				: BRAND.paperInset;
 			// Episode trajectory keeps the downstream narrative bullet
 			// (still episode-shaped copy); other kinds skip the bullet
 			// until P-PDF-8 lands data-driven vital + polarity copy.
@@ -2324,39 +2320,27 @@ export function generateDoctorPdf(
 				trendDir: pillSpec.trendDir,
 			};
 		} else if (pillSpec.kind === 'vital') {
-			// Neutral wording for vital cohorts — no "improving / worsening"
-			// value judgment in the label OR the color. Direction
-			// semantics depend on biology (TSH falling = good for hypothyroid
-			// on supplementation; rising = bad). Let the doctor read the
-			// number and interpret. Steiner's caveat from the campfire.
 			trendLabel = t(pillSpec.labelKey, { vital: t(pillSpec.vitalLabel) });
-			trendColor = BRAND.textPrimary;
-			pillBg = BRAND.paperInset;
 		} else {
-			// Polarity pill — both poles are clinically meaningful;
-			// "improving" and "worsening" don't map onto bipolar. Brunner:
-			// "treats bipolar like hypertension; cry wolf on every stable
-			// patient." Neutral color, label carries the meaning.
 			trendLabel = t(pillSpec.labelKey);
-			trendColor = BRAND.textPrimary;
-			pillBg = BRAND.paperInset;
 		}
 
-		// Trend badge: a soft-pill label on the right edge. No arrow —
-		// color + explicit text carry the direction (or, for vital /
-		// polarity pills, neutral color + text-with-direction-word).
-		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(9);
-		const pillPadX = 3;
-		const pillPadY = 1.8;
-		const pillW = doc.getTextWidth(trendLabel) + pillPadX * 2;
-		const pillH = 6;
-		const pillX = pageW - 14 - pillW;
-		const pillY = cursorY - pillH + pillPadY;
-		doc.setFillColor(...pillBg);
-		doc.roundedRect(pillX, pillY, pillW, pillH, 2, 2, 'F');
-		doc.setTextColor(...trendColor);
-		doc.text(trendLabel, pillX + pillW / 2, pillY + pillH - pillPadY, { align: 'center' });
+		// Trajectory label on the right edge: white fill + hairline border,
+		// neutral text. Reads as a quiet display affordance, not a badge.
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(7);
+		const labelPadX = 2.4;
+		const labelPadY = 1.4;
+		const labelW = doc.getTextWidth(trendLabel) + labelPadX * 2;
+		const labelH = 4.6;
+		const labelX = pageW - 14 - labelW;
+		const labelY = cursorY - labelH + labelPadY;
+		doc.setFillColor(...BRAND.card);
+		doc.setDrawColor(...BRAND.borderSubtle);
+		doc.setLineWidth(0.2);
+		doc.roundedRect(labelX, labelY, labelW, labelH, 1.2, 1.2, 'FD');
+		doc.setTextColor(...BRAND.textPrimary);
+		doc.text(trendLabel, labelX + labelW / 2, labelY + labelH - labelPadY, { align: 'center' });
 	}
 	// pillSpec === null → no pill drawn. The explicit safe-omit path
 	// for sparse data + narrative-no-episodes + custom cohort. The
