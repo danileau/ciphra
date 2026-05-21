@@ -100,6 +100,12 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 	// Static `$t('customization.label')` calls are still detected;
 	// only the dynamic add/edit/section/error families need this.
 	'customization.',
+
+	// Clinical handoff PDF — keys used from pdfHandoff.ts via the
+	// translator callable (not `$t(...)`), plus future export-wizard
+	// keys (handoff.export_*) that ship before the UI lands.
+	// CLINICAL_HANDOFF.md spec, 2026-05-21.
+	'handoff.',
 ];
 
 /**

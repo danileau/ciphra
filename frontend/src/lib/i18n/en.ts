@@ -1295,6 +1295,36 @@ export default {
 	'pdf.disclaimer_medical': 'ciphra is a personal notebook, not a medical device.',
 	'pdf.disclaimer_medical_long': 'Personal notebook — not a medical device under EU MDR 2017/745 or Swiss MepV. Self-entered data. Not a substitute for professional medical advice.',
 	'pdf.table_continued': 'continued',
+
+	// Clinical handoff PDF (CLINICAL_HANDOFF.md, 2026-05-21 binding spec).
+	// Plain neutral copy; no banned interpretive words. Patient-authored
+	// free text is exempt from the banned-word rule.
+	'handoff.brand_label': 'ciphra',
+	'handoff.artifact_label': 'Clinical Handoff',
+	'handoff.wrote_on': 'wrote',
+	'handoff.no_note_provided': '[no note provided]',
+	'handoff.author_fallback': 'Patient',
+	'handoff.patient_label': 'Patient',
+	'handoff.notebook_label': 'Notebook',
+	'handoff.locale_label': 'Locale',
+	'handoff.period_label': 'Export period',
+	'handoff.notes_section': 'Patient notes',
+	'handoff.notes_truncated': '+{n} note(s) not printed on this page',
+	'handoff.last': 'Last',
+	'handoff.this': 'This',
+	'handoff.no_values_in_period': 'no values entered in this period',
+	'handoff.vitals_truncated': '+{n} more value(s) not printed on this page',
+	'handoff.dose_changes_label': 'Dose changes',
+	'handoff.no_dose_changes_in_period': 'no dose changes in this period',
+	'handoff.dose_changes_truncated': '+{n} more dose change(s) not printed on this page',
+	'handoff.cohort_stub_episode': '[Episode primary block — implementation pending]',
+	'handoff.cohort_stub_cycle': '[Cycle primary block — implementation pending]',
+	'handoff.cohort_stub_phase': '[Phase primary block — implementation pending]',
+	'handoff.cohort_stub_narrative': '[Narrative primary block — implementation pending]',
+	'handoff.cohort_stub_custom': '[Custom primary block — implementation pending]',
+	'handoff.scope_statement': 'This page displays patient-authored entries and raw values for the selected period. It does not diagnose, rank importance, or interpret change. Generated locally.',
+	'handoff.export_prompt': 'What do you most want the clinician to notice on this page?',
+	'handoff.export_privacy_notice': 'This line will be visible on the printed page. Anyone who sees the page can read it.',
 	'protocol.export_pdf': 'Export PDF',
 
 	// Admin
