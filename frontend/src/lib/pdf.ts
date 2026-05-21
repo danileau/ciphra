@@ -1735,22 +1735,30 @@ export function generateDoctorPdf(
 	metaParts.push(`${t('pdf.export_date')}: ${exportDate}`);
 	doc.text(metaParts.join('   -   '), 14, 22);
 
-	// ── Disclaimer strip on page 1 ──
-	// Legally and ethically required to be visible at first glance, not a
-	// footnote. MDR auditor in the QA round flagged footer-only placement.
+	// ── Disclaimer notice on page 1 ──
+	// DSPEC-1 — rule-backed notice per PDF_DESIGN_SPEC.md §4: white field,
+	// 3pt olive left rule, body-size text, compact padding, no fill. The
+	// pre-DSPEC ochre-tinted filled banner read as a warning affordance
+	// and risked muddy photocopies. The notice still surfaces at first
+	// glance (MDR auditor's footer-only objection from the QA round), but
+	// reads as standing copy rather than an alert.
 	const discY = 27;
-	doc.setFont('helvetica', 'italic');
-	doc.setFontSize(7.5);
+	const discTextX = 18.5; // 14 + 3pt rule + 1.5mm padding
+	const discTextW = pageW - discTextX - 14;
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(9);
 	const discText = t('pdf.disclaimer_medical_long');
-	const discLines = doc.splitTextToSize(discText, pageW - 40);
-	const lineH = 3.6;
-	const discH = discLines.length * lineH + 3.6;
-	doc.setFillColor(250, 243, 233); // ochreSoft
-	doc.setDrawColor(...BRAND.ochre);
-	doc.setLineWidth(0.3);
-	doc.roundedRect(14, discY, pageW - 28, discH, 1.2, 1.2, 'FD');
-	doc.setTextColor(...BRAND.ochre);
-	doc.text(discLines, pageW / 2, discY + 3.6, { align: 'center' });
+	const discLines = doc.splitTextToSize(discText, discTextW);
+	const lineH = 3.7;
+	const discPadY = 2.2;
+	const discH = discLines.length * lineH + discPadY * 2;
+	// 3pt olive left rule. jsPDF line widths are in mm; 3pt ≈ 1.06mm.
+	doc.setDrawColor(...BRAND.olive);
+	doc.setLineWidth(1.06);
+	doc.line(14, discY, 14, discY + discH);
+	doc.setLineWidth(0.2);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(discLines, discTextX, discY + discPadY + lineH - 0.8);
 
 	// ── Compute stats ──
 	const daysLogged = monthDocs.length;
