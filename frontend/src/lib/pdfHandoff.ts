@@ -60,11 +60,15 @@ const TYPE = {
 	axis: 6,
 };
 
-/** Neutral-only palette. No category color, ever. */
+/** Neutral palette + brand-identity tokens (never value-encoded). */
 const INK = {
 	primary: [0, 0, 0] as [number, number, number],
 	muted: [110, 110, 110] as [number, number, number],
 	hairline: [180, 180, 180] as [number, number, number],
+	/** Brick — used ONLY for the brand asterisk. Never on data. */
+	brandAsterisk: [178, 60, 44] as [number, number, number],
+	/** Olive — used for brand chrome (patient-quote left rule). */
+	brandOlive: [127, 130, 27] as [number, number, number],
 };
 
 /**
@@ -120,6 +124,11 @@ export function generateClinicalHandoff(
 	// Single page. No paintPaper background (§1.5 — white fill only).
 	const exportDate = new Date(year, month, 1);
 	const periodRange = computePeriodRange(year, month, scope);
+	// The 90-day window is the universal data window across every
+	// cohort primary block — it's what the doctor actually sees in the
+	// density strip / sparkline / calendar. The identity block shows
+	// this window so the header matches the data below it (R4 design).
+	const dataWindow = computeCalendarWindow(periodRange, 90);
 
 	let cursorY = GEO.marginTop;
 
@@ -134,7 +143,7 @@ export function generateClinicalHandoff(
 		locale,
 		cursorY,
 	);
-	cursorY = drawIdentityBlock(doc, blueprint, username, periodRange, locale, t, cursorY);
+	cursorY = drawIdentityBlock(doc, blueprint, username, dataWindow, locale, t, cursorY);
 
 	// Primary block — dispatch on cohort. Returns the bottom Y.
 	cursorY = drawPrimaryBlock(doc, blueprint, documents, periodRange, t, locale, cursorY);
@@ -156,22 +165,58 @@ export function generateClinicalHandoff(
 
 /* ─── Shell blocks (constant across all cohorts) ─── */
 
-/** §2 block 1 — Header line. Returns new cursorY. */
+/**
+ * §2 block 1 — Header line. ciphra brand mark on the left, artifact
+ * label + date in muted weight to the right.
+ *
+ * The asterisk is rendered as a brick-colored "*" glyph immediately
+ * after "ciphra" with no space, matching the app's wordmark. Full path-
+ * drawn asterisk with 8° tilt is a future upgrade (see §15 / brand
+ * identity). For now the glyph achieves brand presence at all locales.
+ */
 export function drawHandoffHeader(
 	doc: jsPDF,
 	exportDate: Date,
 	locale: string,
 	t: TranslateFn,
 ): number {
+	const baselineY = GEO.marginTop + 5;
+
+	// "ciphra" wordmark — bold, textPrimary.
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.body);
+	doc.setTextColor(...INK.primary);
+	const brandText = t('handoff.brand_label');
+	doc.text(brandText, GEO.marginX, baselineY);
+
+	// Asterisk in brick, immediately after the wordmark (no space).
+	const brandTextW = doc.getTextWidth(brandText);
+	doc.setTextColor(...INK.brandAsterisk);
+	doc.setFont('helvetica', 'bold');
+	doc.text('*', GEO.marginX + brandTextW + 0.4, baselineY);
+
+	// Artifact label + date — muted, separated by ·.
+	const asteriskW = doc.getTextWidth('*');
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(TYPE.compact);
 	doc.setTextColor(...INK.muted);
-	const left = `${t('handoff.brand_label')} · ${t('handoff.artifact_label')} · ${formatDateLocale(exportDate, locale)}`;
-	doc.text(left, GEO.marginX, GEO.marginTop + 4);
+	const labelText = `  ${t('handoff.artifact_label')}`;
+	doc.text(labelText, GEO.marginX + brandTextW + asteriskW + 1, baselineY);
+
+	const dateText = formatDateLocale(exportDate, locale);
+	doc.text(dateText, GEO.pageW - GEO.marginX, baselineY, { align: 'right' });
+
 	return GEO.marginTop + GEO.headerH;
 }
 
-/** §2 block 2 — Patient top line. Free-text quote with author + date. */
+/**
+ * §2 block 2 — Patient top line. Free-text quote with author + date,
+ * rendered with a 3pt olive left rule running the full block height.
+ *
+ * If the patient passed no text, the block collapses entirely (returns
+ * y unchanged). R4 convergence: software does NOT narrate absence;
+ * "[no note provided]" leads the page with failure and was killed.
+ */
 export function drawPatientTopLine(
 	doc: jsPDF,
 	blueprint: Blueprint,
@@ -182,29 +227,54 @@ export function drawPatientTopLine(
 	locale: string,
 	y: number,
 ): number {
-	// Author display: first name if available, else username, else
-	// blueprint condition label as a last resort.
+	const hasText = text.trim().length > 0;
+	if (!hasText) {
+		// Collapse the block. Caller's cursor stays put; downstream
+		// blocks shift upward and white space accumulates at the bottom.
+		return y;
+	}
+
 	const author = firstNameOrFallback(username, blueprint, t);
 	const dateLabel = formatDateLocale(new Date(dateISO), locale);
+	const safeText = text.trim().slice(0, 180);
 
-	const hasText = text.trim().length > 0;
-	const safeText = hasText ? text.trim().slice(0, 180) : t('handoff.no_note_provided');
-	const prefix = `${author} ${t('handoff.wrote_on')} (${dateLabel}): `;
+	// Olive 3pt left rule running the full block height (~16mm).
+	const ruleX = GEO.marginX;
+	const ruleY1 = y + 1;
+	const ruleY2 = y + GEO.topLineH - 1;
+	doc.setDrawColor(...INK.brandOlive);
+	doc.setLineWidth(1.06); // 3pt ≈ 1.06mm
+	doc.line(ruleX, ruleY1, ruleX, ruleY2);
 
-	doc.setFont('helvetica', 'normal');
+	// Reset line width for downstream renderers.
+	doc.setLineWidth(0.2);
+
+	// Content indented 4mm past the rule for breathing room.
+	const textX = GEO.marginX + 4;
+	const textW = GEO.contentW - 4;
+
+	// Header line: "Hans schrieb am 18. Mai 2026:" — 11pt bold.
+	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(TYPE.topLine);
 	doc.setTextColor(...INK.primary);
+	doc.text(`${author} ${t('handoff.wrote_at')} ${dateLabel}:`, textX, y + 5);
 
-	// Prefix and quoted text concatenated; quote shown when there's
-	// real content, fallback string shown plain when empty.
-	const fullText = hasText ? `${prefix}"${safeText}"` : `${prefix}${safeText}`;
-	const wrapped = doc.splitTextToSize(fullText, GEO.contentW);
-	doc.text(wrapped, GEO.marginX, y + 5);
+	// Quote body — 11pt italic regular, wrapped within textW.
+	doc.setFont('helvetica', 'italic');
+	const wrapped = doc.splitTextToSize(`„${safeText}"`, textW);
+	doc.text(wrapped, textX, y + 11);
+	doc.setFont('helvetica', 'normal'); // reset
 
 	return y + GEO.topLineH;
 }
 
-/** §2 block 3 — Identity + scope (cohort label, period, locale). */
+/**
+ * §2 block 3 — Identity (brand-voice line + capitalized name).
+ *
+ * Two lines, 8pt muted. Brand-voice phrasing (Notizbuch / Zeitraum)
+ * instead of admin-clinical labels (Patient / Locale). The locale tag
+ * was dropped — clinically irrelevant, looked like raw debug output.
+ */
 export function drawIdentityBlock(
 	doc: jsPDF,
 	blueprint: Blueprint,
@@ -223,22 +293,26 @@ export function drawIdentityBlock(
 		: blueprint.conditionId;
 	const periodLabel = `${formatDateLocale(new Date(periodRange.startISO), locale)} – ${formatDateLocale(new Date(periodRange.endISO), locale)}`;
 
-	const left = [
-		`${t('handoff.patient_label')}: ${username || '—'}`,
-		`${t('handoff.notebook_label')}: ${conditionLabel}`,
-		`${t('handoff.locale_label')}: ${locale.toUpperCase()}`,
-	].join('  ·  ');
-	doc.text(left, GEO.marginX, y + 3);
+	// Line 1 — notebook + period in brand voice.
+	const line1 = `${t('handoff.notebook_label')}: ${conditionLabel}  ·  ${t('handoff.period_label')}: ${periodLabel}`;
+	doc.text(line1, GEO.marginX, y + 3);
 
-	const right = `${t('handoff.period_label')}: ${periodLabel}`;
-	doc.text(right, GEO.pageW - GEO.marginX, y + 3, { align: 'right' });
-
-	// Single hairline separator below identity row.
-	doc.setDrawColor(...INK.hairline);
-	doc.setLineWidth(0.15);
-	doc.line(GEO.marginX, y + GEO.identityH - 2, GEO.pageW - GEO.marginX, y + GEO.identityH - 2);
+	// Line 2 — capitalized name only. No DOB (ciphra doesn't store it).
+	const displayName = capitalizeName(username);
+	if (displayName) {
+		doc.text(displayName, GEO.marginX, y + 7);
+	}
 
 	return y + GEO.identityH;
+}
+
+function capitalizeName(raw: string): string {
+	if (!raw) return '';
+	return raw
+		.split(/\s+/)
+		.map((part) => (part.length === 0 ? '' : part[0].toUpperCase() + part.slice(1).toLowerCase()))
+		.join(' ')
+		.trim();
 }
 
 /** §2 block 5 — Patient notes (3 most recent, dated, quoted). */
@@ -512,13 +586,24 @@ export function drawDoseChangeStrip(
 /* ─── Other cohort primary blocks (stubs — to be filled in next sessions) ─── */
 
 /**
- * §3.2 — Episode cohort primary block.
- * B&W calendar over the trailing 90 days. Empty cells = calm days
- * (thin black border, white fill). Event days = black marker + 2-letter
- * code. Same-day same-type collisions compress to `SZ x3`; multi-type
- * collisions show the most-frequent code + `+N` suffix.
- * Counts side-by-side below: `Previous: X · This: Y` over equal-length
- * windows (no labeled delta).
+ * §3.2 — Episode cohort primary block. v2 design (campfire v2 R4
+ * convergence, 2026-05-22). Density strip + Ereignisliste, NOT the
+ * 91-cell calendar grid the v1 spec used.
+ *
+ * Why the change: rendering Hans through v1 produced a page that read
+ * as EMPTY (91 hairline cells dominate the visual weight; 2 real events
+ * become visual dust). All three campfire v2 buddies independently
+ * diagnosed this. The fix is a horizontal density strip + a separate
+ * Ereignisliste section with full German event labels, not 2-letter
+ * codes inside cells.
+ *
+ * Layout:
+ *   - Section title: "ANFÄLLE — Letzte 90 Tage (Anzahl: N)" 11pt bold.
+ *   - Horizontal density strip: 90-day axis with filled markers at
+ *     proportional date positions. Each marker is ~0.7mm radius black.
+ *   - Ereignisliste: 7pt bold heading + one row per event in 8pt:
+ *     "{date}  {full label}".
+ *   - Comparison row at 7pt muted: "Vorher: P · Diese Periode: T".
  */
 function drawEpisodeCohortPrimary(
 	doc: jsPDF,
@@ -529,141 +614,162 @@ function drawEpisodeCohortPrimary(
 	locale: string,
 	y: number,
 ): number {
-	// Calendar window: trailing 90 days ending at periodRange.endISO, but
-	// never extending before periodRange.startISO. For month scope this
-	// collapses to the month; for year scope it caps at 90 days.
 	const window = computeCalendarWindow(periodRange, 90);
 	const previous = computePreviousWindow(window);
-	const eventsByDay = aggregateEpisodesByDay(documents, blueprint, window);
-	const thisCount = countEpisodesInWindow(documents, blueprint, window);
+	const events = extractEpisodeEvents(documents, blueprint, window, t);
+	const thisCount = events.length;
 	const prevCount = countEpisodesInWindow(documents, blueprint, previous);
-	const thisDaysWithEvents = countDaysWithEpisodes(documents, blueprint, window);
-	const prevDaysWithEvents = countDaysWithEpisodes(documents, blueprint, previous);
 
-	// Heading.
+	// Section title with inline count (Split 2 = Option A INLINE).
 	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...INK.primary);
-	doc.text(t('handoff.episodes_title'), GEO.marginX, y + 4);
+	const titleText = `${t('handoff.episodes_title_base').toUpperCase()} — ${t('handoff.last_90_days')} (${t('handoff.count_label')}: ${thisCount})`;
+	doc.text(titleText, GEO.marginX, y + 4);
 
-	// Calendar grid.
-	const gridX = GEO.marginX;
-	const gridY = y + 10;
-	const labelColW = 20;
-	const cellW = (GEO.contentW - labelColW) / 7;
-	const cellH = 7.5;
-	drawEpisodeCalendar(doc, gridX, gridY, labelColW, cellW, cellH, window, eventsByDay, locale, t);
+	// Density strip — horizontal axis with markers.
+	const stripTopY = y + 14;
+	drawDensityStrip(doc, GEO.marginX, stripTopY, GEO.contentW, window, events, locale);
+	const stripBottomY = stripTopY + 14; // axis + marker zone + labels
 
-	// Counts row.
-	const calendarBottomY = gridY + 5 /* header */ + numWeeksInWindow(window) * cellH + 4;
-	let yi = calendarBottomY;
-
-	doc.setFont('helvetica', 'normal');
+	// Ereignisliste section.
+	let yi = stripBottomY + 4;
+	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(TYPE.compact);
 	doc.setTextColor(...INK.primary);
-	const row1 = `${t('handoff.episodes_recorded')}    ${t('handoff.previous')}: ${prevCount}  ·  ${t('handoff.this_window')}: ${thisCount}`;
-	doc.text(row1, GEO.marginX, yi);
+	doc.text(t('handoff.events_list_title'), GEO.marginX, yi);
 	yi += 4;
-	const row2 = `${t('handoff.days_with_events')}    ${t('handoff.previous')}: ${prevDaysWithEvents}  ·  ${t('handoff.this_window')}: ${thisDaysWithEvents}`;
-	doc.text(row2, GEO.marginX, yi);
+
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.table);
+	doc.setTextColor(...INK.primary);
+	if (events.length === 0) {
+		doc.setFont('helvetica', 'italic');
+		doc.setTextColor(...INK.muted);
+		doc.text(t('handoff.no_episodes_in_period'), GEO.marginX, yi);
+		yi += 4;
+		doc.setFont('helvetica', 'normal');
+		doc.setTextColor(...INK.primary);
+	} else {
+		// Cap at 8 events for the page-1 list. Surplus events overflow with
+		// a "+N not printed on this page" suffix per §1.1.
+		const shown = events.slice(0, 8);
+		for (const ev of shown) {
+			const dateLabel = formatDateLocale(new Date(ev.dateISO), locale);
+			doc.text(`${dateLabel}    ${ev.label}`, GEO.marginX, yi);
+			yi += 4;
+		}
+		if (events.length > shown.length) {
+			doc.setFont('helvetica', 'italic');
+			doc.setFontSize(TYPE.compact);
+			doc.setTextColor(...INK.muted);
+			doc.text(
+				t('handoff.events_truncated', { n: String(events.length - shown.length) }),
+				GEO.marginX,
+				yi,
+			);
+			yi += 4;
+		}
+	}
+
+	// Comparison row — 7pt muted, plain text. No banned-word derivation.
+	yi += 2;
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.compact);
+	doc.setTextColor(...INK.muted);
+	doc.text(
+		`${t('handoff.previous_short')}: ${prevCount}  ·  ${t('handoff.this_window_short')}: ${thisCount}`,
+		GEO.marginX,
+		yi,
+	);
 	yi += 4;
 
 	return Math.max(yi, y + GEO.primaryH);
 }
 
-interface DayCell {
-	codeBuckets: Map<string, number>;
+interface EpisodeEvent {
+	dateISO: string;
+	/** i18n-resolved full label (e.g. "Anfall mit Bewusstseinsverlust"). */
+	label: string;
 }
 
-function drawEpisodeCalendar(
+/**
+ * Flatten patient-logged episodes into a chronological event stream
+ * (instead of grouping by day like the legacy calendar aggregator).
+ * Each non-zero `episodes[id]` count contributes that many events,
+ * each carrying the resolved full label. Same-day same-type events
+ * share a date — the density strip handles spatial overlap via
+ * marker rendering, not the data structure.
+ */
+export function extractEpisodeEvents(
+	documents: CiphraDocument[],
+	blueprint: Blueprint,
+	window: { startISO: string; endISO: string },
+	t: TranslateFn,
+): EpisodeEvent[] {
+	const out: EpisodeEvent[] = [];
+	const epTypes = blueprint.episodeTypes ?? [];
+
+	for (const d of documents) {
+		const data = d.data as Record<string, unknown> & { date?: string; episodes?: Record<string, unknown> };
+		const dateISO = String(data?.date || '');
+		if (!dateISO || dateISO < window.startISO || dateISO > window.endISO) continue;
+		const eps = data?.episodes;
+		if (!eps || typeof eps !== 'object') continue;
+
+		for (const ep of epTypes) {
+			const raw = (eps as Record<string, unknown>)[ep.id];
+			const n = Number(raw);
+			if (!Number.isFinite(n) || n <= 0) continue;
+			const label = (ep.label && t(ep.label)) || ep.label || ep.id;
+			for (let i = 0; i < n; i++) {
+				out.push({ dateISO, label });
+			}
+		}
+	}
+	out.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+	return out;
+}
+
+/**
+ * Horizontal density strip. Renders a thin axis line from window start
+ * to window end, with filled black circles at each event's proportional
+ * date position. Date labels at the two endpoints; per-marker dates are
+ * picked up by the Ereignisliste section below, not duplicated here.
+ */
+export function drawDensityStrip(
 	doc: jsPDF,
 	x: number,
 	y: number,
-	labelColW: number,
-	cellW: number,
-	cellH: number,
+	w: number,
 	window: { startISO: string; endISO: string },
-	eventsByDay: Map<string, DayCell>,
+	events: EpisodeEvent[],
 	locale: string,
-	_t: TranslateFn,
 ): void {
-	// Header row: weekday names (M T W T F S S). Always 7 cells.
+	const start = parseISO(window.startISO);
+	const end = parseISO(window.endISO);
+	const totalMs = end.getTime() - start.getTime() || 1;
+
+	// Axis line.
+	doc.setDrawColor(...INK.primary);
+	doc.setLineWidth(0.5);
+	const axisY = y + 4;
+	doc.line(x, axisY, x + w, axisY);
+
+	// Endpoint date labels — small, muted, just above the axis line.
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(TYPE.axis);
 	doc.setTextColor(...INK.muted);
-	const headerY = y + 3;
-	const weekdayInitials = computeWeekdayInitials(locale);
-	for (let i = 0; i < 7; i++) {
-		const cellX = x + labelColW + i * cellW;
-		doc.text(weekdayInitials[i], cellX + cellW / 2, headerY, { align: 'center' });
-	}
+	doc.text(formatDateLocale(start, locale), x, axisY - 1.5);
+	doc.text(formatDateLocale(end, locale), x + w, axisY - 1.5, { align: 'right' });
 
-	const gridTopY = y + 5;
-	const startDate = parseISO(window.startISO);
-	const endDate = parseISO(window.endISO);
-
-	// Pad startDate back to the previous Monday so column = day-of-week
-	// alignment holds across the whole grid. Padded cells are drawn as
-	// dimmed empty placeholders.
-	const startDow = (startDate.getDay() + 6) % 7; // Mon=0..Sun=6
-	const gridStart = new Date(startDate);
-	gridStart.setDate(gridStart.getDate() - startDow);
-
-	const weeks = numWeeksInWindow(window);
-	doc.setDrawColor(...INK.hairline);
-	doc.setLineWidth(0.15);
-
-	for (let w = 0; w < weeks; w++) {
-		const rowY = gridTopY + w * cellH;
-
-		// Row label: first day of the week (Mon).
-		const rowDate = new Date(gridStart);
-		rowDate.setDate(rowDate.getDate() + w * 7);
-		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(TYPE.axis);
-		doc.setTextColor(...INK.muted);
-		doc.text(formatMonDayLocale(rowDate, locale), x + labelColW - 2, rowY + cellH / 2 + 1, { align: 'right' });
-
-		// 7 day cells.
-		for (let d = 0; d < 7; d++) {
-			const cellX = x + labelColW + d * cellW;
-			const cellY = rowY;
-			const dayDate = new Date(gridStart);
-			dayDate.setDate(dayDate.getDate() + w * 7 + d);
-			const dayISO = formatDateISOFromDate(dayDate);
-
-			const isInWindow = dayISO >= window.startISO && dayISO <= window.endISO;
-			if (!isInWindow) {
-				// Out-of-window pad cell — leave blank (no border).
-				continue;
-			}
-
-			// Cell border (calm-day affordance, §1.5 + §3.2).
-			doc.setDrawColor(...INK.hairline);
-			doc.setLineWidth(0.15);
-			doc.rect(cellX + 0.3, cellY + 0.3, cellW - 0.6, cellH - 0.6, 'S');
-
-			// Event content, if any.
-			const dayCell = eventsByDay.get(dayISO);
-			if (!dayCell || dayCell.codeBuckets.size === 0) continue;
-
-			// In-cell label: the most-frequent code (collision compress).
-			const sortedCodes = Array.from(dayCell.codeBuckets.entries()).sort((a, b) => b[1] - a[1]);
-			const [topCode, topN] = sortedCodes[0];
-			const extraTypes = sortedCodes.length - 1;
-			let label = topN > 1 ? `${topCode} x${topN}` : topCode;
-			if (extraTypes > 0) label += ` +${extraTypes}`;
-
-			doc.setFont('helvetica', 'bold');
-			doc.setFontSize(TYPE.axis);
-			doc.setTextColor(...INK.primary);
-			doc.text(label, cellX + cellW / 2, cellY + cellH / 2 + 1, { align: 'center' });
-
-			// Filled black dot to the left of the label (event marker
-			// affordance, B&W safe per §1.5 + tribunal split 2 spirit).
-			doc.setFillColor(...INK.primary);
-			doc.circle(cellX + 1.4, cellY + cellH / 2, 0.7, 'F');
-		}
+	// Event markers — proportional position, filled black circles.
+	doc.setFillColor(...INK.primary);
+	for (const ev of events) {
+		const evDate = parseISO(ev.dateISO);
+		const fraction = (evDate.getTime() - start.getTime()) / totalMs;
+		const cx = x + Math.max(0, Math.min(1, fraction)) * w;
+		doc.circle(cx, axisY, 0.9, 'F');
 	}
 }
 
@@ -688,49 +794,6 @@ export function computePreviousWindow(window: { startISO: string; endISO: string
 	const prevStart = new Date(prevEnd);
 	prevStart.setDate(prevStart.getDate() - (lengthDays - 1));
 	return { startISO: formatDateISOFromDate(prevStart), endISO: formatDateISOFromDate(prevEnd) };
-}
-
-function numWeeksInWindow(window: { startISO: string; endISO: string }): number {
-	const start = parseISO(window.startISO);
-	const end = parseISO(window.endISO);
-	const startDow = (start.getDay() + 6) % 7;
-	const padded = new Date(start);
-	padded.setDate(padded.getDate() - startDow);
-	const days = Math.round((end.getTime() - padded.getTime()) / (24 * 60 * 60 * 1000)) + 1;
-	return Math.ceil(days / 7);
-}
-
-export function aggregateEpisodesByDay(
-	documents: CiphraDocument[],
-	blueprint: Blueprint,
-	window: { startISO: string; endISO: string },
-): Map<string, DayCell> {
-	const map = new Map<string, DayCell>();
-	const epTypes = blueprint.episodeTypes ?? [];
-
-	for (const d of documents) {
-		const data = d.data as Record<string, unknown> & { date?: string; type?: string; episodes?: Record<string, unknown> };
-		const dateISO = String(data?.date || '');
-		if (!dateISO || dateISO < window.startISO || dateISO > window.endISO) continue;
-		const eps = data?.episodes;
-		if (!eps || typeof eps !== 'object') continue;
-
-		let cell = map.get(dateISO);
-		if (!cell) {
-			cell = { codeBuckets: new Map() };
-			map.set(dateISO, cell);
-		}
-
-		for (const ep of epTypes) {
-			const raw = (eps as Record<string, unknown>)[ep.id];
-			const n = Number(raw);
-			if (!Number.isFinite(n) || n <= 0) continue;
-			const code = shortCodeForEpisode(ep.id, ep.label);
-			cell.codeBuckets.set(code, (cell.codeBuckets.get(code) ?? 0) + n);
-		}
-	}
-
-	return map;
 }
 
 export function countEpisodesInWindow(
@@ -778,39 +841,6 @@ export function countDaysWithEpisodes(
 	return days.size;
 }
 
-/**
- * Derive a 2-letter event code for an episode type.
- * - `tonic_clonic` → `TC`
- * - `focal_aware` → `FA`
- * - `migraine` → `MI`
- * - `aura` → `AU`
- * Underscore-separated → initials of first two parts; single word →
- * first two letters. Always uppercase. Collisions within a blueprint
- * are possible but acceptable for the first-glance read; the doctor
- * resolves on the day-by-day list which lives in the patient app.
- */
-export function shortCodeForEpisode(id: string, _label: string): string {
-	const parts = id.split('_').filter((p) => p.length > 0);
-	if (parts.length >= 2) {
-		return (parts[0][0] + parts[1][0]).toUpperCase();
-	}
-	return (parts[0] ?? id).slice(0, 2).toUpperCase();
-}
-
-function computeWeekdayInitials(locale: string): string[] {
-	// Mon..Sun. Use the locale's short weekday label, take the first
-	// character (uppercase). Sunday is the last column per ISO 8601.
-	const out: string[] = [];
-	const base = new Date(2026, 0, 5); // Monday 2026-01-05
-	for (let i = 0; i < 7; i++) {
-		const d = new Date(base);
-		d.setDate(d.getDate() + i);
-		const short = d.toLocaleDateString(locale, { weekday: 'short' });
-		out.push((short[0] ?? '·').toUpperCase());
-	}
-	return out;
-}
-
 function parseISO(iso: string): Date {
 	const [y, m, d] = iso.split('-').map(Number);
 	return new Date(y, (m ?? 1) - 1, d ?? 1);
@@ -818,10 +848,6 @@ function parseISO(iso: string): Date {
 
 function formatDateISOFromDate(d: Date): string {
 	return formatDateISO(d);
-}
-
-function formatMonDayLocale(d: Date, locale: string): string {
-	return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 /**
@@ -1002,10 +1028,9 @@ function enumerateMonthsInWindow(
  * The spec's "stripe-band timeline" (active/transition/baseline) is
  * aspirational: the data schema does not yet support patient-authored
  * phase labels. Per §1.3 software MUST NOT derive phase from symptoms.
- * Until a phase-logging UI lands, phase cohorts reuse the episode
- * calendar primitive — the patient's logged episode events are the
- * most-honest available signal. Mirrors §3.2 exactly; only the
- * section heading differs.
+ * Until a phase-logging UI lands, phase cohorts reuse the v2 episode
+ * primitives (density strip + Ereignisliste) — the patient's logged
+ * episode events are the most-honest available signal.
  */
 function drawPhaseCohortPrimary(
 	doc: jsPDF,
@@ -1018,38 +1043,63 @@ function drawPhaseCohortPrimary(
 ): number {
 	const window = computeCalendarWindow(periodRange, 90);
 	const previous = computePreviousWindow(window);
-	const eventsByDay = aggregateEpisodesByDay(documents, blueprint, window);
-	const thisCount = countEpisodesInWindow(documents, blueprint, window);
+	const events = extractEpisodeEvents(documents, blueprint, window, t);
+	const thisCount = events.length;
 	const prevCount = countEpisodesInWindow(documents, blueprint, previous);
-	const thisDaysWithEvents = countDaysWithEpisodes(documents, blueprint, window);
-	const prevDaysWithEvents = countDaysWithEpisodes(documents, blueprint, previous);
 
+	// Section title (uses phase wording instead of "ANFÄLLE").
 	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...INK.primary);
-	doc.text(t('handoff.phase_title'), GEO.marginX, y + 4);
+	const titleText = `${t('handoff.phase_title').toUpperCase()} (${t('handoff.count_label')}: ${thisCount})`;
+	doc.text(titleText, GEO.marginX, y + 4);
 
-	const gridX = GEO.marginX;
-	const gridY = y + 10;
-	const labelColW = 20;
-	const cellW = (GEO.contentW - labelColW) / 7;
-	const cellH = 7.5;
-	drawEpisodeCalendar(doc, gridX, gridY, labelColW, cellW, cellH, window, eventsByDay, locale, t);
+	// Density strip + Ereignisliste (same primitive as episode cohort).
+	const stripTopY = y + 14;
+	drawDensityStrip(doc, GEO.marginX, stripTopY, GEO.contentW, window, events, locale);
+	const stripBottomY = stripTopY + 14;
 
-	const calendarBottomY = gridY + 5 + numWeeksInWindow(window) * cellH + 4;
-	let yi = calendarBottomY;
-
-	doc.setFont('helvetica', 'normal');
+	let yi = stripBottomY + 4;
+	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(TYPE.compact);
 	doc.setTextColor(...INK.primary);
-	doc.text(
-		`${t('handoff.episodes_recorded')}    ${t('handoff.previous')}: ${prevCount}  ·  ${t('handoff.this_window')}: ${thisCount}`,
-		GEO.marginX,
-		yi,
-	);
+	doc.text(t('handoff.events_list_title'), GEO.marginX, yi);
 	yi += 4;
+
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.table);
+	doc.setTextColor(...INK.primary);
+	if (events.length === 0) {
+		doc.setFont('helvetica', 'italic');
+		doc.setTextColor(...INK.muted);
+		doc.text(t('handoff.no_episodes_in_period'), GEO.marginX, yi);
+		yi += 4;
+	} else {
+		const shown = events.slice(0, 8);
+		for (const ev of shown) {
+			const dateLabel = formatDateLocale(new Date(ev.dateISO), locale);
+			doc.text(`${dateLabel}    ${ev.label}`, GEO.marginX, yi);
+			yi += 4;
+		}
+		if (events.length > shown.length) {
+			doc.setFont('helvetica', 'italic');
+			doc.setFontSize(TYPE.compact);
+			doc.setTextColor(...INK.muted);
+			doc.text(
+				t('handoff.events_truncated', { n: String(events.length - shown.length) }),
+				GEO.marginX,
+				yi,
+			);
+			yi += 4;
+		}
+	}
+
+	yi += 2;
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.compact);
+	doc.setTextColor(...INK.muted);
 	doc.text(
-		`${t('handoff.days_with_events')}    ${t('handoff.previous')}: ${prevDaysWithEvents}  ·  ${t('handoff.this_window')}: ${thisDaysWithEvents}`,
+		`${t('handoff.previous_short')}: ${prevCount}  ·  ${t('handoff.this_window_short')}: ${thisCount}`,
 		GEO.marginX,
 		yi,
 	);
@@ -1536,8 +1586,14 @@ function formatDateISO(d: Date): string {
 	return `${y}-${m}-${day}`;
 }
 
+/**
+ * German-style date: "22. Mai 2026". Uses month NAME (short form),
+ * not digits — the v2 design treats this as part of brand voice. The
+ * legacy "5/22/2026" US locale leak was an experience-crushing detail
+ * surfaced in the v2 R1 critique.
+ */
 function formatDateLocale(d: Date, locale: string): string {
-	return d.toLocaleDateString(locale, { year: 'numeric', month: '2-digit', day: '2-digit' });
+	return d.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function firstNameOrFallback(username: string, blueprint: Blueprint, t: TranslateFn): string {
