@@ -1321,7 +1321,17 @@
 			{/each}
 		</div>
 
-		<div class="mt-3 text-right">
+		<!-- Privacy note: the exported PDF is plaintext on disk. ciphra's
+		     zero-knowledge encryption only covers data inside the app, so
+		     the patient must know the saved file is readable by anyone. -->
+		<p class="report-export-note">
+			<svg class="report-export-note__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+				<path d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+			</svg>
+			<span>{$t('reports.export_privacy_note')}</span>
+		</p>
+
+		<div class="mt-2 text-right">
 			<button
 				on:click={exportCsvFile}
 				class="text-[11px] text-slate-500 hover:text-brand underline-offset-2 hover:underline transition-colors"
@@ -2076,4 +2086,21 @@
 		background: var(--border);
 	}
 	.report-line--short { width: 58%; }
+
+	/* Privacy note under the export cards. */
+	.report-export-note {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.4rem;
+		margin-top: 0.8rem;
+		font-size: 0.72rem;
+		line-height: 1.45;
+		color: var(--text-muted);
+	}
+	.report-export-note__icon {
+		width: 0.85rem;
+		height: 0.85rem;
+		flex-shrink: 0;
+		margin-top: 0.07rem;
+	}
 </style>

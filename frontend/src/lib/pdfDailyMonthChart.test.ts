@@ -80,6 +80,19 @@ describe('aggregateDailyMonthSeries', () => {
 		expect(result.dailySymptomDays[10]).toBe(0);  // all falsy → 0
 	});
 
+	it('dailySymptomCounts is the per-day count of truthy symptoms', () => {
+		// The daily-month chart plots this as a line, so it needs the count
+		// (a curve), not the 0/1 day flag (a square wave).
+		const docs = [
+			entryDoc(1, '2026-05-10', { symptoms: { headache: true, fatigue: true, nausea: true } }),
+			entryDoc(2, '2026-05-11', { symptoms: { headache: false } }),
+		];
+		const result = aggregateDailyMonthSeries(docs, 2026, 4, 31, []);
+		expect(result.dailySymptomCounts[9]).toBe(3);   // 3 truthy
+		expect(result.dailySymptomCounts[10]).toBe(0);  // all falsy
+		expect(result.dailySymptomCounts).toHaveLength(31);
+	});
+
 	it('clamps stray dates outside 1..daysInMonth (defensive)', () => {
 		// Malformed date components shouldn't write past the array end.
 		const docs = [

@@ -1092,7 +1092,7 @@ function drawDailyMonthChart(
 	acc: CohortAccents,
 	cursorY: number,
 ): number {
-	const { dailyTotals } = aggregateDailyMonthSeries(
+	const { dailyTotals, dailySymptomDays, dailySymptomCounts } = aggregateDailyMonthSeries(
 		documents, year, month, daysInMonth, episodeCols,
 	);
 	const pageW = 210;
@@ -1135,12 +1135,14 @@ function drawDailyMonthChart(
 	}
 	doc.text('0', chartX - 1, cursorY + chartH, { align: 'right' });
 
-	// Empty-state placeholder when the month is silent — same vocabulary as
-	// /reports' daily chart (PI v17). The chart frame stays so the doctor
-	// can see "yes, this scope was searched and there's no data" rather
-	// than "the chart is missing."
-	const total = dailyTotals.reduce((a, b) => a + b, 0);
-	if (total === 0) {
+	// Empty-state only when the month is genuinely silent — no episodes
+	// AND no symptom days. A month with symptoms logged but zero episodes
+	// (common for a well-controlled epilepsy patient) still has a chart
+	// worth showing: the episode line at zero plus the symptom-day row.
+	// Before this, the episode-only total wrongly read as "no entries".
+	const episodeTotal = dailyTotals.reduce((a, b) => a + b, 0);
+	const symptomTotal = dailySymptomDays.reduce((a, b) => a + b, 0);
+	if (episodeTotal === 0 && symptomTotal === 0) {
 		doc.setFont('helvetica', 'italic');
 		doc.setFontSize(TYPE.body);
 		doc.setTextColor(...BRAND.textMuted);
@@ -1182,11 +1184,46 @@ function drawDailyMonthChart(
 		doc.lines(bezier, firstX, firstY);
 	}
 
-	// Endpoint dot.
+	// Data dot at every day + a larger endpoint dot — orientation marks,
+	// matching the 24-month trajectory chart's episode series.
 	if (points.length >= 1) {
-		const last = points[points.length - 1];
 		doc.setFillColor(...acc.primary);
-		doc.circle(last[0], last[1], 0.8, 'F');
+		for (const [px, py] of points) doc.circle(px, py, 0.55, 'F');
+		const last = points[points.length - 1];
+		doc.circle(last[0], last[1], 1.0, 'F');
+	}
+
+	// Symptom-count secondary line — dashed, muted, on its own scale so a
+	// high symptom count can't flatten the episode line. Same rendering as
+	// the 24-month trajectory chart's symptom series: a dashed bezier line
+	// with a right-edge scale number. This is what keeps a symptom-only
+	// month (zero episodes) from reading as empty.
+	if (symptomTotal > 0) {
+		const symMax = Math.max(1, ...dailySymptomCounts);
+		const sPoints: Array<[number, number]> = dailySymptomCounts.map((v, i) => [
+			chartX + (i / Math.max(1, daysInMonth - 1)) * chartW,
+			cursorY + chartH - (v / symMax) * chartH,
+		]);
+		doc.setDrawColor(...BRAND.textMuted);
+		doc.setLineWidth(0.4);
+		doc.setLineDashPattern([1.2, 1.2], 0);
+		if (sPoints.length >= 2) {
+			const sBezier = smoothBezierDeltas(sPoints, cursorY, cursorY + chartH);
+			doc.lines(sBezier, sPoints[0][0], sPoints[0][1], undefined, 'S', false);
+		}
+		doc.setLineDashPattern([], 0);
+		doc.setLineWidth(0.2);
+		// Square marker at every day — orientation marks, matching the
+		// trajectory chart's symptom series (square pairs with the dashed
+		// stroke so the two series stay distinct in grayscale).
+		doc.setFillColor(...BRAND.textMuted);
+		for (const [px, py] of sPoints) drawMarker(doc, px, py, 0.5, 'square', true);
+		// Right-edge scale disclosure for the secondary series.
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.chartAxisMicro);
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(String(symMax), chartX + chartW + 0.5, cursorY + 2, { align: 'left' });
+		doc.text('0', chartX + chartW + 0.5, cursorY + chartH, { align: 'left' });
 	}
 
 	// X-axis day labels — every 5 days when daysInMonth > 20, every 2 otherwise
@@ -1202,7 +1239,30 @@ function drawDailyMonthChart(
 		doc.text(String(day), x, cursorY + chartH + 3, { align: 'center' });
 	}
 
-	return cursorY + chartH + 6;
+	// Legend — episode line + symptom-day dot.
+	{
+		const lgY = cursorY + chartH + 8;
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.chartAxis);
+		doc.setTextColor(...BRAND.textMuted);
+		let lx = chartX;
+		doc.setDrawColor(...acc.primary);
+		doc.setLineWidth(0.6);
+		doc.line(lx, lgY - 0.8, lx + 5, lgY - 0.8);
+		doc.text(t('pdf.legend_episodes'), lx + 7, lgY);
+		lx += 7 + doc.getTextWidth(t('pdf.legend_episodes')) + 8;
+		if (symptomTotal > 0) {
+			doc.setDrawColor(...BRAND.textMuted);
+			doc.setLineWidth(0.4);
+			doc.setLineDashPattern([1.2, 1.2], 0);
+			doc.line(lx, lgY - 0.8, lx + 5, lgY - 0.8);
+			doc.setLineDashPattern([], 0);
+			doc.text(t('pdf.legend_symptoms'), lx + 7, lgY);
+		}
+		doc.setLineWidth(0.2);
+	}
+
+	return cursorY + chartH + 12;
 }
 
 /* ────────────────────────────────────────────────────────────────

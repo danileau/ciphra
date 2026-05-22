@@ -12,8 +12,9 @@
 import type { CiphraDocument } from '$lib/stores/documents';
 
 export interface DailyMonthSeries {
-	dailyTotals: number[];       // length === daysInMonth
-	dailySymptomDays: number[];  // length === daysInMonth; 0 or 1 per day
+	dailyTotals: number[];        // length === daysInMonth; episode count per day
+	dailySymptomDays: number[];   // length === daysInMonth; 0 or 1 per day
+	dailySymptomCounts: number[]; // length === daysInMonth; symptom count per day
 }
 
 /**
@@ -35,6 +36,7 @@ export function aggregateDailyMonthSeries(
 ): DailyMonthSeries {
 	const dailyTotals = new Array(daysInMonth).fill(0);
 	const dailySymptomDays = new Array(daysInMonth).fill(0);
+	const dailySymptomCounts = new Array(daysInMonth).fill(0);
 
 	const focusPrefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
 	for (const d of documents) {
@@ -50,8 +52,10 @@ export function aggregateDailyMonthSeries(
 			dailyTotals[idx] += Number(eps[col] || seizures[col] || 0);
 		}
 		const syms = (d.data?.symptoms || {}) as Record<string, unknown>;
-		if (Object.values(syms).some((v) => !!v)) dailySymptomDays[idx] = 1;
+		const symCount = Object.values(syms).filter((v) => !!v).length;
+		dailySymptomCounts[idx] += symCount;
+		if (symCount > 0) dailySymptomDays[idx] = 1;
 	}
 
-	return { dailyTotals, dailySymptomDays };
+	return { dailyTotals, dailySymptomDays, dailySymptomCounts };
 }
