@@ -127,5 +127,8 @@ ciphra/
 - **Swiss German** — generated German copy uses `ss`, never `ß`; pinned by
   `frontend/src/lib/i18n/swiss-orthography.test.ts`.
 - **Scratch stays out of the repo** — PI-cycle planning notes, review memos,
-  and session hand-offs do not get committed. The repo's `.md` files are
-  durable documentation only.
+  and session hand-offs are not committed; they belong in the assistant's
+  `memory/`, not the repository. The repo's `.md` files are durable
+  documentation only. Enforced by `frontend/src/lib/docs-integrity.test.ts`,
+  which also fails the build on a dead internal doc link or a missing
+  canonical doc — so documentation rot is caught mechanically.
