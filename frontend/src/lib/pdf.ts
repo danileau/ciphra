@@ -374,9 +374,43 @@ export function applyBlueprintCustomizations(blueprint: Blueprint): Blueprint {
  * ──────────────────────────────────────────────────────────────── */
 
 /**
- * Draws the "ciphra *" wordmark. The asterisk is brick, slightly raised
- * and offset — the rotation trick from the brand isn't reproducible in
- * jsPDF text, so we rely on color + position to carry the mark.
+ * The ciphra brand asterisk — three strokes through a shared centre at
+ * an 8° tilt, with asymmetric arm lengths and stroke widths. Geometry is
+ * lifted from `Wordmark.svelte` (arm-1 reference half-length 5.4 units,
+ * width 1.3; arms 2 and 3 progressively shorter and thinner). `r` is
+ * arm-1's half-length in mm; the other arms scale off it. This is the
+ * real mark — it replaces the typographic "*" glyph the PDF used before.
+ */
+function drawAsteriskMark(doc: jsPDF, cx: number, cy: number, r: number, color: RGB): void {
+	const rot = (8 * Math.PI) / 180;
+	const cos = Math.cos(rot);
+	const sin = Math.sin(rot);
+	// Per-arm half-vector (units of arm-1 half-length 5.4) + stroke width
+	// (units of 5.4 too, so width ÷ 5.4 × r gives mm). From Wordmark.svelte.
+	const arms: Array<{ ex: number; ey: number; w: number }> = [
+		{ ex: 1, ey: 0, w: 1.3 },
+		{ ex: 2 / 5.4, ey: 3.5 / 5.4, w: 1.0 },
+		{ ex: 2 / 5.4, ey: -3.3 / 5.4, w: 0.9 },
+	];
+	doc.setLineCap('round');
+	doc.setDrawColor(...color);
+	for (const a of arms) {
+		const dx = a.ex * r;
+		const dy = a.ey * r;
+		// rotate the half-vector by the brand's 8° tilt
+		const rx = dx * cos - dy * sin;
+		const ry = dx * sin + dy * cos;
+		doc.setLineWidth((a.w / 5.4) * r);
+		doc.line(cx - rx, cy - ry, cx + rx, cy + ry);
+	}
+	// Reset stroke state so later rendering isn't affected.
+	doc.setLineCap('butt');
+	doc.setLineWidth(0.2);
+}
+
+/**
+ * Draws the "ciphra*" wordmark — brand text plus the real drawn asterisk
+ * (see `drawAsteriskMark`), brick on light surfaces, paper on dark.
  */
 function drawWordmark(
 	doc: jsPDF,
@@ -386,15 +420,16 @@ function drawWordmark(
 ): number {
 	const { size = 18, reverse = false, align = 'left' } = opts;
 	const brand = 'ciphra';
-	const star = '*';
-	const gap = size * 0.18;
+	// Asterisk arm-1 half-length (mm) — matches the on-screen wordmark
+	// proportion. Wordmark.svelte uses arm-1 half-length 5.4 against text
+	// size 26 (ratio 0.2077); ×0.3528 converts the pt font size to mm.
+	const astR = size * 0.2077 * 0.3528;
+	const gap = size * 0.05;
 
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(size);
-
 	const brandW = doc.getTextWidth(brand);
-	const starW = doc.getTextWidth(star);
-	const totalW = brandW + gap + starW;
+	const totalW = brandW + gap + astR * 2;
 
 	let startX = x;
 	if (align === 'center') startX = x - totalW / 2;
@@ -404,13 +439,117 @@ function drawWordmark(
 	else doc.setTextColor(...BRAND.textPrimary);
 	doc.text(brand, startX, y);
 
-	// asterisk — always brick, never reversed (it holds the brand even on dark bands)
-	doc.setTextColor(...BRAND.brick);
-	// if reversed, the asterisk must stay readable against brick — use paper instead
-	if (reverse) doc.setTextColor(...BRAND.paper);
-	doc.text(star, startX + brandW + gap, y - size * 0.08);
+	// asterisk — the real 3-arm star, raised to sit near the cap line.
+	// Brick on light; paper on a dark band so it stays readable.
+	drawAsteriskMark(
+		doc,
+		startX + brandW + gap + astR,
+		y - size * 0.25,
+		astR,
+		reverse ? BRAND.paper : BRAND.brick
+	);
 
 	return totalW;
+}
+
+/**
+ * Capitalize a display name part-by-part. `hans` → `Hans`. A lowercase
+ * username reads as raw debug output in a clinical artifact.
+ */
+function capitalizeName(raw: string): string {
+	return raw
+		.split(/\s+/)
+		.filter(Boolean)
+		.map((p) => p[0].toUpperCase() + p.slice(1).toLowerCase())
+		.join(' ');
+}
+
+/**
+ * The patient's most-recent note within `recencyDays` of the period end
+ * — source of the page-1 top-line quote (CLINICAL_HANDOFF.md §4). The
+ * recency window keeps a stale note from anchoring the page: a January
+ * line on a May export reads as the patient's current voice when it is
+ * not. A note older than the window → returns null and the caller
+ * collapses the block rather than printing a placeholder (§14.1 —
+ * software does not narrate absence). The window is anchored to the
+ * period end, not to today, so a back-dated month report quotes a note
+ * from that month.
+ */
+const TOP_LINE_RECENCY_DAYS = 30;
+function extractLatestNote(
+	documents: CiphraDocument[],
+	startISO: string,
+	endISO: string,
+	recencyDays: number = TOP_LINE_RECENCY_DAYS
+): { text: string; dateISO: string } | null {
+	const cutoff = new Date(endISO + 'T12:00:00');
+	cutoff.setDate(cutoff.getDate() - recencyDays);
+	const cutoffISO = cutoff.toISOString().slice(0, 10);
+	const lowerISO = cutoffISO > startISO ? cutoffISO : startISO;
+
+	let best: { text: string; dateISO: string } | null = null;
+	for (const d of documents) {
+		if (d.data?.type !== 'entry') continue;
+		const dateISO = String(d.data?.date || '');
+		if (!dateISO || dateISO < lowerISO || dateISO > endISO) continue;
+		const note = String(d.data?.notes || '').replace(/\s+/g, ' ').trim();
+		if (!note) continue;
+		if (!best || dateISO > best.dateISO) best = { text: note, dateISO };
+	}
+	return best;
+}
+
+/**
+ * Patient top-line quote block — the page-1 human anchor. A 3pt olive
+ * left rule (brand chrome, never value-encoded), the note in italic, a
+ * muted attribution line. Returns the block's bottom Y. When `note` is
+ * null the block collapses: returns `y` unchanged, no placeholder.
+ */
+function drawTopLineQuote(
+	doc: jsPDF,
+	note: { text: string; dateISO: string } | null,
+	name: string,
+	locale: string,
+	x: number,
+	y: number,
+	w: number
+): number {
+	if (!note) return y;
+
+	const textX = x + 4;
+	const textW = w - 4;
+	const lineH = 4.0;
+
+	doc.setFont('helvetica', 'italic');
+	doc.setFontSize(TYPE.body);
+	const wrapped = doc.splitTextToSize(`"${note.text.slice(0, 200)}"`, textW) as string[];
+	const shown = wrapped.slice(0, 2);
+
+	const dateLabel = new Date(note.dateISO + 'T12:00:00').toLocaleDateString(locale, {
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric',
+	});
+	const attribY = y + shown.length * lineH + 3.0;
+	const blockH = attribY - y + 1;
+
+	// 3pt olive left rule (3pt ≈ 1.06mm).
+	doc.setDrawColor(...BRAND.olive);
+	doc.setLineWidth(1.06);
+	doc.line(x, y, x, y + blockH);
+	doc.setLineWidth(0.2);
+
+	doc.setFont('helvetica', 'italic');
+	doc.setFontSize(TYPE.body);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(shown, textX, y + 3.4);
+
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.compact);
+	doc.setTextColor(...BRAND.textMuted);
+	doc.text(name ? `— ${name}, ${dateLabel}` : `— ${dateLabel}`, textX, attribY);
+
+	return y + blockH;
 }
 
 /**
@@ -550,28 +689,32 @@ function drawHeaderBand(
  */
 function drawFooter(doc: jsPDF, t: TranslateFn, footerKey = 'pdf.footer'): void {
 	const pageCount = doc.getNumberOfPages();
-	const pageW = doc.internal.pageSize.getWidth();
-	const pageH = doc.internal.pageSize.getHeight();
 
 	for (let i = 1; i <= pageCount; i++) {
 		doc.setPage(i);
-
-		// thin divider
-		doc.setDrawColor(...BRAND.border);
-		doc.setLineWidth(0.2);
-		doc.line(14, pageH - 12, pageW - 14, pageH - 12);
+		// Per-page width/height — protocol pages may be landscape.
+		const pageW = doc.internal.pageSize.getWidth();
+		const pageH = doc.internal.pageSize.getHeight();
 
 		doc.setFont('helvetica', 'normal');
 		doc.setFontSize(TYPE.compact);
-		doc.setTextColor(...BRAND.textMuted);
-		doc.text(t(footerKey), 14, pageH - 7);
 
-		doc.text(
-			t('pdf.page', { current: i, total: pageCount }),
-			pageW - 14,
-			pageH - 7,
-			{ align: 'right' }
-		);
+		// The footer text wraps — the doctor PDF carries the full medical-
+		// device disclaimer here (moved off page 1). The page-number column
+		// is reserved on the right so the disclaimer never runs under it.
+		const pageLabel = t('pdf.page', { current: i, total: pageCount });
+		const pageLabelW = doc.getTextWidth(pageLabel);
+		const lines = doc.splitTextToSize(t(footerKey), pageW - 28 - pageLabelW - 6) as string[];
+		const lineH = 3.2;
+		const dividerY = pageH - 7 - lines.length * lineH;
+
+		doc.setDrawColor(...BRAND.border);
+		doc.setLineWidth(0.2);
+		doc.line(14, dividerY, pageW - 14, dividerY);
+
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(lines, 14, dividerY + 3.4);
+		doc.text(pageLabel, pageW - 14, dividerY + 3.4, { align: 'right' });
 	}
 }
 
@@ -652,19 +795,25 @@ function drawStatCard(
 	}
 	doc.text(displayLabel, x + labelPadLeft, y + 5.5);
 
-	// value — truncate to a single line + ellipsis if the value is too long
-	// for the card width. Long values (e.g. PCOS "Vermehrter Haarwuchs
-	// (Gesicht/Körper…)" previously bled into the neighbouring card.
-	// CIPH-pi19-3-fix: 13pt (was 15pt) for the narrower 4-tile context.
+	// value — shrink-to-fit (2026-05-22 review): a long value like Anna's
+	// "Slept badly (37)" used to truncate to "Slept badly (…", losing the
+	// count. Step the font down from the summary size until the full value
+	// fits the card; only ellipsis-truncate if even the floor size is too
+	// narrow (rare — guards against a pathologically long value).
 	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(TYPE.summary);
 	doc.setTextColor(...accent);
 	const valPadLeft = 5;
 	const valPadRight = 3;
 	const maxValW = w - valPadLeft - valPadRight;
+	let valFontSize = TYPE.summary;
+	const VALUE_FLOOR_FS = 8;
+	doc.setFontSize(valFontSize);
+	while (valFontSize > VALUE_FLOOR_FS && doc.getTextWidth(value) > maxValW) {
+		valFontSize -= 1;
+		doc.setFontSize(valFontSize);
+	}
 	let displayValue = value;
 	if (doc.getTextWidth(displayValue) > maxValW) {
-		// Binary-ish trim — drop chars until the ellipsised string fits.
 		const ell = '…';
 		let s = value;
 		while (s.length > 1 && doc.getTextWidth(s + ell) > maxValW) {
@@ -737,143 +886,6 @@ function smoothBezierDeltas(
 		]);
 	}
 	return out;
-}
-
-/* ────────────────────────────────────────────────────────────────
- * CIPH-pi19-2 — Day-coverage strip (PDF_REWRITE.md §7).
- *
- * 31-cell horizontal strip mirroring calendar v3's per-cell encoding
- * for the focus month. Cell body = symptom-load α-blend on the cohort
- * primary tone; trigger triangle (top-right, ochre) when any trigger
- * was logged that day; right-edge brick bar (half-height = 1 dose,
- * full-height = ≥2 doses) when rescue meds were taken.
- *
- * Marks (ochre triangle, brick bar) stay universal across cohorts —
- * they're clinical signals, not data accents. The cell BODY is the
- * cohort-tinted layer.
- *
- * Pre-bucketing the per-day counts by date string keeps this O(N+D)
- * (N docs + D days), no per-cell .find() scan over monthDocs.
- * ──────────────────────────────────────────────────────────────── */
-function drawDayCoverageStrip(
-	doc: jsPDF,
-	blueprint: Blueprint,
-	focusMonthEntries: CiphraDocument[],
-	allDocs: CiphraDocument[],
-	year: number,
-	month: number,
-	daysInMonth: number,
-	t: TranslateFn,
-	locale: string,
-	acc: CohortAccents,
-	cursorY: number,
-): number {
-	const pageW = 210;
-	const stripW = pageW - 28;                            // 182mm content width
-	const cellGap = 0.4;
-	const cellW = (stripW - (daysInMonth - 1) * cellGap) / daysInMonth;
-	const cellH = 6;
-	const triSize = 1.4;
-	const barW = 0.6;
-	const focusPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-
-	// Pre-bucket: O(N) walk over focus-month entries + O(M) walk over
-	// medication events. Each cell is then an O(1) Map lookup.
-	const triggerByDay = new Map<string, number>();
-	const symptomCountByDay = new Map<string, number>();
-	for (const d of focusMonthEntries) {
-		if (d.data.type !== 'entry') continue;
-		const ds = String(d.data.date || '');
-		if (!ds) continue;
-		const trs = (d.data as Record<string, unknown>).triggers as unknown;
-		let trN = 0;
-		if (Array.isArray(trs)) {
-			trN = trs.length;
-		} else if (trs && typeof trs === 'object') {
-			for (const v of Object.values(trs as Record<string, boolean>)) {
-				if (v) trN++;
-			}
-		}
-		if (trN > 0) triggerByDay.set(ds, (triggerByDay.get(ds) || 0) + trN);
-		const syms = (d.data?.symptoms || {}) as Record<string, unknown>;
-		let symN = 0;
-		for (const v of Object.values(syms)) if (v) symN++;
-		if (symN > 0) symptomCountByDay.set(ds, (symptomCountByDay.get(ds) || 0) + symN);
-	}
-	const rescueByDay = new Map<string, number>();
-	for (const d of allDocs) {
-		if (d.data.type !== 'event' || (d.data as Record<string, unknown>).kind !== 'medication') continue;
-		const ds = String(d.data.date || '');
-		if (!ds.startsWith(focusPrefix)) continue;
-		rescueByDay.set(ds, (rescueByDay.get(ds) || 0) + 1);
-	}
-
-	// Section title — match the section-title vocabulary (helvetica bold 10pt
-	// textPrimary) used elsewhere in generateDoctorPdf.
-	const focusMonthName = new Date(year, month).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(TYPE.head);
-	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(t('pdf.day_coverage_title', { month: focusMonthName }), 14, cursorY);
-	cursorY += 4;
-
-	// Symptom-column count for normalising load. effectiveSymptomColumns is
-	// view-shape-aware; for the strip we want the underlying possible columns
-	// (an asthma user with 6 symptoms shouldn't have load capped by the visible
-	// 4-column grid — the strip is a per-day signal, not a table view).
-	const symptomColCount = Math.max(
-		1,
-		(blueprint.symptomGroups || []).reduce((n, g) => n + (g.items?.length || 0), 0),
-	);
-
-	const stripY = cursorY;
-	for (let day = 1; day <= daysInMonth; day++) {
-		const ds = `${focusPrefix}-${String(day).padStart(2, '0')}`;
-		const x = 14 + (day - 1) * (cellW + cellGap);
-		const symN = symptomCountByDay.get(ds) || 0;
-		const symLoad = Math.min(1, symN / symptomColCount);
-		const fillAlpha = symN > 0 ? 0.18 + symLoad * 0.6 : 0;
-
-		if (fillAlpha > 0) {
-			const fill = softBlendRgb(acc.primary, fillAlpha);
-			doc.setFillColor(...fill);
-			doc.rect(x, stripY, cellW, cellH, 'F');
-		} else {
-			// Empty day — hairline so position is preserved on silent months.
-			doc.setDrawColor(...BRAND.borderSubtle);
-			doc.setLineWidth(0.1);
-			doc.rect(x, stripY, cellW, cellH, 'S');
-		}
-
-		// Day number top-left.
-		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(TYPE.chartAxisMicro);
-		doc.setTextColor(...BRAND.textPrimary);
-		doc.text(String(day), x + 0.6, stripY + 2.2);
-
-		// Trigger triangle top-right (universal ochre — calendar parity).
-		if ((triggerByDay.get(ds) || 0) > 0) {
-			doc.setFillColor(...BRAND.ochre);
-			doc.triangle(
-				x + cellW - triSize, stripY + 0.4,
-				x + cellW - 0.4,     stripY + 0.4,
-				x + cellW - 0.4,     stripY + triSize + 0.4,
-				'F',
-			);
-		}
-
-		// Rescue-med edge bar (universal brick — calendar parity).
-		// 1 dose = half-height bar; ≥2 doses = full-height.
-		const rescueN = rescueByDay.get(ds) || 0;
-		if (rescueN > 0) {
-			doc.setFillColor(...BRAND.brick);
-			const barH = rescueN === 1 ? cellH * 0.5 : cellH;
-			doc.rect(x + cellW - barW, stripY + (cellH - barH), barW, barH, 'F');
-		}
-	}
-	cursorY = stripY + cellH + 4;
-
-	return cursorY;
 }
 
 /**
@@ -1236,48 +1248,56 @@ function drawGridSection(
 	const episodeCols = effectiveEpisodeColumns(blueprint, documents, monthPrefix);
 
 	// pi24 P-PDF-bug — Monthly-grid headers wrapped mid-word at narrow
-	// column widths (e.g. "Schlecht g eschlafen", "Generalisier t (GM)";
-	// the Notes column collapsed to vertical letter-stacks "N o ti z e n").
-	// Two fixes paired: explicit per-column cellWidth below + label
-	// abbreviation here. Trim long words at the last space within the
-	// limit so we get clean breaks like "Schlecht gesch." rather than
-	// "Schlecht g eschlafen". Bracketed suffixes ("(GM)") are preserved
-	// because they're load-bearing for episode-type disambiguation.
-	const abbreviateHeader = (s: string, max = 12): string => {
-		if (s.length <= max) return s;
-		// Bracketed suffix at the end → preserve it, trim the body.
-		const bracketMatch = s.match(/^(.*?)(\s*\([^)]+\))\s*$/);
-		if (bracketMatch) {
-			const body = bracketMatch[1];
-			const suffix = bracketMatch[2];
-			if (suffix.length + 1 < max) {
-				const bodyMax = max - suffix.length - 1;
-				const bodyTrim = body.length <= bodyMax ? body : body.slice(0, bodyMax - 1) + '.';
-				return `${bodyTrim}${suffix}`;
-			}
+	// column widths (e.g. "Aggressi ve", "Headach e", "Myocloni c"). The
+	// prior char-count abbreviation guessed: a 10-char word like
+	// "Aggressive" passed an unchanged length check yet still overflowed
+	// the ~10mm usable cell at the rendered font. The fix MEASURES — trim
+	// the label with `doc.getTextWidth` at the actual header font until
+	// it fits the actual column width, so headers are always single-line.
+	// Bracketed suffixes ("(GM)") are preserved — load-bearing for
+	// episode-type disambiguation.
+	// Protocol pages render landscape (2026-05-22 review): portrait A4 could
+	// not hold wide blueprints — a 16-symptom burnout grid pushed the Notes
+	// column off the page and crushed headers to 5-char stubs. Landscape
+	// gives ~269mm of content width instead of 182mm.
+	const pageW = doc.internal.pageSize.getWidth();
+	const HEADER_FS = 7;
+	const HEADER_CELL_PAD = 1.5;
+	const GRID_DAY_COL_W = 14; // wide enough that the "Totals" label fits
+	const GRID_NOTES_COL_W = pageW > 250 ? 46 : 32;
+	// Column widths must be known before we can fit labels — compute the
+	// data-column width here (also reused verbatim by `columnStyles`).
+	const gridDataColCount = symptomCols.length + episodeCols.length;
+	const gridDataBudget = pageW - 28 - GRID_DAY_COL_W - GRID_NOTES_COL_W;
+	const gridDataColW = gridDataColCount > 0
+		? Math.max(10, Math.min(18, gridDataBudget / gridDataColCount))
+		: 14;
+	const fitHeader = (s: string): string => {
+		const maxW = gridDataColW - HEADER_CELL_PAD * 2;
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(HEADER_FS);
+		if (doc.getTextWidth(s) <= maxW) return s;
+		// Preserve a trailing bracket suffix; trim the body.
+		const m = s.match(/^(.*?)(\s*\([^)]+\))\s*$/);
+		const body = m ? m[1] : s;
+		const suffix = m ? m[2] : '';
+		let trimmed = body;
+		while (trimmed.length > 1 && doc.getTextWidth(`${trimmed}.${suffix}`) > maxW) {
+			trimmed = trimmed.slice(0, -1);
 		}
-		// Multi-word → take first word + abbreviated second
-		const words = s.split(/\s+/);
-		if (words.length > 1) {
-			const first = words[0];
-			if (first.length >= max) return first.slice(0, max - 1) + '.';
-			const remaining = max - first.length - 1;
-			if (remaining < 2) return first;
-			return `${first} ${words[1].slice(0, remaining - 1)}.`;
-		}
-		return s.slice(0, max - 1) + '.';
+		return `${trimmed}.${suffix}`;
 	};
 
 	const symptomLabels = symptomCols.map((id) => {
 		for (const g of blueprint.symptomGroups) {
 			const item = g.items.find((i) => i.id === id);
-			if (item) return abbreviateHeader(labelOf(t, item));
+			if (item) return fitHeader(labelOf(t, item));
 		}
 		return id;
 	});
 	const episodeLabels = episodeCols.map((id) => {
 		const ep = blueprint.episodeTypes.find((e) => e.id === id);
-		return ep ? abbreviateHeader(labelOf(t, ep)) : id;
+		return ep ? fitHeader(labelOf(t, ep)) : id;
 	});
 
 	const allHeaders = [t('pdf.day'), ...symptomLabels, ...episodeLabels, t('pdf.notes')];
@@ -1334,7 +1354,6 @@ function drawGridSection(
 	rows.push(pctRow);
 
 	const daysLogged = monthDocs.length;
-	const pageW = doc.internal.pageSize.getWidth();
 
 	// ── Header block ──
 	// Wordmark top-left
@@ -1361,8 +1380,10 @@ function drawGridSection(
 	});
 	doc.setFontSize(TYPE.table);
 	doc.setTextColor(...BRAND.textMuted);
+	// Brand voice: capitalized name, no "Account:" admin label — matches
+	// the page-1 header in `generateDoctorPdf`.
 	const metaParts: string[] = [];
-	if (username) metaParts.push(`${t('pdf.account')}: ${username}`);
+	if (username) metaParts.push(capitalizeName(username));
 	metaParts.push(`${t('pdf.export_date')}: ${exportDate}`);
 	doc.text(metaParts.join('   ·   '), 14, 22);
 
@@ -1383,13 +1404,15 @@ function drawGridSection(
 	const maxSymptomDays = Math.max(...symptomSums, 1);
 
 	autoTable(doc, {
-		startY: 37,
+		startY: 34,
 		head: [allHeaders],
 		body: rows,
 		theme: 'plain',
 		styles: {
 			fontSize: TYPE.compact,
-			cellPadding: 1.8,
+			// Tight padding — 31 days + totals + percent = 33 rows must fit
+			// the 210mm landscape page height without spilling to page 2.
+			cellPadding: 0.7,
 			lineColor: BRAND.borderSubtle as any,
 			lineWidth: 0.1,
 			textColor: BRAND.textPrimary as any,
@@ -1399,31 +1422,28 @@ function drawGridSection(
 			fillColor: BRAND.paperInset as any,
 			textColor: BRAND.textPrimary as any,
 			fontStyle: 'bold',
-			fontSize: TYPE.compact,
+			// `fitHeader` measured the labels against this size — keep in
+			// sync with HEADER_FS so headers render single-line.
+			fontSize: HEADER_FS,
+			cellPadding: HEADER_CELL_PAD,
 			lineWidth: 0.1,
 			lineColor: BRAND.border as any,
 		},
 		alternateRowStyles: {
 			fillColor: [252, 250, 248] as any,
 		},
-		// pi24 P-PDF-bug — Per-column explicit widths to prevent autoTable
-		// from squeezing data columns and char-wrapping headers. Day
-		// 10mm + Notes 32mm = 42mm fixed; remainder distributes across
-		// symptom+episode columns (~140mm available content width →
-		// ~10-14mm per data column for typical 8-12 col blueprints).
+		// Per-column explicit widths. Day + Notes are fixed; `gridDataColW`
+		// (computed above against the landscape page width, so headers were
+		// fitted to the same width) distributes the remainder.
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		columnStyles: (() => {
 			const styles: Record<number, any> = {
-				0: { cellWidth: 10, fontStyle: 'bold', halign: 'center' },
+				0: { cellWidth: GRID_DAY_COL_W, fontStyle: 'bold', halign: 'center' },
 			};
 			const notesColIdx = 1 + symptomCols.length + episodeCols.length;
-			styles[notesColIdx] = { cellWidth: 32 };
-			const dataColCount = symptomCols.length + episodeCols.length;
-			if (dataColCount > 0) {
-				const dataColW = Math.max(10, Math.min(14, 140 / dataColCount));
-				for (let i = 1; i <= dataColCount; i++) {
-					styles[i] = { cellWidth: dataColW, halign: 'center' };
-				}
+			styles[notesColIdx] = { cellWidth: GRID_NOTES_COL_W };
+			for (let i = 1; i <= gridDataColCount; i++) {
+				styles[i] = { cellWidth: gridDataColW, halign: 'center' };
 			}
 			return styles;
 		})(),
@@ -1493,218 +1513,6 @@ function drawGridSection(
 		didDrawCell: continuationLabelHook(t('pdf.table_continued')),
 	});
 
-}
-
-/* ────────────────────────────────────────────────────────────────
- * CIPH-305b — Shared condition-aware bullet builder.
- *
- * Hoisted out of `generateDoctorPdf` so both the standard and the compact
- * PDF emit the SAME clinically relevant facts. Felix's note: "a glaucoma
- * doctor opening a compact PDF still wants peak-IOP" — generalist trajectory
- * bullets aren't enough on their own. Returns `{fact, question}` pairs;
- * compact callers can `.map(b => b.fact)` to drop the question hierarchy.
- *
- * Pure: depends only on the blueprint + scope-window docs + a translator.
- * No chart-context, no firstAvg/lastAvg — the trajectory bullet is owned
- * by the caller (standard PDF only) so the compact format keeps its
- * 12-month chart math local.
- * ──────────────────────────────────────────────────────────────── */
-export function buildConditionAwareBullets(
-	blueprint: Blueprint,
-	scopeDocs: CiphraDocument[],
-	t: TranslateFn,
-	scopeWindowLabel: string
-): Array<{ fact: string; question: string }> {
-	const bullets: Array<{ fact: string; question: string }> = [];
-	const vitalIds = new Set(blueprint.vitals.map((v) => v.id));
-
-	// Local copy of the doctor-PDF dayVitals helper. Handles single-value
-	// strings + multi-entry JSON arrays.
-	function dayVitals(d: CiphraDocument | undefined, vid: string): number[] {
-		const raw = d?.data?.vitals?.[vid];
-		if (!raw) return [];
-		try {
-			const parsed = JSON.parse(raw);
-			if (Array.isArray(parsed)) {
-				return parsed.map((e: { value: string }) => Number(e.value)).filter((v) => !isNaN(v));
-			}
-		} catch { /* not JSON */ }
-		const n = Number(raw);
-		return isNaN(n) ? [] : [n];
-	}
-
-	// 1. Total OFF time (Parkinson's)
-	if (vitalIds.has('off_time_hours')) {
-		let total = 0, daysWithEntry = 0;
-		for (const d of scopeDocs) {
-			const vs = dayVitals(d, 'off_time_hours');
-			if (vs.length) { total += vs.reduce((a, b) => a + b, 0); daysWithEntry++; }
-		}
-		if (daysWithEntry > 0) {
-			bullets.push({
-				fact: t('pdf.for_doctor_fact_off_time', {
-					total: total.toFixed(0),
-					avg: (total / daysWithEntry).toFixed(1),
-					window: scopeWindowLabel,
-				}),
-				question: t('pdf.for_doctor_q_off_time'),
-			});
-		}
-	}
-
-	// 2. Mood polarity breakdown (bipolar)
-	if (vitalIds.has('mood_polarity')) {
-		let manicDays = 0, depDays = 0, polSum = 0, polCount = 0;
-		for (const d of scopeDocs) {
-			const vs = dayVitals(d, 'mood_polarity');
-			for (const v of vs) {
-				polSum += v; polCount++;
-				if (v > 0) manicDays++;
-				else if (v < 0) depDays++;
-			}
-		}
-		if (polCount > 0) {
-			bullets.push({
-				fact: t('pdf.for_doctor_fact_polarity', {
-					manic: String(manicDays),
-					dep: String(depDays),
-					avg: (polSum / polCount).toFixed(1),
-					window: scopeWindowLabel,
-				}),
-				question: t('pdf.for_doctor_q_polarity'),
-			});
-		}
-	}
-
-	// 3. Peak IOP per eye (glaucoma) — Felix's hero example
-	if (vitalIds.has('iop_left') && vitalIds.has('iop_right')) {
-		let maxL = 0, maxR = 0;
-		for (const d of scopeDocs) {
-			for (const v of dayVitals(d, 'iop_left')) if (v > maxL) maxL = v;
-			for (const v of dayVitals(d, 'iop_right')) if (v > maxR) maxR = v;
-		}
-		if (maxL > 0 || maxR > 0) {
-			bullets.push({
-				fact: t('pdf.for_doctor_fact_iop', {
-					left: String(maxL),
-					right: String(maxR),
-					window: scopeWindowLabel,
-				}),
-				question: t('pdf.for_doctor_q_iop'),
-			});
-		}
-	}
-
-	// 4. Multi-day episode totals (IBD flare, bipolar episodes, etc.)
-	for (const ep of blueprint.episodeTypes) {
-		if (!ep.multiDay) continue;
-		// Dedupe by date — a daily_log + a standalone episode on the same
-		// day must count as one active day, not two.
-		const activeDateSet = new Set<string>();
-		for (const d of scopeDocs) {
-			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
-			if ((eps[ep.id] || 0) > 0) activeDateSet.add(String(d.data?.date || ''));
-		}
-		const activeDays = activeDateSet.size;
-		if (activeDays > 0) {
-			bullets.push({
-				fact: t('pdf.for_doctor_fact_multiday', {
-					label: labelOf(t, ep),
-					days: String(activeDays),
-					weeks: (activeDays / 7).toFixed(1),
-					window: scopeWindowLabel,
-				}),
-				question: t('pdf.for_doctor_q_multiday', { label: labelOf(t, ep) }),
-			});
-		}
-	}
-
-	// 5. Average bowel movements per day (IBD)
-	if (vitalIds.has('stool_count')) {
-		let total = 0, daysWithEntry = 0;
-		for (const d of scopeDocs) {
-			const vs = dayVitals(d, 'stool_count');
-			if (vs.length) { total += vs.reduce((a, b) => a + b, 0); daysWithEntry++; }
-		}
-		if (daysWithEntry > 0) {
-			bullets.push({
-				fact: t('pdf.for_doctor_fact_stool', {
-					avg: (total / daysWithEntry).toFixed(1),
-					days: String(daysWithEntry),
-					window: scopeWindowLabel,
-				}),
-				question: t('pdf.for_doctor_q_stool'),
-			});
-		}
-	}
-
-	// 6. Pain × mood correlation (≥30 paired days, |r| ≥ 0.4)
-	if (vitalIds.has('pain_level') && vitalIds.has('mood')) {
-		const pairs: [number, number][] = [];
-		for (const d of scopeDocs) {
-			const p = dayVitals(d, 'pain_level');
-			const m = dayVitals(d, 'mood');
-			if (p.length > 0 && m.length > 0) pairs.push([p[0], m[0]]);
-		}
-		if (pairs.length >= 30) {
-			const n = pairs.length;
-			const meanX = pairs.reduce((s, [x]) => s + x, 0) / n;
-			const meanY = pairs.reduce((s, [, y]) => s + y, 0) / n;
-			let num = 0, dx2 = 0, dy2 = 0;
-			for (const [x, y] of pairs) {
-				const dx = x - meanX, dy = y - meanY;
-				num += dx * dy; dx2 += dx * dx; dy2 += dy * dy;
-			}
-			const denom = Math.sqrt(dx2 * dy2);
-			const r = denom > 0 ? num / denom : 0;
-			if (Math.abs(r) >= 0.4) {
-				bullets.push({
-					fact: t('pdf.for_doctor_fact_pain_mood', {
-						r: r.toFixed(2),
-						n: String(n),
-						dir: r < 0 ? t('pdf.correlation_inverse') : t('pdf.correlation_positive'),
-					}),
-					question: t('pdf.for_doctor_q_pain_mood'),
-				});
-			}
-		}
-	}
-
-	// 7. Medication compliance (CIPH-411d) — across regular (non-PRN) meds.
-	//    Denominator: days in scope window where the user logged anything at
-	//    all (any non-empty `data` payload). Numerator: days marked true for
-	//    each med. Only emit when ≥1 regular med and ≥7 logged days.
-	{
-		const regularMeds = blueprint.medications.filter((m) => !m.asNeeded);
-		const loggedDocs = scopeDocs.filter((d) => d && d.data && Object.keys(d.data).length > 0);
-		if (regularMeds.length > 0 && loggedDocs.length >= 7) {
-			const denom = loggedDocs.length;
-			let pctSum = 0;
-			let counted = 0;
-			for (const med of regularMeds) {
-				let taken = 0;
-				for (const d of loggedDocs) {
-					const meds = (d.data.medications || {}) as Record<string, boolean>;
-					if (meds[med.id] === true) taken++;
-				}
-				pctSum += (taken / denom) * 100;
-				counted++;
-			}
-			if (counted > 0) {
-				const avgPct = Math.round(pctSum / counted);
-				bullets.push({
-					fact: t('pdf.for_doctor_fact_med_compliance', {
-						window: scopeWindowLabel,
-						pct: String(avgPct),
-						n: String(counted),
-					}),
-					question: t('pdf.for_doctor_q_med_compliance'),
-				});
-			}
-		}
-	}
-
-	return bullets;
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -1840,7 +1648,10 @@ export function generateDoctorPdf(
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textSecondary);
-	doc.text(`${conditionLabel} · ${t('pdf.analytics_title')}`, pageW - 14, 21, { align: 'right' });
+	// Brand voice (feedback_brand_voice): the condition label stands
+	// alone. The "ciphra — Analytics Report" category label is dropped —
+	// the wordmark already says ciphra, the monthName already says scope.
+	doc.text(conditionLabel, pageW - 14, 21, { align: 'right' });
 
 	const exportDate = new Date().toLocaleDateString(locale, {
 		year: 'numeric',
@@ -1849,35 +1660,33 @@ export function generateDoctorPdf(
 	});
 	doc.setFontSize(TYPE.table);
 	doc.setTextColor(...BRAND.textMuted);
+	// Brand voice: no "Account:" admin label — the capitalized name
+	// stands on its own. The export date keeps its label (it is a field).
 	const metaParts: string[] = [];
-	if (username) metaParts.push(`${t('pdf.account')}: ${username}`);
+	if (username) metaParts.push(capitalizeName(username));
 	metaParts.push(`${t('pdf.export_date')}: ${exportDate}`);
-	doc.text(metaParts.join('   -   '), 14, 22);
+	doc.text(metaParts.join('   ·   '), 14, 22);
 
-	// ── Disclaimer notice on page 1 ──
-	// DSPEC-1 — rule-backed notice per PDF_DESIGN_SPEC.md §4: white field,
-	// 3pt olive left rule, body-size text, compact padding, no fill. The
-	// pre-DSPEC ochre-tinted filled banner read as a warning affordance
-	// and risked muddy photocopies. The notice still surfaces at first
-	// glance (MDR auditor's footer-only objection from the QA round), but
-	// reads as standing copy rather than an alert.
-	const discY = 27;
-	const discTextX = 18.5; // 14 + 3pt rule + 1.5mm padding
-	const discTextW = pageW - discTextX - 14;
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(TYPE.body);
-	const discText = t('pdf.disclaimer_medical_long');
-	const discLines = doc.splitTextToSize(discText, discTextW);
-	const lineH = 3.7;
-	const discPadY = 2.2;
-	const discH = discLines.length * lineH + discPadY * 2;
-	// 3pt olive left rule. jsPDF line widths are in mm; 3pt ≈ 1.06mm.
-	doc.setDrawColor(...BRAND.olive);
-	doc.setLineWidth(1.06);
-	doc.line(14, discY, 14, discY + discH);
-	doc.setLineWidth(0.2);
-	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(discLines, discTextX, discY + discPadY + lineH - 0.8);
+	// ── Patient top-line quote ──
+	// Grafted from the retired CLINICAL_HANDOFF.md §4 / §14.8: the
+	// patient's own most-recent in-scope note, given a 3pt olive left
+	// rule, is the page's human anchor. No export-wizard prompt yet — the
+	// latest note is the honest available source. Collapses entirely when
+	// the patient logged no notes (§14.1 — no placeholder text).
+	const latestNote = extractLatestNote(documents, scopeStartISO, scopeEndISO);
+	const quoteBottomY = drawTopLineQuote(
+		doc,
+		latestNote,
+		username ? capitalizeName(username) : '',
+		locale,
+		14,
+		26,
+		pageW - 28
+	);
+
+	// The medical-device disclaimer moved to the page footer (drawFooter).
+	// As a page-1 block it reclaimed ~12mm of the most valuable real estate
+	// on the page for standing legal copy the reader does not act on.
 
 	// ── Compute stats ──
 	const daysLogged = monthDocs.length;
@@ -1953,9 +1762,9 @@ export function generateDoctorPdf(
 	triggerFreq.sort((a, b) => b.count - a.count);
 	const mostFrequentTrigger = triggerFreq[0] ?? null;
 
-	// ── Clinical summary paragraph ──
-	// Position directly below the disclaimer strip (height measured above).
-	let cursorY = discY + discH + 6;
+	// Page-1 content starts just below the top-line quote block (or the
+	// header meta line when the patient logged no recent note).
+	let cursorY = (latestNote ? quoteBottomY : 24) + 6;
 	doc.setDrawColor(...BRAND.border);
 	doc.setLineWidth(0.2);
 	doc.line(14, cursorY, pageW - 14, cursorY);
@@ -2051,11 +1860,9 @@ export function generateDoctorPdf(
 			accent: acc.break,
 		};
 	};
-	const tileDaysLogged = (): Tile => ({
-		label: t('pdf.days_logged'),
-		value: `${daysLogged}/${daysInMonth}`,
-		accent: acc.break,
-	});
+	// Days-logged tile removed (2026-05-22 review): days-logged already
+	// renders as the small "days logged: N/M" line above the tile row —
+	// a boxed KPI tile of the same number was redundant.
 	const tileRescueMed = (): Tile | null => {
 		if (rescueMedDays === 0) return null;
 		return {
@@ -2187,10 +1994,18 @@ export function generateDoctorPdf(
 		readings.sort((a, b) => b.date.localeCompare(a.date));
 		const last = readings[0].v;
 		const prev = readings.length > 1 ? readings[1].v : null;
-		const unitStr = vital.unit ? ` ${vital.unit}` : '';
+		// A "scale-like" unit (e.g. mood polarity's "-5..+5") is a range
+		// annotation, not a measurement unit. Appending it to the value
+		// produced gibberish like "-1.0 -5..+5". Such a unit moves into the
+		// label parenthetical; a real unit (mIU/L, kg, mmHg) stays inline.
+		const unitIsScale = !!vital.unit && /\.\.|–|—/.test(vital.unit);
+		const unitStr = vital.unit && !unitIsScale ? ` ${vital.unit}` : '';
 		// Format: 1-decimal under 20, integer at/above 20 (BP / pulse).
 		const fmt = (n: number) => (Math.abs(n) >= 20 ? String(Math.round(n)) : n.toFixed(1));
 		const value = `${fmt(last)}${unitStr}`;
+		const tileLabel = unitIsScale
+			? `${t(vital.label)} (${vital.unit})`
+			: t(vital.label);
 		let delta: StatCardDelta | undefined;
 		if (prev !== null && Math.abs(last - prev) >= 0.05) {
 			const d = last - prev;
@@ -2204,7 +2019,7 @@ export function generateDoctorPdf(
 				semantic: 'neutral',
 			};
 		}
-		return { label: t(vital.label), value, accent: acc.primary, delta };
+		return { label: tileLabel, value, accent: acc.primary, delta };
 	};
 
 	// pi24 P-PDF-4 — Per-cohort tile priority list. Picks first 4 tiles
@@ -2239,17 +2054,13 @@ export function generateDoctorPdf(
 					tileEpisodeDurationDist(),
 					tileRescueMed(),
 					tileTopTrigger(),
-					tileTopSymptom(),
-					tileDaysLogged(),
-				];
+					tileTopSymptom(),				];
 			case 'cycle':
 				return [
 					tileTopTrigger(),
 					tileTopSymptom(),
 					tileEpisodes(),
-					tileRescueMed(),
-					tileDaysLogged(),
-				];
+					tileRescueMed(),				];
 			case 'phase':
 				// Bipolar gets polarity-vital tile FIRST (campfire consensus
 				// — polarity index is the bipolar clinical primary). Other
@@ -2260,26 +2071,20 @@ export function generateDoctorPdf(
 					tilePhaseTopN(0),
 					tilePhaseTopN(1),
 					tileTopTrigger(),
-					tileTopSymptom(),
-					tileDaysLogged(),
-				];
+					tileTopSymptom(),				];
 			case 'narrative':
 				return [
 					tileTopTrigger(),
 					tileEpisodes(),
 					tileTopSymptom(),
-					tileRescueMed(),
-					tileDaysLogged(),
-				];
+					tileRescueMed(),				];
 			case 'custom':
 			default:
 				return [
 					tileEpisodes(),
 					tileTopSymptom(),
 					tileTopTrigger(),
-					tileRescueMed(),
-					tileDaysLogged(),
-				];
+					tileRescueMed(),				];
 		}
 	};
 	const tiles: Tile[] = candidatesForCohort()
@@ -2298,7 +2103,9 @@ export function generateDoctorPdf(
 			const x = 14 + i * (tileWAdaptive + tileGap);
 			drawStatCard(doc, x, cursorY, tileWAdaptive, tileH, tiles[i].label, tiles[i].value, tiles[i].accent, tiles[i].delta);
 		}
-		cursorY += tileH + 6;
+		// Extra gap below the KPI tiles (2026-05-22 review): the tile row
+		// sat jammed against the trajectory-chart title.
+		cursorY += tileH + 11;
 	}
 
 	// CIPH-pi21-Track-B-4 — cohort-conditional middle. The typed gate at
@@ -2333,27 +2140,12 @@ export function generateDoctorPdf(
 		);
 	}
 
-	// CIPH-pi19-2 — Day-coverage strip. 31-cell per-day overview of the focus
-	// month, mirrors calendar v3's cell encoding (symptom-load tint, trigger
-	// triangle, rescue-med edge bar). Section is always rendered so the
-	// strip is a stable spine element across cohorts; cohort tinting is
-	// scoped to the cell BODY via acc.primary, not to the marks.
-	cursorY = drawDayCoverageStrip(
-		doc,
-		blueprint,
-		focusMonthDocs,
-		documents,
-		year,
-		month,
-		focusDaysInMonth,
-		t,
-		locale,
-		acc,
-		cursorY,
-	);
+	// Day-coverage strip removed (2026-05-22 review): the 31-cell per-day
+	// overview was decorative — the 5-doctor clinician lens noted no doctor
+	// cited it as useful, and the monthly grid appendix already carries the
+	// per-day detail forensically. `drawDayCoverageStrip` is now dead code.
 
-	// Trajectory metadata exposed outside the scope block so the "trajectory"
-	// bullet on the For-Doctor page can reference it when the chart is drawn.
+	// Trajectory metadata for the chart below.
 	type TrendDir = 'up' | 'down' | 'flat';
 	let chartContext:
 		| { MONTHS: number; firstAvg: number; lastAvg: number; trendLabel: string; trendDir: TrendDir }
@@ -2746,7 +2538,38 @@ export function generateDoctorPdf(
 		doc.text(shortLabel, x, cursorY + chartH + 4, { align: 'center' });
 	}
 
-	cursorY += chartH + 10;
+	// Legend (2026-05-22 review): the solid + dashed series were
+	// unlabelled — the reader could not tell episodes from symptom-days.
+	{
+		const legendY = cursorY + chartH + 9;
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.chartAxis);
+		let lx = chartX;
+		// Episodes — filled circle, primary stroke (solid).
+		doc.setDrawColor(...acc.primary);
+		doc.setLineWidth(0.8);
+		doc.line(lx, legendY - 0.8, lx + 5, legendY - 0.8);
+		doc.setFillColor(...acc.primary);
+		doc.circle(lx + 2.5, legendY - 0.8, 0.7, 'F');
+		doc.setTextColor(...BRAND.textMuted);
+		const epLabel = t('pdf.legend_episodes');
+		doc.text(epLabel, lx + 7, legendY);
+		lx += 7 + doc.getTextWidth(epLabel) + 8;
+		// Symptom-days — dashed muted line + square marker (only if drawn).
+		if (monthlySymptomDays.some((v) => v > 0)) {
+			doc.setDrawColor(...BRAND.textMuted);
+			doc.setLineWidth(0.4);
+			doc.setLineDashPattern([1.2, 1.2], 0);
+			doc.line(lx, legendY - 0.8, lx + 5, legendY - 0.8);
+			doc.setLineDashPattern([], 0);
+			doc.setFillColor(...BRAND.textMuted);
+			drawMarker(doc, lx + 2.5, legendY - 0.8, 0.6, 'square', true);
+			doc.setTextColor(...BRAND.textMuted);
+			doc.text(t('pdf.legend_symptom_days'), lx + 7, legendY);
+		}
+	}
+
+	cursorY += chartH + 18;
 
 	// ── 24-month trends: vitals + multiDay episode breakdown ──
 	// One mini-chart per significant vital (paired vitals share a chart).
@@ -2910,19 +2733,36 @@ export function generateDoctorPdf(
 		const values = aggregateVitalMonthly(v.id, 'mean');
 		const populated = values.filter((x) => x !== null).length;
 		if (populated < 2) continue;
+		// Polarity vitals (declared `min < 0`) render as diverging bars and
+		// are the cohort primary — exempt from the relevance gate below.
+		const isPolarVital = typeof v.min === 'number' && typeof v.max === 'number' && v.min < 0;
+		// Relevance gate (2026-05-22 review): skip a vital that barely moves
+		// across the window — it renders as a flat noise line (e.g. weight
+		// for an epilepsy / bipolar patient) carrying no signal a clinician
+		// acts on. Vitals that genuinely move (labs, mood, sleep) clear the
+		// 4%-relative-range threshold easily; this is per-export "relevance"
+		// — a patient whose weight IS trending still gets the chart.
+		if (!isPolarVital) {
+			const nums = values.filter((x): x is number => x !== null);
+			const vMin = Math.min(...nums);
+			const vMax = Math.max(...nums);
+			const vMean = nums.reduce((a, b) => a + b, 0) / nums.length;
+			if (vMean !== 0 && (vMax - vMin) / Math.abs(vMean) < 0.04) {
+				seenVitalIds.add(v.id);
+				continue;
+			}
+		}
 		const refLines: RefLine[] = v.referenceLine
 			? [{ value: v.referenceLine.value, label: t(v.referenceLine.labelKey) }]
 			: [];
-		// pi24 P-PDF-3 — Polarity vitals (declared `min < 0`, e.g. bipolar
-		// mood_polarity at -5..+5) render as diverging bars on a zero
-		// baseline instead of a line. Brunner's 5-doctor campfire
-		// critique: a line through zero reads as noise on sign+magnitude
-		// data; bars above/below zero communicate "how much manic vs how
-		// much depressed" at a glance without a clinical label. The chart
+		// pi24 P-PDF-3 — Polarity vitals (`isPolarVital`, computed above)
+		// render as diverging bars on a zero baseline instead of a line.
+		// Brunner's 5-doctor campfire critique: a line through zero reads
+		// as noise on sign+magnitude data; bars above/below zero communicate
+		// "how much manic vs how much depressed" at a glance. The chart
 		// remains pure display (raw values, neutral colors, no
 		// classification). yMin/yMax pin the axis so the zero baseline is
 		// centered and bar heights compare across months.
-		const isPolarVital = typeof v.min === 'number' && typeof v.max === 'number' && v.min < 0;
 		if (isPolarVital) {
 			miniCharts.push({
 				title: `${vitalLabelOf(t, v)}${v.unit ? ` (${translateUnit(t, v.unit)})` : ''}`,
@@ -3003,7 +2843,7 @@ export function generateDoctorPdf(
 		doc.setFontSize(TYPE.head);
 		doc.setTextColor(...BRAND.textPrimary);
 		doc.text(t(scope === 'year' ? 'pdf.vital_trends_title_12m' : 'pdf.vital_trends_title'), 14, cursorY);
-		cursorY += 5;
+		cursorY += 7;
 
 		const cx = 22;
 		const cw = pageW - 28 - 8;
@@ -3018,7 +2858,7 @@ export function generateDoctorPdf(
 				doc.setFontSize(TYPE.head);
 				doc.setTextColor(...BRAND.textPrimary);
 				doc.text(t(scope === 'year' ? 'pdf.vital_trends_title_12m' : 'pdf.vital_trends_title'), 14, PAGE_TOP_AFTER_BREAK);
-				return PAGE_TOP_AFTER_BREAK + 5;
+				return PAGE_TOP_AFTER_BREAK + 7;
 			});
 			// Title + inline legend
 			doc.setFont('helvetica', 'normal');
@@ -3372,7 +3212,10 @@ export function generateDoctorPdf(
 	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(t('pdf.symptom_frequency'), 14, cursorY);
+	// Centered on the page (2026-05-22 review): the 3-column table is
+	// 146mm — left-aligned it left a 34mm band of dead white space. Title
+	// centers with it.
+	doc.text(t('pdf.symptom_frequency'), pageW / 2, cursorY, { align: 'center' });
 	cursorY += 2;
 
 	const symptomRows = symptomFreq.map((s) => [
@@ -3382,8 +3225,10 @@ export function generateDoctorPdf(
 	]);
 
 	if (symptomRows.length > 0) {
+		const symFreqTableW = 90 + 28 + 28;
 		autoTable(doc, {
 			startY: cursorY,
+			margin: { left: (pageW - symFreqTableW) / 2, right: (pageW - symFreqTableW) / 2 },
 			head: [[t('pdf.symptom'), t('pdf.days_active'), t('pdf.frequency')]],
 			body: symptomRows,
 			theme: 'plain',
@@ -3499,210 +3344,6 @@ export function generateDoctorPdf(
 		});
 	}
 
-	// ── "For your doctor" narrative bullets ──
-	// Dr. Fischer from the 10-persona QA said: "give me the answer in 10
-	// seconds, not the data to compute one." These bullets restate the
-	// findings as clinical questions so the appointment starts with the
-	// right conversation, not with chart-reading.
-	doc.addPage();
-	paintPaper(doc);
-	drawWordmark(doc, 14, 16, { size: 14 });
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(TYPE.summary);
-	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(t('pdf.for_doctor_title'), pageW - 14, 15, { align: 'right' });
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(TYPE.body);
-	doc.setTextColor(...BRAND.textSecondary);
-	doc.text(t('pdf.for_doctor_subtitle'), pageW - 14, 21, { align: 'right' });
-
-	let byY = 40;
-	doc.setDrawColor(...BRAND.border);
-	doc.setLineWidth(0.2);
-	doc.line(14, byY - 4, pageW - 14, byY - 4);
-
-	// Compose bullets — each is "fact · question" pairs.
-	// Bullet window now matches the report scope: month / year / 2years.
-	// Variable still named `yearDocs` for historical reasons — it holds the
-	// scope-appropriate document set, not necessarily a year.
-
-	const bulletMonths = scope === '2years' ? 24 : scope === 'year' ? 12 : 1;
-	const yearEndDate = new Date(year, month + 1, 0);
-	const yearStartDate = new Date(year, month + 1 - bulletMonths, 1);
-	const yearStartISO = yearStartDate.toISOString().slice(0, 10);
-	const yearEndISO = yearEndDate.toISOString().slice(0, 10);
-	const yearDocs = documents.filter((d) => {
-		if (d.data?.type !== 'entry') return false;
-		const ds = String(d.data.date || '');
-		return ds >= yearStartISO && ds <= yearEndISO;
-	});
-	const yearDaysLogged = yearDocs.length;
-	// Same window, but also includes standalone `episode` quick-add docs —
-	// used for episode-counting bullets where excluding them would
-	// undercount the patient's actual symptom burden.
-	const yearEpisodeDocs = documents.filter((d) => {
-		const t = d.data?.type;
-		if (t !== 'entry') return false;
-		const ds = String(d.data.date || '');
-		return ds >= yearStartISO && ds <= yearEndISO;
-	});
-
-	// Human-readable label for the bullet window (passed as {window} into
-	// fact strings). Month scope shows the month name (e.g. "April 2026"),
-	// year/2years show the scope header label ("Letzte 12 Monate" etc.).
-	const bulletWindowLabel = scope === 'month'
-		? monthName
-		: t(scope === 'year' ? 'pdf.scope_year' : 'pdf.scope_2years');
-
-	// Year-scoped top symptom and trigger (separate from the month-scoped
-	// symptomFreq used on the page-1 summary).
-	const yearSymptomFreq: { id: string; label: string; count: number }[] = [];
-	for (const g of blueprint.symptomGroups) {
-		for (const item of g.items) {
-			if (POSITIVE_MARKERS.has(item.id)) continue;
-			const count = yearDocs.filter((d) => d.data?.symptoms?.[item.id]).length;
-			if (count > 0) {
-				yearSymptomFreq.push({ id: item.id, label: labelOf(t, item), count });
-			}
-		}
-	}
-	yearSymptomFreq.sort((a, b) => b.count - a.count);
-	const yearTopSymptom = yearSymptomFreq[0] ?? null;
-
-	const yearTriggerFreq: { id: string; label: string; count: number }[] = [];
-	for (const trig of blueprint.triggers) {
-		const count = yearDocs.filter((d) => {
-			const trs = d.data?.triggers;
-			if (Array.isArray(trs)) return trs.includes(trig.id);
-			return !!(trs && trs[trig.id]);
-		}).length;
-		if (count > 0) {
-			yearTriggerFreq.push({ id: trig.id, label: labelOf(t, trig), count });
-		}
-	}
-	yearTriggerFreq.sort((a, b) => b.count - a.count);
-	const yearTopTrigger = yearTriggerFreq[0] ?? null;
-
-	// CIPH-305b — condition-aware bullets now come from the shared helper so
-	// the compact PDF emits the same clinical facts (peak IOP, OFF time,
-	// pain×mood, etc.). Trajectory + episode-burden + top-trigger/symptom
-	// bullets remain inline below since they need scope-local state.
-	const bullets: Array<{ fact: string; question: string }> = [
-		// `buildConditionAwareBullets` mixes vital-derived facts (need daily_log)
-		// with episode-derived facts (need standalone episodes too); the helper
-		// itself filters per-bullet, so we hand it the broader set.
-		...buildConditionAwareBullets(blueprint, yearEpisodeDocs, t, bulletWindowLabel),
-	];
-
-	// Trajectory bullet — only when we actually drew a trajectory chart.
-	if (chartContext) {
-		bullets.push({
-			fact: t('pdf.for_doctor_fact_trajectory', {
-				months: String(chartContext.MONTHS),
-				first: chartContext.firstAvg.toFixed(1),
-				last: chartContext.lastAvg.toFixed(1),
-				trend: chartContext.trendLabel,
-			}),
-			question: chartContext.trendDir === 'up'
-				? t('pdf.for_doctor_q_worsening')
-				: chartContext.trendDir === 'down'
-					? t('pdf.for_doctor_q_improving')
-					: t('pdf.for_doctor_q_stable'),
-		});
-	}
-
-	// Episode burden across the 12-month window (replaces old "cluster days"
-	// bullet — listing specific day numbers doesn't scale beyond one month).
-	let yearTotalEpisodes = 0;
-	const yearEpisodeDaySet = new Set<string>();
-	for (const d of yearEpisodeDocs) {
-		const eps = (d.data?.episodes || d.data?.seizures || {}) as Record<string, number>;
-		let dayTotal = 0;
-		for (const col of episodeCols) dayTotal += eps[col] || 0;
-		if (dayTotal > 0) {
-			yearTotalEpisodes += dayTotal;
-			yearEpisodeDaySet.add(String(d.data?.date || ''));
-		}
-	}
-	const yearEpisodeDays = yearEpisodeDaySet.size;
-	if (yearTotalEpisodes > 0) {
-		bullets.push({
-			fact: t('pdf.for_doctor_fact_year_burden', {
-				total: String(yearTotalEpisodes),
-				days: String(yearEpisodeDays),
-				logged: String(yearDaysLogged),
-				window: bulletWindowLabel,
-			}),
-			question: t('pdf.for_doctor_q_cluster'),
-		});
-	}
-
-	if (yearTopTrigger && yearTopTrigger.count > 0) {
-		bullets.push({
-			fact: t('pdf.for_doctor_fact_trigger', {
-				label: yearTopTrigger.label,
-				count: String(yearTopTrigger.count),
-				window: bulletWindowLabel,
-			}),
-			question: t('pdf.for_doctor_q_trigger'),
-		});
-	}
-
-	if (yearTopSymptom && yearTopSymptom.count > 0 && yearDaysLogged > 0) {
-		bullets.push({
-			fact: t('pdf.for_doctor_fact_symptom', {
-				label: yearTopSymptom.label,
-				count: String(yearTopSymptom.count),
-				pct: String(Math.round((yearTopSymptom.count / yearDaysLogged) * 100)),
-			}),
-			question: t('pdf.for_doctor_q_symptom'),
-		});
-	}
-
-	// Pain × mood correlation now lives in `buildConditionAwareBullets`
-	// (CIPH-305b) so the compact PDF can also surface it.
-
-	// Cap to 6 bullets (was 5). The pain-mood correlation is a bonus signal
-	// when present; condition-aware bullets still come first.
-	const renderedBullets = bullets.slice(0, 6);
-	for (const b of renderedBullets) {
-		const num = renderedBullets.indexOf(b) + 1;
-		// Number circle — cohort-primary fill
-		doc.setFillColor(...acc.primary);
-		doc.circle(18, byY + 2, 3, 'F');
-		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(TYPE.head);
-		doc.setTextColor(255, 255, 255);
-		doc.text(String(num), 18, byY + 3.5, { align: 'center' });
-
-		// Fact — wider safety margin so long German compound words don't overflow.
-		// jsPDF's default helvetica is Latin-1 only; all text here avoids the
-		// Unicode arrow (→) which renders as !' and breaks splitTextToSize.
-		const factWidth = pageW - 26 - 14 - 6; // left=26, right=14, 6mm safety
-		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(TYPE.head);
-		doc.setTextColor(...BRAND.textPrimary);
-		const factLines = doc.splitTextToSize(b.fact, factWidth);
-		doc.text(factLines, 26, byY + 3);
-
-		// Question underneath — prefix with "Q:" (ASCII) instead of the
-		// Unicode arrow which the font cannot render.
-		doc.setFont('helvetica', 'italic');
-		doc.setFontSize(TYPE.body);
-		doc.setTextColor(...BRAND.ochre);
-		const qY = byY + 3 + factLines.length * 4.5;
-		const qLines = doc.splitTextToSize('Q:  ' + b.question, factWidth);
-		doc.text(qLines, 26, qY);
-
-		byY = qY + qLines.length * 4.5 + 8;
-	}
-
-	// Footnote
-	doc.setFont('helvetica', 'italic');
-	doc.setFontSize(TYPE.table);
-	doc.setTextColor(...BRAND.textMuted);
-	doc.text(t('pdf.for_doctor_footnote'), pageW / 2, pageH - 28, { align: 'center' });
-
 	// ── Append day-by-day grid(s). 'month' scope = one grid for the focus
 	// month. 'year' / '2years' scope = one grid per month in the window, so
 	// the doctor can spot-check any specific month without extra exports.
@@ -3746,7 +3387,9 @@ export function generateDoctorPdf(
 		}
 	}
 	for (const gm of gridMonths) {
-		doc.addPage();
+		// Landscape: the per-day grid is wide (Day + N symptom/episode
+		// columns + Notes). Portrait A4 could not hold wide blueprints.
+		doc.addPage('a4', 'landscape');
 		paintPaper(doc);
 		drawGridSection(doc, blueprint, documents, gm.y, gm.m, t, locale, username);
 	}
@@ -3754,7 +3397,9 @@ export function generateDoctorPdf(
 	// Footer: stamp every page ONCE, at the very end, after all pages exist.
 	// Calling drawFooter before doc.addPage() would stamp the new page again
 	// on the next call, producing the overlapping "Seite 1/3 Seite 1/4" artifact.
-	drawFooter(doc, t);
+	// The doctor PDF carries the full medical-device disclaimer in the footer
+	// (moved off page 1 — it was eating ~12mm of prime real estate).
+	drawFooter(doc, t, 'pdf.disclaimer_medical_long');
 
 	const userTag = username ? `${username}-` : '';
 	const scopeTag = scope === 'month' ? focusMonthPrefix : `${scope}-${focusMonthPrefix}`;

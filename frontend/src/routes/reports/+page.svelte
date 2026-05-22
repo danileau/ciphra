@@ -32,18 +32,23 @@
 
 	let currentDate = new Date().toISOString().slice(0, 10);
 	let pdfScope: ReportScope = 'month';
-	let exportMenuOpen = false;
 
-	function scopeLabelKey(s: ReportScope): string {
-		if (s === 'year') return 'pdf.scope_year_label';
-		if (s === '2years') return 'pdf.scope_2years_label';
-		return 'pdf.scope_month_label';
-	}
-
+	// Doctor-export scope picker — a clicked card sets the scope and
+	// exports in one step (no intermediate menu state).
 	function pickExport(scope: ReportScope) {
 		pdfScope = scope;
-		exportMenuOpen = false;
 		exportForDoctor();
+	}
+
+	/** Human date span a scope covers, ending at the report month. */
+	function scopeRangeLabel(scope: ReportScope, locale: string, refISO: string): string {
+		const d = new Date(refISO + 'T12:00:00');
+		const end = new Date(d.getFullYear(), d.getMonth(), 1);
+		const fmt = (x: Date) => x.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
+		if (scope === 'month') return fmt(end);
+		const back = scope === 'year' ? 11 : 23;
+		const start = new Date(end.getFullYear(), end.getMonth() - back, 1);
+		return `${fmt(start)} – ${fmt(end)}`;
 	}
 
 	// Available scope set depends on data span: no point offering "2 years"
@@ -69,6 +74,30 @@
 	} else if (pdfScope === 'year' && !scopeYearAvailable) {
 		pdfScope = 'month';
 	}
+
+	// Export scope cards (replaces the dropdown): each is a clickable
+	// mini-document; paper-stack depth cues the span, the body line says
+	// which visit it suits, and a locked card explains its own threshold.
+	$: scopeCards = [
+		{
+			scope: 'month' as ReportScope, depth: 1, available: true,
+			titleKey: 'pdf.scope_month_label', useKey: 'reports.scope_month_use',
+			range: scopeRangeLabel('month', $locale, currentDate),
+			recommended: false, lockMonths: 0,
+		},
+		{
+			scope: 'year' as ReportScope, depth: 2, available: scopeYearAvailable,
+			titleKey: 'pdf.scope_year_label', useKey: 'reports.scope_year_use',
+			range: scopeRangeLabel('year', $locale, currentDate),
+			recommended: scopeYearAvailable, lockMonths: 2,
+		},
+		{
+			scope: '2years' as ReportScope, depth: 3, available: scopeTwoYearsAvailable,
+			titleKey: 'pdf.scope_2years_label', useKey: 'reports.scope_2years_use',
+			range: scopeRangeLabel('2years', $locale, currentDate),
+			recommended: false, lockMonths: 12,
+		},
+	];
 	let viewMode: 'month' | 'year' = 'month';
 	let currentYear = new Date().getFullYear();
 	// Track loading explicitly so the empty / loading / ready states don't
@@ -137,7 +166,6 @@
 		// with no scope choice; this respects the existing picker UI and
 		// stops the button from surprising the user.
 		if ($page.url.searchParams.get('action') === 'export') {
-			exportMenuOpen = true;
 			await tick();
 			document
 				.getElementById('reports-export-section')
@@ -300,26 +328,6 @@
 	async function exportForDoctor() {
 		if (!bp) return;
 		const d = new Date(currentDate + 'T12:00:00');
-		// Feature flag for the CLINICAL_HANDOFF.md rewrite. Toggle via
-		// localStorage `ciphra_handoff_v2=1` to opt into the new
-		// single-page renderer. Legacy generateDoctorPdf stays the
-		// default until the new path reaches feature parity.
-		const useHandoffV2 =
-			typeof localStorage !== 'undefined' && localStorage.getItem('ciphra_handoff_v2') === '1';
-		if (useHandoffV2) {
-			const { generateClinicalHandoff } = await import('$lib/pdfHandoff');
-			generateClinicalHandoff(
-				bp,
-				exportableDocs,
-				d.getFullYear(),
-				d.getMonth(),
-				$t,
-				$locale,
-				$auth.username || '',
-				pdfScope,
-			);
-			return;
-		}
 		const { generateDoctorPdf } = await loadPdfLib();
 		generateDoctorPdf(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
 	}
@@ -1270,79 +1278,50 @@
 		{/if}
 	</div>
 
-	<!-- CIPH-423 — Combined scope+export dropdown: scope only matters with
-	     export, so collapse them into one decision. CSV stays as a small link.
-	     CIPH-873 — id=reports-export-section for deep-link scroll-into-view. -->
-	<div id="reports-export-section" class="mb-6 relative">
-		<button
-			type="button"
-			on:click={() => (exportMenuOpen = !exportMenuOpen)}
-			aria-haspopup="menu"
-			aria-expanded={exportMenuOpen}
-			class="w-full px-4 py-3 text-sm font-medium rounded-xl bg-brand text-white hover:opacity-90 transition-opacity flex items-center justify-between gap-2 min-h-[44px]"
-		>
-			<span class="flex items-center gap-2">
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				{$t('reports.export_dropdown_label', { scope: $t(scopeLabelKey(pdfScope)) })}
-			</span>
-			<svg class="w-4 h-4 transition-transform" style="transform: rotate({exportMenuOpen ? 180 : 0}deg)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-		</button>
-
-		{#if exportMenuOpen}
-			<!-- Backdrop: click anywhere outside to close -->
-			<button
-				type="button"
-				class="fixed inset-0 z-40"
-				aria-label={$t('common.close')}
-				on:click={() => (exportMenuOpen = false)}
-			></button>
-			<div
-				role="menu"
-				class="absolute z-50 left-0 right-0 mt-2 rounded-xl overflow-hidden shadow-lg"
-				style="background: var(--surface-card); border: 1px solid var(--border)"
-			>
+	<!-- Doctor-export scope picker (2026-05-22). Replaces the dropdown with
+	     clickable mini-document cards: each card's paper-stack depth cues its
+	     time span, the body line says which visit it suits, and a locked card
+	     explains its own data threshold instead of greying out silently.
+	     id=reports-export-section kept for deep-link scroll-into-view. -->
+	<div id="reports-export-section" class="mb-6">
+		<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">
+			{$t('reports.export_heading')}
+		</h2>
+		<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+			{#each scopeCards as card (card.scope)}
 				<button
-					role="menuitem"
 					type="button"
-					on:click={() => pickExport('month')}
-					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between"
+					class="report-card"
+					class:report-card--recommended={card.recommended}
+					disabled={!card.available}
+					on:click={() => pickExport(card.scope)}
 				>
-					<span style="color: var(--text-primary)">{$t('pdf.scope_month_label')}</span>
-					<span class="text-xs" style="color: var(--text-muted)">PDF</span>
+					<span class="report-doc" aria-hidden="true">
+						{#if card.depth >= 3}<span class="report-sheet report-sheet--b2"></span>{/if}
+						{#if card.depth >= 2}<span class="report-sheet report-sheet--b1"></span>{/if}
+						<span class="report-sheet report-sheet--front">
+							<span class="report-line"></span>
+							<span class="report-line"></span>
+							<span class="report-line report-line--short"></span>
+						</span>
+					</span>
+					<span class="report-card__title">
+						{$t(card.titleKey)}
+						{#if card.recommended}
+							<span class="report-card__badge">★ {$t('reports.scope_recommended')}</span>
+						{/if}
+					</span>
+					<span class="report-card__range">{card.range}</span>
+					<span class="report-card__use">
+						{card.available
+							? $t(card.useKey)
+							: $t('reports.scope_locked', { months: card.lockMonths })}
+					</span>
 				</button>
-				<button
-					role="menuitem"
-					type="button"
-					on:click={() => scopeYearAvailable && pickExport('year')}
-					disabled={!scopeYearAvailable}
-					title={scopeYearAvailable ? '' : $t('pdf.scope_unavailable')}
-					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between disabled:opacity-40 disabled:cursor-not-allowed"
-				>
-					<span style="color: var(--text-primary)">{$t('pdf.scope_year_label')}</span>
-					<span class="text-xs" style="color: var(--text-muted)">PDF</span>
-				</button>
-				<button
-					role="menuitem"
-					type="button"
-					on:click={() => scopeTwoYearsAvailable && pickExport('2years')}
-					disabled={!scopeTwoYearsAvailable}
-					title={scopeTwoYearsAvailable ? '' : $t('pdf.scope_unavailable')}
-					class="w-full text-left px-4 py-3 text-sm hover:bg-brand/5 transition-colors flex items-center justify-between disabled:opacity-40 disabled:cursor-not-allowed"
-				>
-					<span style="color: var(--text-primary)">{$t('pdf.scope_2years_label')}</span>
-					<span class="text-xs" style="color: var(--text-muted)">PDF</span>
-				</button>
-			</div>
-		{/if}
+			{/each}
+		</div>
 
-		<p class="text-[11px] mt-2" style="color: var(--text-muted)">{$t('reports.doctor_desc')}</p>
-		{#if !scopeYearAvailable || !scopeTwoYearsAvailable}
-			<p class="text-[11px] mt-1" style="color: var(--text-muted)">
-				{$t('pdf.scope_data_span', { days: String(dataSpanDays) })}
-			</p>
-		{/if}
-
-		<div class="mt-2 text-right">
+		<div class="mt-3 text-right">
 			<button
 				on:click={exportCsvFile}
 				class="text-[11px] text-slate-500 hover:text-brand underline-offset-2 hover:underline transition-colors"
@@ -2010,4 +1989,91 @@
 	   [−] N [+] counter widget inside is the affordance. */
 	/* CIPH-915 — `.grid-episode-zero` removed; empty cells now show a
 	   centered "+" button instead of a muted "-" placeholder. */
+
+	/* ── Doctor-export scope cards ── */
+	.report-card {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		padding: 0.85rem 0.95rem 0.9rem;
+		border-radius: 0.75rem;
+		background: var(--surface-card);
+		border: 1px solid var(--border);
+		text-align: left;
+		cursor: pointer;
+		min-height: 138px;
+		transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	}
+	.report-card:hover:not(:disabled),
+	.report-card:focus-visible:not(:disabled) {
+		border-color: var(--brand);
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+	}
+	.report-card:disabled {
+		cursor: not-allowed;
+		opacity: 0.55;
+	}
+	.report-card--recommended {
+		border-color: var(--brand);
+	}
+	.report-card__title {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin-top: 0.55rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+	.report-card__badge {
+		font-size: 0.62rem;
+		font-weight: 600;
+		color: var(--brand);
+		white-space: nowrap;
+	}
+	.report-card__range {
+		margin-top: 0.1rem;
+		font-size: 0.72rem;
+		color: var(--text-muted);
+	}
+	.report-card__use {
+		margin-top: 0.3rem;
+		font-size: 0.72rem;
+		line-height: 1.4;
+		color: var(--text-secondary);
+	}
+	/* Mini-document: the front sheet plus offset sheets behind it. The
+	   stack depth (1 / 2 / 3 sheets) is the visual cue for the time span. */
+	.report-doc {
+		position: relative;
+		width: 36px;
+		height: 44px;
+	}
+	.report-sheet {
+		position: absolute;
+		width: 28px;
+		height: 36px;
+		border-radius: 2px;
+		background: #fff;
+		border: 1px solid var(--border);
+	}
+	.report-sheet--b2 { left: 8px; top: 0; }
+	.report-sheet--b1 { left: 4px; top: 4px; }
+	.report-sheet--front {
+		left: 0;
+		top: 8px;
+		z-index: 2;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 3px;
+		padding: 0 4.5px;
+	}
+	.report-line {
+		height: 1.6px;
+		border-radius: 1px;
+		background: var(--border);
+	}
+	.report-line--short { width: 58%; }
 </style>

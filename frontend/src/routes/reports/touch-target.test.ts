@@ -91,6 +91,14 @@ describe('CIPH-pi23-A1 /reports touch-target floor (44pt WCAG 2.5.5)', () => {
 		if (symptomRule !== -1) {
 			excludeRanges.push([symptomRule, symptomRule + 400]);
 		}
+		// `.report-sheet` (36px) is decorative — the mini-document graphic
+		// inside the doctor-export scope cards, not an interactive target.
+		// The card itself (`.report-card`, a <button>, min-height 138px) is
+		// the touch target and clears the floor with room to spare.
+		const sheetRule = REPORTS.indexOf('.report-sheet {');
+		if (sheetRule !== -1) {
+			excludeRanges.push([sheetRule, sheetRule + 200]);
+		}
 		const inExclusion = (idx: number) =>
 			excludeRanges.some(([s, e]) => idx >= s && idx < e);
 

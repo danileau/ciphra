@@ -1,6 +1,22 @@
-# CLINICAL_HANDOFF.md — ciphra clinical handoff artifact (binding spec)
+# CLINICAL_HANDOFF.md — ciphra clinical handoff artifact (RETIRED)
 
-**Status:** Binding (v2, 2026-05-22). Supersedes `PDF_TEMPLATE.md` and `PDF_DESIGN_SPEC.md`.
+> **RETIRED 2026-05-22.** The single-A4 model this spec mandates was tested
+> against the legacy multi-page renderer and rejected by the user:
+> *"legacy is a lot better than v2."* Rendering Hans (epilepsy, 2-year scope,
+> 87 episodes) exposed the root error — the hard 1-page constraint (§1.1) plus
+> the 90-day data window (§14.7) made the export show "last 90 days (count: 1)"
+> when the user had selected 2 years, discarding 21 months including the GTC
+> and the medication change. The `pdfHandoff.ts` renderer (v1 + v2) is deleted.
+> The active artifact is the multi-page `generateDoctorPdf` in `pdf.ts`, being
+> patched to graft this spec's three genuinely-good ideas: the patient
+> top-line quote (§4 / §14.8), brand-voice labels (§15.4), and collapse-don't-
+> narrate for empty blocks (§14.1).
+>
+> **Kept for reference only:** §1.3–§1.6 and §11.5 (the MDR analysis), §14
+> (UX dimensions), and §15 (brand identity) remain useful. §1.1 (single page)
+> and §14.7 (90-day window) are the disproven constraints — do not reinstate.
+
+**Status:** RETIRED. Superseded the now-also-retired `PDF_TEMPLATE.md` and `PDF_DESIGN_SPEC.md`.
 **Provenance:**
 - v1 (2026-05-21): R1–R5 campfire + 7-split tribunal. Optimized for MDR + print + clinical correctness. Resulting render was experience-crushing — page LED with "[no note provided]", 91-cell calendar grid made sparse data look empty, gibberish 2-letter codes, US date format. User: *"this is the result of this whole idea. without this part, this deliverable being perfect, the whole application has no sense."*
 - v2 (2026-05-22): R1–R4 campfire with UX seats + ciphra brand identity dimension + conviction loop. All three buddies voted SOLD on the literal same mockup at R4. Replaces §3.2 calendar grid with the density-strip pattern, adds §14 (UX dimensions) and §15 (ciphra brand identity).
