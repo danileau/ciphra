@@ -73,6 +73,8 @@ export const ROUTE_SHELLS: RouteShellRule[] = [
 	{ pattern: /^\/terms(\/|$)/, shell: 'public-doc', requiresAuth: false, requiresBlueprint: false },
 	{ pattern: /^\/protocol(\/|$)/, shell: 'public-doc', requiresAuth: false, requiresBlueprint: false },
 	{ pattern: /^\/conditions(\/|$)/, shell: 'public-doc', requiresAuth: false, requiresBlueprint: false },
+	// In-app documentation viewer — renders the repo's docs/*.md.
+	{ pattern: /^\/docs(\/|$)/, shell: 'public-doc', requiresAuth: false, requiresBlueprint: false },
 
 	// Family-claim flow. Public: the invitee might not have an account
 	// yet. Auth + blueprint redirects happen inside the page itself

@@ -57,6 +57,13 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      # The /docs route renders the repo's documentation. The container
+      # only mounts ./frontend, so the doc sources are bind-mounted in
+      # under /docs-src for the ciphraDocs Vite plugin. See
+      # frontend/vite.config.ts.
+      - ./docs:/docs-src/docs:ro
+      - ./README.md:/docs-src/README.md:ro
+      - ./SECURITY.md:/docs-src/SECURITY.md:ro
     environment:
       - VITE_API_URL=http://api:5000
     networks:
