@@ -20,12 +20,18 @@
 	// Focus surfaces: a sticky save bar / wizard chrome already owns the
 	// bottom of the screen. The footer would sit underneath them and read
 	// as visual debris, not as a closing signature.
+	// Admin is also hidden — operators don't need a patient-facing
+	// "Ende-zu-Ende verschlüsselt" reassurance line on an ops console;
+	// it reads as duplicate of the admin page's own zero-knowledge note
+	// (which is itself dropped — see admin/+page.svelte).
 	$: hidden =
 		pathname.startsWith('/log/') ||
 		pathname === '/setup' ||
 		pathname === '/login' ||
 		pathname === '/migrate' ||
-		pathname.startsWith('/migrate/');
+		pathname.startsWith('/migrate/') ||
+		pathname === '/admin' ||
+		pathname.startsWith('/admin/');
 </script>
 
 {#if !hidden}

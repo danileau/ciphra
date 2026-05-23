@@ -546,11 +546,6 @@
 			{/if}
 		</section>
 
-		<!-- Zero-knowledge reminder -->
-		<div class="flex items-center justify-center gap-2 py-4">
-			<Asterisk size={14} color="olive" />
-			<span class="text-xs" style="color: var(--text-muted);">{$t('admin.zero_knowledge')}</span>
-		</div>
 	{/if}
 </div>
 

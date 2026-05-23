@@ -1315,7 +1315,6 @@ export default {
 	'admin.ip': 'Adresse IP',
 	'admin.promote': 'Promouvoir admin',
 	'admin.demote': 'Révoquer admin',
-	'admin.zero_knowledge': 'Zero-knowledge — L\'administrateur ne peut consulter aucune donnée de santé',
 	'admin.admin_badge': 'Admin',
 
 	// Technical Details

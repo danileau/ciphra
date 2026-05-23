@@ -1337,7 +1337,6 @@ export default {
 	'admin.ip': 'IP-Adresse',
 	'admin.promote': 'Zum Admin',
 	'admin.demote': 'Admin entziehen',
-	'admin.zero_knowledge': 'Zero-Knowledge — Der Admin kann keine Gesundheitsdaten einsehen',
 	'admin.admin_badge': 'Admin',
 
 	// Technical Details
