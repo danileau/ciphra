@@ -376,8 +376,12 @@
 				</div>
 			</div>
 
-			<!-- Key hierarchy -->
-			<div class="rounded-xl p-6 md:p-8 mb-8" style="background: var(--surface-muted); border: 1px solid var(--border);">
+			<!-- Key hierarchy. The 2-column "Server sees / Server sees NOT"
+			     8-bullet display that used to sit beneath this was dropped:
+			     repeating the same claim in eight checkmark bullets read as
+			     manifesto, not evidence. The hierarchy diagram + the tech
+			     section below already carry the cryptographic content. -->
+			<div class="rounded-xl p-6 md:p-8" style="background: var(--surface-muted); border: 1px solid var(--border);">
 				<h3 class="font-bold text-lg mb-6" style="color: var(--text-primary);">{$t('landing.security_hierarchy_title')}</h3>
 				<div class="font-mono text-sm leading-relaxed overflow-x-auto" style="color: var(--ochre);">
 					<pre class="whitespace-pre">{$t('landing.security_hierarchy_password')}
@@ -391,34 +395,6 @@
   |     {$t('landing.security_hierarchy_never')}
   |
   +-- {$t('landing.security_hierarchy_recovery')}</pre>
-				</div>
-			</div>
-
-			<!-- What server sees vs can't -->
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-				<div class="rounded-xl p-6" style="background: var(--surface-muted); border: 1px solid var(--border);">
-					<div class="flex items-center gap-2 mb-4">
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--ochre);"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
-						<h3 class="font-bold" style="color: var(--text-primary);">{$t('landing.security_server_sees')}</h3>
-					</div>
-					<ul class="space-y-3 text-sm" style="color: var(--text-secondary);">
-						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_1')}</li>
-						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_2')}</li>
-						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_3')}</li>
-						<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span> {$t('landing.security_server_sees_4')}</li>
-					</ul>
-				</div>
-				<div class="rounded-xl p-6" style="background: var(--surface-muted); border: 1px solid var(--border);">
-					<div class="flex items-center gap-2 mb-4">
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="1" y1="1" x2="23" y2="23" stroke-width="2" stroke-linecap="round"/></svg>
-						<h3 class="font-bold" style="color: var(--text-primary);">{$t('landing.security_server_not')}</h3>
-					</div>
-					<ul class="space-y-3 text-sm" style="color: var(--text-secondary);">
-						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_1')}</li>
-						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_2')}</li>
-						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_3')}</li>
-						<li class="flex items-center gap-2"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--brand);"><path d="M18 6L6 18M6 6l12 12" stroke-width="2.5" stroke-linecap="round"/></svg> {$t('landing.security_server_not_4')}</li>
-					</ul>
 				</div>
 			</div>
 		</div>
@@ -548,7 +524,17 @@
 				<div>
 					<div class="card rounded-xl p-6 md:p-8" style="border-left: 4px solid var(--olive);">
 						<h3 class="text-xl md:text-2xl font-bold tracking-tight mb-3" style="color: var(--text-primary);">{$t('tech.verify_title')}</h3>
-						<p class="leading-relaxed mb-6" style="color: var(--text-secondary);">{$t('tech.verify_desc')}</p>
+						<p class="leading-relaxed mb-4" style="color: var(--text-secondary);">{$t('tech.verify_desc')}</p>
+						<a
+							href="https://github.com/danileau/ciphra"
+							target="_blank"
+							rel="noopener"
+							class="inline-flex items-center gap-2 text-sm font-medium mb-6 hover:underline"
+							style="color: var(--brand);"
+						>
+							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.09 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.29 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+							github.com/danileau/ciphra
+						</a>
 						<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 							<div class="rounded-lg p-4" style="background: var(--surface-muted); border: 1px solid var(--border);">
 								<div class="flex items-center gap-2 mb-2">
