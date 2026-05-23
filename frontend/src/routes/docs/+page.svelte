@@ -14,6 +14,18 @@
 		</p>
 	</header>
 
+	<aside class="english-note">
+		<p>
+			<strong>Why English only?</strong> The app itself is translated into German, French,
+			Italian, and English, because those are the languages our users live in. The
+			documentation isn't — it covers architecture, the threat model, and how to develop
+			against ciphra, and its audience is engineers, auditors, and contributors who already
+			work in English across the rest of their toolchain. Keeping one canonical version
+			also avoids the drift problem: four translated copies of an architecture doc rot at
+			four different rates, and a stale security note is worse than no translation at all.
+		</p>
+	</aside>
+
 	<ul class="space-y-3">
 		{#each docList as doc (doc.slug)}
 			<li>
@@ -29,6 +41,22 @@
 </main>
 
 <style>
+	.english-note {
+		padding: 0.85rem 1rem;
+		border-left: 3px solid var(--brand);
+		background: var(--surface-card);
+		border-radius: 0.5rem;
+	}
+	.english-note p {
+		margin: 0;
+		font-size: 0.82rem;
+		line-height: 1.55;
+		color: var(--text-secondary);
+	}
+	.english-note strong {
+		color: var(--text-primary);
+		font-weight: 600;
+	}
 	.doc-card {
 		display: flex;
 		flex-direction: column;
