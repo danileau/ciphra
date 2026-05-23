@@ -30,6 +30,11 @@
 
 	const dispatch = createEventDispatcher<{ 'signup-complete': void }>();
 
+	// Metadata-only tag passed to /api/register. The migrate route sets this
+	// to 'migrate' so /admin can count epilepc migrations vs organic signups.
+	// Default undefined → register call omits the field → server defaults 'web'.
+	export let source: 'web' | 'migrate' | undefined = undefined;
+
 	let username = '';
 	let password = '';
 	let confirm = '';
@@ -89,7 +94,7 @@
 		try {
 			const uname = username.trim().toLowerCase();
 			const bundle = await createVault(uname, password, true);
-			const reg = await api.register(bundle);
+			const reg = await api.register(bundle, source);
 			if (!reg.ok) {
 				// Status-aware copy. Server is enumeration-resistant (409 also covers
 				// bundle-bad), so 409 still maps to "username taken" — that's the

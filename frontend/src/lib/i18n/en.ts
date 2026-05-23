@@ -1282,6 +1282,10 @@ export default {
 	// Admin
 	'admin.title': 'Administration',
 	'admin.stats': 'Statistics',
+	'admin.trend_26w': 'Trend — 26 weeks',
+	'admin.migrations': 'Migrations from epilepc',
+	'admin.last_migration': 'Last',
+	'admin.dormant_90d': 'Dormant',
 	'admin.users': 'Users',
 	'admin.audit': 'Audit Log',
 	'admin.total_users': 'Total Users',

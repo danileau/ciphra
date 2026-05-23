@@ -29,12 +29,15 @@ async function request(
 
 import type { RegistrationBundle } from './crypto';
 
-export async function register(bundle: RegistrationBundle) {
+export async function register(bundle: RegistrationBundle, source?: 'web' | 'migrate') {
 	// Server receives only hashes + encrypted blobs — never the password or recovery_code.
+	// `source` is a metadata-only bit ('web' default, 'migrate' for the epilepc
+	// off-ramp) so /admin can count migrations vs organic signups.
 	const { recovery_code: _drop, ...payload } = bundle;
+	const body = source ? { ...payload, source } : payload;
 	return request('/register', {
 		method: 'POST',
-		body: JSON.stringify(payload)
+		body: JSON.stringify(body)
 	});
 }
 
@@ -99,6 +102,10 @@ export async function recover(payload: {
 
 export async function adminGetStats() {
 	return request('/admin/stats');
+}
+
+export async function adminGetTimeseries() {
+	return request('/admin/stats/timeseries');
 }
 
 export async function adminGetUsers() {

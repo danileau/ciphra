@@ -387,6 +387,12 @@ each surface is also visibly cohort-aware when empty.
   responsive sizing + reduced-motion handling. Used on
   dashboard (episode + symptom + how-are-you charts) and
   calendar (weekday distribution).
+- **Sparkline.svelte** (pi24 admin) — stateless inline SVG
+  sparkline: takes an array of numbers, renders a single
+  polyline plus a trailing dot for the most recent value. No
+  axes, no legend, no library — by design. Used by the admin
+  dashboard's sparkline-first metric layout (migration counter,
+  active users, document totals).
 - **ConfirmDelete.svelte** (CIPH-834) — the red "Yes delete" +
   "Cancel" button pair shown next to a just-tapped delete icon
   on an entry card. Used on `routes/journal/+page.svelte` and

@@ -139,6 +139,7 @@ def init_db():
                     last_login TIMESTAMP WITH TIME ZONE,
                     login_attempts INTEGER DEFAULT 0,
                     locked_until TIMESTAMP WITH TIME ZONE,
+                    registration_source VARCHAR(16) DEFAULT 'web',
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                 )
@@ -222,6 +223,14 @@ def init_db():
             cur.execute("""
                 DO $$ BEGIN
                     ALTER TABLE family_grants ADD COLUMN last_access_at TIMESTAMP WITH TIME ZONE;
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$
+            """)
+            # Registration source — one metadata bit per user, used by the
+            # /admin dashboard to count epilepc migrations. No content leak.
+            cur.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE users ADD COLUMN registration_source VARCHAR(16) DEFAULT 'web';
                 EXCEPTION WHEN duplicate_column THEN NULL;
                 END $$
             """)
@@ -449,6 +458,11 @@ def register():
     recovery_vault = data.get('recovery_vault')
     recovery_params = data.get('recovery_params')
     recovery_auth = data.get('recovery_auth')
+    # Optional metadata-only flag — the /migrate flow passes 'migrate' so
+    # the /admin dashboard can count epilepc migrations vs. organic signups.
+    # Unknown values are silently coerced to 'web' (no client-driven leak).
+    raw_source = (data.get('source') or 'web')
+    registration_source = raw_source if raw_source in ('web', 'migrate') else 'web'
 
     if not username or not USERNAME_RE.match(username):
         return jsonify({'error': 'Invalid username'}), 400
@@ -480,11 +494,12 @@ def register():
                 cur.execute("""
                     INSERT INTO users (username, auth_hash, auth_params, vault_params,
                                        encrypted_master, recovery_vault, recovery_params,
-                                       recovery_auth)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+                                       recovery_auth, registration_source)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
                 """, (
                     username, auth_hash, auth_params, vault_params,
                     encrypted_master, recovery_vault, recovery_params, recovery_auth,
+                    registration_source,
                 ))
                 user_id = cur.fetchone()['id']
                 audit(conn, user_id, 'REGISTER')
@@ -1050,6 +1065,40 @@ def admin_stats():
                 """)
                 deletions_today = cur.fetchone()['cnt']
 
+                # Slice 2 — migration metrics. Counts users whose registration
+                # came via the epilepc /migrate flow (server-visible bit, no
+                # content leak). Read [[project_epilepc_lifecycle_plan]] for
+                # the design.
+                cur.execute("SELECT COUNT(*) AS cnt FROM users WHERE registration_source = 'migrate'")
+                migrations_total = cur.fetchone()['cnt']
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM users
+                    WHERE registration_source = 'migrate'
+                    AND created_at >= NOW() - INTERVAL '7 days'
+                """)
+                migrations_7d = cur.fetchone()['cnt']
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM users
+                    WHERE registration_source = 'migrate'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                """)
+                migrations_30d = cur.fetchone()['cnt']
+                cur.execute("""
+                    SELECT MAX(created_at) AS last_at FROM users
+                    WHERE registration_source = 'migrate'
+                """)
+                last_migration_row = cur.fetchone()
+                last_migration_at = last_migration_row['last_at'].isoformat() if last_migration_row and last_migration_row['last_at'] else None
+
+                # Dormant accounts — users who haven't logged in for >90 days
+                # and aren't brand-new (registered >90 days ago).
+                cur.execute("""
+                    SELECT COUNT(*) AS cnt FROM users
+                    WHERE created_at < NOW() - INTERVAL '90 days'
+                    AND (last_login IS NULL OR last_login < NOW() - INTERVAL '90 days')
+                """)
+                dormant_90d = cur.fetchone()['cnt']
+
         return jsonify({
             'total_users': total_users,
             'active_users_30d': active_30d,
@@ -1065,10 +1114,73 @@ def admin_stats():
             'new_users_today': new_users_today,
             'deletions_30d': deletions_30d,
             'deletions_today': deletions_today,
+            'migrations_total': migrations_total,
+            'migrations_7d': migrations_7d,
+            'migrations_30d': migrations_30d,
+            'last_migration_at': last_migration_at,
+            'dormant_90d': dormant_90d,
         }), 200
     except Exception:
         logger.exception("Admin stats failed")
         return jsonify({'error': 'Failed to retrieve stats'}), 500
+
+
+@app.route('/api/admin/stats/timeseries', methods=['GET'])
+@admin_required
+def admin_timeseries():
+    """26-week sparkline series for the /admin dashboard.
+
+    Returns one bucket per ISO-week, padded with zeros for weeks with no
+    data so the sparkline stays a continuous 26-point line. Cheap query —
+    weekly aggregation over a ~half-year window."""
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                # Last 26 ISO weeks worth of new users, broken down by source.
+                cur.execute("""
+                    SELECT
+                        date_trunc('week', created_at) AS week,
+                        SUM(CASE WHEN registration_source = 'migrate' THEN 1 ELSE 0 END) AS migrations,
+                        COUNT(*) AS new_users
+                    FROM users
+                    WHERE created_at >= date_trunc('week', NOW()) - INTERVAL '25 weeks'
+                    GROUP BY week
+                    ORDER BY week
+                """)
+                user_rows = cur.fetchall()
+
+                cur.execute("""
+                    SELECT
+                        date_trunc('week', created_at) AS week,
+                        COUNT(*) AS cnt
+                    FROM audit_log
+                    WHERE action = 'LOGIN_SUCCESS'
+                    AND created_at >= date_trunc('week', NOW()) - INTERVAL '25 weeks'
+                    GROUP BY week
+                    ORDER BY week
+                """)
+                login_rows = cur.fetchall()
+
+        # Pad to a fixed 26-point series so sparklines align across metrics.
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        # Anchor on Monday of the current week, walk back 25 weeks.
+        current_week_start = now - timedelta(days=now.weekday(), hours=now.hour, minutes=now.minute, seconds=now.second, microseconds=now.microsecond)
+        weeks = [(current_week_start - timedelta(weeks=25 - i)).date().isoformat() for i in range(26)]
+
+        def to_series(rows, key):
+            by_week = {row['week'].date().isoformat(): int(row[key]) for row in rows if row['week']}
+            return [by_week.get(w, 0) for w in weeks]
+
+        return jsonify({
+            'weeks': weeks,
+            'new_users_per_week': to_series(user_rows, 'new_users'),
+            'migrations_per_week': to_series(user_rows, 'migrations'),
+            'logins_per_week': to_series(login_rows, 'cnt'),
+        }), 200
+    except Exception:
+        logger.exception("Admin timeseries failed")
+        return jsonify({'error': 'Failed to retrieve timeseries'}), 500
 
 
 @app.route('/api/admin/users', methods=['GET'])

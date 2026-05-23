@@ -508,7 +508,13 @@
 	// Session-scoped master_key is gone (browser restarted) but JWT persists.
 	// Force re-login so the password unlocks the vault again. Avoids leaving
 	// an authenticated but decrypt-useless state.
-	$: if (browser && $needsUnlock && currentPath !== '/login') {
+	//
+	// Gated on `requiresAuth`: public routes (/, /migrate, /join/*, /privacy,
+	// etc.) have their own signup/auth-handling and must not be hijacked.
+	// Previously this fired on /migrate when a user with a stale JWT hit
+	// the inbound migration link — bounced them to /login instead of letting
+	// them sign up a fresh ciphra account via the inline SignupFlow.
+	$: if (browser && $needsUnlock && currentShell.requiresAuth && currentPath !== '/login') {
 		// auth.logout() is async (PI v16); fire-and-forget here is fine
 		// because the master key is already gone — no plaintext to leak.
 		// The wipe still runs in background.

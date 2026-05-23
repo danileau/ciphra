@@ -270,6 +270,13 @@
 			for (const d of mapped.diaries) await saveOne(d);
 
 			clearCheckpoint();
+			// Slice 3b — signal the source (epilepc) that the import succeeded.
+			// epilepc stamps `users.migrated_at` and locks the user into read+
+			// export-only mode on its side, preventing data divergence.
+			// Fire-and-forget: the migration itself has succeeded on ciphra's
+			// side; the lockdown is a downstream nice-to-have. We log and
+			// move on if the signal fails.
+			void signalMigrationComplete();
 			// CIPH-761 — show the one-shot Tagebuch-private tour after a
 			// successful import, unless the user has already seen it on this
 			// browser. The tour has its own explicit "continue" button to
@@ -287,6 +294,33 @@
 			phase = 'preview';
 		} finally {
 			busy = false;
+		}
+	}
+
+	async function signalMigrationComplete() {
+		// Best-effort: try https first, fall back to http for localhost-style
+		// dev sources (mirrors the fetchBundle logic).
+		const path = `/api/migration-complete/${encodeURIComponent(token)}`;
+		const tryOnce = async (scheme: 'https' | 'http') => {
+			const url = `${scheme}://${source}${path}`;
+			return fetch(url, { method: 'POST', mode: 'cors', credentials: 'omit' });
+		};
+		try {
+			let res: Response;
+			try {
+				res = await tryOnce('https');
+			} catch (netErr) {
+				if (source.startsWith('localhost') || source.startsWith('127.0.0.1')) {
+					res = await tryOnce('http');
+				} else {
+					throw netErr;
+				}
+			}
+			if (!res.ok) {
+				console.warn('[migrate] lockdown signal returned non-OK', res.status);
+			}
+		} catch (e) {
+			console.warn('[migrate] lockdown signal failed (non-fatal)', e);
 		}
 	}
 
@@ -356,7 +390,7 @@
 						<p class="text-sm mb-6" style="color: var(--text-secondary)">
 							{$t('migrate.welcome_body', { source })}
 						</p>
-						<SignupFlow on:signup-complete={handleSignupComplete} />
+						<SignupFlow source="migrate" on:signup-complete={handleSignupComplete} />
 					{:else if phase === 'confirm-origin'}
 						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
 							{$t('migrate.confirm_title')}

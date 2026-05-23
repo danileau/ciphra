@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import * as api from '$lib/api';
 	import Asterisk from '$lib/components/Asterisk.svelte';
+	import Sparkline from '$lib/components/Sparkline.svelte';
 
 	// Redirect non-admins
 	$: if ($auth.ready && (!$isAuthenticated || !$auth.isAdmin)) {
@@ -26,6 +27,19 @@
 		new_users_today: number;
 		deletions_30d: number;
 		deletions_today: number;
+		// Slice 2 — migration + dormancy metrics
+		migrations_total: number;
+		migrations_7d: number;
+		migrations_30d: number;
+		last_migration_at: string | null;
+		dormant_90d: number;
+	}
+
+	interface AdminTimeseries {
+		weeks: string[];
+		new_users_per_week: number[];
+		migrations_per_week: number[];
+		logins_per_week: number[];
 	}
 
 	interface AdminUser {
@@ -49,6 +63,7 @@
 	}
 
 	let stats: AdminStats | null = null;
+	let timeseries: AdminTimeseries | null = null;
 	let users: AdminUser[] = [];
 	let auditLog: AuditEntry[] = [];
 	let loading = true;
@@ -69,15 +84,17 @@
 		loading = true;
 		error = '';
 		try {
-			const [statsRes, usersRes, auditRes] = await Promise.all([
+			const [statsRes, tsRes, usersRes, auditRes] = await Promise.all([
 				api.adminGetStats(),
+				api.adminGetTimeseries(),
 				api.adminGetUsers(),
 				api.adminGetAudit(),
 			]);
 			if (statsRes.ok) stats = statsRes.data as unknown as AdminStats;
+			if (tsRes.ok) timeseries = tsRes.data as unknown as AdminTimeseries;
 			if (usersRes.ok) users = (usersRes.data as unknown as { users: AdminUser[] }).users;
 			if (auditRes.ok) auditLog = (auditRes.data as unknown as { entries: AuditEntry[] }).entries;
-			if (!statsRes.ok || !usersRes.ok || !auditRes.ok) {
+			if (!statsRes.ok || !tsRes.ok || !usersRes.ok || !auditRes.ok) {
 				error = 'Failed to load some data';
 			}
 		} catch {
@@ -305,6 +322,65 @@
 			</section>
 		{/if}
 
+		<!-- Sparkline-first metrics block (Slice 2) -->
+		{#if stats && timeseries}
+			{@const active_pct = stats.total_users > 0 ? Math.round((stats.active_users_30d / stats.total_users) * 100) : 0}
+			<section>
+				<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted); letter-spacing: 0.04em;">{$t('admin.trend_26w') || 'Trend — 26 Wochen'}</h2>
+				<div class="rounded-xl trend-block">
+					<div class="metric-row">
+						<div class="metric-label">
+							<p class="text-xs" style="color: var(--text-muted);">{$t('admin.total_users') || 'Total accounts'}</p>
+							<p class="text-xl font-bold mt-0.5 num-data" style="line-height: 1.1;">{stats.total_users}</p>
+						</div>
+						<div class="metric-spark">
+							<Sparkline values={timeseries.new_users_per_week} width={260} height={36} color="var(--brand, #b23c2c)" label="New users per week" />
+						</div>
+						<div class="metric-aside">+{stats.new_users_7d} / Woche</div>
+					</div>
+
+					<div class="metric-row">
+						<div class="metric-label">
+							<p class="text-xs" style="color: var(--text-muted);">{$t('admin.migrations') || 'Migrations from epilepc'}</p>
+							<p class="text-xl font-bold mt-0.5 num-data" style="line-height: 1.1;">{stats.migrations_total}</p>
+						</div>
+						<div class="metric-spark">
+							<Sparkline values={timeseries.migrations_per_week} width={260} height={36} color="var(--brand, #b23c2c)" label="Migrations per week" />
+						</div>
+						<div class="metric-aside">
+							{#if stats.migrations_7d > 0}
+								+{stats.migrations_7d} last 7d
+							{:else if stats.last_migration_at}
+								{$t('admin.last_migration') || 'Last'}: {formatDate(stats.last_migration_at)}
+							{:else}
+								—
+							{/if}
+						</div>
+					</div>
+
+					<div class="metric-row">
+						<div class="metric-label">
+							<p class="text-xs" style="color: var(--text-muted);">{$t('admin.active_users') || 'Active'} (30d)</p>
+							<p class="text-xl font-bold mt-0.5 num-data" style="line-height: 1.1;">{stats.active_users_30d}</p>
+						</div>
+						<div class="metric-spark">
+							<Sparkline values={timeseries.logins_per_week} width={260} height={36} color="var(--brand, #b23c2c)" label="Logins per week" />
+						</div>
+						<div class="metric-aside">{active_pct}% of total</div>
+					</div>
+
+					<div class="metric-row metric-row--last">
+						<div class="metric-label">
+							<p class="text-xs" style="color: var(--text-muted);">{$t('admin.dormant_90d') || 'Dormant'} (>90d)</p>
+							<p class="text-xl font-bold mt-0.5 num-data" style="line-height: 1.1;">{stats.dormant_90d}</p>
+						</div>
+						<div class="metric-spark metric-spark--empty"></div>
+						<div class="metric-aside">{stats.total_users > 0 ? Math.round((stats.dormant_90d / stats.total_users) * 100) : 0}%</div>
+					</div>
+				</div>
+			</section>
+		{/if}
+
 		<!-- User Table -->
 		<section class="card rounded-xl overflow-hidden">
 			<div class="p-4" style="border-bottom: 1px solid var(--border);">
@@ -517,3 +593,74 @@
 	</div>
 </div>
 {/if}
+
+<style>
+	.trend-block {
+		background: var(--surface-card);
+		border: 1px solid var(--border);
+	}
+	.metric-row {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 14px 18px;
+		border-bottom: 1px solid var(--border);
+	}
+	.metric-row--last { border-bottom: 0; }
+
+	.metric-label {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+	.metric-spark {
+		flex: 0 0 auto;
+	}
+	/* Force the Sparkline SVG (which sets its own width attribute) to
+	   shrink to the column. preserveAspectRatio="none" already lets it
+	   stretch — we override the attribute width via CSS. */
+	.metric-spark :global(svg) {
+		max-width: 100%;
+		height: auto;
+	}
+	.metric-spark--empty {
+		width: 260px;
+		height: 36px;
+	}
+	.metric-aside {
+		flex: 0 0 auto;
+		text-align: right;
+		white-space: nowrap;
+		color: var(--text-muted);
+		font-size: 12px;
+	}
+
+	/* Phone. Stack the row: label on top, sparkline full-width,
+	   side stat next to label. The 260px fixed-width sparkline was
+	   forcing horizontal overflow on every viewport <640px. */
+	@media (max-width: 640px) {
+		.metric-row {
+			flex-wrap: wrap;
+			gap: 8px;
+			padding: 12px 14px;
+		}
+		.metric-label {
+			flex: 1 1 60%;
+			min-width: 0;
+		}
+		.metric-aside {
+			flex: 0 0 auto;
+			align-self: flex-start;
+			padding-top: 4px;
+		}
+		.metric-spark {
+			flex: 1 1 100%;
+			order: 3; /* drop the spark beneath the label+aside line */
+		}
+		.metric-spark :global(svg) {
+			width: 100% !important;
+		}
+		.metric-spark--empty {
+			display: none; /* placeholder column not needed when stacked */
+		}
+	}
+</style>
