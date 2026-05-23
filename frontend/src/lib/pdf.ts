@@ -3476,123 +3476,135 @@ export function generateRecoveryPdf(
 	t: TranslateFn,
 	locale: string
 ): void {
+	// Styled to match generateDoctorPdf: plain paper (no brick header band,
+	// no watermark texture), top-left wordmark + top-right title, a rule-
+	// backed notice instead of a filled warning box, single-column code
+	// list for clearer aural reading. Same TYPE scale + BRAND tokens the
+	// reports PDF uses.
 	const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 	const pageW = doc.internal.pageSize.getWidth();
-	const pageH = doc.internal.pageSize.getHeight();
 
 	paintPaper(doc);
-	drawWatermarkPattern(doc);
 
-	// Header band
-	const bandH = drawHeaderBand(doc, {
-		title: t('pdf.recovery_title'),
-		color: BRAND.brick,
-	});
+	// ── Header (mirrors generateDoctorPdf page-1) ──
+	drawWordmark(doc, 14, 16, { size: 14 });
 
-	// Meta
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.summary);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.recovery_title'), pageW - 14, 15, { align: 'right' });
+
 	const issuedAt = new Date().toLocaleDateString(locale, {
 		year: 'numeric',
-		month: 'long',
+		month: 'short',
 		day: 'numeric',
 	});
 	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(TYPE.body);
+	doc.setFontSize(TYPE.table);
 	doc.setTextColor(...BRAND.textMuted);
-	doc.text(
-		`${t('pdf.account')}: ${username}   ·   ${t('pdf.export_date')}: ${issuedAt}`,
-		pageW / 2,
-		bandH + 10,
-		{ align: 'center' }
-	);
+	const metaParts: string[] = [];
+	if (username) metaParts.push(capitalizeName(username));
+	metaParts.push(`${t('pdf.export_date')}: ${issuedAt}`);
+	doc.text(metaParts.join('   ·   '), 14, 22);
 
-	// Context
-	doc.setFont('helvetica', 'normal');
+	const margin = 14;
+	const contentW = pageW - 2 * margin;
+	let y = 32;
+
+	// ── Rule-backed security notice. Matches drawTopLineQuote's chrome
+	// (3pt left rule + italic body + small attribution-style label), but
+	// uses BRAND.brick because this is the security/danger semantic — the
+	// patient-quote rule is olive. Lands first so the warning context
+	// arrives before the eye locks onto the code.
+	const ruleW = 1.06; // 3pt
+	const warnLines = doc.splitTextToSize(t('pdf.recovery_warning'), contentW - 6) as string[];
+	const warnLineH = 4.4;
+	const warnBodyH = warnLines.length * warnLineH;
+	const labelGap = 3.2;
+	const warnBlockH = warnBodyH + labelGap + 1;
+
+	doc.setDrawColor(...BRAND.brick);
+	doc.setLineWidth(ruleW);
+	doc.line(margin, y, margin, y + warnBlockH);
+	doc.setLineWidth(0.2);
+
+	doc.setFont('helvetica', 'italic');
+	doc.setFontSize(TYPE.body);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(warnLines, margin + 4, y + 3.4);
+
+	y += warnBlockH + 8;
+
+	// ── Section head: the code itself. Same head treatment the doctor
+	// PDF uses for "Symptome", "Vitalwerte", etc.
+	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(TYPE.head);
-	doc.setTextColor(...BRAND.textSecondary);
-	const contextLines = doc.splitTextToSize(t('pdf.recovery_context'), pageW - 50);
-	doc.text(contextLines, pageW / 2, bandH + 20, { align: 'center' });
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.recovery_code_heading'), margin, y);
 
-	// ── Code box (olive-tinted, 4×3 grid) ──
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.body);
+	doc.setTextColor(...BRAND.textSecondary);
+	const contextLines = doc.splitTextToSize(t('pdf.recovery_context'), contentW) as string[];
+	doc.text(contextLines, margin, y + 5.6);
+	y += 5.6 + contextLines.length * 4.2 + 4;
+
+	// ── Code card — hairline border, no fill (paper shows through). Four
+	// columns: 12 words land as a 3×4 grid, scannable as a block rather
+	// than a long ladder. Each cell still reads `nn  mono-word`.
 	const words = recoveryCode.trim().split(/\s+/);
 	const cols = 4;
 	const rows = Math.ceil(words.length / cols);
-	const boxMargin = 22;
-	const boxW = pageW - 2 * boxMargin;
-	const cellH = 12;
-	const boxH = cellH * rows + 8;
-	const boxY = bandH + 20 + contextLines.length * 5 + 8;
+	const cellH = 9;
+	const boxPadY = 5;
+	const boxH = cellH * rows + boxPadY * 2;
 
-	// olive-tinted card
-	doc.setFillColor(...BRAND.oliveSoft);
-	doc.setDrawColor(...BRAND.olive);
-	doc.setLineWidth(0.5);
-	doc.roundedRect(boxMargin, boxY, boxW, boxH, 3, 3, 'FD');
+	doc.setDrawColor(...BRAND.border);
+	doc.setLineWidth(0.3);
+	doc.roundedRect(margin, y, contentW, boxH, 1.5, 1.5, 'S');
 
-	const colW = boxW / cols;
+	const colW = contentW / cols;
 	for (let i = 0; i < words.length; i++) {
 		const r = Math.floor(i / cols);
 		const c = i % cols;
-		const cx = boxMargin + c * colW + 6;
-		const cy = boxY + 4 + r * cellH + cellH / 2 + 1.5;
+		const cx = margin + c * colW + 4;
+		const cy = y + boxPadY + r * cellH + cellH / 2 + 1.4;
 
-		// index number — brick
-		doc.setFont('helvetica', 'bold');
-		doc.setFontSize(TYPE.table);
-		doc.setTextColor(...BRAND.brick);
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.compact);
+		doc.setTextColor(...BRAND.textMuted);
 		doc.text(String(i + 1).padStart(2, '0'), cx, cy);
 
-		// word — monospace
 		doc.setFont('courier', 'bold');
-		doc.setFontSize(TYPE.head);
+		doc.setFontSize(TYPE.body);
 		doc.setTextColor(...BRAND.textPrimary);
-		doc.text(words[i], cx + 8, cy);
+		doc.text(words[i], cx + 7, cy);
 	}
+	y += boxH + 10;
 
-	// ── Side-note instructions ──
-	const instY = boxY + boxH + 10;
+	// ── Instructions — section head + asterisk-bulleted steps. The
+	// asterisk bullets are the real drawn ciphra mark, same primitive the
+	// doctor-PDF condition-aware bullets use.
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.head);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.recovery_instructions_heading'), margin, y);
+	y += 6.5;
+
 	const steps = [
 		t('pdf.recovery_step_1'),
 		t('pdf.recovery_step_2'),
 		t('pdf.recovery_step_3'),
 	];
-
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(TYPE.body);
-	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(t('pdf.recovery_instructions_heading'), boxMargin, instY);
-
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textSecondary);
-	let sy = instY + 6;
 	for (const step of steps) {
-		// asterisk bullet
-		doc.setTextColor(...BRAND.brick);
-		doc.setFont('helvetica', 'bold');
-		doc.text('*', boxMargin, sy);
-		doc.setFont('helvetica', 'normal');
-		doc.setTextColor(...BRAND.textSecondary);
-		const lines = doc.splitTextToSize(step, boxW - 8);
-		doc.text(lines, boxMargin + 4, sy);
-		sy += lines.length * 5 + 2;
+		drawAsteriskMark(doc, margin + 2, y - 1.4, 2.2, BRAND.brick);
+		const lines = doc.splitTextToSize(step, contentW - 7) as string[];
+		doc.text(lines, margin + 7, y);
+		y += lines.length * 4.6 + 2.5;
 	}
-
-	// ── Warning strip ──
-	const warnY = pageH - 32;
-	doc.setFillColor(...BRAND.brickSoft);
-	doc.setDrawColor(...BRAND.brick);
-	doc.setLineWidth(0.3);
-	doc.roundedRect(boxMargin, warnY, boxW, 14, 2, 2, 'FD');
-
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(TYPE.body);
-	doc.setTextColor(...BRAND.brick);
-	doc.text('*', boxMargin + 4, warnY + 9);
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(TYPE.body);
-	doc.setTextColor(...BRAND.brickDark);
-	const warnLines = doc.splitTextToSize(t('pdf.recovery_warning'), boxW - 10);
-	doc.text(warnLines, boxMargin + 8, warnY + 6);
 
 	drawFooter(doc, t, 'pdf.recovery_footer');
 
