@@ -22,6 +22,7 @@
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import TimePicker from '$lib/components/TimePicker.svelte';
 	import { shellFor } from '$lib/routeShells';
+	import { sweepLegacyLocalStorage } from '$lib/legacy-cleanup';
 	import { fade, fly } from 'svelte/transition';
 
 	let docsLoadStarted = false;
@@ -156,6 +157,11 @@
 
 	onMount(() => {
 		if (!browser) return;
+		// One-shot sweep of localStorage keys from a pre-zero-knowledge
+		// build (masterKey / user_admin / username / ciphra_dark). Gated
+		// by a sentinel so it runs once per browser. See
+		// `lib/legacy-cleanup.ts`.
+		sweepLegacyLocalStorage();
 		try {
 			const raw = localStorage.getItem('ciphra_fab_seen_count');
 			const n = raw ? parseInt(raw, 10) : 0;
