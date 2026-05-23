@@ -87,8 +87,18 @@ orthography (`ss`, never `ß`).
 
 Users of the original epilepc tracker can import their history at `/migrate`:
 the old records are re-encrypted in the browser with the user's new ciphra key
-and uploaded as encrypted documents. epilepc keeps running for anyone who
-doesn't migrate — there is no forced cutover.
+and uploaded as encrypted documents.
+
+epilepc is on a phased decommission. New account registration on epilepc closes
+the moment the `announce` phase starts (2026-07-01); existing accounts keep
+reading and writing through `warn`, become read-only on 2026-10-01, and are fully
+decommissioned on 2026-10-31. Each user can either migrate via `/migrate` or
+download their data as a JSON bundle (byte-identical to the migration bundle, so
+it stays re-importable) or as a PDF.
+
+Once a user has completed migration, ciphra signals epilepc and that one account
+is read+export-only from that point on, regardless of the global phase — to
+prevent the two systems from diverging.
 
 ## Operator tooling
 
