@@ -546,6 +546,11 @@
 		class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:outline-none"
 		style="background: var(--brand); color: white;"
 	>{$t('landing.skip_to_content')}</a>
+	<!-- Sticky-footer shell. min-h-screen + flex-col + a flex-1 slot
+	     wrapper push the footer to the bottom of the viewport on short
+	     pages (e.g. /docs index). Without it the footer floated mid-
+	     viewport on any page that didn't fill the screen. -->
+	<div class="min-h-screen flex flex-col">
 	<!-- Single unified public nav — covers landing, /login, /migrate,
 		 /conditions, /privacy, /terms, /join/*. One identity for every
 		 unauthenticated visitor; anchor links resolve back to the
@@ -585,13 +590,16 @@
 			</div>
 		</div>
 	</nav>
-	<slot />
+	<div class="flex-1 flex flex-col">
+		<slot />
+	</div>
 	<!-- CIPH-916 — public footer for landing + public-doc shells
 		 (/conditions, /privacy, /terms, /protocol). Auth-flow + family-
 		 claim shells skip it intentionally — those are focus surfaces. -->
 	{#if currentShell.shell === 'landing' || currentShell.shell === 'public-doc'}
 		<PublicFooter />
 	{/if}
+	</div>
 {:else if $isAuthenticated && currentPath !== '/login' && currentPath !== '/setup'}
 	<!-- CIPH-904 — Skip-to-content link for keyboard / AT users. Public
 		 landing already had this; the authed shell didn't, leaving 8-9
@@ -601,6 +609,10 @@
 		class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:outline-none"
 		style="background: var(--brand); color: white;"
 	>{$t('landing.skip_to_content')}</a>
+	<!-- Sticky-footer shell (matches the unauth branch). Pushes the
+	     authed footer to the bottom of short pages instead of letting
+	     it float in mid-viewport. -->
+	<div class="min-h-screen flex flex-col">
 	<!-- Top Bar -->
 	<header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b">
 		<div class="max-w-6xl mx-auto px-4 flex items-center justify-between h-14 gap-2">
@@ -743,6 +755,7 @@
 		id="main-content"
 		data-route={currentRoute}
 		data-cohort={currentCohort}
+		class="flex-1"
 		style="padding-bottom: 2rem"
 	>
 		<slot />
@@ -754,6 +767,7 @@
 		 focus surfaces stay clean. The footer's own margin-bottom clears the
 		 BottomNav (mobile) and safe-area (desktop). -->
 	<AuthedFooter />
+	</div>
 
 	<!-- CIPH-pi24-5d — Desktop FAB + its 2 onboarding tooltips removed.
 		 Dogfood read it as "off-grid (too far right) and breaks the style
