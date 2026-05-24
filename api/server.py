@@ -564,7 +564,8 @@ def login():
             with conn.cursor() as cur:
                 cur.execute("""
                     SELECT id, auth_hash, auth_params, vault_params, encrypted_master,
-                           login_attempts, locked_until, is_admin, password_version
+                           login_attempts, locked_until, is_admin, password_version,
+                           registration_source
                     FROM users WHERE username = %s
                 """, (username,))
                 user = cur.fetchone()
@@ -594,6 +595,7 @@ def login():
                         'token': token,
                         'username': username,
                         'is_admin': is_admin,
+                        'registration_source': user.get('registration_source') or 'web',
                         'vault': {
                             'auth_params': user['auth_params'],
                             'vault_params': user['vault_params'],

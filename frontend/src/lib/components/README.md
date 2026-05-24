@@ -234,6 +234,16 @@ route kind.
   "listbox"` popover with keyboard nav (Up/Down/Home/End/Esc) and
   outside-click dismissal. Form-context selects (settings, EntryComposer)
   keep the native control on purpose.
+- **WelcomeCard.svelte** (post-pi24, go-live) — first-moment
+  explainer that mounts at the top of the dashboard. Two variants
+  branched on `auth.registrationSource`: `'web'` shows the new-user
+  3-bullet intro (log daily / doctor PDF / save recovery code);
+  `'migrate'` shows an import-count breakdown (entries / medications
+  / notes from $documents), a one-sentence encryption note, and the
+  epilepc readonly date with a verify-via-/journal link. Dismiss is
+  one-shot per variant via localStorage (`ciphra_welcome_web_seen` /
+  `ciphra_welcome_migrate_seen`). Renders nothing once dismissed.
+  Used by `Companion.svelte` (mounted above the greeting hero).
 - **GapTrendSpark.svelte** (CIPH-pi24-5c) — dashboard rail card
   showing the gap (days) between successive marker events as an
   inline-SVG sparkline. Last 5 historical gaps render as filled

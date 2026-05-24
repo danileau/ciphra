@@ -72,7 +72,8 @@
 					res.data.username as string,
 					masterKey,
 					vault,
-					(res.data.is_admin as boolean) || false
+					(res.data.is_admin as boolean) || false,
+					(res.data.registration_source as 'web' | 'migrate') || 'web'
 				);
 				dispatch('login-complete');
 			} catch (e) {

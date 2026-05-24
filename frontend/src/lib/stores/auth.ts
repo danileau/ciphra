@@ -9,6 +9,11 @@ interface AuthState {
 	vaultParams: string | null;
 	encryptedMaster: string | null;
 	isAdmin: boolean;
+	// 'web' = registered directly on ciphra.ch, 'migrate' = came in via the
+	// /migrate flow from epilepc. Drives the dashboard WelcomeCard variant.
+	// Set from the login response; defaults to 'web' for legacy sessions
+	// that pre-date this field.
+	registrationSource: 'web' | 'migrate';
 	ready: boolean;
 }
 
@@ -28,7 +33,7 @@ function b64ToUint8(b64: string): Uint8Array {
 const emptyState = (ready: boolean): AuthState => ({
 	token: null, username: null, masterKey: null,
 	authParams: null, vaultParams: null, encryptedMaster: null,
-	isAdmin: false, ready,
+	isAdmin: false, registrationSource: 'web', ready,
 });
 
 // Master key lives in sessionStorage (cleared on browser/tab close), not
@@ -54,6 +59,7 @@ function loadFromStorage(): AuthState {
 			vaultParams: parsed.vaultParams || null,
 			encryptedMaster: parsed.encryptedMaster || null,
 			isAdmin: parsed.isAdmin || false,
+			registrationSource: parsed.registrationSource === 'migrate' ? 'migrate' : 'web',
 			ready: true,
 		};
 	} catch {
@@ -75,6 +81,7 @@ function saveToStorage(state: AuthState) {
 		vaultParams: state.vaultParams,
 		encryptedMaster: state.encryptedMaster,
 		isAdmin: state.isAdmin,
+		registrationSource: state.registrationSource,
 	}));
 	if (state.masterKey) {
 		sessionStorage.setItem(SS_MASTER_KEY, uint8ToB64(state.masterKey));
@@ -96,7 +103,7 @@ function createAuthStore() {
 
 	return {
 		subscribe,
-		login(token: string, username: string, masterKey: Uint8Array, vault: { auth_params: string; vault_params: string; encrypted_master: string }, isAdmin: boolean = false) {
+		login(token: string, username: string, masterKey: Uint8Array, vault: { auth_params: string; vault_params: string; encrypted_master: string }, isAdmin: boolean = false, registrationSource: 'web' | 'migrate' = 'web') {
 			const state: AuthState = {
 				token,
 				username,
@@ -105,6 +112,7 @@ function createAuthStore() {
 				vaultParams: vault.vault_params,
 				encryptedMaster: vault.encrypted_master,
 				isAdmin,
+				registrationSource,
 				ready: true,
 			};
 			saveToStorage(state);

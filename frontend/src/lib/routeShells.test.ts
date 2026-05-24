@@ -16,8 +16,11 @@ describe('CIPH-833 — route shell registry', () => {
 		requiresAuth: boolean;
 		requiresBlueprint: boolean;
 	}> = [
-		// Landing
-		{ path: '/', shell: 'landing', requiresAuth: false, requiresBlueprint: false },
+		// Landing — `/` is the public landing for unauthenticated visitors
+		// but the authed-app dashboard for logged-in users. requiresBlueprint
+		// is true so fresh registrants are redirected to /setup instead of
+		// landing on the caregiver-fallback Companion branch.
+		{ path: '/', shell: 'landing', requiresAuth: false, requiresBlueprint: true },
 
 		// Auth flow
 		{ path: '/login', shell: 'auth-flow', requiresAuth: false, requiresBlueprint: false },

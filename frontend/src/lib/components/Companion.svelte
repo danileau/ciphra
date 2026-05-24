@@ -8,6 +8,7 @@
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import CompanionMain from '$lib/components/CompanionMain.svelte';
 	import CompanionRail from '$lib/components/CompanionRail.svelte';
+	import WelcomeCard from '$lib/components/WelcomeCard.svelte';
 
 	// CIPH-764 reverted post senior review — country-specific helplines
 	// without explicit user country selection conflict with zero-knowledge.
@@ -622,6 +623,12 @@
 		 are thin render-only wrappers to de-risk the split that was
 		 deferred twice by keeping the reactive cascade in one place. -->
 	<div class="layout-data py-6 fade-in space-y-6">
+		<!-- First-moment explainer for new + migrated users. Sits ABOVE the
+		     greeting + primary card so it's the first thing a fresh user
+		     sees on the dashboard. Variant is driven by
+		     auth.registrationSource; dismiss is one-shot via localStorage
+		     (per-variant key). Renders nothing once dismissed. -->
+		<WelcomeCard />
 		<!-- pi24 dogfood: hero is greeting + a positive recap WHEN today is
 		     logged. When today isn't logged, the hero stays silent — a
 		     blank day is also a valid good day. "+ Eintrag" affordances

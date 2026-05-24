@@ -64,6 +64,7 @@
 		masterKey: Uint8Array;
 		vault: { auth_params: string; vault_params: string; encrypted_master: string };
 		isAdmin: boolean;
+		registrationSource: 'web' | 'migrate';
 	};
 	let pending: PendingSession | null = null;
 
@@ -139,6 +140,7 @@
 				masterKey,
 				vault,
 				isAdmin: (lr.data.is_admin as boolean) || false,
+				registrationSource: (lr.data.registration_source as 'web' | 'migrate') || 'web',
 			};
 			showRecovery = true;
 		} catch (e) {
@@ -172,7 +174,8 @@
 			pending.username,
 			pending.masterKey,
 			pending.vault,
-			pending.isAdmin
+			pending.isAdmin,
+			pending.registrationSource
 		);
 		pending = null;
 		dispatch('signup-complete');

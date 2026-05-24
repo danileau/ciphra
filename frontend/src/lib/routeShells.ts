@@ -58,8 +58,12 @@ export interface RouteShellRule {
  * rather than leaking past auth/blueprint guards.
  */
 export const ROUTE_SHELLS: RouteShellRule[] = [
-	// Landing — public marketing page at exactly "/".
-	{ pattern: /^\/$/, shell: 'landing', requiresAuth: false, requiresBlueprint: false },
+	// Landing — public marketing page at exactly "/" for unauthenticated
+	// visitors. For authed users, "/" is the dashboard and it requires a
+	// blueprint: fresh registrants without one are redirected to /setup so
+	// they don't land on the caregiver-fallback page meant for users who
+	// genuinely chose to caregiver-only (and have family links to prove it).
+	{ pattern: /^\/$/, shell: 'landing', requiresAuth: false, requiresBlueprint: true },
 
 	// Auth flow: login + migrate (cross-origin import) + stream (family
 	// invite link handoff). All render a centred card on the public

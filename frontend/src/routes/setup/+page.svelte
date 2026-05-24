@@ -77,7 +77,11 @@
 		'symptom_group.circulation': 'heart-pulse',
 	};
 
-	let step: 1 | 2 | 3 | 4 = 1;
+	// step 0 is the caregiver-vs-own intro added for fresh registrants
+	// (no existing blueprint, not arrived via ?customize=1). Returning
+	// users who already have a blueprint skip straight to step 1. The
+	// onMount block below may override this default once it knows.
+	let step: 0 | 1 | 2 | 3 | 4 = 1;
 	let working: Blueprint | null = null;
 	// CIPH-882 — Resolved view for step-2/3 iteration so user-added
 	// custom items render alongside preset ones. `working` stays the
@@ -217,11 +221,16 @@
 
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
+		// Fresh registrants see step 0 (caregiver vs own tracking).
+		// Returning users with an existing blueprint go straight to step 1.
+		const existing = get(blueprint);
+		if (!existing) {
+			step = 0;
+		}
 		// Re-entry with an existing blueprint: pre-seed `working` so the
 		// toggle screens reflect what the user already has. They can Skip
 		// out at any point — no destructive resave happens unless they
 		// reach screen 3 and hit "Complete".
-		const existing = get(blueprint);
 		if (existing) {
 			working = JSON.parse(JSON.stringify(existing));
 			// CIPH-301b — pre-seed toggle state from any prior customizations.
@@ -341,12 +350,48 @@
 				}
 			} catch { /* private-mode or quota — non-fatal */ }
 		}
+		// Blueprint saved — clear the skip flag so the dashboard redirect
+		// behaves normally going forward.
+		clearSetupSkipped();
 		saving = false;
+		goto('/');
+	}
+
+	// `ciphra_setup_skipped` tells +layout.svelte to stop auto-redirecting
+	// the user from `/` back into /setup. Set when the user explicitly opts
+	// out of setting up their own tracking (skip from step 0/1 or picks
+	// "help someone else"). Cleared in finishAndSave once a blueprint is
+	// committed, so a future re-entry that bails again sets it again.
+	function markSetupSkipped() {
+		try { localStorage.setItem('ciphra_setup_skipped', '1'); } catch {}
+	}
+	function clearSetupSkipped() {
+		try { localStorage.removeItem('ciphra_setup_skipped'); } catch {}
+	}
+
+	function chooseOwnTracking() {
+		step = 1;
+	}
+
+	function chooseCaregiver() {
+		// User has opted to be a caregiver only. Route to /settings#sharing
+		// where the family-code linking UI lives. Set the skip flag so the
+		// layout doesn't bounce them back into /setup before they get there.
+		markSetupSkipped();
+		goto('/settings?tab=sharing');
+	}
+
+	async function skipFromStep0() {
+		// "Maybe later" — defer the whole question. Layout won't auto-redirect
+		// again until the user clears the flag by completing setup later.
+		markSetupSkipped();
 		goto('/');
 	}
 
 	async function skipFromStep1() {
 		// Skipping from screen 1 before choosing a preset → nothing to save.
+		// Mark skipped so the layout doesn't bounce them straight back.
+		markSetupSkipped();
 		goto('/');
 	}
 
@@ -417,25 +462,83 @@
 		<div class="max-w-2xl mx-auto px-4 py-5 flex items-center justify-between gap-3">
 			<div class="flex-1 min-w-0">
 				<h1 class="text-lg font-bold truncate" style="color: var(--text-primary)">{$t('setup.title')}</h1>
-				<p class="text-xs mt-0.5" style="color: var(--text-muted)">{$t('setup.step_label', { n: step })}</p>
+				{#if step > 0}
+					<p class="text-xs mt-0.5" style="color: var(--text-muted)">{$t('setup.step_label', { n: step })}</p>
+				{/if}
 			</div>
 			<button
 				type="button"
-				on:click={step === 1 ? skipFromStep1 : skipFromLater}
+				on:click={step === 0 ? skipFromStep0 : step === 1 ? skipFromStep1 : skipFromLater}
 				class="text-sm font-medium px-3 py-2 min-h-[44px] rounded-lg"
 				style="color: var(--text-secondary); background: var(--surface-muted)"
 			>
-				{$t('setup.skip')}
+				{step === 0 ? $t('setup.choose_later') : $t('setup.skip')}
 			</button>
 		</div>
-		<div class="max-w-2xl mx-auto px-4 pb-3 flex gap-2">
-			{#each [1, 2, 3, 4] as s}
-				<div class="h-1 flex-1 rounded-full" style="background: {s <= step ? 'var(--olive)' : 'var(--surface-inset)'}"></div>
-			{/each}
-		</div>
+		{#if step > 0}
+			<div class="max-w-2xl mx-auto px-4 pb-3 flex gap-2">
+				{#each [1, 2, 3, 4] as s}
+					<div class="h-1 flex-1 rounded-full" style="background: {s <= step ? 'var(--olive)' : 'var(--surface-inset)'}"></div>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	<div class="max-w-2xl mx-auto px-4 py-6">
+		<!-- ─── SCREEN 0: Caregiver question ─── -->
+		<!-- Shown only to fresh registrants (no existing blueprint) so they
+		     don't land on the caregiver-fallback dashboard page meant for
+		     active caregivers. "Help someone else" routes to settings/sharing
+		     and sets a skip flag to prevent the dashboard redirect loop. -->
+		{#if step === 0}
+			<section aria-labelledby="wizard-step0-heading" class="space-y-4">
+				<div class="text-center mb-6">
+					<h2 id="wizard-step0-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.intro_title')}</h2>
+					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.intro_subtitle')}</p>
+				</div>
+
+				<div class="grid gap-3">
+					<button
+						type="button"
+						on:click={chooseOwnTracking}
+						class="block w-full text-left rounded-xl p-5 transition-all"
+						style="background: var(--surface-card); border: 1px solid var(--border)"
+					>
+						<div class="flex items-start gap-3">
+							<span class="shrink-0 mt-0.5" style="color: var(--brand)">
+								<svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+									<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+								</svg>
+							</span>
+							<div class="min-w-0">
+								<p class="text-base font-semibold" style="color: var(--text-primary)">{$t('setup.intro_own_title')}</p>
+								<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.intro_own_desc')}</p>
+							</div>
+						</div>
+					</button>
+
+					<button
+						type="button"
+						on:click={chooseCaregiver}
+						class="block w-full text-left rounded-xl p-5 transition-all"
+						style="background: var(--surface-card); border: 1px solid var(--border)"
+					>
+						<div class="flex items-start gap-3">
+							<span class="shrink-0 mt-0.5" style="color: var(--olive)">
+								<svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+									<path d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-4a4 4 0 100-8 4 4 0 000 8zm6 4a3 3 0 100-6 3 3 0 000 6zM5 14a3 3 0 100-6 3 3 0 000 6z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+								</svg>
+							</span>
+							<div class="min-w-0">
+								<p class="text-base font-semibold" style="color: var(--text-primary)">{$t('setup.intro_caregiver_title')}</p>
+								<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.intro_caregiver_desc')}</p>
+							</div>
+						</div>
+					</button>
+				</div>
+			</section>
+		{/if}
+
 		<!-- ─── SCREEN 1: Condition picker ─── -->
 		{#if step === 1}
 			<section aria-labelledby="wizard-step1-heading" class="space-y-4">
@@ -445,12 +548,6 @@
 				</div>
 
 				<div class="grid gap-3">
-					<a href="/settings" class="block w-full text-left rounded-xl p-4 mb-2 transition-all"
-						style="background: var(--surface-muted); border: 1px dashed var(--border)">
-						<p class="text-sm font-semibold" style="color: var(--text-primary)">{$t('setup.skip_caregiver_title')}</p>
-						<p class="text-xs mt-0.5" style="color: var(--text-muted)">{$t('setup.skip_caregiver_desc')}</p>
-					</a>
-
 					{#each presets as preset}
 						<button
 							on:click={() => selectPreset(preset)}

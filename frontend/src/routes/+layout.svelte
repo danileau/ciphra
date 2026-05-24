@@ -433,8 +433,18 @@
 	// has been checked. The per-route allow-list (login/setup/settings/
 	// admin/migrate) that used to live here is now encoded in the
 	// registry via `requiresBlueprint=false` on each of those shells.
+	// `ciphra_setup_skipped` is set by /setup when the user picks "help
+	// someone else" or "maybe later" on the wizard's step 0. Without it,
+	// a fresh user who opts to caregiver-only would land back on `/` and
+	// get bounced right into /setup again. Cleared on successful blueprint
+	// save (in /setup's finishAndSave) so the redirect resumes its job
+	// once the user is in a state that genuinely needs the wizard again.
+	$: setupSkipped = browser
+		? (() => { try { return localStorage.getItem('ciphra_setup_skipped') === '1'; } catch { return false; } })()
+		: false;
 	$: if (browser && $authReady && $isAuthenticated && docsLoaded && !$hasBlueprint
 		&& $familyLinks.length === 0
+		&& !setupSkipped
 		&& shellFor(currentPath).requiresBlueprint) {
 		goto('/setup');
 	}

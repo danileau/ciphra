@@ -164,8 +164,6 @@ export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
 	'landing.feature_calendar_desc',
 	'landing.feature_pdf',
 	'landing.feature_pdf_desc',
-	'landing.feature_offline',
-	'landing.feature_offline_desc',
 	'landing.feature_multilang',
 	'landing.feature_multilang_desc',
 	'landing.feature_custom',
