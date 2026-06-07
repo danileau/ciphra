@@ -25,10 +25,14 @@
 	// ChartWrapper + chart.js together pulled ~250 KB gzip into the
 	// landing chunk despite only rendering when authenticated. Dynamic-
 	// import + reactive load keeps unauth visitors at a tight bundle.
+	// 2026-06-07 — Svelte 5 changed component typings (legacy ComponentType
+	// is not assignable from the new __sveltets_2_IsomorphicComponent shape).
+	// Cast through unknown for the dynamic-import path until tests + types
+	// are migrated to the Svelte 5 mount() API.
 	let CompanionComponent: ComponentType | null = null;
 	$: if ($authReady && $isAuthenticated && !CompanionComponent) {
 		import('$lib/components/Companion.svelte').then((m) => {
-			CompanionComponent = m.default as ComponentType;
+			CompanionComponent = m.default as unknown as ComponentType;
 		});
 	}
 
