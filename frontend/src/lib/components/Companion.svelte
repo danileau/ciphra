@@ -656,6 +656,27 @@
 					</div>
 					<a href="/log/today" class="text-xs font-medium hover:underline shrink-0" style="color: var(--brand)">{$t('common.edit')}</a>
 				</div>
+			{:else}
+				<!-- 2026-06-07 — no-today-log affordance. Mobile users reach
+					 /log/today via the BottomNav center FAB; desktop users had
+					 no entry point at all after the desktop FAB was dropped in
+					 pi24. PI v24 memo "dashboard CTA (S5+S1 hero)" planned for
+					 this slot — finally implementing it. Right-aligned + brick-
+					 primary mirror the "Bearbeiten" link position when today
+					 IS logged, so the hero divider area carries one consistent
+					 "today's action" affordance in both states. No leading
+					 prompt copy — feedback_no_gaslight_good_days requires the
+					 absence of judgment; the button speaks for itself. -->
+				<div class="mt-5 pt-5 flex items-center justify-end" style="border-top: 1px solid var(--border)">
+					<a
+						href="/log/today"
+						class="btn-primary text-sm px-5 min-h-[44px] inline-flex items-center gap-2 rounded-xl font-medium"
+						data-testid="companion-new-entry"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-width="2.5" stroke-linecap="round"/></svg>
+						{$t('companion.new_entry')}
+					</a>
+				</div>
 			{/if}
 		</section>
 

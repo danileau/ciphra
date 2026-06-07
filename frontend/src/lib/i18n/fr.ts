@@ -264,6 +264,7 @@ export default {
 	'companion.today_summary': 'Résumé du jour',
 	'companion.today_filled': 'Aujourd\'hui complété',
 	'companion.today_logged': 'Aujourd\'hui noté',
+	'companion.new_entry': 'Nouvelle saisie',
 	'companion.last_entries_title': 'Entrées récentes',
 	'companion.vital_trend_aria': 'Voir la tendance pour {label}',
 	'companion.vital_trend_secondary_count_one': '1 autre valeur sur /reports',

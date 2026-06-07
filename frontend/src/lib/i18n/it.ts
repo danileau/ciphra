@@ -264,6 +264,7 @@ export default {
 	'companion.today_summary': 'Riepilogo di oggi',
 	'companion.today_filled': 'Oggi compilato',
 	'companion.today_logged': 'Oggi registrato',
+	'companion.new_entry': 'Nuovo inserimento',
 	'companion.last_entries_title': 'Voci recenti',
 	'companion.vital_trend_aria': 'Mostra andamento di {label}',
 	'companion.vital_trend_secondary_count_one': '1 altro valore su /reports',

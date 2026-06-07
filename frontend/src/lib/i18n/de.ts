@@ -270,6 +270,7 @@ export default {
 	'companion.today_summary': 'Heute zusammengefasst',
 	'companion.today_filled': 'Heute ausgefüllt',
 	'companion.today_logged': 'Heute geloggt',
+	'companion.new_entry': 'Neuer Eintrag',
 	'companion.last_entries_title': 'Zuletzt notiert',
 	'companion.vital_trend_aria': 'Verlauf für {label} ansehen',
 	'companion.vital_trend_secondary_count_one': '1 weiterer Wert auf /reports',
