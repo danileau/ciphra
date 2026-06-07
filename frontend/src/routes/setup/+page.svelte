@@ -432,7 +432,14 @@
 	$: if (step) { tick().then(() => headingEl?.focus()); }
 </script>
 
-<main class="min-h-screen pb-12" style="background: var(--surface)">
+<!-- 2026-06-07 — was <main class="min-h-screen ..."> which nested a
+	<main> inside the layout's own <main class="flex-1"> AND forced an
+	inner 100vh that broke the layout's sticky-footer flex. Result: even
+	on the lightest step the AuthedFooter was pushed beyond the viewport
+	and required a scroll to see. Now a plain <div> that flows
+	naturally — the layout's outer min-h-screen + flex + main(flex-1)
+	already handles sticky-footer math correctly. -->
+<div class="pb-12" style="background: var(--surface)">
 	<!-- Header with step progress + skip -->
 	<div style="background: var(--surface-card); border-bottom: 1px solid var(--border)">
 		{#if isCustomizeMode}
@@ -876,7 +883,7 @@
 			</div>
 		{/if}
 	</div>
-</main>
+</div>
 
 <!-- CIPH-882 — Add-your-own-item modal. Mounts at the end of the page
 	so it's outside any conditional `{#if step === N}` block. The wizard
