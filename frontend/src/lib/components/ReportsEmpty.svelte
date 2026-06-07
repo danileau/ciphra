@@ -43,12 +43,22 @@
 		</tbody>
 	</table>
 	<p class="reports-empty-title">{$t('reports.empty_title')}</p>
-	<p class="reports-empty-caption">
-		{$t('reports.empty_caption', {
-			logged: String(daysLogged),
-			needed: String(Math.max(0, threshold - daysLogged)),
-		})}
-	</p>
+	{#if daysLogged === 0}
+		<!-- Fresh-account hint: the /reports grid is the historical answer
+			 to "epilepc CRUD is too cumbersome, I want a 2-axis Excel-like
+			 table" (see project_excel_view_provenance.md). On day 0 the
+			 grid is hidden, so introduce its editing affordance up front
+			 instead of only framing this surface as a report-quality
+			 threshold. -->
+		<p class="reports-empty-caption">{$t('reports.empty_caption_fresh')}</p>
+	{:else}
+		<p class="reports-empty-caption">
+			{$t('reports.empty_caption', {
+				logged: String(daysLogged),
+				needed: String(Math.max(0, threshold - daysLogged)),
+			})}
+		</p>
+	{/if}
 </section>
 
 <style>
