@@ -164,7 +164,7 @@ export default {
 	'auth.error_server': 'Server nicht erreichbar. Bitte gleich nochmals versuchen.',
 	'auth.error_password_match': 'Passwörter stimmen nicht überein',
 	'auth.proceed': 'Weiter zur Anwendung',
-	'auth.download_recovery_pdf': 'Recovery-PDF herunterladen',
+	'auth.download_recovery_pdf': 'PDF herunterladen',
 	'auth.enable_recovery': 'Recovery-Code aktivieren (empfohlen)',
 	'auth.recovery_mandatory': 'Nach der Registrierung erhältst du einen Recovery-Code. Bewahre diesen sicher auf — er ist die einzige Möglichkeit, dein Konto wiederherzustellen.',
 	'auth.new_password': 'Neues Passwort',

@@ -159,7 +159,7 @@ export default {
 	'auth.error_server': 'Server non raggiungibile. Riprova tra un attimo.',
 	'auth.error_password_match': 'Le password non corrispondono',
 	'auth.proceed': "Continua all'app",
-	'auth.download_recovery_pdf': 'Scarica PDF di recupero',
+	'auth.download_recovery_pdf': 'Scarica PDF',
 	'auth.enable_recovery': 'Attiva codice di recupero (consigliato)',
 	'auth.recovery_mandatory': 'Dopo la registrazione riceverai un codice di recupero. Conservalo in un luogo sicuro — è l\'unico modo per recuperare il tuo account.',
 	'auth.new_password': 'Nuova password',

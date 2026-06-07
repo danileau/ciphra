@@ -116,6 +116,17 @@ function createAuthStore() {
 				ready: true,
 			};
 			saveToStorage(state);
+			// 2026-06-07 — clear ciphra_setup_skipped on every fresh login.
+			// The flag is intended to bridge the in-session gap between the
+			// user clicking "I'm here for someone else" on the wizard and
+			// the family-links store catching up. Across sessions / across
+			// users on the same browser it should NOT persist — a stale flag
+			// from a previous test or a previous account silently breaks
+			// the auto-redirect-to-/setup that fresh registrants need to
+			// reach the wizard at all.
+			if (browser) {
+				try { localStorage.removeItem('ciphra_setup_skipped'); } catch {}
+			}
 			set(state);
 		},
 		updateVault(vault: { auth_params: string; vault_params: string; encrypted_master: string }) {
@@ -137,6 +148,10 @@ function createAuthStore() {
 			if (!browser) return;
 			localStorage.removeItem(LS_KEY);
 			sessionStorage.removeItem(SS_MASTER_KEY);
+			// Cleared on logout for the same reason it's cleared on login:
+			// the next user on this browser must not inherit a previous
+			// session's "skip the setup wizard" decision.
+			try { localStorage.removeItem('ciphra_setup_skipped'); } catch {}
 			try {
 				const m = await import('$lib/idb');
 				await m.clearAllPartitions();

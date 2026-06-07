@@ -439,7 +439,14 @@
 	// get bounced right into /setup again. Cleared on successful blueprint
 	// save (in /setup's finishAndSave) so the redirect resumes its job
 	// once the user is in a state that genuinely needs the wizard again.
-	$: setupSkipped = browser
+	// Reactive on currentPath so the value refreshes on every navigation
+	// (incl. post-login goto('/')). Earlier version had no reactive
+	// dependency so the IIFE ran exactly once at mount and a flag set
+	// later in the same session was never picked up — and a stale flag
+	// from a previous session locked out the auto-redirect-to-/setup.
+	// auth.login()/logout() also clear the flag now, so this read mostly
+	// returns false; the explicit dependency is the belt for the braces.
+	$: setupSkipped = browser && currentPath
 		? (() => { try { return localStorage.getItem('ciphra_setup_skipped') === '1'; } catch { return false; } })()
 		: false;
 	$: if (browser && $authReady && $isAuthenticated && docsLoaded && !$hasBlueprint

@@ -159,7 +159,7 @@ export default {
 	'auth.error_server': 'Serveur injoignable. Réessayez dans un instant.',
 	'auth.error_password_match': 'Les mots de passe ne correspondent pas',
 	'auth.proceed': "Continuer vers l'application",
-	'auth.download_recovery_pdf': 'Télécharger le PDF de récupération',
+	'auth.download_recovery_pdf': 'Télécharger PDF',
 	'auth.enable_recovery': 'Activer le code de récupération (recommandé)',
 	'auth.recovery_mandatory': 'Après l\'inscription, vous recevrez un code de récupération. Conservez-le en lieu sûr — c\'est le seul moyen de récupérer votre compte.',
 	'auth.new_password': 'Nouveau mot de passe',

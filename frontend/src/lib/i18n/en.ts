@@ -159,7 +159,7 @@ export default {
 	'auth.error_server': 'Couldn\'t reach the server. Please try again in a moment.',
 	'auth.error_password_match': 'Passwords do not match',
 	'auth.proceed': 'Continue to app',
-	'auth.download_recovery_pdf': 'Download recovery PDF',
+	'auth.download_recovery_pdf': 'Download PDF',
 	'auth.enable_recovery': 'Enable recovery code (recommended)',
 	'auth.recovery_mandatory': 'After registration you will receive a recovery code. Store it safely — it is the only way to recover your account.',
 	'auth.new_password': 'New password',
