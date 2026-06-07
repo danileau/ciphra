@@ -67,8 +67,16 @@ describe('CIPH-pi20-LB-2 settings UI wiring', () => {
 		expect(SETTINGS).toMatch(/settings\.local_data_count/);
 	});
 
-	it('disables the button when nothing is cached or when wiping is in flight', () => {
-		expect(SETTINGS).toMatch(/disabled=\{clearingCache \|\| cachedDocCount === 0\}/);
+	it('disables the button only while wiping is in flight (always-available privacy action)', () => {
+		// 2026-06-07 — the earlier `cachedDocCount === 0` half of the
+		// disabled gate was dropped. Three reasons captured in the
+		// settings/+page.svelte block comment: it read as a broken
+		// trust signal, the count was non-reactive and stale, and the
+		// action also purges the SW cache (which can hold assets even
+		// when IndexedDB is empty). Keeping `clearingCache` so a
+		// double-click during the wipe is still bounced.
+		expect(SETTINGS).toMatch(/disabled=\{clearingCache\}/);
+		expect(SETTINGS).not.toMatch(/disabled=\{clearingCache \|\| cachedDocCount === 0\}/);
 	});
 
 	it('refreshes the count on mount', () => {

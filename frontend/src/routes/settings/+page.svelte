@@ -626,10 +626,19 @@
 				{$t('settings.local_data_count', { count: String(cachedDocCount) })}
 			{/if}
 		</p>
+		<!-- 2026-06-07 — disabled-on-(cachedDocCount===0) gate removed.
+			 Three problems with it: (a) read as "broken trust signal"
+			 by users who expected a privacy action to always work,
+			 (b) cachedDocCount is set once on mount and never refreshes,
+			 so a session that logged entries showed a stale 0 and
+			 trapped the button disabled, (c) clearLocalCache() also
+			 purges the service-worker cache which can hold shell assets
+			 even when IndexedDB is empty — the IDB count alone is the
+			 wrong gate. Always-active except while clearing. -->
 		<button
 			type="button"
 			on:click={handleClearCache}
-			disabled={clearingCache || cachedDocCount === 0}
+			disabled={clearingCache}
 			class="w-full py-2 rounded-xl text-sm font-medium min-h-[44px] transition-colors disabled:opacity-50"
 			style="background: var(--surface-muted); color: var(--text-primary); border: 1px solid var(--border)"
 			data-testid="clear-local-cache"
