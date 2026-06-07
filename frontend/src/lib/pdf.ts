@@ -3526,10 +3526,12 @@ export function generateRecoveryPdf(
 
 	paintPaper(doc);
 
-	// ── Header — centered wordmark on paper. No brick band, no
-	// right-aligned title (the "Recovery Code" section head below is
-	// the page anchor).
-	drawWordmark(doc, pageW / 2, 18, { size: 18, align: 'center' });
+	// ── Header — centered wordmark on paper. Size 22 (up from 18) for
+	// hero-prominence: a single-page security handout has space for a
+	// confident brand mark, and oversized chrome reads as "real document"
+	// rather than "small utility printout". No brick band, no right-
+	// aligned title (the "Recovery Code" section head below anchors).
+	drawWordmark(doc, pageW / 2, 22, { size: 22, align: 'center' });
 
 	const issuedAt = new Date().toLocaleDateString(locale, {
 		year: 'numeric',
@@ -3542,11 +3544,11 @@ export function generateRecoveryPdf(
 	const metaParts: string[] = [];
 	if (username) metaParts.push(capitalizeName(username));
 	metaParts.push(`${t('pdf.export_date')}: ${issuedAt}`);
-	doc.text(metaParts.join('   ·   '), pageW / 2, 25, { align: 'center' });
+	doc.text(metaParts.join('   ·   '), pageW / 2, 30, { align: 'center' });
 
 	const margin = 14;
 	const contentW = pageW - 2 * margin;
-	let y = 35;
+	let y = 42;
 
 	// ── Rule-backed security notice. Matches drawTopLineQuote's chrome
 	// (3pt left rule + italic body + small attribution-style label), but

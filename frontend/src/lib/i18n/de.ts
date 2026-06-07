@@ -864,7 +864,6 @@ export default {
 	'setup.intro_own_desc': 'Wähle eine Vorlage und passe an, was du erfassen möchtest.',
 	'setup.intro_caregiver_title': 'Jemand anderem helfen',
 	'setup.intro_caregiver_desc': 'Verknüpfe einen Familien-Code in den Einstellungen und schau oder erfasse für die andere Person.',
-	'setup.choose_later': 'Später entscheiden',
 	'setup.choose_title': 'Was möchtest du dokumentieren?',
 	'setup.choose_subtitle': 'Wähle eine Vorlage oder erstelle ein eigenes Profil',
 	'setup.select_all': 'Alle an',

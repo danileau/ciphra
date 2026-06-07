@@ -844,7 +844,6 @@ export default {
 	'setup.intro_own_desc': 'Pick a condition template, then refine what you log.',
 	'setup.intro_caregiver_title': 'Help someone else',
 	'setup.intro_caregiver_desc': 'Link a family code in Settings and view or log on their behalf.',
-	'setup.choose_later': 'Maybe later',
 	'setup.choose_title': 'What would you like to track?',
 	'setup.choose_subtitle': 'Choose a template or create a custom profile',
 	'setup.select_all': 'All on',

@@ -844,7 +844,6 @@ export default {
 	'setup.intro_own_desc': 'Choisissez un modèle de pathologie, puis ajustez ce que vous souhaitez consigner.',
 	'setup.intro_caregiver_title': 'Aider quelqu\'un d\'autre',
 	'setup.intro_caregiver_desc': 'Liez un code familial dans les Paramètres pour consulter ou saisir à la place d\'une autre personne.',
-	'setup.choose_later': 'Peut-être plus tard',
 	'setup.choose_title': 'Que souhaitez-vous documenter ?',
 	'setup.choose_subtitle': 'Choisissez un modèle ou créez un profil personnalisé',
 	'setup.select_all': 'Tout activer',

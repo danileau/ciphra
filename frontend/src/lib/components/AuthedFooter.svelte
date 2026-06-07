@@ -24,9 +24,12 @@
 	// "Ende-zu-Ende verschlüsselt" reassurance line on an ops console;
 	// it reads as duplicate of the admin page's own zero-knowledge note
 	// (which is itself dropped — see admin/+page.svelte).
+	// 2026-06-07 — /setup removed from the hidden list. The wizard is
+	// the first thing a freshly-registered authed user sees; without
+	// the footer (and without the header's wordmark, which is added in
+	// parallel via the layout shell) the page reads as logged-out chrome.
 	$: hidden =
 		pathname.startsWith('/log/') ||
-		pathname === '/setup' ||
 		pathname === '/login' ||
 		pathname === '/migrate' ||
 		pathname.startsWith('/migrate/') ||

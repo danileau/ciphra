@@ -844,7 +844,6 @@ export default {
 	'setup.intro_own_desc': 'Scegli un modello di condizione, poi rifinisci cosa vuoi annotare.',
 	'setup.intro_caregiver_title': 'Aiutare qualcun altro',
 	'setup.intro_caregiver_desc': 'Collega un codice famiglia nelle Impostazioni per consultare o registrare al posto di un\'altra persona.',
-	'setup.choose_later': 'Più tardi',
 	'setup.choose_title': 'Cosa desideri documentare?',
 	'setup.choose_subtitle': 'Scegli un modello o crea un profilo personalizzato',
 	'setup.select_all': 'Tutti attivi',

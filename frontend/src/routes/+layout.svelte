@@ -616,7 +616,7 @@
 		<PublicFooter />
 	{/if}
 	</div>
-{:else if $isAuthenticated && currentPath !== '/login' && currentPath !== '/setup'}
+{:else if $isAuthenticated && currentPath !== '/login'}
 	<!-- CIPH-904 — Skip-to-content link for keyboard / AT users. Public
 		 landing already had this; the authed shell didn't, leaving 8-9
 		 nav stops in the header before reaching content on every page. -->
@@ -639,7 +639,12 @@
 			<!-- Desktop primary nav (CIPH-201 follow-up) — bottom-nav handles
 			     mobile, but on >=md the only navigation in the header was logo
 			     + settings + logout, leaving users stranded. Mirror the 4 main
-			     routes here. Active route gets brand color + brand bottom border. -->
+			     routes here. Active route gets brand color + brand bottom border.
+			     2026-06-07 — gated on $hasBlueprint so the setup-wizard user
+			     (who explicitly does not yet have a blueprint) doesn't see 4
+			     nav links that would each trigger the redirect-back-to-/setup
+			     loop. Primary-nav reappears the instant the wizard finishes. -->
+			{#if $hasBlueprint}
 			<nav class="hidden md:flex items-center gap-1 ml-2" aria-label="Primary">
 				{#each [
 					{ href: '/',         label: $t('nav.dashboard') },
@@ -659,6 +664,7 @@
 					>{item.label}</a>
 				{/each}
 			</nav>
+			{/if}
 
 			{#if liveLinks.length > 0}
 				<!-- Vault switcher: visible label + eye icon so it reads as

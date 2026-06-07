@@ -381,13 +381,6 @@
 		goto('/settings?tab=sharing');
 	}
 
-	async function skipFromStep0() {
-		// "Maybe later" — defer the whole question. Layout won't auto-redirect
-		// again until the user clears the flag by completing setup later.
-		markSetupSkipped();
-		goto('/');
-	}
-
 	async function skipFromStep1() {
 		// Skipping from screen 1 before choosing a preset → nothing to save.
 		// Mark skipped so the layout doesn't bounce them straight back.
@@ -466,14 +459,25 @@
 					<p class="text-xs mt-0.5" style="color: var(--text-muted)">{$t('setup.step_label', { n: step })}</p>
 				{/if}
 			</div>
-			<button
-				type="button"
-				on:click={step === 0 ? skipFromStep0 : step === 1 ? skipFromStep1 : skipFromLater}
-				class="text-sm font-medium px-3 py-2 min-h-[44px] rounded-lg"
-				style="color: var(--text-secondary); background: var(--surface-muted)"
-			>
-				{step === 0 ? $t('setup.choose_later') : $t('setup.skip')}
-			</button>
+			<!-- 2026-06-07 — Step 0 lost its skip ("Später entscheiden"): the
+				 layout's redirect-to-/setup guard reads `ciphra_setup_skipped`
+				 from localStorage non-reactively, so the user was bounced right
+				 back to /setup on the next paint, making the affordance read
+				 like a broken way-out. Step 0 now has no skip — chooseCaregiver
+				 is still the legitimate "I'm here for someone else" exit. Step
+				 1+ keep the Skip; their handlers either save (skipFromLater) or
+				 hit the same flag-loop, but at least there the user has already
+				 picked a preset so "skip and come back" is meaningful. -->
+			{#if step > 0}
+				<button
+					type="button"
+					on:click={step === 1 ? skipFromStep1 : skipFromLater}
+					class="text-sm font-medium px-3 py-2 min-h-[44px] rounded-lg"
+					style="color: var(--text-secondary); background: var(--surface-muted)"
+				>
+					{$t('setup.skip')}
+				</button>
+			{/if}
 		</div>
 		{#if step > 0}
 			<div class="max-w-2xl mx-auto px-4 pb-3 flex gap-2">
