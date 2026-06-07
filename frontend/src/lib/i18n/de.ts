@@ -1405,7 +1405,7 @@ export default {
 	'tech.why_hardening_title': 'Defense in Depth',
 	'tech.why_hardening_desc': 'Die Argon2-WASM-Library ist mit Subresource Integrity (SRI) gepinnt — eine manipulierte Datei wird vom Browser abgelehnt. Der Master Key liegt nur im sessionStorage und wird beim Schliessen des Browsers gelöscht, was das XSS-Fenster verkleinert. CSP, X-Frame-Options und Referrer-Policy-Header, strenges CORS, Sperren pro Account bei Login und Recovery sowie 90-Tage-Audit-Log-Retention mit IP-Anonymisierung runden das Bild ab.',
 	'tech.verify_title': 'Überprüfe es selbst',
-	'tech.verify_desc': 'Du musst nicht selbst prüfen — der Punkt ist, dass es jeder kann. ciphra ist Open Source.',
+	'tech.verify_desc': 'ciphra ist Open Source. So überzeugst du dich:',
 	'tech.verify_steps_heading': 'Wie du es selbst prüfst',
 	'tech.verify_step_1': 'Lies <code>frontend/src/lib/crypto.ts</code> — die komplette Browser-Krypto.',
 	'tech.verify_step_2': 'Browser DevTools → Network → registriere dich → schau dir den POST an <code>/api/register</code> an. Es darf kein Klartext-Passwort und kein Klartext-Recovery-Code drin sein. Wiederhole für <code>/api/login</code>.',

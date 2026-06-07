@@ -1386,7 +1386,7 @@ export default {
 	'tech.why_hardening_title': 'Defense in depth',
 	'tech.why_hardening_desc': 'The Argon2 WASM library is pinned with Subresource Integrity so a tampered script is refused by the browser. The master key lives in sessionStorage only — cleared when the browser closes, shrinking the XSS window. CSP + X-Frame-Options + Referrer-Policy headers, strict CORS, per-account lockouts on login and recovery, and 90-day audit-log retention with IP anonymization round it out.',
 	'tech.verify_title': 'Verify It Yourself',
-	'tech.verify_desc': 'You don\'t have to verify yourself — the point is that anyone can. ciphra is open source.',
+	'tech.verify_desc': 'ciphra is open source. Here\'s how to confirm:',
 	'tech.verify_steps_heading': 'How to verify yourself',
 	'tech.verify_step_1': 'Read <code>frontend/src/lib/crypto.ts</code> — the complete browser-side crypto.',
 	'tech.verify_step_2': 'Browser DevTools → Network → register → inspect the POST to <code>/api/register</code>. No plaintext password, no plaintext recovery code. Repeat for <code>/api/login</code>.',
