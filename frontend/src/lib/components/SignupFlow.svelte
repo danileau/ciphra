@@ -262,9 +262,31 @@
 		<div class="rounded-xl p-4 mb-4" style="background: var(--surface-muted)">
 			<!-- CIPH-763b — SR-only DOM label announces context before the
 				 raw code characters. Sighted users already see the olive
-				 warning box above; announcer users had no such framing. -->
+				 warning box above; announcer users had no such framing.
+				 2026-06-07 — code now renders as a numbered 2/3/4-col
+				 grid mirroring the PDF's 3×4 layout. Easier to cross-
+				 check paper↔screen and lower cognitive load than a
+				 12-word run-on. Selection skips the cell numbers via
+				 user-select:none so a manual copy still yields just the
+				 words; the explicit copy button below remains the
+				 canonical copy path. -->
 			<span class="sr-only">{$t('auth.recovery_code_label')}</span>
-			<p data-testid="recovery-code-display" class="font-mono text-base select-all leading-relaxed" style="color: var(--text-primary)">{recoveryCode}</p>
+			<ol
+				data-testid="recovery-code-display"
+				class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-2 list-none m-0 p-0"
+				aria-label={$t('auth.recovery_code_label')}
+			>
+				{#each recoveryCode.trim().split(/\s+/) as word, i}
+					<li class="flex items-baseline gap-2 min-w-0">
+						<span
+							class="text-xs font-mono tabular-nums select-none shrink-0"
+							style="color: var(--text-muted)"
+							aria-hidden="true"
+						>{String(i + 1).padStart(2, '0')}</span>
+						<span class="font-mono text-base truncate" style="color: var(--text-primary)">{word}</span>
+					</li>
+				{/each}
+			</ol>
 		</div>
 		<div class="grid grid-cols-2 gap-2 mb-4">
 			<button

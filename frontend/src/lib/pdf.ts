@@ -3514,23 +3514,22 @@ export function generateRecoveryPdf(
 	t: TranslateFn,
 	locale: string
 ): void {
-	// Styled to match generateDoctorPdf: plain paper (no brick header band,
-	// no watermark texture), top-left wordmark + top-right title, a rule-
-	// backed notice instead of a filled warning box, single-column code
-	// list for clearer aural reading. Same TYPE scale + BRAND tokens the
-	// reports PDF uses.
+	// Styled to match generateDoctorPdf vocabulary: plain paper (no
+	// brick header band, no watermark texture), wordmark centered in
+	// the header to match the on-screen brand chrome at the same
+	// moment in onboarding, rule-backed notice (olive, not brick —
+	// recovery is "important, save this", not "danger"), 3×4 numbered
+	// code grid that mirrors what the user will see in-app once the
+	// SignupFlow code display is migrated to the same chunking.
 	const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 	const pageW = doc.internal.pageSize.getWidth();
 
 	paintPaper(doc);
 
-	// ── Header (mirrors generateDoctorPdf page-1) ──
-	drawWordmark(doc, 14, 16, { size: 14 });
-
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(TYPE.summary);
-	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(t('pdf.recovery_title'), pageW - 14, 15, { align: 'right' });
+	// ── Header — centered wordmark on paper. No brick band, no
+	// right-aligned title (the "Recovery Code" section head below is
+	// the page anchor).
+	drawWordmark(doc, pageW / 2, 18, { size: 18, align: 'center' });
 
 	const issuedAt = new Date().toLocaleDateString(locale, {
 		year: 'numeric',
@@ -3543,11 +3542,11 @@ export function generateRecoveryPdf(
 	const metaParts: string[] = [];
 	if (username) metaParts.push(capitalizeName(username));
 	metaParts.push(`${t('pdf.export_date')}: ${issuedAt}`);
-	doc.text(metaParts.join('   ·   '), 14, 22);
+	doc.text(metaParts.join('   ·   '), pageW / 2, 25, { align: 'center' });
 
 	const margin = 14;
 	const contentW = pageW - 2 * margin;
-	let y = 32;
+	let y = 35;
 
 	// ── Rule-backed security notice. Matches drawTopLineQuote's chrome
 	// (3pt left rule + italic body + small attribution-style label), but
@@ -3561,7 +3560,12 @@ export function generateRecoveryPdf(
 	const labelGap = 3.2;
 	const warnBlockH = warnBodyH + labelGap + 1;
 
-	doc.setDrawColor(...BRAND.brick);
+	// 2026-06-07 — olive rule (warm caution) instead of brick (alarm).
+	// Web SignupFlow uses --olive for the same warning; the PDF mirrors
+	// that. ciphra brand-voice avoids danger framing — the recovery
+	// step is "save this carefully", not "you're about to do something
+	// dangerous".
+	doc.setDrawColor(...BRAND.olive);
 	doc.setLineWidth(ruleW);
 	doc.line(margin, y, margin, y + warnBlockH);
 	doc.setLineWidth(0.2);
@@ -3638,7 +3642,10 @@ export function generateRecoveryPdf(
 	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textSecondary);
 	for (const step of steps) {
-		drawAsteriskMark(doc, margin + 2, y - 1.4, 2.2, BRAND.brick);
+		// 2026-06-07 — olive bullets to match the same color decision the
+		// warning rule above made. Recovery copy stays in the warm-caution
+		// register end-to-end, never alarm-red.
+		drawAsteriskMark(doc, margin + 2, y - 1.4, 2.2, BRAND.olive);
 		const lines = doc.splitTextToSize(step, contentW - 7) as string[];
 		doc.text(lines, margin + 7, y);
 		y += lines.length * 4.6 + 2.5;
