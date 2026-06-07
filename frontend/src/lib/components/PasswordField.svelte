@@ -14,7 +14,11 @@
 	export let placeholder: string = '';
 	export let required: boolean = false;
 	export let minlength: number | undefined = undefined;
-	export let autocomplete: string | undefined = undefined;
+	// 2026-06-07 — Svelte 5 + new HTML types tightened the `autocomplete`
+	// attribute to the typed `AutoFill` enum (e.g., "current-password").
+	// Narrow the public prop type accordingly so callers get autocomplete-
+	// validation at the boundary.
+	export let autocomplete: AutoFill | undefined = undefined;
 	export let ariaDescribedby: string | undefined = undefined;
 	export let ariaInvalid: boolean | undefined = undefined;
 	let cls = '';
