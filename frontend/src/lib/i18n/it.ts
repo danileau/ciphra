@@ -1383,10 +1383,14 @@ export default {
 	'tech.why_hardening_title': 'Difesa in profondità',
 	'tech.why_hardening_desc': 'La libreria Argon2 WASM è vincolata tramite Subresource Integrity — uno script manomesso viene rifiutato dal browser. La chiave master vive solo in sessionStorage, cancellata alla chiusura del browser, riducendo la finestra di attacco XSS. Header CSP, X-Frame-Options e Referrer-Policy, CORS rigoroso, blocchi per account su login e recupero, retention di 90 giorni del log di audit con anonimizzazione IP completano il quadro.',
 	'tech.verify_title': 'Verificalo tu stesso',
-	'tech.verify_desc': 'ciphra è open source. Nessuna fiducia necessaria — leggi il codice o chiedi una IA.',
-	'tech.verify_encryption': 'Modulo di crittografia',
+	'tech.verify_desc': 'Non devi verificare di persona — il punto è che chiunque può farlo. ciphra è open source.',
+	'tech.verify_steps_heading': 'Come verificare tu stesso',
+	'tech.verify_step_1': 'Leggi <code>frontend/src/lib/crypto.ts</code> — tutta la crittografia lato browser.',
+	'tech.verify_step_2': "DevTools del browser → Network → registrati → ispeziona il POST a <code>/api/register</code>. Nessuna password in chiaro, nessun codice di recupero in chiaro. Ripeti per <code>/api/login</code>.",
+	'tech.verify_step_3': 'DevTools → Application → Storage: <code>localStorage.ciphra_auth</code> contiene un JWT + metadati del vault cifrati, mai testo in chiaro.',
+	'tech.verify_encryption': 'Crittografia',
 	'tech.verify_api': 'Server API',
-	'tech.verify_crypto': 'Crypto del browser',
+	'tech.verify_crypto': 'Archiviazione locale',
 
 	// Edit & Delete
 	'common.confirm_delete': 'Eliminare davvero?',

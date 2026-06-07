@@ -535,6 +535,26 @@
 							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.09 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.29 0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
 							github.com/danileau/ciphra
 						</a>
+						<!-- 3-step verification list — condensed from SECURITY.md
+							 §"How to verify our claims yourself". Each step is
+							 verifiable in <2 minutes by anyone with browser
+							 DevTools. Inline <code> spans live in i18n values
+							 (XSS-safe — static strings, not user input). -->
+						<h4 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted);">{$t('tech.verify_steps_heading')}</h4>
+						<ol class="verify-steps mb-6 space-y-3 list-none p-0">
+							<li class="flex gap-3 text-sm leading-relaxed" style="color: var(--text-secondary);">
+								<span class="font-mono text-xs shrink-0 w-5 text-center pt-0.5" style="color: var(--text-muted);">01</span>
+								<span>{@html $t('tech.verify_step_1')}</span>
+							</li>
+							<li class="flex gap-3 text-sm leading-relaxed" style="color: var(--text-secondary);">
+								<span class="font-mono text-xs shrink-0 w-5 text-center pt-0.5" style="color: var(--text-muted);">02</span>
+								<span>{@html $t('tech.verify_step_2')}</span>
+							</li>
+							<li class="flex gap-3 text-sm leading-relaxed" style="color: var(--text-secondary);">
+								<span class="font-mono text-xs shrink-0 w-5 text-center pt-0.5" style="color: var(--text-muted);">03</span>
+								<span>{@html $t('tech.verify_step_3')}</span>
+							</li>
+						</ol>
 						<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 							<div class="rounded-lg p-4" style="background: var(--surface-muted); border: 1px solid var(--border);">
 								<div class="flex items-center gap-2 mb-2">
@@ -550,12 +570,19 @@
 								</div>
 								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">api/server.py</code>
 							</div>
+							<!-- 2026-06-07 — card was a duplicate of #1 (both pointed
+								 at crypto.ts under two different labels). Now the
+								 storage-layer anchor — the most common question from
+								 privacy-conscious readers ("but where does the
+								 plaintext actually live?"). Database icon replaces the
+								 generic code-arrow that read as identical to other
+								 cards. -->
 							<div class="rounded-lg p-4" style="background: var(--surface-muted); border: 1px solid var(--border);">
 								<div class="flex items-center gap-2 mb-2">
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--olive);"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--olive);"><ellipse cx="12" cy="5" rx="8" ry="3" stroke-width="2"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" stroke-width="2"/><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" stroke-width="2"/></svg>
 									<span class="font-semibold text-sm" style="color: var(--text-primary);">{$t('tech.verify_crypto')}</span>
 								</div>
-								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">frontend/src/lib/crypto.ts</code>
+								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">frontend/src/lib/idb.ts</code>
 							</div>
 						</div>
 					</div>
