@@ -2,7 +2,7 @@
 
 This document is the honest description of what ciphra protects, what it doesn't, and how. It is the substitute for a third-party audit (which has not been done at the time of writing). Read it skeptically, read the code, and decide for yourself.
 
-**Last updated:** 2026-05-07
+**Last updated:** 2026-06-07
 
 ---
 
@@ -127,7 +127,7 @@ Code: `frontend/src/lib/idb.ts:1-90`.
 - **Browser-profile compromise on an unlocked device**: out of scope. An attacker with disk access to your unlocked browser profile can read IndexedDB. This is the same threat model as any browser-served E2E app and is one of the listed exclusions at the top of this document.
 - **Caregiver / family-sharing context**: PI v13 security review caught a related bug where switching between linked vaults left the prior vault's plaintext on disk. Fixed in PI v16 (`clearAllPartitions` deletes the entire database, not just the active partition).
 
-If you want plaintext gone right now without losing your session, log out — the wipe is awaited before the UI confirms. A "Clear local cache" affordance that triggers the same wipe path while keeping you logged in is shipping next (CIPH-pi20-LB-2 in the current development cycle); when it lands, this section will be updated to point at it.
+If you want plaintext gone right now without losing your session, log out — the wipe is awaited before the UI confirms. Or use the **"Cache jetzt leeren" button in Settings → Konto → "Daten auf diesem Gerät"** which triggers the same wipe path (IndexedDB + service-worker cache) while keeping you logged in. Code: `frontend/src/lib/stores/auth.ts:188-204` (`clearLocalCache`). The button is always available — it is your action to invoke regardless of the displayed cache count.
 
 ### 4. Service worker cache
 

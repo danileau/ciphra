@@ -9,7 +9,7 @@
 <main id="main-content" class="max-w-3xl mx-auto px-4 py-8 space-y-6">
 	<header class="space-y-1">
 		<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('privacy.title')}</h1>
-		<p class="text-sm" style="color: var(--text-muted)">{$t('privacy.last_updated')}: 2026-04-12</p>
+		<p class="text-sm" style="color: var(--text-muted)">{$t('privacy.last_updated')}: 2026-06-07</p>
 	</header>
 
 	<section class="card p-5 space-y-2">
