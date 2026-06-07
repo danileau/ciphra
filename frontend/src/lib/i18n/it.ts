@@ -1120,7 +1120,7 @@ export default {
 	'terms.changes_heading': 'Modifiche',
 	'terms.changes_body': "Potremmo aggiornare questi termini occasionalmente. Le modifiche sostanziali saranno indicate nella data \"ultimo aggiornamento\" in alto. L'uso continuato costituisce accettazione.",
 	'terms.contact_heading': 'Contatto',
-	'terms.contact_body': 'Richieste legali e segnalazioni di abusi: abuse@ciphra.ch.',
+	'terms.contact_body': 'Richieste legali e segnalazioni di abusi: info@ciphra.ch (oggetto: Abuso).',
 	'landing.footer_register': 'Registrati',
 
 	// Reports
@@ -1697,7 +1697,7 @@ export default {
 	'privacy.infra_body': 'Cloudflare Inc. si trova davanti a ciphra.ch come responsabile del trattamento per la protezione DDoS e la terminazione TLS. Cloudflare vede che un dispositivo si è connesso a ciphra.ch, ma tutti i contenuti del vault sono cifrati nel tuo browser prima di lasciare il dispositivo — Cloudflare vede solo testo cifrato. Il servizio è ospitato in Svizzera.',
 	'privacy.analytics_heading': 'Analisi e cookie',
 	'privacy.analytics_body': "ciphra non usa Google Analytics, tracker pubblicitari o altre analisi di terze parti. Usiamo i contatori integrati e senza cookie di Cloudflare (visualizzazioni, referrer, paese) — senza identificatori personali né tracciamento cross-site. Per questo non vedi un banner cookie: memorizziamo solo ciò che è strettamente necessario per l'accesso.",
-	'privacy.contact_body': 'Richieste sulla privacy: privacy@ciphra.ch.',
+	'privacy.contact_body': 'Richieste sulla privacy: info@ciphra.ch (oggetto: Privacy).',
 
 	// Nuovi preset — ipertensione, Long COVID, menopausa
 	'landing.template_hypertension': 'Ipertensione',

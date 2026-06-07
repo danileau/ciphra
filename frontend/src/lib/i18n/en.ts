@@ -1120,7 +1120,7 @@ export default {
 	'terms.changes_heading': 'Changes to these terms',
 	'terms.changes_body': 'We may update these terms occasionally. Material changes will be reflected in the "last updated" date at the top. Continued use after a change constitutes acceptance.',
 	'terms.contact_heading': 'Contact',
-	'terms.contact_body': 'Legal and abuse reports: abuse@ciphra.ch.',
+	'terms.contact_body': 'Legal and abuse reports: info@ciphra.ch (subject: Abuse).',
 	'landing.footer_register': 'Register',
 
 	// Reports
@@ -1700,7 +1700,7 @@ export default {
 	'privacy.authority_heading': 'Supervisory authority',
 	'privacy.authority_body': 'You may lodge a complaint with your national data protection authority. In Switzerland: Federal Data Protection and Information Commissioner (FDPIC), Feldeggweg 1, 3003 Bern. In the EU: the authority of your member state.',
 	'privacy.contact_heading': 'Contact',
-	'privacy.contact_body': 'Data protection requests: privacy@ciphra.ch.',
+	'privacy.contact_body': 'Data protection requests: info@ciphra.ch (subject: Privacy).',
 
 	// New presets — hypertension, long_covid, menopause
 	'landing.template_hypertension': 'Hypertension',
