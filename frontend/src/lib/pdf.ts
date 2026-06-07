@@ -501,9 +501,12 @@ function extractLatestNote(
 
 /**
  * Patient top-line quote block — the page-1 human anchor. A 3pt olive
- * left rule (brand chrome, never value-encoded), the note in italic, a
- * muted attribution line. Returns the block's bottom Y. When `note` is
- * null the block collapses: returns `y` unchanged, no placeholder.
+ * left rule (brand chrome, never value-encoded), a tiny uppercase
+ * "ZITAT PATIENT:IN" tag (provenance — disambiguates patient self-
+ * report from system-authored copy per 2026-06-07 clinician review
+ * P0-2), the note in italic, a muted attribution line. Returns the
+ * block's bottom Y. When `note` is null the block collapses: returns
+ * `y` unchanged, no placeholder.
  */
 function drawTopLineQuote(
 	doc: jsPDF,
@@ -512,13 +515,19 @@ function drawTopLineQuote(
 	locale: string,
 	x: number,
 	y: number,
-	w: number
+	w: number,
+	t: TranslateFn,
 ): number {
 	if (!note) return y;
 
 	const textX = x + 4;
 	const textW = w - 4;
 	const lineH = 4.0;
+	// Provenance tag: small uppercase, sits above the italic body to
+	// label the block unambiguously as patient self-report rather than
+	// system-authored copy.
+	const tagH = 3.2;
+	const tagToBody = 1.6;
 
 	doc.setFont('helvetica', 'italic');
 	doc.setFontSize(TYPE.body);
@@ -530,7 +539,8 @@ function drawTopLineQuote(
 		month: 'short',
 		day: 'numeric',
 	});
-	const attribY = y + shown.length * lineH + 3.0;
+	const bodyTop = y + tagH + tagToBody;
+	const attribY = bodyTop + shown.length * lineH + 3.0;
 	const blockH = attribY - y + 1;
 
 	// 3pt olive left rule (3pt ≈ 1.06mm).
@@ -539,10 +549,16 @@ function drawTopLineQuote(
 	doc.line(x, y, x, y + blockH);
 	doc.setLineWidth(0.2);
 
+	// Provenance tag — uppercase, muted, small.
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.chartAxisMicro);
+	doc.setTextColor(...BRAND.textMuted);
+	doc.text(t('pdf.quote_attribution_label'), textX, y + 2.6);
+
 	doc.setFont('helvetica', 'italic');
 	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(shown, textX, y + 3.4);
+	doc.text(shown, textX, bodyTop + 3.4);
 
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(TYPE.compact);
@@ -997,7 +1013,13 @@ function drawCycleStrip(
 	locale: string,
 	cursorY: number,
 ): number {
-	const cells = aggregateCycleStrip(blueprint, allDocs, year, month, daysInMonth);
+	const { cells, anchorDate, stale } = aggregateCycleStrip(
+		blueprint,
+		allDocs,
+		year,
+		month,
+		daysInMonth,
+	);
 	const pageW = 210;
 	const stripW = pageW - 28;
 	const cellGap = 0.4;
@@ -1015,7 +1037,9 @@ function drawCycleStrip(
 	doc.text(t('pdf.cycle_strip_title', { month: focusMonthName }), 14, cursorY);
 	cursorY += 4;
 
-	// Strip body.
+	// Strip body. When `stale` is true, `aggregateCycleStrip` already
+	// stripped phase to null for every cell — the loop below renders
+	// hairline-empty cells with day numbers, matching the no-data path.
 	const stripY = cursorY;
 	for (const c of cells) {
 		const x = 14 + (c.day - 1) * (cellW + cellGap);
@@ -1039,25 +1063,53 @@ function drawCycleStrip(
 	}
 	cursorY = stripY + cellH + 3;
 
-	// Legend — 4 phases × dot + label, single line.
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(TYPE.compact);
-	const dotR = 0.9;
-	const gap = 4;
-	let lx = 14;
-	const ly = cursorY + 2;
-	const phases: Phase[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
-	for (const p of phases) {
-		const labelText = t(`cycle.phase_${p}`);
-		const textW = doc.getTextWidth(labelText);
-		const itemW = dotR * 2 + 1.2 + textW;
-		doc.setFillColor(...softBlendRgb(parseHexToRgb(PHASE_COLORS[p]), 0.55));
-		doc.circle(lx + dotR, ly - 0.6, dotR, 'F');
+	// 2026-06-07 clinician review P1-4 — anchor-provenance footnote.
+	// When the anchor exists, name the date so the doctor can judge how
+	// fresh the cycle data is. When stale, also emit the suppression
+	// reason in the same line so the empty strip isn't read as "no data
+	// at all" (the footnote distinguishes "no period ever recorded"
+	// from "last period was months ago — phase tints suppressed").
+	if (anchorDate) {
+		const dateLabel = new Date(anchorDate + 'T12:00:00').toLocaleDateString(locale, {
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric',
+		});
+		const note = stale
+			? t('pdf.cycle_anchor_stale', { date: dateLabel })
+			: t('pdf.cycle_anchor_last', { date: dateLabel });
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.chartAxisMicro);
 		doc.setTextColor(...BRAND.textMuted);
-		doc.text(labelText, lx + dotR * 2 + 1.2, ly);
-		lx += itemW + gap;
+		doc.text(note, 14, cursorY + 1.8);
+		cursorY += 3.5;
 	}
-	cursorY = ly + 4;
+
+	// Legend — 4 phases × dot + label, single line. Suppressed when
+	// stale: an empty strip doesn't need a phase legend, and showing
+	// one implies tint encoding the renderer just disabled.
+	if (!stale) {
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.compact);
+		const dotR = 0.9;
+		const gap = 4;
+		let lx = 14;
+		const ly = cursorY + 2;
+		const phases: Phase[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
+		for (const p of phases) {
+			const labelText = t(`cycle.phase_${p}`);
+			const textW = doc.getTextWidth(labelText);
+			const itemW = dotR * 2 + 1.2 + textW;
+			doc.setFillColor(...softBlendRgb(parseHexToRgb(PHASE_COLORS[p]), 0.55));
+			doc.circle(lx + dotR, ly - 0.6, dotR, 'F');
+			doc.setTextColor(...BRAND.textMuted);
+			doc.text(labelText, lx + dotR * 2 + 1.2, ly);
+			lx += itemW + gap;
+		}
+		cursorY = ly + 4;
+	} else {
+		cursorY += 2;
+	}
 
 	return cursorY;
 }
@@ -1727,6 +1779,17 @@ export function generateDoctorPdf(
 	metaParts.push(`${t('pdf.export_date')}: ${exportDate}`);
 	doc.text(metaParts.join('   ·   '), 14, 22);
 
+	// 2026-06-07 clinician review P2-5 — prominent "kein Medizinprodukt"
+	// line. Footer carries the long disclaimer (legally adequate) but
+	// the previous page-1 banner removal overcorrected: at clinical
+	// reading distance the footer micro-copy is invisible. One bold
+	// short line under the meta strip restores prominence without
+	// reclaiming the 12mm of real-estate the removed banner cost.
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.compact);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.disclaimer_medical'), 14, 26);
+
 	// ── Patient top-line quote ──
 	// Grafted from the retired CLINICAL_HANDOFF.md §4 / §14.8: the
 	// patient's own most-recent in-scope note, given a 3pt olive left
@@ -1740,8 +1803,9 @@ export function generateDoctorPdf(
 		username ? capitalizeName(username) : '',
 		locale,
 		14,
-		26,
-		pageW - 28
+		30,
+		pageW - 28,
+		t,
 	);
 
 	// The medical-device disclaimer moved to the page footer (drawFooter).
@@ -2340,44 +2404,18 @@ export function generateDoctorPdf(
 	// Event markers — user-authored `event` docs falling inside the chart
 	// window. Rendered as thin dashed vertical lines on the trajectory chart
 	// AND on each vital mini-chart so the doctor sees cause-effect.
+	//
+	// 2026-06-07 clinician review (P0-1): the previous synthetic "Tracking
+	// started" marker on the date of the first entry was visually
+	// indistinguishable from a real clinical event marker (medication
+	// change, hospitalisation, intervention). A neurologist reading a
+	// 24-month epilepsy chart would misread it as such. Removed entirely
+	// — "when the patient started using the app" is metadata, not clinical
+	// signal.
 	type EventMarker = { x: number; label: string };
-	// Find the date of the very first daily_log doc — used as a synthetic
-	// "Tracking started" marker so the chart always has at least one event
-	// line for context, even before the user has created any manual event.
-	const firstLogISO = (() => {
-		let oldest = '';
-		for (const d of documents) {
-			if (d.data?.type !== 'entry') continue;
-			const ds = String(d.data.date || '');
-			if (ds.length !== 10) continue;
-			if (!oldest || ds < oldest) oldest = ds;
-		}
-		return oldest;
-	})();
 
 	function buildEventMarkers(boxX: number, boxW: number): EventMarker[] {
 		const out: EventMarker[] = [];
-		// Synthetic "tracking started" marker — only rendered if it's within
-		// the chart window. Skipped if the user already authored an event on
-		// that exact date (avoids overlap).
-		const startedLabel = t('pdf.event_tracking_started');
-		const userEventDates = new Set(
-			documents
-				.filter((d) => d.data?.type === 'event')
-				.map((d) => String(d.data.date || ''))
-		);
-		if (firstLogISO && !userEventDates.has(firstLogISO)) {
-			const yyyy = parseInt(firstLogISO.slice(0, 4));
-			const mm = parseInt(firstLogISO.slice(5, 7)) - 1;
-			const dd = parseInt(firstLogISO.slice(8, 10));
-			const monthIdx = monthBuckets.findIndex((b) => b.y === yyyy && b.m === mm);
-			if (monthIdx >= 0) {
-				const daysInMo = new Date(yyyy, mm + 1, 0).getDate();
-				const frac = Math.max(0, Math.min(0.999, (dd - 1) / daysInMo));
-				const xRel = Math.min(0.999, (monthIdx + frac) / MONTHS);
-				out.push({ x: boxX + xRel * boxW, label: startedLabel });
-			}
-		}
 		for (const d of documents) {
 			if (d.data?.type !== 'event') continue;
 			const ds = String(d.data.date || '');

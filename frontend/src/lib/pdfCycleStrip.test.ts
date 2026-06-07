@@ -35,17 +35,17 @@ function entryWithCycle(id: number, date: string, day: number, length = 28): Cip
 
 describe('aggregateCycleStrip', () => {
 	it('returns an array of length daysInMonth', () => {
-		const cells = aggregateCycleStrip(endoBlueprint(), [], 2026, 4, 31);
+		const { cells } = aggregateCycleStrip(endoBlueprint(), [], 2026, 4, 31);
 		expect(cells).toHaveLength(31);
 	});
 
 	it('numbers days 1..N in order', () => {
-		const cells = aggregateCycleStrip(endoBlueprint(), [], 2026, 4, 31);
+		const { cells } = aggregateCycleStrip(endoBlueprint(), [], 2026, 4, 31);
 		expect(cells.map((c) => c.day)).toEqual(Array.from({ length: 31 }, (_, i) => i + 1));
 	});
 
 	it('emits ISO YYYY-MM-DD with zero-padded month + day', () => {
-		const cells = aggregateCycleStrip(endoBlueprint(), [], 2026, 0, 31);
+		const { cells } = aggregateCycleStrip(endoBlueprint(), [], 2026, 0, 31);
 		expect(cells[0].iso).toBe('2026-01-01');
 		expect(cells[8].iso).toBe('2026-01-09');
 		expect(cells[30].iso).toBe('2026-01-31');
@@ -54,7 +54,7 @@ describe('aggregateCycleStrip', () => {
 	it('returns phase=null for every day when anchor has no data', () => {
 		// No cycle_day in any doc → anchor has no data → cycleStateForDate
 		// returns null → strip renders empty (hairline border per cell).
-		const cells = aggregateCycleStrip(endoBlueprint(), [], 2026, 4, 31);
+		const { cells } = aggregateCycleStrip(endoBlueprint(), [], 2026, 4, 31);
 		expect(cells.every((c) => c.phase === null)).toBe(true);
 	});
 
@@ -62,7 +62,7 @@ describe('aggregateCycleStrip', () => {
 		// Anchor: 2026-04-15 was cycle_day=1 (start of menstrual). 28-day cycle.
 		// Phase boundaries: menstrual 1-5, follicular 6-13, ovulation 14-16, luteal 17+.
 		const docs = [entryWithCycle(1, '2026-04-15', 1, 28)];
-		const cells = aggregateCycleStrip(endoBlueprint(), docs, 2026, 3, 30);  // month 3 = April
+		const { cells } = aggregateCycleStrip(endoBlueprint(), docs, 2026, 3, 30);  // month 3 = April
 		// Day 15 (anchor) → menstrual.
 		expect(cells.find((c) => c.day === 15)?.phase).toBe('menstrual');
 		// Day 20 → 6 days post-anchor → cycle_day 7 → follicular.
@@ -77,7 +77,7 @@ describe('aggregateCycleStrip', () => {
 	it('honors cycle_length other than 28 (PCOS irregular case)', () => {
 		// cycle_length=35 → menstrual 1-6, follicular 7-16, ovulation 17-20, luteal 21+.
 		const docs = [entryWithCycle(1, '2026-04-15', 1, 35)];
-		const cells = aggregateCycleStrip(endoBlueprint(), docs, 2026, 3, 30);
+		const { cells } = aggregateCycleStrip(endoBlueprint(), docs, 2026, 3, 30);
 		expect(cells.find((c) => c.day === 15)?.phase).toBe('menstrual');
 		// Day 22 → 7 days post-anchor → cycle_day 8 → follicular (still inside).
 		expect(cells.find((c) => c.day === 22)?.phase).toBe('follicular');
@@ -88,7 +88,38 @@ describe('aggregateCycleStrip', () => {
 	it('handles anchor docs from outside the focus month', () => {
 		// Anchor in March, focus month is April — strip must still resolve.
 		const docs = [entryWithCycle(1, '2026-03-20', 1, 28)];
-		const cells = aggregateCycleStrip(endoBlueprint(), docs, 2026, 3, 30);
+		const { cells } = aggregateCycleStrip(endoBlueprint(), docs, 2026, 3, 30);
 		expect(cells.every((c) => c.phase !== null)).toBe(true);
+	});
+
+	// 2026-06-07 clinician review P1-4 — anchor staleness guard.
+
+	it('returns anchorDate + anchorAgeDays metadata for a fresh anchor', () => {
+		const docs = [entryWithCycle(1, '2026-04-15', 1, 28)];
+		const result = aggregateCycleStrip(endoBlueprint(), docs, 2026, 3, 30);
+		expect(result.anchorDate).toBe('2026-04-15');
+		// Focus month-end is 2026-04-30, anchor is 2026-04-15 → 15 days.
+		expect(result.anchorAgeDays).toBe(15);
+		expect(result.stale).toBe(false);
+	});
+
+	it('marks stale when anchor age exceeds 60 days and strips phase tinting', () => {
+		// Anchor in 2026-01-10, focus April 2026 → end 2026-04-30 → ~110 days.
+		const docs = [entryWithCycle(1, '2026-01-10', 1, 28)];
+		const result = aggregateCycleStrip(endoBlueprint(), docs, 2026, 3, 30);
+		expect(result.anchorDate).toBe('2026-01-10');
+		expect(result.anchorAgeDays).toBeGreaterThan(60);
+		expect(result.stale).toBe(true);
+		// Every cell renders null phase so the strip is empty (the
+		// renderer paints hairline borders) instead of confidently
+		// projecting old cycle data into the focus month.
+		expect(result.cells.every((c) => c.phase === null)).toBe(true);
+	});
+
+	it('returns null metadata when no anchor exists', () => {
+		const result = aggregateCycleStrip(endoBlueprint(), [], 2026, 3, 30);
+		expect(result.anchorDate).toBeNull();
+		expect(result.anchorAgeDays).toBeNull();
+		expect(result.stale).toBe(false);
 	});
 });

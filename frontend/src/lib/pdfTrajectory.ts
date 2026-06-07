@@ -146,9 +146,19 @@ export function resolveTrajectoryPill(
 	// Polarity cohort path — sign+magnitude on the polar vital.
 	if (POLARITY_CONDITIONS.has(conditionId)) {
 		const series = aggregateVitalMonthly(documents, 'mood_polarity', monthBuckets);
-		const firstAvg = mean(series.slice(0, halfSize));
-		const lastAvg = mean(series.slice(-halfSize));
+		const firstHalf = series.slice(0, halfSize);
+		const lastHalf = series.slice(-halfSize);
+		const firstAvg = mean(firstHalf);
+		const lastAvg = mean(lastHalf);
 		if (firstAvg === null || lastAvg === null) return null;
+		// 2026-06-07 clinician review P1-3: gate sample size to avoid
+		// firing "stärker depressiv/manisch" on 1-vs-2 entries. Mirrors the
+		// vital path's sparse-data null-out behaviour at the per-half level
+		// rather than the across-window level. n=3 minimum per half
+		// (≈ a quarter of typical bipolar episode cadence).
+		const firstN = firstHalf.filter((v): v is number => v !== null).length;
+		const lastN = lastHalf.filter((v): v is number => v !== null).length;
+		if (firstN < 3 || lastN < 3) return null;
 		const labelKey = pickPolarityLabel(firstAvg, lastAvg);
 		const poleShift = pickPolarityShift(firstAvg, lastAvg);
 		return { kind: 'polarity', firstAvg, lastAvg, labelKey, poleShift };

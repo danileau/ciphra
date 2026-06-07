@@ -167,10 +167,15 @@ describe('resolveTrajectoryPill — Anna (bipolar, the polarity case)', () => {
 
 	it('bipolar shifting toward mania → "more_manic" label', () => {
 		const buckets = mb(12);
+		// 2026-06-07 clinician review P1-3: polarity now requires ≥3
+		// readings per half-window so 1-vs-2 entries do not fire
+		// "stärker manisch / depressiv". These tests use 3 per half.
 		const docs: CiphraDocument[] = [
 			entry('2025-06-15', { vitals: { mood_polarity: '-1' } }),
-			entry('2025-11-15', { vitals: { mood_polarity: '-1' } }),
-			entry('2026-02-15', { vitals: { mood_polarity: '2' } }),
+			entry('2025-08-15', { vitals: { mood_polarity: '-1' } }),
+			entry('2025-10-15', { vitals: { mood_polarity: '-1' } }),
+			entry('2026-01-15', { vitals: { mood_polarity: '2' } }),
+			entry('2026-03-15', { vitals: { mood_polarity: '2' } }),
 			entry('2026-04-15', { vitals: { mood_polarity: '3' } }),
 		];
 		const spec = resolveTrajectoryPill(anna, docs, buckets, []);
@@ -185,8 +190,10 @@ describe('resolveTrajectoryPill — Anna (bipolar, the polarity case)', () => {
 		const buckets = mb(12);
 		const docs: CiphraDocument[] = [
 			entry('2025-06-15', { vitals: { mood_polarity: '1' } }),
-			entry('2025-11-15', { vitals: { mood_polarity: '0' } }),
-			entry('2026-02-15', { vitals: { mood_polarity: '-2' } }),
+			entry('2025-08-15', { vitals: { mood_polarity: '0' } }),
+			entry('2025-10-15', { vitals: { mood_polarity: '1' } }),
+			entry('2026-01-15', { vitals: { mood_polarity: '-2' } }),
+			entry('2026-03-15', { vitals: { mood_polarity: '-3' } }),
 			entry('2026-04-15', { vitals: { mood_polarity: '-3' } }),
 		];
 		const spec = resolveTrajectoryPill(anna, docs, buckets, []);
@@ -201,8 +208,10 @@ describe('resolveTrajectoryPill — Anna (bipolar, the polarity case)', () => {
 		const buckets = mb(12);
 		const docs: CiphraDocument[] = [
 			entry('2025-06-15', { vitals: { mood_polarity: '-3' } }),
-			entry('2025-11-15', { vitals: { mood_polarity: '-2' } }),
-			entry('2026-02-15', { vitals: { mood_polarity: '0' } }),
+			entry('2025-08-15', { vitals: { mood_polarity: '-2' } }),
+			entry('2025-10-15', { vitals: { mood_polarity: '-3' } }),
+			entry('2026-01-15', { vitals: { mood_polarity: '0' } }),
+			entry('2026-03-15', { vitals: { mood_polarity: '0' } }),
 			entry('2026-04-15', { vitals: { mood_polarity: '0' } }),
 		];
 		const spec = resolveTrajectoryPill(anna, docs, buckets, []);
@@ -217,6 +226,21 @@ describe('resolveTrajectoryPill — Anna (bipolar, the polarity case)', () => {
 		const buckets = mb(12);
 		const docs: CiphraDocument[] = [
 			entry('2026-04-15', { symptoms: { irritable: true } }),
+		];
+		expect(resolveTrajectoryPill(anna, docs, buckets, [])).toBeNull();
+	});
+
+	it('bipolar with <3 readings per half-window → null (sparse-data gate)', () => {
+		// 2026-06-07 clinician review P1-3 — the regression test for the
+		// "1 vs 2 entries fires stärker depressiv" failure mode. Two
+		// readings in each half is below the n=3 floor, so resolve must
+		// return null even though the means would point toward a shift.
+		const buckets = mb(12);
+		const docs: CiphraDocument[] = [
+			entry('2025-06-15', { vitals: { mood_polarity: '-2' } }),
+			entry('2025-11-15', { vitals: { mood_polarity: '-2' } }),
+			entry('2026-02-15', { vitals: { mood_polarity: '3' } }),
+			entry('2026-04-15', { vitals: { mood_polarity: '3' } }),
 		];
 		expect(resolveTrajectoryPill(anna, docs, buckets, [])).toBeNull();
 	});

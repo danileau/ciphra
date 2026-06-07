@@ -1268,6 +1268,9 @@ export default {
 	// New branded-PDF keys (EN only for now; DE/FR/IT to translate)
 	'pdf.grid_title': 'Monthly Protocol',
 	'pdf.export_date': 'Exported',
+	'pdf.quote_attribution_label': 'PATIENT QUOTE',
+	'pdf.cycle_anchor_last': 'Last recorded period: {date}',
+	'pdf.cycle_anchor_stale': 'Last recorded period: {date} — phase tinting suppressed (anchor older than 60 days).',
 	'pdf.account': 'Account',
 	'pdf.days_logged_short': 'days logged',
 	'pdf.total_episodes_short': 'total episodes',
