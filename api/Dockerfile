@@ -24,7 +24,9 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 
 COPY . .
 
-RUN useradd --system --uid 1001 --no-create-home ciphra && chown -R ciphra:ciphra /app
+RUN chmod +x entrypoint.sh \
+ && useradd --system --uid 1001 --no-create-home ciphra \
+ && chown -R ciphra:ciphra /app
 USER ciphra
 
 EXPOSE 5000
@@ -32,7 +34,7 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "server:app"]
+CMD ["./entrypoint.sh"]
 
 
 # ─── prod: minimal surface, no test tooling. Default target. ───
@@ -40,7 +42,9 @@ FROM base AS prod
 
 COPY . .
 
-RUN useradd --system --uid 1001 --no-create-home ciphra && chown -R ciphra:ciphra /app
+RUN chmod +x entrypoint.sh \
+ && useradd --system --uid 1001 --no-create-home ciphra \
+ && chown -R ciphra:ciphra /app
 USER ciphra
 
 EXPOSE 5000
@@ -48,4 +52,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "server:app"]
+CMD ["./entrypoint.sh"]
