@@ -25,8 +25,8 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY . .
 
 RUN chmod +x entrypoint.sh \
- && useradd --system --uid 1001 --no-create-home ciphra \
- && chown -R ciphra:ciphra /app
+ && useradd --system --uid 1001 --create-home --home-dir /home/ciphra ciphra \
+ && chown -R ciphra:ciphra /app /home/ciphra
 USER ciphra
 
 EXPOSE 5000
@@ -43,8 +43,8 @@ FROM base AS prod
 COPY . .
 
 RUN chmod +x entrypoint.sh \
- && useradd --system --uid 1001 --no-create-home ciphra \
- && chown -R ciphra:ciphra /app
+ && useradd --system --uid 1001 --create-home --home-dir /home/ciphra ciphra \
+ && chown -R ciphra:ciphra /app /home/ciphra
 USER ciphra
 
 EXPOSE 5000
