@@ -113,6 +113,11 @@ cd frontend && npm run build      # static SvelteKit build
 docker build --target prod ./api  # minimal API image (no test tooling)
 ```
 
+For the day-to-day production operations runbook — cron jobs, monitoring,
+backup + restore, disaster recovery, on-call troubleshooting — see
+[OPERATIONS.md](OPERATIONS.md). This file focuses on local dev; OPERATIONS
+focuses on the live deploy.
+
 The Compose file uses the API's `dev` target (so `pytest` is available);
 production deploys should build `--target prod`.
 
