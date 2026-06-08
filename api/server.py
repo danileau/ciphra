@@ -60,9 +60,16 @@ _raw_cors = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localho
 CORS_ORIGINS = [o.strip() for o in _raw_cors.split(',') if o.strip()]
 CORS(app, supports_credentials=True, origins=CORS_ORIGINS)
 
+# Storage: redis in production (survives `systemctl restart ciphra-app`,
+# shared across gunicorn workers). Falls back to in-memory if REDIS_URL
+# is unset — fine for local dev + tests, NOT for prod (counters reset on
+# restart + are per-worker, so the effective limit becomes N_workers ×
+# configured limit).
+_RATELIMIT_STORAGE = os.environ.get('REDIS_URL', 'memory://')
 limiter = Limiter(
     get_remote_address,
     app=app,
+    storage_uri=_RATELIMIT_STORAGE,
     default_limits=["5000 per hour"],
     enabled=os.environ.get('CIPHRA_DEV_MOCKS') != '1',
 )
