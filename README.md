@@ -39,6 +39,7 @@ Then open **http://localhost:8080** — nginx serves the app and proxies the API
 | frontend | http://localhost:5173   | SvelteKit dev server (direct) |
 | api      | http://localhost:5050   | Flask API (direct)            |
 | postgres | localhost:5433          | Database                      |
+| redis    | (internal)              | Rate-limit counters (prod)    |
 
 A `SECRET_KEY` of 32+ characters is mandatory — the API refuses to start
 without it. Generate one with `python -c 'import secrets; print(secrets.token_hex(32))'`.
@@ -57,9 +58,10 @@ without it. Generate one with `python -c 'import secrets; print(secrets.token_he
 ## Tech stack
 
 - **Frontend** — SvelteKit + TypeScript, Vite, client-side WebCrypto + Argon2id (WASM)
-- **API** — Flask (Python 3.11), gunicorn, JWT auth
+- **API** — Flask (Python 3.11), gunicorn (schema initialised via `api/entrypoint.sh`), JWT auth
 - **Database** — PostgreSQL 15, one opaque encrypted-document table
-- **Deployment** — Docker Compose; nginx reverse proxy
+- **Rate-limit store** — Redis (in-memory only, lives in the data plane so counters survive app restarts)
+- **Deployment** — Docker Compose; nginx reverse proxy (Cloudflare-fronted in production)
 
 ciphra is a serious tool for managing a real condition — not a wellness app.
 No gamification, no email required, four languages (DE/EN/FR/IT).

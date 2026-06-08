@@ -1824,6 +1824,10 @@ if os.environ.get('CIPHRA_DEV_MOCKS') == '1':
 
 
 if __name__ == '__main__':
+    # Dev mode only — `python server.py` runs Flask's built-in server.
+    # Production runs under gunicorn via api/entrypoint.sh which calls
+    # init_db() + apply_audit_retention() before exec, so this block
+    # never fires under gunicorn. Both paths are intentional.
     init_db()
     apply_audit_retention()
     logger.info("ciphra API — encrypted by design")

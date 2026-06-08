@@ -35,8 +35,22 @@ docker compose up --build
 | frontend | 5173      | 5173         | SvelteKit dev server, HMR |
 | api      | 5050      | 5000         | Flask; host port avoids the macOS :5000 AirPlay collision |
 | postgres | 5433      | 5432         | host port 5433 avoids a local Postgres clash |
+| redis    | —         | 6379         | rate-limit counter store (optional in dev — falls back to `memory://` if `REDIS_URL` is unset) |
 
 The database schema is created automatically by the API on first start.
+
+### How schema init runs
+
+- **Dev (`python server.py`):** Flask's built-in server triggers the
+  `if __name__ == '__main__': init_db()` block at the bottom of `server.py`.
+- **Production (gunicorn):** the `__main__` block never fires — gunicorn
+  imports `server:app` as a module. Instead `api/entrypoint.sh` calls
+  `init_db()` once and then `exec`s gunicorn, so the schema is guaranteed
+  to exist before any worker accepts a request and workers don't race on
+  `CREATE TABLE IF NOT EXISTS`.
+
+Both paths are intentional. Don't remove the `__main__` block — it keeps
+`python server.py` working for fast local iteration without gunicorn.
 
 ## Seeding demo data
 

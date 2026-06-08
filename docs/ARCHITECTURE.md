@@ -7,20 +7,31 @@ model, key hierarchy, what the browser caches — see
 
 ## The shape of it
 
-Four containers, one bridge network:
+Five containers, one bridge network:
 
 ```
 browser ──► nginx :8080 ──┬──► frontend (SvelteKit) :5173
-                          └──► /api/* ──► api (Flask) :5050 ──► postgres :5432
+                          └──► /api/* ──► api (Flask) :5050 ──┬──► postgres :5432
+                                                              └──► redis :6379
 ```
 
 - **nginx** — the single entry point. Serves the app and proxies `/api/*` to
   the API. Forwards `X-Forwarded-For` / `X-Forwarded-Proto`, which the API
-  relies on for rate-limiting and HSTS.
+  relies on for rate-limiting and HSTS. In production, also rewrites
+  `$remote_addr` from the Cloudflare `CF-Connecting-IP` header and trusts the
+  docker bridge gateway so the real client IP reaches the rate-limiter.
 - **frontend** — SvelteKit + TypeScript. All cryptography runs here.
 - **api** — Flask (Python 3.11), run under gunicorn. A thin authenticated
-  store: it never decrypts anything.
+  store: it never decrypts anything. Schema is created at boot by
+  `api/entrypoint.sh` (which calls `init_db()` once before exec-ing gunicorn,
+  so workers don't race on `CREATE TABLE IF NOT EXISTS`).
 - **postgres** — PostgreSQL 15.
+- **redis** — rate-limit counter store for flask-limiter. In-memory only
+  (`--save '' --appendonly no`, 64mb LRU cap, no host port). Lives in the
+  data plane next to postgres so counters survive `systemctl restart
+  ciphra-app`; without persistence across app restarts, an attacker could
+  reset their per-IP limit by bouncing the app. See
+  `memory/project_redis_ratelimit_architecture.md` for the full rationale.
 
 ## Zero-knowledge in one paragraph
 
