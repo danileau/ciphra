@@ -14,6 +14,7 @@
  */
 import type { Blueprint, EpisodeType } from '$lib/blueprint';
 import type { CiphraDocument } from '$lib/stores/documents';
+import { episodeCountTotals } from '$lib/monthAggregates';
 
 export type RGB = [number, number, number];
 
@@ -48,17 +49,10 @@ export function aggregatePhaseDistribution(
 	const types: EpisodeType[] = blueprint.episodeTypes ?? [];
 	if (types.length === 0) return [];
 
-	const counts = new Map<string, number>();
-	for (const t of types) counts.set(t.id, 0);
-
-	for (const d of focusMonthDocs) {
-		if (d?.data?.type !== 'entry') continue;
-		const eps = (d.data?.episodes || {}) as Record<string, unknown>;
-		for (const t of types) {
-			const v = Number(eps[t.id] || 0);
-			if (v > 0) counts.set(t.id, (counts.get(t.id) ?? 0) + v);
-		}
-	}
+	// Shared math (design review 2026-06-11) — same totals the calendar
+	// rail uses, including the legacy `seizures`-shape fallback this
+	// site previously missed.
+	const counts = episodeCountTotals(blueprint, focusMonthDocs, 'all');
 
 	const total = [...counts.values()].reduce((a, b) => a + b, 0);
 	if (total === 0) return [];
