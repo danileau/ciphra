@@ -117,6 +117,18 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
  * same commit.
  */
 export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
+	// 'Startseiten-Layout' select hidden (design review 2026-06-11) —
+	// it wrote blueprint.primaryBrowseSurface but getPrimaryBrowseSurface()
+	// has no runtime consumer, so the control was a placebo. NOT dead:
+	// these keys come back in the same PR that ships a real consumer
+	// (dashboard primary slot / browse links following the choice).
+	'settings.primary_surface_title',
+	'settings.primary_surface_desc',
+	'settings.primary_surface_auto',
+	'settings.primary_surface_journal',
+	'settings.primary_surface_calendar',
+	'settings.primary_surface_trend',
+
 	// Landing rewrite leftovers — `/` no longer renders these sections.
 	// Strongly suspected dead. Delete in a follow-up after one more
 	// visual QA round to confirm no conditional render path.

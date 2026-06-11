@@ -6,9 +6,7 @@
 	import { blueprint, hasBlueprint, presets, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import {
 		applyDateFormatChoice,
-		applyPrimarySurfaceChoice,
 		type DateFormatChoice,
-		type PrimarySurfaceChoice,
 	} from '$lib/blueprint/preferences';
 	import type {
 		Blueprint,
@@ -55,19 +53,6 @@
 		{ id: 'sharing', label: $t('settings.tab_sharing') },
 	];
 
-	// CIPH-852 — primaryBrowseSurface override. Discriminator helper lives
-	// in $lib/blueprint/preferences.ts (CIPH-pi18-3 added the test).
-	async function setPrimarySurface(value: PrimarySurfaceChoice) {
-		if (!bp) return;
-		await blueprint.save(applyPrimarySurfaceChoice(bp, value));
-	}
-	function onSurfaceChange(e: Event) {
-		const target = e.currentTarget as HTMLSelectElement;
-		setPrimarySurface(target.value as PrimarySurfaceChoice);
-	}
-
-	// For the <select>: 'auto' when the field is missing, otherwise the value.
-	$: currentSurfaceChoice = bp?.primaryBrowseSurface ?? 'auto';
 	$: cohortDefault = bp ? getCohort(bp.conditionId) : 'custom';
 
 	// CIPH-pi18-3 — DatePicker display format. Lives in the Appearance
@@ -939,26 +924,15 @@
 		on:close={closeCustomModal}
 	/>
 
-	<!-- CIPH-852 — Home layout / primary browse surface override -->
-	{#if bp}
-	<section class="card p-5">
-		<h3 class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('settings.primary_surface_title')}</h3>
-		<p class="text-sm mb-3" style="color: var(--text-secondary)">{$t('settings.primary_surface_desc')}</p>
-		<label class="sr-only" for="primary-surface-select">{$t('settings.primary_surface_title')}</label>
-		<select
-			id="primary-surface-select"
-			class="input select-chevron cursor-pointer"
-			value={currentSurfaceChoice}
-			on:change={onSurfaceChange}
-		>
-			<option value="auto">{$t('settings.primary_surface_auto')}</option>
-			<option value="journal">{$t('settings.primary_surface_journal')}</option>
-			<option value="calendar">{$t('settings.primary_surface_calendar')}</option>
-			<option value="trend">{$t('settings.primary_surface_trend')}</option>
-		</select>
-	</section>
-	{/if}
-
+	<!-- CIPH-852 'Startseiten-Layout' select removed (design review
+	     2026-06-11): it wrote blueprint.primaryBrowseSurface but
+	     getPrimaryBrowseSurface() has zero runtime consumers, so the
+	     control changed nothing — a placebo that quietly broke the
+	     contract that settings do things. The plumbing
+	     ($lib/blueprint/preferences.ts, preset declarations, cohort
+	     defaults) is intact; re-add this block in the same PR that
+	     ships an actual consumer (dashboard primary slot / browse
+	     links). i18n keys parked in ORPHAN_AUDIT_BACKLOG. -->
 
 	<!-- Quick switch (profile template) -->
 	<section class="card p-5">
