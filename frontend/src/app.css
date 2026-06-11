@@ -89,19 +89,11 @@
 		   currently parse this file but `cohortPalette.test.ts`
 		   enforces the matrix on the JS side. Update both together.
 
-		   The route-shift variables below are applied via the CSS
-		   Color Level 5 relative-color syntax at consumer sites:
-		     hsl(from var(--cohort-cycle-1)
-		         h
-		         calc(s + var(--route-s-shift))
-		         calc(l + var(--route-l-shift)))
-		   Modern evergreen browsers only (Chrome 119+ / Safari 16.4+
-		   / Firefox 128+) — pre-launch decision, no production users.
-
 		   `data-route` is set by `+layout.svelte` based on the first
-		   path segment via `pathToRoute()`. `data-cohort` is set the
-		   same way from `cohortOf($resolvedBlueprint)`. CIPH-891 will
-		   migrate consumers to read these variables. */
+		   path segment via `pathToRoute()` (it drives the CIPH-892
+		   rhythm tokens below). `data-cohort` is set the same way from
+		   `cohortOf($resolvedBlueprint)` and drives the `--accent-*`
+		   overrides. */
 		--cohort-cycle-1: #b6306a;
 		--cohort-cycle-2: #7a2845;
 		--cohort-cycle-3: #b06a4a;
@@ -176,9 +168,7 @@
 
 		   Defaults below = discrete cohort = today's brand identity.
 		   `[data-cohort="X"]` overrides further down replace these per
-		   cohort. Route shifts compose at consumer sites via the same
-		   `hsl(from var(--accent) h calc(s + var(--route-s-shift))
-		   calc(l + var(--route-l-shift)))` pattern. The `--brand`,
+		   cohort. The `--brand`,
 		   `--ochre`, `--olive` tokens above are NOT redirected — they
 		   stay invariant for brand-mark sites (wordmarks, landing CTAs).
 
@@ -200,10 +190,6 @@
 		--accent-neutral: var(--cohort-discrete-5);
 		--accent-neutral-rgb: var(--cohort-discrete-5-rgb);
 
-		/* Default = dashboard baseline = zero shift. Route-specific
-		   selectors below override these. */
-		--route-l-shift: 0%;
-		--route-s-shift: 0%;
 	}
 
 	/* CIPH-891 — Per-cohort accent overrides. Scoped on `[data-cohort]`
@@ -267,18 +253,22 @@
 		--accent-neutral-rgb: var(--cohort-discrete-5-rgb);
 	}
 
-	/* CIPH-890 — Per-route HSL modulation. Composes with cohort tones
-	   via `hsl(from var(--cohort-X-N) h calc(s + var(--route-s-shift))
-	   calc(l + var(--route-l-shift)))` at consumer sites.
+	/* CIPH-890/891 route-shift removed (design review 2026-06-11):
+	   the per-route `--route-l/s-shift` variables shipped for ~6 weeks
+	   with zero consumers — the `hsl(from …)` pattern only ever existed
+	   in comments, and the one attempt to wire it produced the PI v13
+	   hover-white bug class. The PI v13 critique called the visual
+	   effect "fake differentiation" even when applied. Decision: route
+	   identity comes from content + the CIPH-892 rhythm tokens below;
+	   cohort identity keeps the `--accent-*` system above.
+	   Guard: `lib/route-shift-removed.test.ts`.
 
-	   CIPH-892 extends each route block below with rhythm tokens
+	   CIPH-892 — each route block below carries rhythm tokens
 	   driving silhouette differences (card padding, gap, radius,
 	   border style). The four browse surfaces feel distinct at
 	   a glance: calendar tight grid / journal stream / reports
 	   clinical / dashboard hub. */
 	[data-route="calendar"] {
-		--route-l-shift: -8%;
-		--route-s-shift: 0%;
 		/* tight grid rhythm — small radii, small gaps, square cells */
 		--rhythm-card-padding: 8px;
 		--rhythm-card-gap: 4px;
@@ -286,8 +276,6 @@
 		--rhythm-section-gap: 16px;
 	}
 	[data-route="journal"] {
-		--route-l-shift: 4%;
-		--route-s-shift: 0%;
 		/* stream rhythm — generous card chrome, vertical breathing */
 		--rhythm-card-padding: 16px;
 		--rhythm-card-gap: 8px;
@@ -295,12 +283,6 @@
 		--rhythm-section-gap: 12px;
 	}
 	[data-route="reports"] {
-		/* Critique (PI v13): -4% saturation was too subtle. Reports is
-		   the doctor-handover surface; it should read demonstrably more
-		   clinical than the rest of the app. -10% S + -2% L gets us
-		   there without losing brand cohesion. */
-		--route-l-shift: -2%;
-		--route-s-shift: -10%;
 		/* clinical rhythm — compact rows, hairline separators */
 		--rhythm-card-padding: 6px;
 		--rhythm-card-gap: 0px;
@@ -308,8 +290,6 @@
 		--rhythm-section-gap: 20px;
 	}
 	[data-route="dashboard"] {
-		--route-l-shift: 0%;
-		--route-s-shift: 0%;
 		/* hub rhythm — generous nested cards, soft shadows */
 		--rhythm-card-padding: 16px;
 		--rhythm-card-gap: 24px;

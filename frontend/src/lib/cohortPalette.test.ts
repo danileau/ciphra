@@ -9,10 +9,10 @@
  *     adjacent slots both fall in the rust/brick collision set).
  *   - Each tone passes WCAG ≥3:1 against the cream `--surface`
  *     (`#faf8f6`) so chart bars / dots / band fills stay legible.
- *   - `routeShift` returns the documented L/S deltas.
- *   - `applyRouteShift` is identity for the dashboard baseline and
- *     produces a known shift for known routes.
  *   - Named exports stay in sync with the matrix.
+ *
+ * (The route-shift assertions were removed with the route axis itself —
+ * design review 2026-06-11, see `route-shift-removed.test.ts`.)
  *   - `pathToRoute` maps every primary surface correctly.
  *
  * Mirrors `presets-palette.test.ts` style. Linus persona dry-run is
@@ -53,12 +53,8 @@ import {
 	CUSTOM_5,
 	CUSTOM_6,
 	cohortPalette,
-	routeShift,
-	applyRouteShift,
-	applyRouteShiftRgb,
 	pathToRoute,
 	type Cohort,
-	type RouteName,
 } from './cohortPalette';
 
 const SURFACE = '#faf8f6';
@@ -148,76 +144,6 @@ describe('CIPH-890 — WCAG contrast against the cream surface', () => {
 			`Tones below ${TEXT_FLOOR}:1 must be listed in CHART_ONLY_TONES so ` +
 				`callers know not to use them for body text. Missing:\n${failures.join('\n')}`,
 		).toEqual([]);
-	});
-});
-
-describe('CIPH-890 — routeShift table', () => {
-	it('returns the documented deltas per route', () => {
-		expect(routeShift('calendar')).toEqual({ l: -8, s: 0 });
-		expect(routeShift('journal')).toEqual({ l: 4, s: 0 });
-		expect(routeShift('reports')).toEqual({ l: 0, s: -4 });
-		expect(routeShift('dashboard')).toEqual({ l: 0, s: 0 });
-	});
-
-	it('returns baseline for an unknown route name', () => {
-		expect(routeShift('foo' as unknown as RouteName)).toEqual({ l: 0, s: 0 });
-	});
-});
-
-describe('CIPH-890 — applyRouteShift', () => {
-	it('is identity for the dashboard route across every tone', () => {
-		for (const cohort of ALL_COHORTS_PALETTE) {
-			for (const tone of cohortPalette(cohort)) {
-				expect(applyRouteShift(tone, 'dashboard')).toBe(tone);
-			}
-		}
-	});
-
-	it('darkens for the calendar route (lightness drops)', () => {
-		// Pick a tone away from the rails so the shift doesn't clamp.
-		const before = '#9f630b'; // ochre
-		const after = applyRouteShift(before, 'calendar');
-		expect(after).not.toBe(before);
-		// Quick sanity: the result hex should compute a lower channel sum.
-		const sum = (h: string) =>
-			parseInt(h.slice(1, 3), 16) +
-			parseInt(h.slice(3, 5), 16) +
-			parseInt(h.slice(5, 7), 16);
-		expect(sum(after)).toBeLessThan(sum(before));
-	});
-
-	it('lightens for the journal route', () => {
-		const before = '#9f630b';
-		const after = applyRouteShift(before, 'journal');
-		expect(after).not.toBe(before);
-		const sum = (h: string) =>
-			parseInt(h.slice(1, 3), 16) +
-			parseInt(h.slice(3, 5), 16) +
-			parseInt(h.slice(5, 7), 16);
-		expect(sum(after)).toBeGreaterThan(sum(before));
-	});
-
-	it('is stable: same input → same output across calls', () => {
-		const tone = '#a83a5b';
-		const a = applyRouteShift(tone, 'calendar');
-		const b = applyRouteShift(tone, 'calendar');
-		expect(a).toBe(b);
-	});
-});
-
-describe('CIPH-890 — applyRouteShiftRgb', () => {
-	it('mirrors applyRouteShift in RGB-triple space', () => {
-		const hex = '#9f630b';
-		const expected = applyRouteShift(hex, 'reports');
-		const [r, g, b] = applyRouteShiftRgb([0x9f, 0x63, 0x0b], 'reports');
-		const back = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-		expect(back).toBe(expected);
-	});
-
-	it('returns the same triple for the dashboard baseline', () => {
-		expect(applyRouteShiftRgb([0xb2, 0x3c, 0x2c], 'dashboard')).toEqual([
-			0xb2, 0x3c, 0x2c,
-		]);
 	});
 });
 

@@ -1,12 +1,9 @@
 /**
- * CIPH-890 — Cohort × Route palette.
+ * CIPH-890 — Cohort palette.
  *
- * Adds a per-cohort tonal family on top of `DATA_PALETTE`, with a
- * per-route lightness/saturation modulation. Diversifies the visual
- * signature so a glance at the page reads BOTH the condition (cohort)
- * AND the surface (route).
+ * Adds a per-cohort tonal family on top of `DATA_PALETTE`, so a glance
+ * at the page reads the condition (cohort).
  *
- * Layers:
  *   - Cohort axis (5 families × 6 tones)
  *     cycle    → roses
  *     phase    → indigos
@@ -15,24 +12,20 @@
  *                shipped preset working without migration)
  *     custom   → slates
  *
- *   - Route axis (4 surfaces, applied multiplicatively in HSL space)
- *     calendar → -8% lightness    (denser, more chart-like)
- *     journal  → +4% lightness    (lighter, more readable)
- *     reports  → -4% saturation   (clinical, cool)
- *     dashboard→ baseline         (no shift)
+ * The CIPH-890 route axis (per-route HSL shift) was REMOVED in the
+ * 2026-06-11 design review: it shipped with zero consumers on both the
+ * CSS side (`--route-l/s-shift` vars, only ever referenced in comments)
+ * and the TS side (`applyRouteShift*`, only referenced by its own
+ * tests) — and the two sides had already drifted apart (CSS said
+ * reports −10% S after the PI v13 critique, TS still said −4%). Route
+ * identity comes from content + the CIPH-892 rhythm tokens; cohort
+ * identity keeps `--accent-*`. Guard: `route-shift-removed.test.ts`.
+ * `pathToRoute()` survives — it drives `data-route` for rhythm tokens.
  *
  * Consumers of this module:
- *   - CSS — uses `--cohort-<family>-<n>` vars from `app.css` and the
- *     `[data-route="..."]` shift variables. The relative-color syntax
- *     `hsl(from var(...) h calc(s + var(--route-s-shift)) calc(l + var(--route-l-shift)))`
- *     does the modulation at render time. Tested in modern evergreens
- *     only (Chrome 119+ / Safari 16.4+ / Firefox 128+) — pre-launch
- *     decision, no production users.
- *
+ *   - CSS — uses `--cohort-<family>-<n>` vars from `app.css`.
  *   - JS / Chart.js — chart libraries take hex strings, not CSS vars.
- *     Use `cohortPalette(cohort)` for the base tones and
- *     `applyRouteShift(hex, route)` (or `applyRouteShiftRgb`) to compute
- *     the same modulation in TypeScript.
+ *     Use `cohortPalette(cohort)` for the base tones.
  *
  * NOT TOUCHED by this story:
  *   - `pdf.ts` BRAND + DATA_HEX (print-safe, fixed).
@@ -228,132 +221,6 @@ export function cohortPalette(
 	cohort: Cohort,
 ): readonly [Hex, Hex, Hex, Hex, Hex, Hex] {
 	return COHORT_PALETTES[cohort];
-}
-
-/** Returns the lightness/saturation deltas for the route, in HSL
- *  percent units. Unknown routes default to baseline. */
-export function routeShift(route: RouteName): { l: number; s: number } {
-	switch (route) {
-		case 'calendar':
-			return { l: -8, s: 0 };
-		case 'journal':
-			return { l: 4, s: 0 };
-		case 'reports':
-			return { l: 0, s: -4 };
-		case 'dashboard':
-		default:
-			return { l: 0, s: 0 };
-	}
-}
-
-/* ────────────────────────────────────────────────────────────────
- * HSL conversion helpers (private to this module).
- *
- * The CSS layer uses `hsl(from var(...) h calc(s + var(--route-s-shift))
- * calc(l + var(--route-l-shift)))` to do the same math in CSS Color
- * Level 5 relative-color syntax. The TS implementation here mirrors it
- * for chart consumers that take hex strings.
- * ──────────────────────────────────────────────────────────────── */
-
-function hexToRgb(hex: string): [number, number, number] {
-	const m = hex.replace('#', '');
-	const full =
-		m.length === 3 ? m.split('').map((ch) => ch + ch).join('') : m;
-	return [
-		parseInt(full.slice(0, 2), 16),
-		parseInt(full.slice(2, 4), 16),
-		parseInt(full.slice(4, 6), 16),
-	];
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-	const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
-	const toHex = (n: number) => clamp(n).toString(16).padStart(2, '0');
-	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function rgbToHsl(
-	r: number,
-	g: number,
-	b: number,
-): { h: number; s: number; l: number } {
-	const rN = r / 255;
-	const gN = g / 255;
-	const bN = b / 255;
-	const max = Math.max(rN, gN, bN);
-	const min = Math.min(rN, gN, bN);
-	const l = (max + min) / 2;
-	let s = 0;
-	let h = 0;
-	if (max !== min) {
-		const d = max - min;
-		s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-		switch (max) {
-			case rN:
-				h = (gN - bN) / d + (gN < bN ? 6 : 0);
-				break;
-			case gN:
-				h = (bN - rN) / d + 2;
-				break;
-			case bN:
-				h = (rN - gN) / d + 4;
-				break;
-		}
-		h /= 6;
-	}
-	return { h: h * 360, s: s * 100, l: l * 100 };
-}
-
-function hslToRgb(
-	h: number,
-	s: number,
-	l: number,
-): [number, number, number] {
-	const sN = s / 100;
-	const lN = l / 100;
-	const c = (1 - Math.abs(2 * lN - 1)) * sN;
-	const hPrime = ((h % 360) + 360) % 360 / 60;
-	const x = c * (1 - Math.abs((hPrime % 2) - 1));
-	let r = 0;
-	let g = 0;
-	let b = 0;
-	if (hPrime >= 0 && hPrime < 1) [r, g, b] = [c, x, 0];
-	else if (hPrime < 2) [r, g, b] = [x, c, 0];
-	else if (hPrime < 3) [r, g, b] = [0, c, x];
-	else if (hPrime < 4) [r, g, b] = [0, x, c];
-	else if (hPrime < 5) [r, g, b] = [x, 0, c];
-	else [r, g, b] = [c, 0, x];
-	const m = lN - c / 2;
-	return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
-}
-
-/** Apply the route's HSL shift to a hex color and return the new hex.
- *  Pure function. Idempotent for `route === 'dashboard'`. Clamps L and
- *  S to [0, 100]. */
-export function applyRouteShift(hex: Hex, route: RouteName): Hex {
-	const { l: dl, s: ds } = routeShift(route);
-	if (dl === 0 && ds === 0) return hex;
-	const [r, g, b] = hexToRgb(hex);
-	const { h, s, l } = rgbToHsl(r, g, b);
-	const newL = Math.max(0, Math.min(100, l + dl));
-	const newS = Math.max(0, Math.min(100, s + ds));
-	const [nr, ng, nb] = hslToRgb(h, newS, newL);
-	return rgbToHex(nr, ng, nb);
-}
-
-/** Same as `applyRouteShift` but takes/returns RGB triples — for
- *  `rgba()` consumers (alpha tinting on charts, badge backgrounds). */
-export function applyRouteShiftRgb(
-	rgb: [number, number, number],
-	route: RouteName,
-): [number, number, number] {
-	const { l: dl, s: ds } = routeShift(route);
-	if (dl === 0 && ds === 0) return rgb;
-	const { h, s, l } = rgbToHsl(rgb[0], rgb[1], rgb[2]);
-	const newL = Math.max(0, Math.min(100, l + dl));
-	const newS = Math.max(0, Math.min(100, s + ds));
-	const [nr, ng, nb] = hslToRgb(h, newS, newL);
-	return [Math.round(nr), Math.round(ng), Math.round(nb)];
 }
 
 /** Resolve the current route name from a pathname. The first path
