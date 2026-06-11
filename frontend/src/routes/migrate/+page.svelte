@@ -21,6 +21,7 @@
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n';
 	import { auth, isAuthenticated } from '$lib/stores/auth';
+	import { originStatus, hostOf, type OriginStatus } from '$lib/origin';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import { get } from 'svelte/store';
 	import { documents } from '$lib/stores/documents';
@@ -58,6 +59,10 @@
 	let errorDetail = '';
 	let originConfirmed = false;
 	let currentOrigin = '';
+	// Design review 2026-06-11 — the app verifies its own origin instead
+	// of leaving the whole phishing check to the user. 'mismatch' hard-
+	// stops the transfer; 'dev' (loopback) skips the pill for e2e/local.
+	let ciphraStatus: OriginStatus = 'mismatch';
 
 	let busy = false;
 	let busyLabel = '';
@@ -120,6 +125,7 @@
 	onMount(() => {
 		if (!browser) return;
 		currentOrigin = window.location.origin;
+		ciphraStatus = originStatus(currentOrigin);
 		const hash = window.location.hash.replace(/^#/, '');
 		const params = new URLSearchParams(hash);
 		const tok = params.get('migrate');
@@ -128,13 +134,16 @@
 			phase = 'no-fragment';
 			return;
 		}
-		// minimal sanity: no scheme, no spaces
-		if (/[\s]/.test(tok) || /[\s/]/.test(src)) {
+		// Token: no whitespace. Source: normalized to a bare host —
+		// hostname-only and full-URL inputs both resolve (P2 debt), deep
+		// links / credentials / exotic schemes are rejected.
+		const srcHost = /\s/.test(tok) ? null : hostOf(src);
+		if (!srcHost) {
 			phase = 'no-fragment';
 			return;
 		}
 		token = tok;
-		source = src;
+		source = srcHost;
 		// Already authenticated (with master_key in session) → skip signup,
 		// go straight to bundle fetch. Covers the case where the user reloaded
 		// after a prior signup attempt.
@@ -392,48 +401,109 @@
 						</p>
 						<SignupFlow source="migrate" on:signup-complete={handleSignupComplete} />
 					{:else if phase === 'confirm-origin'}
+						<!-- Design review 2026-06-11 — from→to reading order (source
+						     above target), machine origin-check with hard-stop on
+						     mismatch, and one sentence on what actually happens to
+						     the data. The checkbox stays as a deliberate ritual: the
+						     browser address bar is the one indicator a phishing page
+						     cannot fake, so the human look is still requested. -->
 						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
 							{$t('migrate.confirm_title')}
 						</h1>
-						<p class="text-sm mb-4" style="color: var(--text-secondary)">{$t('migrate.confirm_body')}</p>
 
-						<div
-							class="rounded-xl p-3 mb-3"
-							style="background: var(--surface-muted); border: 1px solid var(--border)"
-						>
-							<p class="text-xs mb-1" style="color: var(--text-muted)">
-								{$t('migrate.confirm_target_label')}
-							</p>
-							<code class="text-sm font-mono font-semibold break-all" style="color: var(--text-primary)"
-								>{currentOrigin}</code
+						{#if ciphraStatus === 'mismatch'}
+							<div
+								class="rounded-xl p-3 mb-3"
+								style="background: var(--surface-muted); border: 1px solid var(--border)"
 							>
-						</div>
-						<div
-							class="rounded-xl p-3 mb-4"
-							style="background: var(--surface-muted); border: 1px solid var(--border)"
-						>
-							<p class="text-xs mb-1" style="color: var(--text-muted)">
-								{$t('migrate.confirm_source_label')}
-							</p>
-							<code class="text-sm font-mono font-semibold break-all" style="color: var(--text-primary)"
-								>{source}</code
+								<p class="text-xs mb-1" style="color: var(--text-muted)">
+									{$t('migrate.confirm_target_label')}
+								</p>
+								<code class="text-sm font-mono font-semibold break-all" style="color: var(--text-primary)"
+									>{currentOrigin}</code
+								>
+							</div>
+							<div
+								class="rounded-xl p-4"
+								style="background: rgba(var(--danger-rgb), 0.07); border: 1px solid var(--danger)"
+								data-testid="migrate-origin-blocked"
 							>
-						</div>
+								<p class="text-sm font-semibold mb-1" style="color: var(--danger)">
+									{$t('migrate.confirm_blocked_title')}
+								</p>
+								<p class="text-sm" style="color: var(--text-primary)">
+									{$t('migrate.confirm_blocked_body')}
+								</p>
+							</div>
+						{:else}
+							<p class="text-sm mb-4" style="color: var(--text-secondary)">
+								{$t('migrate.confirm_body', { source })}
+							</p>
 
-						<label class="flex items-start gap-2 mb-6 cursor-pointer">
-							<input type="checkbox" bind:checked={originConfirmed} class="mt-0.5" />
-							<span class="text-sm" style="color: var(--text-secondary)">{$t('migrate.confirm_checkbox')}</span>
-						</label>
+							<div
+								class="rounded-xl p-3"
+								style="background: var(--surface-muted); border: 1px solid var(--border)"
+							>
+								<p class="text-xs mb-1" style="color: var(--text-muted)">
+									{$t('migrate.confirm_source_label')}
+								</p>
+								<code class="text-sm font-mono font-semibold break-all" style="color: var(--text-primary)"
+									>{source}</code
+								>
+							</div>
+							<div class="flex justify-center py-1" style="color: var(--text-muted)" aria-hidden="true">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 5v14m0 0l-6-6m6 6l6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							</div>
+							<div
+								class="rounded-xl p-3 mb-2"
+								style="background: var(--surface-muted); border: 1px solid var(--border)"
+							>
+								<p class="text-xs mb-1" style="color: var(--text-muted)">
+									{$t('migrate.confirm_target_label')}
+								</p>
+								<code class="text-sm font-mono font-semibold break-all" style="color: var(--text-primary)"
+									>{currentOrigin}</code
+								>
+							</div>
 
-						<button
-							type="button"
-							class="btn-primary w-full px-4 min-h-[48px]"
-							on:click={confirmOriginAndFetch}
-							disabled={!originConfirmed}
-							data-testid="migrate-confirm-origin"
-						>
-							{$t('migrate.confirm_button')}
-						</button>
+							{#if ciphraStatus === 'canonical'}
+								<p class="mb-3">
+									<span
+										class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+										style="background: var(--olive-light); color: var(--olive)"
+									>
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><polyline points="20,6 9,17 4,12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+										{$t('migrate.confirm_match_ok')}
+									</span>
+								</p>
+							{:else}
+								<p class="text-xs mb-3" style="color: var(--text-muted)">
+									{$t('migrate.confirm_dev_note')}
+								</p>
+							{/if}
+
+							<p
+								class="text-sm rounded-xl p-3 mb-4"
+								style="background: var(--olive-light); color: var(--text-secondary)"
+							>
+								{$t('migrate.confirm_selfcheck_note')}
+							</p>
+
+							<label class="flex items-start gap-2 mb-6 cursor-pointer">
+								<input type="checkbox" bind:checked={originConfirmed} class="mt-0.5" />
+								<span class="text-sm" style="color: var(--text-secondary)">{$t('migrate.confirm_checkbox')}</span>
+							</label>
+
+							<button
+								type="button"
+								class="btn-primary w-full px-4 min-h-[48px]"
+								on:click={confirmOriginAndFetch}
+								disabled={!originConfirmed}
+								data-testid="migrate-confirm-origin"
+							>
+								{$t('migrate.confirm_button')}
+							</button>
+						{/if}
 					{:else if phase === 'fetching'}
 						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
 							{$t('migrate.phase_fetching')}
