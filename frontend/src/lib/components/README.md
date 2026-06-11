@@ -133,6 +133,39 @@ success/completed, ochre = warning/empty). Tailwind color
 utilities (`text-slate-500`, `bg-white`) are fine for generic
 chrome.
 
+## Dark mode (design review 2026-06-11)
+
+Source of truth: the `[data-theme='dark']` token block in `app.css` +
+[`lib/stores/theme.ts`](../stores/theme.ts) (preference: light / dark /
+system, default **light**). `+layout.svelte` mirrors the resolved theme
+onto `<html data-theme>`; `app.html` carries a pre-hydration inline
+script so OS-dark users get no white flash (keep it in sync with the
+store; CSP note inside).
+
+Rules when adding UI:
+
+1. **Never hardcode an opaque surface or text color** — use the
+   semantic vars and both themes come free. Translucent `rgba(...)`
+   tints over themed surfaces adapt automatically and are fine.
+2. **Text on a `--brand` or `--danger` fill** uses `--on-brand` /
+   `--on-danger` (white in light, warm-black in dark — the dark theme
+   lifts those fills past white-text contrast).
+3. Raw Tailwind palette utilities (`bg-white`, `bg-surface`,
+   `text-brand`, `text-slate-*`) are remapped to vars in `app.css`'s
+   warm-overrides block. If you introduce a new one, add it there.
+4. The doctor PDF and `--data-*` / `--cohort-*` matrices are
+   deliberately NOT themed (print stays light; chart mid-tones work on
+   both surfaces).
+5. Eyeball pass: `npx playwright test e2e/dark-smoke.spec.ts` emits
+   PNGs to `e2e/_screenshots/dark/`.
+
+## Asterisk loading vs empty (convention)
+
+`<Asterisk mode="loading">` is for data actively being fetched or
+decrypted; `<Asterisk muted>` (or `mode="empty"`) is for static
+nothing-here states. Don't show a spinner for an empty state — it
+promises progress that isn't coming.
+
 ## i18n
 
 Locales: `de` (default + authoritative), `en`, `fr`, `it`. All

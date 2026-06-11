@@ -8,6 +8,7 @@
 		applyDateFormatChoice,
 		type DateFormatChoice,
 	} from '$lib/blueprint/preferences';
+	import { themeChoice, setThemeChoice, type ThemeChoice } from '$lib/stores/theme';
 	import type {
 		Blueprint,
 		BlueprintItem,
@@ -673,6 +674,25 @@
 				</select>
 			</div>
 			{/if}
+
+			<!-- Dark mode (design review 2026-06-11) — outside the {#if bp}
+				 above on purpose: caregivers without a blueprint log at
+				 night too. Default 'light' (post-launch conservatism);
+				 'system' follows the OS live. -->
+			<div>
+				<label class="text-sm mb-1.5 block" style="color: var(--text-secondary)" for="theme-select">{$t('settings.theme_title')}</label>
+				<p class="text-xs mb-1.5" style="color: var(--text-muted)">{$t('settings.theme_desc')}</p>
+				<select
+					id="theme-select"
+					class="input select-chevron cursor-pointer"
+					value={$themeChoice}
+					on:change={(e) => setThemeChoice((e.currentTarget as HTMLSelectElement).value as ThemeChoice)}
+				>
+					<option value="light">{$t('settings.theme_light')}</option>
+					<option value="dark">{$t('settings.theme_dark')}</option>
+					<option value="system">{$t('settings.theme_system')}</option>
+				</select>
+			</div>
 		</div>
 	</section>
 
@@ -688,7 +708,7 @@
 			<button
 				on:click={() => { showDeleteModal = true; deletePassword = ''; deleteUsernameTyped = ''; deleteError = ''; }}
 				class="w-full py-2 text-white rounded-xl text-sm font-medium min-h-[44px] transition-colors"
-				style="background: var(--danger)"
+				style="background: var(--danger); color: var(--on-danger, #fff)"
 			>
 				{$t('settings.delete_account')}
 			</button>
@@ -1083,7 +1103,7 @@
 				on:click={handleDeleteAccount}
 				disabled={deleteLoading || !deletePassword || !deleteUsernameMatches}
 				class="flex-1 py-2 text-white rounded-xl text-sm font-medium min-h-[44px] disabled:opacity-50"
-				style="background: var(--danger)"
+				style="background: var(--danger); color: var(--on-danger, #fff)"
 			>
 				{$t('settings.delete_account')}
 			</button>

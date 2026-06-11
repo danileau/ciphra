@@ -399,7 +399,7 @@
 	}
 	.dp-day--selected {
 		background: var(--brand);
-		color: #fff;
+		color: var(--on-brand, #fff);
 	}
 	.dp-day--selected:hover {
 		background: var(--brand);
@@ -428,7 +428,7 @@
 	}
 	.dp-action--primary {
 		background: var(--brand);
-		color: #fff;
+		color: var(--on-brand, #fff);
 		border-color: var(--brand);
 	}
 	.dp-action--primary:hover {

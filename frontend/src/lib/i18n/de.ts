@@ -2069,6 +2069,11 @@ export default {
 
 	// CIPH-pi18-3 — DatePicker display format
 	'settings.date_format_title': 'Datumsformat',
+	'settings.theme_title': 'Erscheinungsbild',
+	'settings.theme_desc': 'Hell, dunkel oder automatisch nach Systemeinstellung.',
+	'settings.theme_light': 'Hell',
+	'settings.theme_dark': 'Dunkel',
+	'settings.theme_system': 'Automatisch (System)',
 	'settings.date_format_desc': 'Wie Datumsangaben in Eingabefeldern angezeigt werden.',
 
 	// CIPH-411b — Medikamentenverwaltung

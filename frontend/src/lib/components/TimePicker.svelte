@@ -292,7 +292,7 @@
 	}
 	.tp-cell--selected {
 		background: var(--brand);
-		color: #fff;
+		color: var(--on-brand, #fff);
 	}
 	.tp-cell--selected:hover {
 		background: var(--brand);
@@ -321,7 +321,7 @@
 	}
 	.tp-action--primary {
 		background: var(--brand);
-		color: #fff;
+		color: var(--on-brand, #fff);
 		border-color: var(--brand);
 	}
 	.tp-action--primary:hover {

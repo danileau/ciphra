@@ -2047,7 +2047,7 @@
 		width: 28px;
 		height: 36px;
 		border-radius: 2px;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid var(--border);
 	}
 	.report-sheet--b2 { left: 8px; top: 0; }

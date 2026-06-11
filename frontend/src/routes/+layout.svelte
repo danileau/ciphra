@@ -13,6 +13,7 @@
 	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import { pathToRoute } from '$lib/cohortPalette';
+	import { resolvedTheme } from '$lib/stores/theme';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import AuthedFooter from '$lib/components/AuthedFooter.svelte';
@@ -513,10 +514,15 @@
 	// chains that each new route had to be patched into.
 	$: currentShell = shellFor(currentPath);
 	// CIPH-890 — `data-route` and `data-cohort` on <main> drive the
-	// cohort×route palette modulation in `app.css`. Pure attributes;
-	// CIPH-891 will migrate consumers to use the resulting CSS vars.
+	// CIPH-892 rhythm tokens and the cohort accent overrides in app.css.
 	$: currentRoute = pathToRoute(currentPath);
 	$: currentCohort = cohortOf($resolvedBlueprint);
+
+	// Dark mode (design review 2026-06-11) — mirror the resolved theme
+	// onto <html> so the app.css [data-theme='dark'] block applies.
+	// app.html sets the same attribute pre-hydration to avoid a white
+	// flash; this keeps it live for in-session changes.
+	$: if (browser) document.documentElement.dataset.theme = $resolvedTheme;
 
 	// Redirect to login when auth is ready but user is not authenticated
 	// and the current route requires auth. Public routes (landing,

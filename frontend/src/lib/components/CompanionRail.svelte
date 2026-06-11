@@ -231,7 +231,7 @@
 								{#if confirmDeleteId === entry.id}
 									<button on:click={() => onDeleteEntry(entry.id)}
 										class="p-1.5 rounded-lg text-white transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center text-xs font-medium"
-										style="background: var(--danger)"
+										style="background: var(--danger); color: var(--on-danger, #fff)"
 									>{$t('common.yes_delete')}</button>
 									<button on:click={onCancelDelete}
 										class="p-1.5 rounded-lg transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center text-xs font-medium"
