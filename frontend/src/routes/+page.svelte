@@ -168,9 +168,17 @@
 					{$t('landing.hero_detail')}
 				</p>
 
-				<div class="flex flex-wrap gap-4 mb-8">
-					<a href="/login?mode=register" data-anim="hero-cta" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors" style="box-shadow: 0 4px 14px rgba(178,60,44,0.2);">
+				<div class="flex flex-wrap gap-4 mb-8 items-center">
+					<a href="/login?mode=register" data-anim="hero-cta" class="btn-primary min-h-[52px] px-8 font-semibold rounded-xl text-base shadow-lg transition-colors" style="box-shadow: 0 4px 14px rgba(var(--data-1-rgb), 0.2);">
 						{$t('landing.hero_cta')}
+					</a>
+					<!-- Secondary path for the skeptic: a privacy product's second-most
+					     important hero action is checking the claim, not signing up.
+					     Deliberately a text link, not a button — the CTA stays the
+					     only dominant element. -->
+					<a href="#security" class="inline-flex items-center gap-1.5 min-h-[52px] px-2 font-medium text-base rounded-xl transition-colors hover:underline" style="color: var(--text-secondary);">
+						{$t('landing.hero_verify_link')}
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</a>
 				</div>
 
@@ -212,13 +220,15 @@
 					</div>
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style="background: var(--olive-light); color: var(--olive);">
-							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/><polyline points="22,4 12,14.01 9,11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							<!-- Zero-knowledge = the password mask. The brand mark IS the
+							     claim — no generic icon says it better. -->
+							<Asterisk size={14} color="olive" />
 							<span class="text-xs font-medium">{$t('landing.hero_badge_zk')}</span>
 						</div>
 					</div>
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style="background: var(--olive-light); color: var(--olive);">
-							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/><polyline points="22,4 12,14.01 9,11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><polyline points="16,18 22,12 16,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="8,6 2,12 8,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 							<span class="text-xs font-medium">{$t('landing.hero_badge_opensource')}</span>
 						</div>
 					</div>
@@ -426,13 +436,13 @@
 
 				<!-- Section A: Architecture Overview -->
 				<div>
-					<h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-8" style="color: var(--text-primary);">{$t('tech.architecture_title')}</h3>
+					<h2 class="text-2xl md:text-3xl font-bold tracking-tight mb-8" style="color: var(--text-primary);">{$t('tech.architecture_title')}</h2>
 					<div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-6 items-center">
 						<!-- Client card -->
 						<div class="card rounded-xl p-6" style="border-left: 4px solid var(--ochre);">
-							<h4 class="font-bold text-lg mb-4" style="color: var(--text-primary);">{$t('tech.client_title')}</h4>
+							<h3 class="font-bold text-lg mb-4" style="color: var(--text-primary);">{$t('tech.client_title')}</h3>
 							<ul class="space-y-2">
-								{#each $t('tech.client_items').split(', ') as item}
+								{#each $t('tech.client_items').split(',').map((i) => i.trim()).filter(Boolean) as item}
 									<li class="flex items-center gap-2">
 										<span class="w-1.5 h-1.5 rounded-full" style="background: var(--ochre);"></span>
 										<span class="font-mono text-sm px-2 py-0.5 rounded" style="background: var(--surface-muted); color: var(--text-secondary);">{item}</span>
@@ -462,9 +472,9 @@
 						</div>
 						<!-- Server card -->
 						<div class="card rounded-xl p-6" style="border-left: 4px solid var(--brand);">
-							<h4 class="font-bold text-lg mb-4" style="color: var(--text-primary);">{$t('tech.server_title')}</h4>
+							<h3 class="font-bold text-lg mb-4" style="color: var(--text-primary);">{$t('tech.server_title')}</h3>
 							<ul class="space-y-2">
-								{#each $t('tech.server_items').split(', ') as item}
+								{#each $t('tech.server_items').split(',').map((i) => i.trim()).filter(Boolean) as item}
 									<li class="flex items-center gap-2">
 										<span class="w-1.5 h-1.5 rounded-full" style="background: var(--brand);"></span>
 										<span class="font-mono text-sm px-2 py-0.5 rounded" style="background: var(--surface-muted); color: var(--text-secondary);">{item}</span>
@@ -483,7 +493,7 @@
 
 				<!-- Section B: Encryption Flow -->
 				<div>
-					<h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-8" style="color: var(--text-primary);">{$t('tech.flow_title')}</h3>
+					<h2 class="text-2xl md:text-3xl font-bold tracking-tight mb-8" style="color: var(--text-primary);">{$t('tech.flow_title')}</h2>
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 						{#each [
 							{ num: 1, titleKey: 'tech.flow_register_title', descKey: 'tech.flow_register_desc', borderColor: 'var(--ochre)' },
@@ -494,7 +504,7 @@
 							<div class="card rounded-xl p-6" style="border-left: 4px solid {step.borderColor};">
 								<div class="flex items-center gap-3 mb-3">
 									<div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" style="background: var(--ochre-light); color: var(--ochre);">{step.num}</div>
-									<h4 class="font-bold text-lg" style="color: var(--text-primary);">{$t(step.titleKey)}</h4>
+									<h3 class="font-bold text-lg" style="color: var(--text-primary);">{$t(step.titleKey)}</h3>
 								</div>
 								<p class="text-sm leading-relaxed" style="color: var(--text-secondary);">{$t(step.descKey)}</p>
 							</div>
@@ -507,7 +517,7 @@
 
 				<!-- Section C: Why these choices? -->
 				<div>
-					<h3 class="text-2xl md:text-3xl font-bold tracking-tight mb-8" style="color: var(--text-primary);">{$t('tech.why_title')}</h3>
+					<h2 class="text-2xl md:text-3xl font-bold tracking-tight mb-8" style="color: var(--text-primary);">{$t('tech.why_title')}</h2>
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 						{#each [
 							{ titleKey: 'tech.why_argon2_title', descKey: 'tech.why_argon2_desc', borderColor: 'var(--ochre)' },
@@ -517,7 +527,7 @@
 							{ titleKey: 'tech.why_hardening_title', descKey: 'tech.why_hardening_desc', borderColor: 'var(--olive)' }
 						] as choice}
 							<div class="card rounded-xl p-6" style="border-left: 4px solid {choice.borderColor};">
-								<h4 class="font-bold text-base mb-3" style="color: var(--text-primary);">{$t(choice.titleKey)}</h4>
+								<h3 class="font-bold text-base mb-3" style="color: var(--text-primary);">{$t(choice.titleKey)}</h3>
 								<p class="text-sm leading-relaxed" style="color: var(--text-secondary);">{$t(choice.descKey)}</p>
 							</div>
 						{/each}
@@ -527,7 +537,7 @@
 				<!-- Section D: Open Source Verification -->
 				<div>
 					<div class="card rounded-xl p-6 md:p-8" style="border-left: 4px solid var(--olive);">
-						<h3 class="text-xl md:text-2xl font-bold tracking-tight mb-3" style="color: var(--text-primary);">{$t('tech.verify_title')}</h3>
+						<h2 class="text-xl md:text-2xl font-bold tracking-tight mb-3" style="color: var(--text-primary);">{$t('tech.verify_title')}</h2>
 						<p class="leading-relaxed mb-4" style="color: var(--text-secondary);">{$t('tech.verify_desc')}</p>
 						<a
 							href="https://github.com/danileau/ciphra"
@@ -544,7 +554,7 @@
 							 verifiable in <2 minutes by anyone with browser
 							 DevTools. Inline <code> spans live in i18n values
 							 (XSS-safe — static strings, not user input). -->
-						<h4 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted);">{$t('tech.verify_steps_heading')}</h4>
+						<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted);">{$t('tech.verify_steps_heading')}</h3>
 						<ol class="verify-steps mb-6 space-y-3 list-none p-0">
 							<li class="flex gap-3 text-sm leading-relaxed" style="color: var(--text-secondary);">
 								<span class="font-mono text-xs shrink-0 w-5 text-center pt-0.5" style="color: var(--text-muted);">01</span>

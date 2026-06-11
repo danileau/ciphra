@@ -965,6 +965,7 @@ export default {
 	'landing.hero_subtitle': 'A diary {strong_start}encrypted with your password{strong_end} — right in your browser. For every condition.',
 	'landing.hero_detail': 'Built by someone who has been developing tools for chronically ill people for 7 years. Not as a product — as an answer to a real problem.',
 	'landing.hero_cta': 'Start for free',
+	'landing.hero_verify_link': 'How we prove it',
 	'landing.hero_scroll_cue': 'Scroll to conditions',
 	'landing.hero_badge_crypto': 'AES-256-GCM + Argon2id',
 	'landing.hero_badge_opensource': 'Open Source',

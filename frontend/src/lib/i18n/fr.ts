@@ -965,6 +965,7 @@ export default {
 	'landing.hero_subtitle': 'Un journal {strong_start}chiffré avec votre mot de passe{strong_end} — directement dans votre navigateur. Pour toute affection.',
 	'landing.hero_detail': 'Conçu par quelqu\'un qui développe des outils pour les personnes atteintes de maladies chroniques depuis 7 ans. Pas comme un produit — comme une réponse à un vrai problème.',
 	'landing.hero_cta': 'Commencer gratuitement',
+	'landing.hero_verify_link': 'Comment nous le prouvons',
 	'landing.hero_scroll_cue': 'Voir les affections',
 	'landing.hero_badge_crypto': 'AES-256-GCM + Argon2id',
 	'landing.hero_badge_opensource': 'Open Source',

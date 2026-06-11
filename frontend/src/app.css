@@ -12,6 +12,12 @@
 
 @layer base {
 	:root {
+		/* Design review 2026-06-11 — ciphra has no dark theme (yet); without
+		   this declaration, OS-dark users get dark native chrome (scrollbars,
+		   picker panels, iOS keyboard) on a light page. Flip to
+		   `light dark` when the dark token block ships. */
+		color-scheme: light;
+
 		/* ── Brand ── */
 		--brand: #b23c2c;
 		--brand-hover: #9a3326;
@@ -30,7 +36,11 @@
 		/* ── Text ── */
 		--text-primary: #2c2520;
 		--text-secondary: #64594e;
-		--text-muted: #97918a;
+		/* Design review 2026-06-11 — was #97918a (3.12:1 on white, below AA
+		   for the 13–14px body copy it labels). #736d63 clears 4.5:1 on all
+		   three light surfaces (white 5.13, --surface 4.84, --surface-muted
+		   4.52) while staying clearly lighter than --text-secondary (6.82). */
+		--text-muted: #736d63;
 
 		/* ── Borders ── */
 		--border: #e8e3dd;

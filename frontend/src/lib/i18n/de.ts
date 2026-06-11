@@ -987,6 +987,7 @@ export default {
 	'landing.hero_subtitle': 'Ein Tagebuch, {strong_start}das mit deinem Passwort verschlüsselt wird{strong_end} — direkt im Browser. Für jede Erkrankung.',
 	'landing.hero_detail': 'Gebaut von jemandem, der seit 7 Jahren Werkzeuge für chronisch Kranke entwickelt. Nicht als Produkt — als Antwort auf ein echtes Problem.',
 	'landing.hero_cta': 'Kostenlos starten',
+	'landing.hero_verify_link': 'Wie wir das beweisen',
 	'landing.hero_scroll_cue': 'Zu den Erkrankungen scrollen',
 	'landing.hero_badge_crypto': 'AES-256-GCM + Argon2id',
 	'landing.hero_badge_opensource': 'Open Source',
