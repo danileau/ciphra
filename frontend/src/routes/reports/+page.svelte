@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
+	import { rememberFocusMonth, recallFocusMonth } from '$lib/stores/focusMonth';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
@@ -30,7 +31,12 @@
 	import { isExportable } from '$lib/utils/exportable';
 	import { weekdayLabels } from '$lib/i18n/dates';
 
-	let currentDate = new Date().toISOString().slice(0, 10);
+	// Design review 2026-06-11 — month context travels from /calendar
+	// via the focus-month handoff; fresh sessions start on today.
+	let currentDate = (() => {
+		const m = recallFocusMonth();
+		return m ? `${m}-01` : new Date().toISOString().slice(0, 10);
+	})();
 	let pdfScope: ReportScope = 'month';
 
 	// Doctor-export scope picker — a clicked card sets the scope and
@@ -317,6 +323,7 @@
 		return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
 	})();
 	$: isOnCurrentMonth = currentDate.slice(0, 7) === todayMonthStr;
+	$: rememberFocusMonth(currentDate.slice(0, 7));
 
 	$: weekdays = weekdayLabels($locale, 'narrow');
 
