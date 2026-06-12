@@ -347,9 +347,14 @@ Deploys remain an operator action — CI never touches the VPS.
 
 ### Standard deploy (ghcr pull)
 
-One-time setup: `docker login ghcr.io -u danileau -p <PAT read:packages>`
-on the VPS, and in `/opt/ciphra/golive/.env` set
-`CIPHRA_REGISTRY=ghcr.io/danileau`.
+One-time setup: in `/opt/ciphra/golive/.env` set
+`CIPHRA_REGISTRY=ghcr.io/danileau`. The ghcr packages are PUBLIC
+(repo is open source, images contain no secrets — .env stays on the
+VPS), so pulls need no token; authenticity comes from the cosign
+verify step below, not from registry auth. If the packages are ever
+made private: fine-grained PAT, packages:read on this repo only,
+6-month expiry bundled into the semi-annual key-rotation ritual —
+do NOT build token-refresh machinery for a read-only pull credential.
 
 ```bash
 # 1. note the merge SHA from the GitHub PR (7 chars), then on the VPS:
