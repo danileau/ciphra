@@ -164,6 +164,12 @@ export interface Blueprint {
 	 *  trigger. Read by call sites of `<DatePicker>`. Default `dd.mm.yyyy`
 	 *  (Swiss/EU) when unset, matching the existing PI v17 behavior. */
 	dateFormat?: 'dd.mm.yyyy' | 'dd/mm/yyyy' | 'iso' | 'us';
+	/** Welcome-card variants the user has dismissed (2026-06-12).
+	 *  Account-level (rides the encrypted blueprint doc) so a dismissal
+	 *  survives browsers/devices — localStorage-only dismissal kept
+	 *  resurfacing the migrate card on every fresh profile. Optional
+	 *  for backwards-compat; read through WelcomeCard's combined check. */
+	dismissedWelcome?: Array<'web' | 'migrate'>;
 
 	/** CIPH-pi24-5c — Marker event for the dashboard gap-trend sparkline
 	 *  ("Tage ohne {Anfall|Attacke|Episode|Schub|...}"). Only declared for

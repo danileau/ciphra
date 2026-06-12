@@ -9,10 +9,12 @@
 	  ("X Einträge · Y Medikamente · Z Notizen"), a one-sentence encryption
 	  note, and the epilepc read-only date. Verify-via-journal link.
 
-	Dismiss is one-shot via localStorage. Per-variant key so a user who
-	migrates a separate device later still sees the migrated copy on that
-	device (rare but possible) and so dismissing one doesn't auto-dismiss
-	the other.
+	Dismiss is one-shot and ACCOUNT-DURABLE (2026-06-12): recorded on the
+	encrypted blueprint doc (`dismissedWelcome`), so it survives fresh
+	browsers / private windows / cleared site data — the localStorage-only
+	v1 kept resurfacing the migrate card on every new profile. localStorage
+	stays as a fallback lane (instant flip + caregivers without an own
+	blueprint). Per-variant so dismissing one doesn't auto-dismiss the other.
 
 	Trust-app posture: dense, factual, no illustrations, one CTA. Matches
 	the rest of the dashboard's card vocabulary (`class="card"` surface,
@@ -25,6 +27,8 @@
 	import { auth } from '$lib/stores/auth';
 	import { t } from '$lib/i18n';
 	import { documents } from '$lib/stores/documents';
+	import { blueprint, resolvedBlueprint } from '$lib/blueprint';
+	import { applyWelcomeDismissed } from '$lib/blueprint/preferences';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 
 	// Per-variant dismiss keys. Keeps the two acknowledgments independent.
@@ -34,6 +38,10 @@
 	let dismissed = true; // start hidden; flip on mount so SSR doesn't flash
 	$: variant = $auth.registrationSource === 'migrate' ? 'migrated' : 'new';
 	$: storageKey = variant === 'migrated' ? KEY_MIGRATE : KEY_WEB;
+	// Account-level dismissal from the encrypted blueprint — the durable
+	// lane. Null blueprint (caregiver) falls through to localStorage only.
+	$: bpVariantKey = (variant === 'migrated' ? 'migrate' : 'web') as 'web' | 'migrate';
+	$: bpDismissed = !!$resolvedBlueprint?.dismissedWelcome?.includes(bpVariantKey);
 
 	onMount(() => {
 		if (!browser) return;
@@ -61,6 +69,14 @@
 		} catch {
 			/* fail silent — the visible flip is the user signal that mattered */
 		}
+		// Durable lane: record on the encrypted blueprint so the dismissal
+		// follows the account, not the browser profile. Fire-and-forget —
+		// the local flip above already happened; a failed save just means
+		// the card may show once more on another device.
+		const bp = $resolvedBlueprint;
+		if (bp) {
+			blueprint.save(applyWelcomeDismissed(bp, bpVariantKey)).catch(() => {});
+		}
 	}
 
 	// Migrated-only counts. Three buckets that map directly to the epilepc
@@ -80,7 +96,7 @@
 	$: totalCount = entryCount + medCount + noteCount;
 </script>
 
-{#if !dismissed && $auth.username}
+{#if !dismissed && !bpDismissed && $auth.username}
 	<section
 		class="card p-5 welcome-card"
 		aria-label={variant === 'migrated' ? $t('welcome.migrated_aria') : $t('welcome.new_aria')}

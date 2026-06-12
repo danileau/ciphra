@@ -274,8 +274,13 @@ route kind.
   `'migrate'` shows an import-count breakdown (entries / medications
   / notes from $documents), a one-sentence encryption note, and the
   epilepc readonly date with a verify-via-/journal link. Dismiss is
-  one-shot per variant via localStorage (`ciphra_welcome_web_seen` /
-  `ciphra_welcome_migrate_seen`). Renders nothing once dismissed.
+  one-shot per variant and ACCOUNT-DURABLE (2026-06-12): recorded on
+  the encrypted blueprint (`dismissedWelcome`, helper
+  `applyWelcomeDismissed`), with localStorage
+  (`ciphra_welcome_web_seen` / `ciphra_welcome_migrate_seen`) as the
+  instant-flip + caregiver fallback lane — localStorage-only dismissal
+  kept resurfacing the card on fresh browser profiles. Renders nothing
+  once dismissed.
   Used by `Companion.svelte` (mounted above the greeting hero).
 - **GapTrendSpark.svelte** (CIPH-pi24-5c) — dashboard rail card
   showing the gap (days) between successive marker events as an
