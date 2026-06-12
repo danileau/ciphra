@@ -35,6 +35,13 @@
 		--surface-card: #ffffff;
 		--surface-muted: #f3f0ed;
 		--surface-inset: #ede8e3;
+		/* RGB triples for rgba() translucency (sticky navs, blurred
+		   headers). NOT color-mix: the prod CSS minifier strips
+		   color-mix() from stylesheets entirely (found 2026-06-12 —
+		   the authed header shipped white-on-dark). Inline styles
+		   bypass the minifier, but stylesheets must stick to rgba(). */
+		--surface-rgb: 250, 248, 246;
+		--surface-card-rgb: 255, 255, 255;
 
 		/* ── Text ── */
 		--text-primary: #2c2520;
@@ -226,6 +233,8 @@
 		--surface-card: #221c17;
 		--surface-muted: #2b241e;
 		--surface-inset: #342c25;
+		--surface-rgb: 24, 19, 16;
+		--surface-card-rgb: 34, 28, 23;
 
 		--text-primary: #f1eae3;
 		--text-secondary: #c7bbaf;
@@ -348,25 +357,35 @@
 		--rhythm-section-gap: 24px;
 	}
 
-	/* Warm overrides for Tailwind's cold slate palette (+ bg-white and
-	   the static-hex brand/surface utilities from tailwind.config.js,
-	   so the few raw call sites follow data-theme) */
-	.bg-white { background-color: var(--surface-card) !important; }
-	.bg-surface { background-color: var(--surface) !important; }
-	.bg-surface-muted, .hover\:bg-surface-muted:hover { background-color: var(--surface-muted) !important; }
-	.bg-brand { background-color: var(--brand) !important; }
-	.text-brand, .hover\:text-brand:hover { color: var(--brand) !important; }
-	.bg-white\/95 { background-color: color-mix(in srgb, var(--surface-card) 95%, transparent) !important; }
-	.border-slate-200 { border-color: var(--border) !important; }
-	.border-slate-100 { border-color: var(--border-subtle) !important; }
-	.text-slate-900 { color: var(--text-primary) !important; }
-	.text-slate-700 { color: var(--text-primary) !important; }
-	.text-slate-500 { color: var(--text-secondary) !important; }
-	.text-slate-400 { color: var(--text-muted) !important; }
-	.bg-slate-50 { background-color: var(--surface-muted) !important; }
-	.bg-slate-100 { background-color: var(--surface-muted) !important; }
-	.bg-slate-200 { background-color: var(--surface-inset) !important; }
 }
+
+/* Warm overrides for Tailwind's cold slate palette (+ bg-white and the
+   static-hex brand/surface utilities from tailwind.config.js, so raw call
+   sites follow data-theme).
+
+   DELIBERATELY OUTSIDE @layer: Tailwind tree-shakes custom rules inside
+   @layer blocks by matching selectors against scanned class candidates,
+   and it parses `bg-white/95` as utility-plus-opacity-modifier — the
+   literal `.bg-white\/95` selector never matches a candidate and was
+   silently dropped from every build (shipped white-on-dark authed header,
+   2026-06-12). Top-level rules bypass tree-shaking and emit after the
+   utilities layer. Keep the !important belt anyway. */
+.bg-white { background-color: var(--surface-card) !important; }
+.bg-surface { background-color: var(--surface) !important; }
+.bg-surface-muted, .hover\:bg-surface-muted:hover { background-color: var(--surface-muted) !important; }
+.bg-brand { background-color: var(--brand) !important; }
+.text-brand, .hover\:text-brand:hover { color: var(--brand) !important; }
+.bg-white\/95 { background-color: rgba(var(--surface-card-rgb), 0.95) !important; }
+.border-slate-200 { border-color: var(--border) !important; }
+.border-slate-100 { border-color: var(--border-subtle) !important; }
+.text-slate-900 { color: var(--text-primary) !important; }
+.text-slate-700 { color: var(--text-primary) !important; }
+.text-slate-500 { color: var(--text-secondary) !important; }
+.text-slate-400 { color: var(--text-muted) !important; }
+.bg-slate-50 { background-color: var(--surface-muted) !important; }
+.bg-slate-100 { background-color: var(--surface-muted) !important; }
+.bg-slate-200 { background-color: var(--surface-inset) !important; }
+
 
 /* ═══════════════════════════════════════════════════════════
    THE ASTERISK SYSTEM
