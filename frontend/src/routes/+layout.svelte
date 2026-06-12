@@ -596,7 +596,7 @@
 		 separate "Anmelden" text link was dropped — it was redundant
 		 with the primary CTA and visually competed with it. Returning
 		 users find the Login tab inside /login itself. -->
-	<nav class="sticky top-0 z-40 backdrop-blur-sm" style="border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 85%, transparent);">
+	<nav class="sticky top-0 z-40 backdrop-blur-sm" style="border-bottom: 1px solid var(--border); background: rgba(var(--surface-rgb), 0.85);">
 		<div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
 			<a href="/" class="flex items-center gap-1">
 				<Wordmark size={28} />

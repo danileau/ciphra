@@ -35,6 +35,13 @@
 		--surface-card: #ffffff;
 		--surface-muted: #f3f0ed;
 		--surface-inset: #ede8e3;
+		/* RGB triples for rgba() translucency (sticky navs, blurred
+		   headers). One mechanism everywhere — see the warm-overrides
+		   block (bottom of this file) for why those rules live outside
+		   @layer (Tailwind tree-shaking dropped the bg-white\/95
+		   override from every prod build, 2026-06-12). */
+		--surface-rgb: 250, 248, 246;
+		--surface-card-rgb: 255, 255, 255;
 
 		/* ── Text ── */
 		--text-primary: #2c2520;
@@ -226,6 +233,8 @@
 		--surface-card: #221c17;
 		--surface-muted: #2b241e;
 		--surface-inset: #342c25;
+		--surface-rgb: 24, 19, 16;
+		--surface-card-rgb: 34, 28, 23;
 
 		--text-primary: #f1eae3;
 		--text-secondary: #c7bbaf;
@@ -348,25 +357,42 @@
 		--rhythm-section-gap: 24px;
 	}
 
-	/* Warm overrides for Tailwind's cold slate palette (+ bg-white and
-	   the static-hex brand/surface utilities from tailwind.config.js,
-	   so the few raw call sites follow data-theme) */
-	.bg-white { background-color: var(--surface-card) !important; }
-	.bg-surface { background-color: var(--surface) !important; }
-	.bg-surface-muted, .hover\:bg-surface-muted:hover { background-color: var(--surface-muted) !important; }
-	.bg-brand { background-color: var(--brand) !important; }
-	.text-brand, .hover\:text-brand:hover { color: var(--brand) !important; }
-	.bg-white\/95 { background-color: color-mix(in srgb, var(--surface-card) 95%, transparent) !important; }
-	.border-slate-200 { border-color: var(--border) !important; }
-	.border-slate-100 { border-color: var(--border-subtle) !important; }
-	.text-slate-900 { color: var(--text-primary) !important; }
-	.text-slate-700 { color: var(--text-primary) !important; }
-	.text-slate-500 { color: var(--text-secondary) !important; }
-	.text-slate-400 { color: var(--text-muted) !important; }
-	.bg-slate-50 { background-color: var(--surface-muted) !important; }
-	.bg-slate-100 { background-color: var(--surface-muted) !important; }
-	.bg-slate-200 { background-color: var(--surface-inset) !important; }
 }
+
+/* Warm overrides for Tailwind's cold slate palette (+ bg-white and the
+   static-hex brand/surface utilities from tailwind.config.js, so raw call
+   sites follow data-theme).
+
+   DELIBERATELY AFTER the @layer block / utilities (root cause verified
+   2026-06-12 by an isolated repro): lightningcss — Vite's CSS
+   transformer — deduplicates rules with identical selector + property
+   set and IGNORES !important while doing it. When this block sat before
+   the utilities, the `.bg-white\/95` override (single background-color
+   declaration, exactly matching the utility's property set) was deleted
+   from every prod build and the authed header shipped white-on-dark.
+   Sibling overrides only survived because Tailwind's utilities carry an
+   extra --tw-*-opacity declaration (different property set, no dedup).
+   Placed after utilities, the dedup keeps THIS rule instead — which is
+   also cascade-correct. THE TRAP, for future readers: any single-
+   property !important override of a fixed-alpha Tailwind utility is at
+   risk; dev mode does not run lightningcss, so only a build-output
+   check catches it — see lib/built-css-guard.test.ts. */
+.bg-white { background-color: var(--surface-card) !important; }
+.bg-surface { background-color: var(--surface) !important; }
+.bg-surface-muted, .hover\:bg-surface-muted:hover { background-color: var(--surface-muted) !important; }
+.bg-brand { background-color: var(--brand) !important; }
+.text-brand, .hover\:text-brand:hover { color: var(--brand) !important; }
+.bg-white\/95 { background-color: rgba(var(--surface-card-rgb), 0.95) !important; }
+.border-slate-200 { border-color: var(--border) !important; }
+.border-slate-100 { border-color: var(--border-subtle) !important; }
+.text-slate-900 { color: var(--text-primary) !important; }
+.text-slate-700 { color: var(--text-primary) !important; }
+.text-slate-500 { color: var(--text-secondary) !important; }
+.text-slate-400 { color: var(--text-muted) !important; }
+.bg-slate-50 { background-color: var(--surface-muted) !important; }
+.bg-slate-100 { background-color: var(--surface-muted) !important; }
+.bg-slate-200 { background-color: var(--surface-inset) !important; }
+
 
 /* ═══════════════════════════════════════════════════════════
    THE ASTERISK SYSTEM
