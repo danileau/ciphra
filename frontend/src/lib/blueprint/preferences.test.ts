@@ -13,7 +13,9 @@ import { presets } from './presets';
 import {
 	applyDateFormatChoice,
 	applyPrimarySurfaceChoice,
+	applyWelcomeDismissed,
 } from './preferences';
+import type { Blueprint } from './types';
 
 const fixtureBlueprint = () => structuredClone(presets[0]);
 
@@ -63,5 +65,22 @@ describe('applyPrimarySurfaceChoice', () => {
 		bp.primaryBrowseSurface = 'trend';
 		applyPrimarySurfaceChoice(bp, 'journal');
 		expect(bp.primaryBrowseSurface).toBe('trend');
+	});
+});
+
+describe('applyWelcomeDismissed (2026-06-12 — durable welcome dismissal)', () => {
+	const bp = { conditionId: 'epilepsy', episodeTypes: [] } as unknown as Blueprint;
+
+	it('records a variant without mutating the input', () => {
+		const next = applyWelcomeDismissed(bp, 'migrate');
+		expect(next.dismissedWelcome).toEqual(['migrate']);
+		expect((bp as Blueprint).dismissedWelcome).toBeUndefined();
+	});
+
+	it('is idempotent and accumulates both variants sorted', () => {
+		let next = applyWelcomeDismissed(bp, 'migrate');
+		next = applyWelcomeDismissed(next, 'migrate');
+		next = applyWelcomeDismissed(next, 'web');
+		expect(next.dismissedWelcome).toEqual(['migrate', 'web']);
 	});
 });

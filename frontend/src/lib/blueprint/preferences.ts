@@ -26,6 +26,15 @@ export function applyDateFormatChoice(bp: Blueprint, value: DateFormatChoice): B
 	return next;
 }
 
+/** Record a welcome-card dismissal on the blueprint (idempotent). */
+export function applyWelcomeDismissed(bp: Blueprint, variant: 'web' | 'migrate'): Blueprint {
+	const next: Blueprint = JSON.parse(JSON.stringify(bp));
+	const seen = new Set(next.dismissedWelcome ?? []);
+	seen.add(variant);
+	next.dismissedWelcome = [...seen].sort();
+	return next;
+}
+
 export function applyPrimarySurfaceChoice(bp: Blueprint, value: PrimarySurfaceChoice): Blueprint {
 	const next: Blueprint = JSON.parse(JSON.stringify(bp));
 	if (value === 'auto') {
