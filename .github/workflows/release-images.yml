@@ -17,9 +17,9 @@
 # (the ciphraDocs vite plugin resolves /docs-src inside the container —
 # launch v0.1.0 missed this and shipped an empty /docs section).
 #
-# nginx is NOT built here: its config + Dockerfile live in gitignored
-# golive/ (infra-specific), it changes rarely, and it keeps the proven
-# VPS-build path as fallback. Revisit if its change rate grows.
+# nginx joined the pipeline 2026-06-12 (context moved in-repo to
+# nginx/): all three prod images are now CI-built and signed. TLS
+# material stays bind-mounted on the VPS — never in any image.
 #
 # VPS one-time setup to consume these images (operator):
 #   docker login ghcr.io -u danileau -p <PAT with read:packages>
@@ -102,3 +102,35 @@ jobs:
       - uses: sigstore/cosign-installer@v3
       - name: Sign image (keyless, by digest)
         run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/ciphra-api@${{ steps.build.outputs.digest }}
+
+  nginx-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/ciphra-nginx
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: nginx
+          file: nginx/Dockerfile.prod
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          provenance: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign image (keyless, by digest)
+        run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/ciphra-nginx@${{ steps.build.outputs.digest }}

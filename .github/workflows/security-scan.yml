@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [ciphra-frontend, ciphra-api]
+        image: [ciphra-frontend, ciphra-api, ciphra-nginx]
     steps:
       - uses: docker/login-action@v3
         with:

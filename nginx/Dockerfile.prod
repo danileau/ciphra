@@ -1,0 +1,18 @@
+# Prod nginx image — bakes the ciphra config into the stock alpine image.
+# Built + signed by CI as ghcr.io/danileau/ciphra-nginx:<sha> since
+# 2026-06-12 (moved in-repo from golive/nginx so ALL prod images are
+# pipeline-created; config changes now flow through PR + CI, which
+# structurally kills the rsync-drift incident class — see
+# feedback_golive_rsync_drift). TLS material is NOT in the image:
+# certs stay bind-mounted on the VPS; this config only references
+# their runtime paths.
+
+FROM nginx:1.27-alpine
+
+COPY ciphra.conf       /etc/nginx/conf.d/default.conf
+COPY proxy_params.conf /etc/nginx/proxy_params.conf
+
+# Strip the stock welcome config that ships in the base image.
+RUN rm -f /etc/nginx/conf.d/default.conf.template
+
+EXPOSE 443
