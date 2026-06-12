@@ -2074,6 +2074,7 @@ export default {
 	'settings.theme_light': 'Hell',
 	'settings.theme_dark': 'Dunkel',
 	'settings.theme_system': 'Automatisch (System)',
+	'settings.theme_system_short': 'Auto',
 	'settings.date_format_desc': 'Wie Datumsangaben in Eingabefeldern angezeigt werden.',
 
 	// CIPH-411b — Medikamentenverwaltung

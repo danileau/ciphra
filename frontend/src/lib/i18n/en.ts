@@ -2063,6 +2063,7 @@ export default {
 	'settings.theme_light': 'Light',
 	'settings.theme_dark': 'Dark',
 	'settings.theme_system': 'Automatic (system)',
+	'settings.theme_system_short': 'Auto',
 	'settings.date_format_desc': 'How dates are shown in input fields.',
 
 	// CIPH-411b — Medication management in settings

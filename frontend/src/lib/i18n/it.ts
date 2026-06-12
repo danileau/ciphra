@@ -2046,6 +2046,7 @@ export default {
 	'settings.theme_light': 'Chiaro',
 	'settings.theme_dark': 'Scuro',
 	'settings.theme_system': 'Automatico (sistema)',
+	'settings.theme_system_short': 'Auto',
 	'settings.date_format_desc': 'Come vengono visualizzate le date nei campi di input.',
 
 	// CIPH-411b — Gestione farmaci

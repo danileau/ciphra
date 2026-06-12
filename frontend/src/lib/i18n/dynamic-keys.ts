@@ -12,6 +12,12 @@
  * A prefix matches a key if the key starts with the prefix string.
  */
 export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
+	// PublicFooter theme switch (2026-06-12) — the three option labels
+	// are looked up via `$t(opt.labelKey)` from the THEME_OPTIONS array.
+	// theme_light / theme_dark / theme_system are also statically used
+	// in settings; theme_system_short exists only for the footer pill.
+	'settings.theme_',
+
 	// Blueprint preset + label keys — every preset in blueprint/presets.ts
 	// has its label/title referenced via `$t(info.titleKey)` etc. Preset
 	// `conditionLabel` values live under `landing.template_*`.

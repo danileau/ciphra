@@ -14,6 +14,18 @@
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
+	import { themeChoice, setThemeChoice, type ThemeChoice } from '$lib/stores/theme';
+
+	// Theme switch for logged-out visitors (2026-06-12). Settings is the
+	// authed control surface; anonymous visitors had no override and the
+	// only path was login → settings → logout. Footer is ciphra's slot
+	// for preferences (CIPH-pi24-1B: language lives here, Threema/Proton
+	// pattern). Same store as the settings select — the two stay in sync.
+	const THEME_OPTIONS: { value: ThemeChoice; labelKey: string }[] = [
+		{ value: 'light', labelKey: 'settings.theme_light' },
+		{ value: 'dark', labelKey: 'settings.theme_dark' },
+		{ value: 'system', labelKey: 'settings.theme_system_short' },
+	];
 </script>
 
 <footer class="py-12" style="background: var(--surface-card); border-top: 1px solid var(--border);">
@@ -85,6 +97,25 @@
 		<div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm" style="color: var(--text-muted);">
 			<span>&copy; 2026 ciphra</span>
 			<div class="flex items-center gap-4">
+				<div
+					role="radiogroup"
+					aria-label={$t('settings.theme_title')}
+					class="flex items-center rounded-full p-0.5"
+					style="border: 1px solid var(--border);"
+				>
+					{#each THEME_OPTIONS as opt}
+						<button
+							type="button"
+							role="radio"
+							aria-checked={$themeChoice === opt.value}
+							on:click={() => setThemeChoice(opt.value)}
+							class="px-3 text-xs font-medium rounded-full min-h-[36px] transition-colors"
+							style={$themeChoice === opt.value
+								? 'background: var(--surface-muted); color: var(--text-primary);'
+								: 'color: var(--text-muted);'}
+						>{$t(opt.labelKey)}</button>
+					{/each}
+				</div>
 				<LocaleSelect />
 			</div>
 		</div>
