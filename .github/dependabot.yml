@@ -1,11 +1,36 @@
-# To get started with Dependabot version updates, you'll need to specify which 
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
+# Dependabot config (2026-06-12) — replaces the unfilled template stub
+# (package-ecosystem: "") whose invalid config made every updater run
+# error since at least 2026-06-07.
+#
+# Discipline (feedback_dependabot_major_versions): NEVER blind-merge
+# major bumps — a major rides its own PR, gets read release notes, and
+# a local test pass. Minor/patch are grouped weekly to keep PR noise
+# down; they still go through CI like everything else.
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: npm
+    directory: /frontend
     schedule:
-      interval: "weekly"
+      interval: weekly
+      day: monday
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: pip
+    directory: /api
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
