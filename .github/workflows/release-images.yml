@@ -52,7 +52,7 @@ jobs:
           cp -r docs README.md SECURITY.md frontend/_docs-src/
       - name: Resolve tags
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/ciphra-frontend
           tags: |
@@ -84,7 +84,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Resolve tags
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/ciphra-api
           tags: |
@@ -115,7 +115,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Resolve tags
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/ciphra-nginx
           tags: |
