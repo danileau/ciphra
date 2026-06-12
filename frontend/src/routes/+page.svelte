@@ -118,6 +118,20 @@
 	{#if !$isAuthenticated}
 		<title>ciphra — encrypted by design</title>
 		<meta name="description" content={$t('landing.meta_description')} />
+		<!-- Open Graph + Twitter (SEO foundation 2026-06-12). og:image is a
+		     static 1200×630 branded card (static/og-image.png). -->
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="ciphra" />
+		<meta property="og:title" content="ciphra — encrypted by design" />
+		<meta property="og:description" content={$t('landing.meta_description')} />
+		<meta property="og:url" content="https://ciphra.ch/" />
+		<meta property="og:image" content="https://ciphra.ch/og-image.png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="ciphra — encrypted by design" />
+		<meta name="twitter:description" content={$t('landing.meta_description')} />
+		<meta name="twitter:image" content="https://ciphra.ch/og-image.png" />
 	{/if}
 </svelte:head>
 

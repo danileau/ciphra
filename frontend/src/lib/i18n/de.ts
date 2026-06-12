@@ -1116,6 +1116,7 @@ export default {
 	'landing.footer_legal': 'Rechtliches',
 	'landing.footer_login': 'Anmelden',
 	'terms.title': 'Nutzungsbedingungen',
+	'terms.meta': 'Nutzungsbedingungen von ciphra — dem verschlüsselten Tagebuch für chronische Erkrankungen. Kein Medizinprodukt, kein Ersatz für ärztliche Beratung.',
 	'terms.summary_heading': 'In Kürze',
 	'terms.summary_body': 'ciphra ist ein kostenloses, Ende-zu-Ende verschlüsseltes persönliches Notizbuch. Nutze es zur Dokumentation deiner eigenen Gesundheit. Nutze es nicht zur Dokumentation illegaler Aktivitäten oder um anderen zu schaden. Da wir deine Daten nicht lesen können, liegt die Verantwortung für den Inhalt vollständig bei dir.',
 	'terms.use_heading': 'Wofür ciphra gedacht ist',
@@ -1695,6 +1696,7 @@ export default {
 
 	// Datenschutz
 	'privacy.title': 'Datenschutzerklärung',
+	'privacy.meta': 'Wie ciphra deine Daten schützt: Ende-zu-Ende-Verschlüsselung im Browser, Zero-Knowledge, Schweizer Hosting. Was wir sehen — und was nicht.',
 	'privacy.last_updated': 'Zuletzt aktualisiert',
 	'privacy.summary_heading': 'In Kürze',
 	'privacy.summary_body': 'ciphra ist Ende-zu-Ende verschlüsselt. Dein Passwort, dein Recovery-Code und dein Master-Key verlassen dein Gerät nie. Der Server speichert nur verschlüsselte Daten und Hashes — wir können deine Gesundheitsdaten nicht lesen, und niemand mit Zugriff auf unsere Datenbank kann es.',
