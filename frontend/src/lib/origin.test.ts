@@ -32,9 +32,8 @@ describe('originStatus', () => {
 	});
 
 	it('exports the one host cross-origin fetches must use', () => {
-		// feedback_apex_www_redirect_breaks_cors: the apex 301 carries no
-		// CORS headers — fetch URLs use www, always.
-		expect(CIPHRA_CANONICAL_HOST).toBe('www.ciphra.ch');
+		// Prod serves on the apex (verified 2026-06-12); www is NXDOMAIN.
+		expect(CIPHRA_CANONICAL_HOST).toBe('ciphra.ch');
 	});
 });
 

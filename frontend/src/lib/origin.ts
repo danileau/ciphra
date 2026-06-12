@@ -17,17 +17,18 @@
  *    first migration test (2026-06-08). Anything ciphra receives as a
  *    "source" goes through this normalizer.
  *
- * The apex `ciphra.ch` counts as canonical alongside `www.ciphra.ch`:
- * the edge 301s apex→www, so location.origin is www in practice — but
- * the phishing check asks "is this ciphra?", not "is this the www
- * host?". Cross-origin *fetch URLs* must still use the www host
- * directly (see feedback_apex_www_redirect_breaks_cors).
+ * Production serves on the APEX `ciphra.ch` directly (verified 2026-06-12:
+ * apex → 200, no redirect; `www.ciphra.ch` is not configured / NXDOMAIN).
+ * `www` is kept in the accepted-host set defensively in case it is ever
+ * pointed at the origin, but the canonical host cross-origin callers must
+ * use is the apex. (Earlier notes had this reversed — corrected here and
+ * in feedback_apex_www_redirect_breaks_cors.)
  */
 
-/** The one host cross-origin callers must use. */
-export const CIPHRA_CANONICAL_HOST = 'www.ciphra.ch';
+/** The one host cross-origin callers must use. Apex — www is unconfigured. */
+export const CIPHRA_CANONICAL_HOST = 'ciphra.ch';
 
-const CIPHRA_HOSTS: ReadonlySet<string> = new Set(['www.ciphra.ch', 'ciphra.ch']);
+const CIPHRA_HOSTS: ReadonlySet<string> = new Set(['ciphra.ch', 'www.ciphra.ch']);
 const DEV_HOSTNAMES: ReadonlySet<string> = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 
 export type OriginStatus = 'canonical' | 'dev' | 'mismatch';
