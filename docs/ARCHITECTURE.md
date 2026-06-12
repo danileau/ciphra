@@ -15,6 +15,12 @@ browser ──► nginx :8080 ──┬──► frontend (SvelteKit) :5173
                                                               └──► redis :6379
 ```
 
+Ports above are the **local dev** layout. In **production** the frontend
+is built to `build/index.js` (adapter-node) and listens on `:3000`;
+nginx (`:443`, Cloudflare-fronted) proxies there. Images are CI-built +
+cosign-signed and deployed via pull-based CD — see
+[OPERATIONS.md](OPERATIONS.md) and [THREAT_MODEL.md](THREAT_MODEL.md).
+
 - **nginx** — the single entry point. Serves the app and proxies `/api/*` to
   the API. Forwards `X-Forwarded-For` / `X-Forwarded-Proto`, which the API
   relies on for rate-limiting and HSTS. In production, also rewrites

@@ -337,11 +337,21 @@ This is why we do paper-stash to 2 locations and quarterly drills.
 
 ## Deploying a new version
 
-Since 2026-06-12 CI builds and publishes images on every merge to
-`main`: `ghcr.io/danileau/ciphra-{frontend,api}` tagged with the 7-char
-commit SHA + `latest` (`.github/workflows/release-images.yml`). The
-docs staging for `/docs` is encoded in the workflow. nginx stays
-VPS-built (config lives in `golive/`, changes rarely).
+Since 2026-06-12 CI builds and publishes **all three** images on every
+merge to `main`: `ghcr.io/danileau/ciphra-{frontend,api,nginx}` tagged
+with the 7-char commit SHA + `latest`
+(`.github/workflows/release-images.yml`). Images are **cosign-signed**
+(keyless via GitHub OIDC, logged to Rekor); the docs staging for
+`/docs` is encoded in the workflow. Build sources are all in-repo
+(`frontend/Dockerfile.prod`, `nginx/`); the old `golive/` copies are
+fail-loud stubs. Config changes flow through PR + CI, not rsync.
+
+The three workflows:
+- `ci.yml` — PR + main gates: frontend (svelte-check → build → vitest,
+  build-first so `built-css-guard` sees the artifact), api (pytest in
+  the dev image), Trivy fs scan.
+- `release-images.yml` — on merge to main: buildx + sign + push.
+- `security-scan.yml` — daily Trivy of repo + published images.
 
 Deploys remain an operator action — CI never touches the VPS, and the
 VPS holds no GitHub credentials.
@@ -593,9 +603,13 @@ announcement / Verbände).
 - **Calendar-driven age key rotation reminder** — currently manual.
   Add an entry to a calendar (or cron itself, sending ntfy on
   Dec 15 and Jun 15).
-- **WAF rate-limits at Cloudflare** for `/api/login` — currently only
-  enforced at nginx + flask-limiter. Adding a CF-level rule cuts
-  bruteforce attempts at the edge, never reaching the origin.
+- ✅ **Scanner edge-blocking (done 2026-06-12)** — Cloudflare Bot Fight
+  Mode + a custom WAF rule block `*.php` / dotfile / CMS probe paths at
+  the edge (403). Origin-side companion: the nginx 444 sink in
+  `nginx/ciphra.conf`. Login bruteforce is still bounded by
+  flask-limiter + per-account lockout + the nginx `api_login` zone; a
+  dedicated CF rate-limit rule on `/api/login` remains a possible
+  future add but is not pressing at Wave-1 volume.
 
 ## Operator memory references
 

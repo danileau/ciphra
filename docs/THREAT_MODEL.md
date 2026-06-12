@@ -9,8 +9,9 @@ production deploy stack (`golive/`) and how each is bounded.
 If you only have time for one, read `SECURITY.md` first. This document
 assumes you've read it.
 
-**Last updated:** 2026-06-07
-**Deploy stack reviewed:** `golive/` revision 2026-05-26
+**Last updated:** 2026-06-12
+**Deploy stack reviewed:** `golive/` + CI/CD revision 2026-06-12
+(pull-based CD, cosign-signed images, scanner edge-blocking)
 **Status:** launch-readiness review, not third-party audit
 
 ---
@@ -200,7 +201,7 @@ products.
             ┌─────────────────────────────────────────────────┐
             │       POSTGRES (UNTRUSTED-AT-REST)              │
             │  Holds: ciphertexts, usernames, ts, audit logs  │
-            │  Backup → age-encrypted → Swiss Backup + R2     │
+            │  Backup → age-encrypted → Swiss Backup (R2 architected)     │
             └─────────────────────────────────────────────────┘
 ```
 
@@ -226,8 +227,9 @@ itself. The master key never leaves the BROWSER layer.
 | JS swap | Server-served bundle | A, B, C | ❌ Structural — see §5 |
 | Backup leak | R2 / Swiss Backup | D | ✅ age-encrypted + protocol-layer ciphertext underneath |
 | Postgres dump leak | VPS compromise | A, B | ✅ Patient health data is ciphertext at rest |
-| Container CVE | Docker base images | E (sophisticated) | ⚠️ Manual `trivy image` pre-deploy; no continuous scan |
-| Supply-chain (npm/pip) | Build-time | E (sophisticated) | ⚠️ Lockfiles + `trivy fs` pre-commit; SBOM not yet generated |
+| Container CVE | Docker base images | E (sophisticated) | ✅ Daily Trivy scan of repo + published ghcr images (`security-scan.yml`), fresh DB, fails on HIGH/CRITICAL |
+| Supply-chain (npm/pip) | Build-time | E (sophisticated) | ⚠️ Lockfiles + `trivy fs` in CI + grouped Dependabot (majors solo-PR'd); images cosign-signed (keyless, Rekor-logged) so the registry→VPS hop is verified; SBOM not yet generated |
+| Tampered deploy image | Registry → VPS | C, E | ✅ Pull-based CD digest-verifies the cosign signature (workflow identity on `main`) before restart; a tag alone cannot deploy unsigned bits |
 | Side-channel (timing) | API auth verification | A, E (sophisticated) | ✅ Constant-time hash compare in auth_verify |
 
 Legend: ✅ mitigated · ⚠️ partial / open follow-up · ❌ structural
@@ -281,10 +283,13 @@ tool.
 ### What gets backed up
 
 `pg_dump -Fc` of the full `ciphra` Postgres database → gzip → `age`
-encrypt with `BACKUP_PUBKEY` → rclone to two destinations:
-1. **Primary:** Infomaniak Swiss Backup (Swiss jurisdiction)
-2. **Secondary:** Cloudflare R2 free tier (jurisdictionally
-   different, structurally different vendor)
+encrypt with `BACKUP_PUBKEY` → rclone:
+1. **Primary (active):** Infomaniak Swiss Backup (Swiss jurisdiction)
+2. **Secondary (architected, NOT yet configured):** Cloudflare R2 free
+   tier — the code path exists (`RCLONE_SECONDARY` in `.env`) but is
+   intentionally unset for Wave 1 (10–15 migrants); single-vendor is
+   the accepted posture until broader rollout. Do not assume offsite
+   redundancy exists today. See OPERATIONS.md §Future work.
 
 ### Backup secret-handling
 
@@ -326,7 +331,7 @@ upload time) for tamper-evidence.
 | P1 | Cloudflare TLS-mode drift alerting (no auto-detect for Full→Flexible) | post-launch monitoring sprint |
 | P2 | Backup tamper-evidence (third hash store) | post-launch ops sprint |
 | P2 | HSTS preload submission (30 days of clean prod) | 2026-07 calendar |
-| P2 | Continuous container CVE scan (currently manual `trivy image`) | when GHCR is wired in CI |
+| ✅ done | Continuous container CVE scan — `.github/workflows/security-scan.yml` runs Trivy daily against the repo + the published ghcr images (fresh DB), fails on HIGH/CRITICAL, emails on red (2026-06-12) | — |
 | P2 | SBOM generation in CI | when build moves to CI from local |
 | P3 | Hardware-key 2FA for provider accounts (CF + Infomaniak) | when YubiKey arrives |
 | P3 | Reproducible-build pipeline for frontend bundle | structural, no timeline |

@@ -2,7 +2,7 @@
 
 This document is the honest description of what ciphra protects, what it doesn't, and how. It is the substitute for a third-party audit (which has not been done at the time of writing). Read it skeptically, read the code, and decide for yourself.
 
-**Last updated:** 2026-06-07
+**Last updated:** 2026-06-12
 
 ---
 
@@ -205,5 +205,17 @@ Please **do not** open a public GitHub issue for security vulnerabilities. Use e
    - `localStorage` → key `ciphra_auth` contains JWT + encrypted-vault metadata, no plaintext.
    - `sessionStorage` → key `ciphra_master_key` contains a base64 32-byte string while logged in; gone after browser close.
    - `IndexedDB` → `ciphra_cache` / `decrypted_documents` contains plaintext document JSON while logged in; **the entire database is gone after clicking Abmelden**.
+6. Verify the running images were built by our public pipeline, not
+   swapped underneath us. Every release image is cosign-signed (keyless,
+   via GitHub Actions OIDC, logged to the public Rekor transparency log):
+   ```
+   cosign verify ghcr.io/danileau/ciphra-frontend:<tag> \
+     --certificate-identity-regexp 'https://github.com/danileau/ciphra/.github/workflows/release-images.yml@refs/heads/main' \
+     --certificate-oidc-issuer https://token.actions.githubusercontent.com
+   ```
+   This proves the image came from our `release-images.yml` workflow on
+   `main` — not a tampered or foreign build. (It does **not** defend
+   against the JS-swap problem at the browser layer — see the operational
+   threat model — but it does verify the registry-to-server supply chain.)
 
 If anything in this document is contradicted by the code, please file an issue or email security. The code is the truth; this document tries to describe it accurately.

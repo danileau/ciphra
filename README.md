@@ -50,7 +50,8 @@ without it. Generate one with `python -c 'import secrets; print(secrets.token_he
 |-----|--------------|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design — services, data model, crypto, the blueprint/cohort system, the doctor PDF |
 | [docs/DEVELOPING.md](docs/DEVELOPING.md)     | Local setup, seeding demo data, running tests, project layout |
-| [docs/OPERATIONS.md](docs/OPERATIONS.md)     | Production ops — cron jobs, monitoring, backup + restore, disaster recovery, common tasks |
+| [docs/OPERATIONS.md](docs/OPERATIONS.md)     | Production ops — CI/CD pipeline, pull-based deploy, cron jobs, monitoring, backup + restore, disaster recovery |
+| [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) | Operational threat model — adversary classes, attack-surface inventory, supply-chain + backup integrity, JS-swap problem |
 | [docs/FEATURES.md](docs/FEATURES.md)         | What ciphra does today, feature by feature |
 | [SECURITY.md](SECURITY.md)                   | Security model — the honest description of what is and isn't protected |
 | [frontend/src/lib/components/README.md](frontend/src/lib/components/README.md) | The design-system reference (components, tokens) |
