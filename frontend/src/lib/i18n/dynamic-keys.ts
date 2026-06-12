@@ -12,6 +12,12 @@
  * A prefix matches a key if the key starts with the prefix string.
  */
 export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
+	// PublicFooter theme switch (2026-06-12) — the three option labels
+	// are looked up via `$t(opt.labelKey)` from the THEME_OPTIONS array.
+	// theme_light / theme_dark / theme_system are also statically used
+	// in settings; theme_system_short exists only for the footer pill.
+	'settings.theme_',
+
 	// Blueprint preset + label keys — every preset in blueprint/presets.ts
 	// has its label/title referenced via `$t(info.titleKey)` etc. Preset
 	// `conditionLabel` values live under `landing.template_*`.
@@ -117,6 +123,18 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
  * same commit.
  */
 export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
+	// 'Startseiten-Layout' select hidden (design review 2026-06-11) —
+	// it wrote blueprint.primaryBrowseSurface but getPrimaryBrowseSurface()
+	// has no runtime consumer, so the control was a placebo. NOT dead:
+	// these keys come back in the same PR that ships a real consumer
+	// (dashboard primary slot / browse links following the choice).
+	'settings.primary_surface_title',
+	'settings.primary_surface_desc',
+	'settings.primary_surface_auto',
+	'settings.primary_surface_journal',
+	'settings.primary_surface_calendar',
+	'settings.primary_surface_trend',
+
 	// Landing rewrite leftovers — `/` no longer renders these sections.
 	// Strongly suspected dead. Delete in a follow-up after one more
 	// visual QA round to confirm no conditional render path.

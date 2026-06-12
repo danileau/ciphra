@@ -987,6 +987,7 @@ export default {
 	'landing.hero_subtitle': 'Ein Tagebuch, {strong_start}das mit deinem Passwort verschlüsselt wird{strong_end} — direkt im Browser. Für jede Erkrankung.',
 	'landing.hero_detail': 'Gebaut von jemandem, der seit 7 Jahren Werkzeuge für chronisch Kranke entwickelt. Nicht als Produkt — als Antwort auf ein echtes Problem.',
 	'landing.hero_cta': 'Kostenlos starten',
+	'landing.hero_verify_link': 'Wie wir das beweisen',
 	'landing.hero_scroll_cue': 'Zu den Erkrankungen scrollen',
 	'landing.hero_badge_crypto': 'AES-256-GCM + Argon2id',
 	'landing.hero_badge_opensource': 'Open Source',
@@ -2068,6 +2069,12 @@ export default {
 
 	// CIPH-pi18-3 — DatePicker display format
 	'settings.date_format_title': 'Datumsformat',
+	'settings.theme_title': 'Erscheinungsbild',
+	'settings.theme_desc': 'Hell, dunkel oder automatisch nach Systemeinstellung.',
+	'settings.theme_light': 'Hell',
+	'settings.theme_dark': 'Dunkel',
+	'settings.theme_system': 'Automatisch (System)',
+	'settings.theme_system_short': 'Auto',
 	'settings.date_format_desc': 'Wie Datumsangaben in Eingabefeldern angezeigt werden.',
 
 	// CIPH-411b — Medikamentenverwaltung
@@ -2201,10 +2208,15 @@ export default {
 	'migrate.error_import': 'Import fehlgeschlagen. Du kannst es erneut versuchen — bereits importierte Einträge werden übersprungen.',
 	'migrate.back_to_source': 'Zurück zu {source}',
 	'migrate.confirm_title': 'Bestätige die Übertragung',
-	'migrate.confirm_body': 'Prüfe in der Adressleiste deines Browsers: Du bist auf ciphra.ch. Falls dort etwas anderes steht, brich ab.',
+	'migrate.confirm_body': 'Deine Einträge werden von {source} gelesen, auf diesem Gerät verschlüsselt und in deinem ciphra-Konto gespeichert. Dein Konto bei {source} bleibt unverändert.',
 	'migrate.confirm_target_label': 'Adresse (dieses ciphra-Konto)',
 	'migrate.confirm_source_label': 'Quelle',
-	'migrate.confirm_checkbox': 'Ich habe die URL bestätigt',
+	'migrate.confirm_checkbox': 'Ich habe die Adressleiste geprüft',
+	'migrate.confirm_match_ok': 'Adresse stimmt mit ciphra.ch überein',
+	'migrate.confirm_dev_note': 'Entwicklungsumgebung erkannt — Adressprüfung übersprungen.',
+	'migrate.confirm_selfcheck_note': 'Prüfe zusätzlich selbst die Adressleiste deines Browsers — diese Anzeige ersetzt deinen Blick nicht.',
+	'migrate.confirm_blocked_title': 'Übertragung blockiert',
+	'migrate.confirm_blocked_body': 'Diese Seite ist nicht ciphra.ch. Schliesse den Tab und starte die Migration neu aus deinem epilepc-Konto.',
 	'migrate.confirm_button': 'Daten übertragen',
 	'migrate.date_range': 'Zeitraum: {start} bis {end}',
 	'migrate.importing_status': 'Letzter gesicherter Eintrag: Nr. {done} von {total}. Bei Unterbruch wird ab hier weitergemacht.',

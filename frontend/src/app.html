@@ -6,7 +6,21 @@
 	<link rel="icon" type="image/png" sizes="48x48" href="%sveltekit.assets%/favicon-192.png" />
 	<link rel="apple-touch-icon" sizes="512x512" href="%sveltekit.assets%/icon-512.png" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-	<meta name="theme-color" content="#faf8f6" />
+	<meta name="theme-color" content="#faf8f6" media="(prefers-color-scheme: light)" />
+	<meta name="theme-color" content="#181310" media="(prefers-color-scheme: dark)" />
+	<!-- Dark mode (design review 2026-06-11) — apply the stored theme
+	     before first paint so OS-dark users don't get a white flash.
+	     Mirrors $lib/stores/theme.ts (keep in sync). CSP note: relies on
+	     script-src 'unsafe-inline' (launch tactical); when the Track-3
+	     CSP tightening lands, add this script's sha256 hash instead. -->
+	<script>
+		try {
+			var c = localStorage.getItem('ciphra_theme');
+			if (c === 'dark' || (c !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+				document.documentElement.dataset.theme = 'dark';
+			}
+		} catch (e) { /* storage blocked: stay light */ }
+	</script>
 	<meta name="mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 	<meta name="apple-mobile-web-app-title" content="ciphra" />

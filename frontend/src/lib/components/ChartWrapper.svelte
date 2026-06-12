@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy, afterUpdate } from 'svelte';
 	import { browser } from '$app/environment';
+	import { resolvedTheme } from '$lib/stores/theme';
 
 	export let type: string;
 	export let data: any;
@@ -52,7 +53,12 @@
 	}
 
 	function isDarkMode(): boolean {
-		return typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+		// data-theme is the live mechanism (design review 2026-06-11);
+		// the legacy `.dark` class check predates it and is kept as a
+		// harmless fallback.
+		if (typeof document === 'undefined') return false;
+		const el = document.documentElement;
+		return el.dataset.theme === 'dark' || el.classList.contains('dark');
 	}
 
 	function mergeDefaults(opts: any): any {
@@ -115,6 +121,10 @@
 			options: mergeDefaults(options)
 		});
 	});
+
+	// Theme switch re-merges options so tick/grid colors re-read the live
+	// CSS vars. Rides the existing debounced update path — cheap.
+	$: if (chart && $resolvedTheme) scheduleUpdate();
 
 	afterUpdate(() => {
 		if (!chart) return;

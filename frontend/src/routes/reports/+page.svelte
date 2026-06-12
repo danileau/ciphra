@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
+	import { rememberFocusMonth, recallFocusMonth } from '$lib/stores/focusMonth';
+	import { anyPhaseDayCount } from '$lib/monthAggregates';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
@@ -30,7 +32,12 @@
 	import { isExportable } from '$lib/utils/exportable';
 	import { weekdayLabels } from '$lib/i18n/dates';
 
-	let currentDate = new Date().toISOString().slice(0, 10);
+	// Design review 2026-06-11 — month context travels from /calendar
+	// via the focus-month handoff; fresh sessions start on today.
+	let currentDate = (() => {
+		const m = recallFocusMonth();
+		return m ? `${m}-01` : new Date().toISOString().slice(0, 10);
+	})();
 	let pdfScope: ReportScope = 'month';
 
 	// Doctor-export scope picker — a clicked card sets the scope and
@@ -317,6 +324,7 @@
 		return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
 	})();
 	$: isOnCurrentMonth = currentDate.slice(0, 7) === todayMonthStr;
+	$: rememberFocusMonth(currentDate.slice(0, 7));
 
 	$: weekdays = weekdayLabels($locale, 'narrow');
 
@@ -449,21 +457,9 @@
 	// surfaces when the blueprint has multiDay episodes — discrete cohort
 	// (epilepsy etc.) doesn't get a phase-days card.
 	$: hasMultiDayPhases = !!bp?.episodeTypes?.some((e) => e.multiDay);
-	$: phaseDaysThisMonth = (() => {
-		if (!hasMultiDayPhases || !bp) return 0;
-		const multiIds = bp.episodeTypes.filter((e) => e.multiDay).map((e) => e.id);
-		const days = new Set<string>();
-		for (const d of monthDocs) {
-			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
-			for (const id of multiIds) {
-				if (Number(eps[id] || 0) > 0) {
-					days.add(String(d.data.date || ''));
-					break;
-				}
-			}
-		}
-		return days.size;
-	})();
+	// Shared math (design review 2026-06-11) — lib/monthAggregates.ts,
+	// same day-sets as the calendar rail + doctor PDF.
+	$: phaseDaysThisMonth = hasMultiDayPhases && bp ? anyPhaseDayCount(bp, monthDocs) : 0;
 
 	// ─── Year view helpers ─────────────────────────────────
 	function getYearDocs(docs: CiphraDocument[], year: number) {
@@ -543,21 +539,7 @@
 			.map(([id, days]) => ({ id, label: labelMap[id] || id, days }));
 	})();
 
-	$: phaseDaysThisYear = (() => {
-		if (!hasMultiDayPhases || !bp) return 0;
-		const multiIds = bp.episodeTypes.filter((e) => e.multiDay).map((e) => e.id);
-		const days = new Set<string>();
-		for (const d of yearDocs) {
-			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
-			for (const id of multiIds) {
-				if (Number(eps[id] || 0) > 0) {
-					days.add(String(d.data.date || ''));
-					break;
-				}
-			}
-		}
-		return days.size;
-	})();
+	$: phaseDaysThisYear = hasMultiDayPhases && bp ? anyPhaseDayCount(bp, yearDocs) : 0;
 
 	// CIPH-909 (year-parity) — scoped reactive accessors. Lets the shared
 	// summary-card row, recent-events block, export menu, and glance
@@ -2065,7 +2047,7 @@
 		width: 28px;
 		height: 36px;
 		border-radius: 2px;
-		background: #fff;
+		background: var(--surface-card);
 		border: 1px solid var(--border);
 	}
 	.report-sheet--b2 { left: 8px; top: 0; }

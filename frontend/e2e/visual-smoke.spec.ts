@@ -68,7 +68,20 @@ async function registerAndConfigure(
 	await page.getByTestId('recovery-continue').click();
 
 	await page.goto('/setup');
-	await page.getByText(cohort.match).first().click();
+	// Role step added in ad45859 ("Track my own health" vs caregiver) —
+	// click through it before the preset grid appears. Locale-tolerant.
+	// Retry loop: the step is SSR'd, so a too-early click lands before
+	// hydration attaches the listener and silently does nothing.
+	const roleSelf = page.getByText(
+		/track my own health|eigene gesundheit dokumentieren|documenter ma propre santé|documentare la mia salute/i,
+	);
+	const presetTile = page.getByText(cohort.match).first();
+	for (let attempt = 0; attempt < 8; attempt++) {
+		if (await presetTile.count()) break;
+		if (await roleSelf.count()) await roleSelf.first().click();
+		await page.waitForTimeout(500);
+	}
+	await presetTile.click();
 
 	// Advance through remaining wizard steps without changing toggles.
 	for (let i = 0; i < 4; i++) {

@@ -133,6 +133,15 @@ If you want plaintext gone right now without losing your session, log out — th
 
 Same wipe contract as IndexedDB on logout — every cache whose key starts with `ciphra-` is deleted. SvelteKit currently ships render-only HTML shells via the SW, so today there is no patient data sitting in this cache; the wipe is defensive against future loader-injected content. Code: `frontend/src/lib/stores/auth.ts:142-149`.
 
+### 5. Small preference + bookkeeping keys (no health data)
+
+A handful of plain-string keys that hold UI state, not patient data, and are not part of the wipe contract above:
+
+- `localStorage.ciphra_theme` — `light` / `dark` / `system` display preference.
+- `localStorage.ciphra_welcome_web_seen`, `ciphra_welcome_migrate_seen`, `ciphra_migrate_tour_seen` — one-shot "already saw this intro" flags (`1`).
+- `localStorage.ciphra_migrate_done:<source>:<token>` — migration resume checkpoint: the list of already-imported document ids for a given import run, so an interrupted migration can continue without duplicates. Contains document *ids* and the one-time export token, no entry content; removed when the import completes.
+- `sessionStorage.ciphra_focus_month` — the `YYYY-MM` month you were last browsing, so calendar and reports stay on the same month within a tab.
+
 ### What this means in practice
 
 If your device is yours alone and locked when you walk away, the IndexedDB cache buys you faster page loads at no real-world cost. If a roommate, partner, hotel housekeeper, IT department, or border officer can sit at your unlocked browser, the cache is one of several things they can read. The structural defenses (sessionStorage-bound master key, logout wipe, "Clear local cache" button) bound the exposure; they do not eliminate it.

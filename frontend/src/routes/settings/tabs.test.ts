@@ -58,9 +58,14 @@ describe('CIPH-857 settings tabs', () => {
 		}
 	});
 
-	it('primary browse surface override UI is present in tracking tab', () => {
-		expect(source).toContain('primary-surface-select');
-		expect(source).toContain('setPrimarySurface');
+	it('placebo primary-surface UI stays hidden until a consumer exists', () => {
+		// Design review 2026-06-11: the select wrote
+		// blueprint.primaryBrowseSurface but getPrimaryBrowseSurface() has
+		// zero runtime consumers — the control changed nothing. It comes
+		// back in the same PR that ships a real consumer; until then its
+		// reappearance without one is a regression.
+		expect(source).not.toContain('primary-surface-select');
+		expect(source).not.toContain('setPrimarySurface');
 	});
 
 	it('danger zone stays in account tab (not removed)', () => {

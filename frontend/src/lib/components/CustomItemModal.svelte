@@ -244,6 +244,7 @@
 							type="button"
 							role="radio"
 							aria-checked={color === hex}
+							aria-label={hex}
 							on:click={() => (color = hex)}
 							class="w-9 h-9 rounded-full transition-transform"
 							style="background: {hex}; border: 3px solid {color === hex ? 'var(--text-primary)' : 'transparent'}; transform: {color === hex ? 'scale(1.1)' : 'scale(1)'}"

@@ -126,7 +126,7 @@ describe('SignupFlow — error states', () => {
 });
 
 describe('SignupFlow — recovery-gate screen', () => {
-    async function reachRecoveryScreen() {
+    async function reachRecoveryScreen(events?: Record<string, (e: CustomEvent) => void>) {
         vi.mocked(crypto.createVault).mockResolvedValue({
             recovery_code: 'RECO-1111-2222',
         } as unknown as Awaited<ReturnType<typeof crypto.createVault>>);
@@ -149,7 +149,7 @@ describe('SignupFlow — recovery-gate screen', () => {
         });
         vi.mocked(crypto.decryptMasterKey).mockResolvedValue(new Uint8Array([9]));
 
-        const rendered = render(SignupFlow);
+        const rendered = render(SignupFlow, events ? { events } : undefined);
         fillSignupForm(rendered.container, 'longenoughpw12', 'longenoughpw12');
         await fireEvent.click(submitButton(rendered.container));
         await waitFor(() => {
@@ -175,9 +175,10 @@ describe('SignupFlow — recovery-gate screen', () => {
     });
 
     it('emits signup-complete only after Continue is clicked with acknowledgment', async () => {
-        const { container, component } = await reachRecoveryScreen();
         const onComplete = vi.fn();
-        component.$on('signup-complete', onComplete);
+        const { container, component } = await reachRecoveryScreen({
+            'signup-complete': onComplete,
+        });
 
         const buttons = Array.from(container.querySelectorAll('button')) as HTMLButtonElement[];
         const proceed = buttons[buttons.length - 1];

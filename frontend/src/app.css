@@ -12,10 +12,19 @@
 
 @layer base {
 	:root {
+		/* Design review 2026-06-11 — pin native chrome (scrollbars, picker
+		   panels, iOS keyboard) to the active theme. The dark value lives
+		   in the [data-theme='dark'] block below. */
+		color-scheme: light;
+
 		/* ── Brand ── */
 		--brand: #b23c2c;
 		--brand-hover: #9a3326;
 		--brand-light: #f5e8e6;
+		/* Text on a --brand fill. White on light-brand (5.9:1); the dark
+		   theme lifts brand to #e07a64 where white drops to 2.9:1, so the
+		   dark block flips this to warm-black (6.3:1). */
+		--on-brand: #ffffff;
 		--ochre: #9f630b;
 		--ochre-light: #fdf3e5;
 		--olive: #7f821b;
@@ -30,7 +39,11 @@
 		/* ── Text ── */
 		--text-primary: #2c2520;
 		--text-secondary: #64594e;
-		--text-muted: #97918a;
+		/* Design review 2026-06-11 — was #97918a (3.12:1 on white, below AA
+		   for the 13–14px body copy it labels). #736d63 clears 4.5:1 on all
+		   three light surfaces (white 5.13, --surface 4.84, --surface-muted
+		   4.52) while staying clearly lighter than --text-secondary (6.82). */
+		--text-muted: #736d63;
 
 		/* ── Borders ── */
 		--border: #e8e3dd;
@@ -42,6 +55,8 @@
 		   in-flight). Danger kept as hard red for destructive + errors. */
 		--danger: #DC2626;
 		--danger-hover: #b91c1c;
+		/* Text on a --danger fill — same pattern as --on-brand. */
+		--on-danger: #ffffff;
 		--danger-rgb: 220, 38, 38;        /* CIPH-203b: enables rgba(var(--danger-rgb), …) for tinted bg */
 		--success-rgb: 127, 130, 27;      /* olive */
 		--success: var(--olive);
@@ -79,19 +94,11 @@
 		   currently parse this file but `cohortPalette.test.ts`
 		   enforces the matrix on the JS side. Update both together.
 
-		   The route-shift variables below are applied via the CSS
-		   Color Level 5 relative-color syntax at consumer sites:
-		     hsl(from var(--cohort-cycle-1)
-		         h
-		         calc(s + var(--route-s-shift))
-		         calc(l + var(--route-l-shift)))
-		   Modern evergreen browsers only (Chrome 119+ / Safari 16.4+
-		   / Firefox 128+) — pre-launch decision, no production users.
-
 		   `data-route` is set by `+layout.svelte` based on the first
-		   path segment via `pathToRoute()`. `data-cohort` is set the
-		   same way from `cohortOf($resolvedBlueprint)`. CIPH-891 will
-		   migrate consumers to read these variables. */
+		   path segment via `pathToRoute()` (it drives the CIPH-892
+		   rhythm tokens below). `data-cohort` is set the same way from
+		   `cohortOf($resolvedBlueprint)` and drives the `--accent-*`
+		   overrides. */
 		--cohort-cycle-1: #b6306a;
 		--cohort-cycle-2: #7a2845;
 		--cohort-cycle-3: #b06a4a;
@@ -166,9 +173,7 @@
 
 		   Defaults below = discrete cohort = today's brand identity.
 		   `[data-cohort="X"]` overrides further down replace these per
-		   cohort. Route shifts compose at consumer sites via the same
-		   `hsl(from var(--accent) h calc(s + var(--route-s-shift))
-		   calc(l + var(--route-l-shift)))` pattern. The `--brand`,
+		   cohort. The `--brand`,
 		   `--ochre`, `--olive` tokens above are NOT redirected — they
 		   stay invariant for brand-mark sites (wordmarks, landing CTAs).
 
@@ -190,10 +195,52 @@
 		--accent-neutral: var(--cohort-discrete-5);
 		--accent-neutral-rgb: var(--cohort-discrete-5-rgb);
 
-		/* Default = dashboard baseline = zero shift. Route-specific
-		   selectors below override these. */
-		--route-l-shift: 0%;
-		--route-s-shift: 0%;
+	}
+
+	/* ═══ Dark theme (design review 2026-06-11, Phase 7) ═══
+	   Warm-dark derivation of the palette — same hue family (rust /
+	   ochre / olive on warm brown), not generic slate. Every text token
+	   below clears WCAG AA 4.5:1 on --surface-card (measured: primary
+	   14.1, secondary 8.9, muted 4.9, brand 5.7, olive 7.8, ochre 6.7,
+	   danger 5.8). Applied via `data-theme` on <html> — see
+	   $lib/stores/theme.ts (preference) and app.html (pre-paint apply).
+
+	   Deliberately NOT themed: the doctor PDF (print stays light), the
+	   --data-* / --cohort-* chart+accent matrices (mid-tones that work
+	   on both surfaces; revisit per-cohort dark variants only with
+	   dogfood evidence). --accent-hover still darkens on hover in dark
+	   mode — visible, slightly muted; acceptable v1 residual. */
+	[data-theme='dark'] {
+		color-scheme: dark;
+
+		--brand: #e07a64;
+		--brand-hover: #e8907d;
+		--brand-light: #3a221d;
+		--on-brand: #181310;
+		--ochre: #d8963f;
+		--ochre-light: #362a17;
+		--olive: #b3b65c;
+		--olive-light: #2c2d1b;
+
+		--surface: #181310;
+		--surface-card: #221c17;
+		--surface-muted: #2b241e;
+		--surface-inset: #342c25;
+
+		--text-primary: #f1eae3;
+		--text-secondary: #c7bbaf;
+		--text-muted: #94897e;
+
+		--border: #3b332b;
+		--border-subtle: #2f2822;
+
+		--danger: #f0705f;
+		--danger-hover: #f28575;
+		--on-danger: #181310;
+		--danger-rgb: 240, 112, 95;
+		--ochre-rgb: 216, 150, 63;
+		--olive-rgb: 179, 182, 92;
+		--success-rgb: 179, 182, 92;
 	}
 
 	/* CIPH-891 — Per-cohort accent overrides. Scoped on `[data-cohort]`
@@ -257,18 +304,22 @@
 		--accent-neutral-rgb: var(--cohort-discrete-5-rgb);
 	}
 
-	/* CIPH-890 — Per-route HSL modulation. Composes with cohort tones
-	   via `hsl(from var(--cohort-X-N) h calc(s + var(--route-s-shift))
-	   calc(l + var(--route-l-shift)))` at consumer sites.
+	/* CIPH-890/891 route-shift removed (design review 2026-06-11):
+	   the per-route `--route-l/s-shift` variables shipped for ~6 weeks
+	   with zero consumers — the `hsl(from …)` pattern only ever existed
+	   in comments, and the one attempt to wire it produced the PI v13
+	   hover-white bug class. The PI v13 critique called the visual
+	   effect "fake differentiation" even when applied. Decision: route
+	   identity comes from content + the CIPH-892 rhythm tokens below;
+	   cohort identity keeps the `--accent-*` system above.
+	   Guard: `lib/route-shift-removed.test.ts`.
 
-	   CIPH-892 extends each route block below with rhythm tokens
+	   CIPH-892 — each route block below carries rhythm tokens
 	   driving silhouette differences (card padding, gap, radius,
 	   border style). The four browse surfaces feel distinct at
 	   a glance: calendar tight grid / journal stream / reports
 	   clinical / dashboard hub. */
 	[data-route="calendar"] {
-		--route-l-shift: -8%;
-		--route-s-shift: 0%;
 		/* tight grid rhythm — small radii, small gaps, square cells */
 		--rhythm-card-padding: 8px;
 		--rhythm-card-gap: 4px;
@@ -276,8 +327,6 @@
 		--rhythm-section-gap: 16px;
 	}
 	[data-route="journal"] {
-		--route-l-shift: 4%;
-		--route-s-shift: 0%;
 		/* stream rhythm — generous card chrome, vertical breathing */
 		--rhythm-card-padding: 16px;
 		--rhythm-card-gap: 8px;
@@ -285,12 +334,6 @@
 		--rhythm-section-gap: 12px;
 	}
 	[data-route="reports"] {
-		/* Critique (PI v13): -4% saturation was too subtle. Reports is
-		   the doctor-handover surface; it should read demonstrably more
-		   clinical than the rest of the app. -10% S + -2% L gets us
-		   there without losing brand cohesion. */
-		--route-l-shift: -2%;
-		--route-s-shift: -10%;
 		/* clinical rhythm — compact rows, hairline separators */
 		--rhythm-card-padding: 6px;
 		--rhythm-card-gap: 0px;
@@ -298,8 +341,6 @@
 		--rhythm-section-gap: 20px;
 	}
 	[data-route="dashboard"] {
-		--route-l-shift: 0%;
-		--route-s-shift: 0%;
 		/* hub rhythm — generous nested cards, soft shadows */
 		--rhythm-card-padding: 16px;
 		--rhythm-card-gap: 24px;
@@ -307,7 +348,15 @@
 		--rhythm-section-gap: 24px;
 	}
 
-	/* Warm overrides for Tailwind's cold slate palette */
+	/* Warm overrides for Tailwind's cold slate palette (+ bg-white and
+	   the static-hex brand/surface utilities from tailwind.config.js,
+	   so the few raw call sites follow data-theme) */
+	.bg-white { background-color: var(--surface-card) !important; }
+	.bg-surface { background-color: var(--surface) !important; }
+	.bg-surface-muted, .hover\:bg-surface-muted:hover { background-color: var(--surface-muted) !important; }
+	.bg-brand { background-color: var(--brand) !important; }
+	.text-brand, .hover\:text-brand:hover { color: var(--brand) !important; }
+	.bg-white\/95 { background-color: color-mix(in srgb, var(--surface-card) 95%, transparent) !important; }
 	.border-slate-200 { border-color: var(--border) !important; }
 	.border-slate-100 { border-color: var(--border-subtle) !important; }
 	.text-slate-900 { color: var(--text-primary) !important; }

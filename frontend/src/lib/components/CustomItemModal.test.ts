@@ -43,8 +43,8 @@ describe('CustomItemModal — symptom kind', () => {
 		const onSave = vi.fn();
 		const { getByTestId, component } = render(CustomItemModal, {
 			props: { open: true, kind: 'symptom', editing: null, groups: [] },
+			events: { save: (e: CustomEvent) => onSave(e.detail) },
 		});
-		component.$on('save', (e: CustomEvent) => onSave(e.detail));
 
 		const labelInput = getByTestId('custom-item-label') as HTMLInputElement;
 		await fireEvent.input(labelInput, { target: { value: 'Tooth flare-up' } });
@@ -66,8 +66,8 @@ describe('CustomItemModal — symptom kind', () => {
 				editing: { id: 'custom_existing_aaaaa', label: 'Old name' },
 				groups: [],
 			},
+			events: { save: (e: CustomEvent) => onSave(e.detail) },
 		});
-		component.$on('save', (e: CustomEvent) => onSave(e.detail));
 
 		const labelInput = getByTestId('custom-item-label') as HTMLInputElement;
 		await fireEvent.input(labelInput, { target: { value: 'New name' } });
@@ -106,8 +106,8 @@ describe('CustomItemModal — vital kind', () => {
 		const onSave = vi.fn();
 		const { getByTestId, component } = render(CustomItemModal, {
 			props: { open: true, kind: 'vital', editing: null, groups: [] },
+			events: { save: (e: CustomEvent) => onSave(e.detail) },
 		});
-		component.$on('save', (e: CustomEvent) => onSave(e.detail));
 
 		await fireEvent.input(getByTestId('custom-item-label'), {
 			target: { value: 'Pain' },
@@ -123,8 +123,8 @@ describe('CustomItemModal — vital kind', () => {
 		const onSave = vi.fn();
 		const { getByTestId, component } = render(CustomItemModal, {
 			props: { open: true, kind: 'vital', editing: null, groups: [] },
+			events: { save: (e: CustomEvent) => onSave(e.detail) },
 		});
-		component.$on('save', (e: CustomEvent) => onSave(e.detail));
 
 		await fireEvent.input(getByTestId('custom-item-label'), {
 			target: { value: 'Pain level' },
@@ -163,8 +163,8 @@ describe('CustomItemModal — episode kind', () => {
 		const onSave = vi.fn();
 		const { getByTestId, component } = render(CustomItemModal, {
 			props: { open: true, kind: 'episode', editing: null, groups: [] },
+			events: { save: (e: CustomEvent) => onSave(e.detail) },
 		});
-		component.$on('save', (e: CustomEvent) => onSave(e.detail));
 
 		await fireEvent.input(getByTestId('custom-item-label'), {
 			target: { value: 'Flare' },
@@ -185,8 +185,8 @@ describe('CustomItemModal — close + label-required', () => {
 		const onClose = vi.fn();
 		const { getByTestId, component } = render(CustomItemModal, {
 			props: { open: true, kind: 'symptom', editing: null, groups: [] },
+			events: { close: () => onClose() },
 		});
-		component.$on('close', () => onClose());
 		await fireEvent.click(getByTestId('custom-item-cancel'));
 		expect(onClose).toHaveBeenCalledTimes(1);
 	});
@@ -195,8 +195,8 @@ describe('CustomItemModal — close + label-required', () => {
 		const onSave = vi.fn();
 		const { getByTestId, component } = render(CustomItemModal, {
 			props: { open: true, kind: 'symptom', editing: null, groups: [] },
+			events: { save: (e: CustomEvent) => onSave(e.detail) },
 		});
-		component.$on('save', (e: CustomEvent) => onSave(e.detail));
 		await fireEvent.click(getByTestId('custom-item-save'));
 		expect(onSave).not.toHaveBeenCalled();
 		expect(getByTestId('custom-item-error')).toBeTruthy();

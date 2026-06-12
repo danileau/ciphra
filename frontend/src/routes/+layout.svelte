@@ -13,6 +13,7 @@
 	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import { pathToRoute } from '$lib/cohortPalette';
+	import { resolvedTheme } from '$lib/stores/theme';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import AuthedFooter from '$lib/components/AuthedFooter.svelte';
@@ -513,10 +514,24 @@
 	// chains that each new route had to be patched into.
 	$: currentShell = shellFor(currentPath);
 	// CIPH-890 — `data-route` and `data-cohort` on <main> drive the
-	// cohort×route palette modulation in `app.css`. Pure attributes;
-	// CIPH-891 will migrate consumers to use the resulting CSS vars.
+	// CIPH-892 rhythm tokens and the cohort accent overrides in app.css.
 	$: currentRoute = pathToRoute(currentPath);
 	$: currentCohort = cohortOf($resolvedBlueprint);
+
+	// Dark mode (design review 2026-06-11) — mirror the resolved theme
+	// onto <html> so the app.css [data-theme='dark'] block applies.
+	// app.html sets the same attribute pre-hydration to avoid a white
+	// flash; this keeps it live for in-session changes. The theme-color
+	// metas are media-scoped for pre-hydration; once JS runs the
+	// resolved theme is the truth (manual overrides included), so both
+	// get the resolved surface tone.
+	$: if (browser) {
+		document.documentElement.dataset.theme = $resolvedTheme;
+		const chrome = $resolvedTheme === 'dark' ? '#181310' : '#faf8f6';
+		document
+			.querySelectorAll('meta[name="theme-color"]')
+			.forEach((m) => m.setAttribute('content', chrome));
+	}
 
 	// Redirect to login when auth is ready but user is not authenticated
 	// and the current route requires auth. Public routes (landing,
@@ -581,7 +596,7 @@
 		 separate "Anmelden" text link was dropped — it was redundant
 		 with the primary CTA and visually competed with it. Returning
 		 users find the Login tab inside /login itself. -->
-	<nav class="sticky top-0 z-40 backdrop-blur-sm" style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.85);">
+	<nav class="sticky top-0 z-40 backdrop-blur-sm" style="border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 85%, transparent);">
 		<div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
 			<a href="/" class="flex items-center gap-1">
 				<Wordmark size={28} />

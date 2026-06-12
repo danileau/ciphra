@@ -43,7 +43,7 @@
 	on:click={onConfirm}
 	{disabled}
 	class="{padding} rounded-lg text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-medium"
-	style="background: var(--danger)"
+	style="background: var(--danger); color: var(--on-danger, #fff)"
 >{_confirmLabel}</button>
 <button
 	type="button"

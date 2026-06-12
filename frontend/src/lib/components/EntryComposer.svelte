@@ -1150,7 +1150,7 @@
 		border-radius: 999px;
 		font-size: 13px;
 		font-weight: 500;
-		color: var(--text-muted, #97918a);
+		color: var(--text-muted, #736d63);
 		background: var(--surface-muted, #f3f0ed);
 		border: 1px solid transparent;
 		text-decoration: none;

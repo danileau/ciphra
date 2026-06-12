@@ -4,6 +4,7 @@
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { onMount, tick } from 'svelte';
+	import { rememberFocusMonth, recallFocusMonth } from '$lib/stores/focusMonth';
 	import { goto } from '$app/navigation';
 	import { fade, fly } from 'svelte/transition';
 	import Asterisk from '$lib/components/Asterisk.svelte';
@@ -23,8 +24,12 @@
 	import { weekdayLabels } from '$lib/i18n/dates';
 
 	let selectedDate: string | null = null;
-	let currentYear = new Date().getFullYear();
-	let currentMonth = new Date().getMonth();
+	// Design review 2026-06-11 — recall the month the user was browsing
+	// on /reports (or here, earlier this tab) so the comparison path
+	// calendar↔reports keeps its month context. Falls back to today.
+	const recalledMonth = recallFocusMonth();
+	let currentYear = recalledMonth ? Number(recalledMonth.slice(0, 4)) : new Date().getFullYear();
+	let currentMonth = recalledMonth ? Number(recalledMonth.slice(5, 7)) - 1 : new Date().getMonth();
 
 	$: bp = $resolvedBlueprint;
 
@@ -102,6 +107,7 @@
 	$: daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 	$: firstDayOfWeek = (new Date(currentYear, currentMonth, 1).getDay() + 6) % 7;
 	$: monthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+	$: rememberFocusMonth(monthPrefix);
 	$: monthDocs = $documents.filter(d => String(d.data.date || '').startsWith(monthPrefix));
 
 	function prevMonth() {
@@ -536,6 +542,7 @@
 					on:click={prevMonth}
 					class="p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
 					style="color: var(--text-secondary)"
+					aria-label={$t('common.previous_month')}
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
@@ -553,6 +560,7 @@
 					on:click={nextMonth}
 					class="p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
 					style="color: var(--text-secondary)"
+					aria-label={$t('common.next_month')}
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>

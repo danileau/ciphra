@@ -965,6 +965,7 @@ export default {
 	'landing.hero_subtitle': 'Un journal {strong_start}chiffré avec votre mot de passe{strong_end} — directement dans votre navigateur. Pour toute affection.',
 	'landing.hero_detail': 'Conçu par quelqu\'un qui développe des outils pour les personnes atteintes de maladies chroniques depuis 7 ans. Pas comme un produit — comme une réponse à un vrai problème.',
 	'landing.hero_cta': 'Commencer gratuitement',
+	'landing.hero_verify_link': 'Comment nous le prouvons',
 	'landing.hero_scroll_cue': 'Voir les affections',
 	'landing.hero_badge_crypto': 'AES-256-GCM + Argon2id',
 	'landing.hero_badge_opensource': 'Open Source',
@@ -2040,6 +2041,12 @@ export default {
 
 	// CIPH-pi18-3 — Format d'affichage du DatePicker
 	'settings.date_format_title': 'Format de date',
+	'settings.theme_title': 'Apparence',
+	'settings.theme_desc': 'Clair, sombre ou selon le réglage de votre système.',
+	'settings.theme_light': 'Clair',
+	'settings.theme_dark': 'Sombre',
+	'settings.theme_system': 'Automatique (système)',
+	'settings.theme_system_short': 'Auto',
 	'settings.date_format_desc': 'Comment les dates s\'affichent dans les champs de saisie.',
 
 	// CIPH-411b — Gestion des médicaments
@@ -2173,10 +2180,15 @@ export default {
 	'migrate.error_import': 'Échec de l\'import. Vous pouvez réessayer — les éléments déjà importés seront ignorés.',
 	'migrate.back_to_source': 'Retour à {source}',
 	'migrate.confirm_title': 'Confirmez le transfert',
-	'migrate.confirm_body': 'Vérifiez dans la barre d\'adresse de votre navigateur : vous êtes bien sur ciphra.ch. Si ce n\'est pas le cas, annulez.',
+	'migrate.confirm_body': 'Vos entrées sont lues depuis {source}, chiffrées sur cet appareil et enregistrées dans votre compte ciphra. Votre compte sur {source} reste inchangé.',
 	'migrate.confirm_target_label': 'Adresse (ce compte ciphra)',
 	'migrate.confirm_source_label': 'Source',
-	'migrate.confirm_checkbox': 'J\'ai vérifié l\'URL',
+	'migrate.confirm_checkbox': 'J\'ai vérifié la barre d\'adresse',
+	'migrate.confirm_match_ok': 'L\'adresse correspond à ciphra.ch',
+	'migrate.confirm_dev_note': 'Environnement de développement détecté — vérification d\'adresse ignorée.',
+	'migrate.confirm_selfcheck_note': 'Vérifiez aussi vous-même la barre d\'adresse de votre navigateur — cet indicateur ne remplace pas votre propre regard.',
+	'migrate.confirm_blocked_title': 'Transfert bloqué',
+	'migrate.confirm_blocked_body': 'Cette page n\'est pas ciphra.ch. Fermez l\'onglet et relancez la migration depuis votre compte epilepc.',
 	'migrate.confirm_button': 'Transférer les données',
 	'migrate.date_range': 'Période : du {start} au {end}',
 	'migrate.importing_status': 'Dernière entrée enregistrée : n° {done} sur {total}. En cas d\'interruption, on reprendra à partir d\'ici.',

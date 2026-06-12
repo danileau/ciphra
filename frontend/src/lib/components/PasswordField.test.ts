@@ -63,8 +63,10 @@ describe('CIPH-887 PasswordField runtime contract', () => {
 
 	it('forwards on:blur to the parent', async () => {
 		let blurred = false;
-		const { container, component } = render(PasswordField, { props: { id: 'p1', value: '' } });
-		(component as any).$on('blur', () => { blurred = true; });
+		const { container, component } = render(PasswordField, {
+			props: { id: 'p1', value: '' },
+			events: { blur: () => { blurred = true; } },
+		});
 		const input = container.querySelector('input') as HTMLInputElement;
 		await fireEvent.blur(input);
 		expect(blurred).toBe(true);

@@ -20,6 +20,7 @@
 import type { Blueprint, EpisodeType } from '$lib/blueprint';
 import type { CiphraDocument } from '$lib/stores/documents';
 import type { Cohort } from '$lib/blueprint/cohort';
+import { multiDayEpisodeDays, episodeCountTotals } from '$lib/monthAggregates';
 
 /** Phase-cohort insight: top-N multiDay episode types by day-coverage. */
 export interface PhaseDayCoverageInsight {
@@ -80,18 +81,10 @@ function phaseDayCoverage(
 	const multiDayEps: EpisodeType[] = (blueprint.episodeTypes ?? []).filter((ep) => ep.multiDay);
 	if (multiDayEps.length === 0 || daysInMonth <= 0) return null;
 
-	const dayCounts = new Map<string, Set<string>>();
-	for (const ep of multiDayEps) dayCounts.set(ep.id, new Set());
-
-	for (const d of focusMonthDocs) {
-		if (d?.data?.type !== 'entry') continue;
-		const ds = String(d.data.date || '');
-		if (!ds) continue;
-		const eps = (d.data.episodes || {}) as Record<string, unknown>;
-		for (const ep of multiDayEps) {
-			if (Number(eps[ep.id] || 0) > 0) dayCounts.get(ep.id)!.add(ds);
-		}
-	}
+	// Shared math (design review 2026-06-11) — same day-sets the doctor
+	// PDF and /reports use, including the legacy `seizures`-shape
+	// fallback this site previously missed.
+	const dayCounts = multiDayEpisodeDays(blueprint, focusMonthDocs);
 
 	const segments = multiDayEps
 		.map((ep) => ({
@@ -115,17 +108,7 @@ function topEpisode(
 	const pointEps: EpisodeType[] = (blueprint.episodeTypes ?? []).filter((ep) => !ep.multiDay);
 	if (pointEps.length === 0) return null;
 
-	const counts = new Map<string, number>();
-	for (const ep of pointEps) counts.set(ep.id, 0);
-
-	for (const d of focusMonthDocs) {
-		if (d?.data?.type !== 'entry') continue;
-		const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, unknown>;
-		for (const ep of pointEps) {
-			const n = Number(eps[ep.id] || 0);
-			if (n > 0) counts.set(ep.id, (counts.get(ep.id) ?? 0) + n);
-		}
-	}
+	const counts = episodeCountTotals(blueprint, focusMonthDocs, 'point');
 
 	let topId: string | null = null;
 	let topCount = 0;

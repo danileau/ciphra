@@ -965,6 +965,7 @@ export default {
 	'landing.hero_subtitle': 'A diary {strong_start}encrypted with your password{strong_end} — right in your browser. For every condition.',
 	'landing.hero_detail': 'Built by someone who has been developing tools for chronically ill people for 7 years. Not as a product — as an answer to a real problem.',
 	'landing.hero_cta': 'Start for free',
+	'landing.hero_verify_link': 'How we prove it',
 	'landing.hero_scroll_cue': 'Scroll to conditions',
 	'landing.hero_badge_crypto': 'AES-256-GCM + Argon2id',
 	'landing.hero_badge_opensource': 'Open Source',
@@ -2057,6 +2058,12 @@ export default {
 
 	// CIPH-pi18-3 — DatePicker display format
 	'settings.date_format_title': 'Date format',
+	'settings.theme_title': 'Appearance',
+	'settings.theme_desc': 'Light, dark, or follow your system setting.',
+	'settings.theme_light': 'Light',
+	'settings.theme_dark': 'Dark',
+	'settings.theme_system': 'Automatic (system)',
+	'settings.theme_system_short': 'Auto',
 	'settings.date_format_desc': 'How dates are shown in input fields.',
 
 	// CIPH-411b — Medication management in settings
@@ -2194,10 +2201,15 @@ export default {
 	'migrate.error_import': 'Import failed. You can retry — items already imported will be skipped.',
 	'migrate.back_to_source': 'Back to {source}',
 	'migrate.confirm_title': 'Confirm the transfer',
-	'migrate.confirm_body': 'Check your browser address bar: you are on ciphra.ch. If you see anything else, cancel.',
+	'migrate.confirm_body': 'Your entries are read from {source}, encrypted on this device, and stored in your ciphra account. Your account at {source} stays unchanged.',
 	'migrate.confirm_target_label': 'Address (this ciphra account)',
 	'migrate.confirm_source_label': 'Source',
-	'migrate.confirm_checkbox': 'I have verified the URL',
+	'migrate.confirm_checkbox': 'I have checked the address bar',
+	'migrate.confirm_match_ok': 'Address matches ciphra.ch',
+	'migrate.confirm_dev_note': 'Development environment detected — address check skipped.',
+	'migrate.confirm_selfcheck_note': 'Also check your browser\'s address bar yourself — this indicator does not replace your own eyes.',
+	'migrate.confirm_blocked_title': 'Transfer blocked',
+	'migrate.confirm_blocked_body': 'This page is not ciphra.ch. Close the tab and restart the migration from your epilepc account.',
 	'migrate.confirm_button': 'Transfer data',
 	'migrate.date_range': 'Range: {start} to {end}',
 	'migrate.importing_status': 'Last saved entry: no. {done} of {total}. If interrupted, we pick up from here.',
