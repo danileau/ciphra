@@ -71,3 +71,8 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
+          # Vuln DB freshness: the cache key rotates daily, so the DB is
+          # never older than ~24h here — and security-scan.yml re-checks
+          # repo + published images on a daily schedule with an uncached
+          # latest DB, which is the actual freshness guarantee.
+          cache: 'true'

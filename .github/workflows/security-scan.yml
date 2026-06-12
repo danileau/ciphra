@@ -1,0 +1,55 @@
+# Scheduled vulnerability scan (2026-06-12) — closes the gap the
+# PR-triggered gate cannot: a CVE published AFTER the last commit hits
+# existing lockfiles and the base layers (alpine/debian) of images
+# already running in prod. Runs daily against a fresh scanner + fresh
+# DB (no cache here on purpose), scans the repo AND the published
+# images, and fails loudly — GitHub emails the repo owner on a failed
+# scheduled run. A red run means: assess, then either bump deps /
+# rebuild+redeploy images, or document the acceptance.
+name: Security scan
+
+on:
+  schedule:
+    - cron: '20 4 * * *'   # daily 04:20 UTC — before the operator's day
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  repo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy fs scan, fresh DB
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          version: latest
+
+  images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ciphra-frontend, ciphra-api]
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Trivy image scan (base layers + bundled deps), fresh DB
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:latest
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          version: latest
