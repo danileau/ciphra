@@ -355,6 +355,16 @@ on the VPS, and in `/opt/ciphra/golive/.env` set
 # 1. note the merge SHA from the GitHub PR (7 chars), then on the VPS:
 docker pull ghcr.io/danileau/ciphra-frontend:<sha>
 docker pull ghcr.io/danileau/ciphra-api:<sha>
+
+# 1b. verify the signatures (cosign binary: one-time install on the VPS).
+#     This pins "built by the release workflow of danileau/ciphra on main"
+#     — a tampered or foreign image fails here. Do NOT skip-on-red.
+cosign verify ghcr.io/danileau/ciphra-frontend:<sha> \
+  --certificate-identity-regexp 'https://github.com/danileau/ciphra/.github/workflows/release-images.yml@refs/heads/main' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com -o text
+cosign verify ghcr.io/danileau/ciphra-api:<sha> \
+  --certificate-identity-regexp 'https://github.com/danileau/ciphra/.github/workflows/release-images.yml@refs/heads/main' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com -o text
 # 2. nginx keeps its locally built tag — retag to the new deploy tag:
 docker tag local/ciphra-nginx:<previous> ghcr.io/danileau/ciphra-nginx:<sha> 2>/dev/null   || docker tag $(docker images --format '{{.Repository}}:{{.Tag}}' | grep ciphra-nginx | head -1) ghcr.io/danileau/ciphra-nginx:<sha>
 # 3. bump + restart (keep commands SHORT — long pastes split):

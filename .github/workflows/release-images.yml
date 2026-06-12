@@ -6,6 +6,13 @@
 # Tags per image: the 7-char commit SHA (what CIPHRA_TAG points at) and
 # a moving `latest`. Rollback = previous SHA tag, exactly like before.
 #
+# Images are SIGNED (cosign keyless via GitHub OIDC, logged to Rekor):
+# the signature pins the identity of THIS workflow on THIS repo. The
+# deploy ritual verifies before restart — see OPERATIONS.md. Honest
+# scope: protects the registry→VPS link (tampered/foreign images);
+# does NOT protect against a compromised GitHub account (it signs
+# "legitimately") and is unrelated to the THREAT_MODEL JS-swap item.
+#
 # The frontend image needs the repo docs staged into its build context
 # (the ciphraDocs vite plugin resolves /docs-src inside the container —
 # launch v0.1.0 missed this and shipped an empty /docs section).
@@ -26,6 +33,7 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write # cosign keyless signing (GitHub OIDC)
 
 jobs:
   frontend-image:
@@ -51,13 +59,18 @@ jobs:
             type=sha,prefix=
             type=raw,value=latest
       - uses: docker/build-push-action@v6
+        id: build
         with:
           context: frontend
           file: frontend/Dockerfile.prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          provenance: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign image (keyless, by digest)
+        run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/ciphra-frontend@${{ steps.build.outputs.digest }}
 
   api-image:
     runs-on: ubuntu-latest
@@ -78,9 +91,14 @@ jobs:
             type=sha,prefix=
             type=raw,value=latest
       - uses: docker/build-push-action@v6
+        id: build
         with:
           context: api
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          provenance: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign image (keyless, by digest)
+        run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/ciphra-api@${{ steps.build.outputs.digest }}
