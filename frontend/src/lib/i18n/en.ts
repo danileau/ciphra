@@ -1094,6 +1094,7 @@ export default {
 	'landing.footer_legal': 'Legal',
 	'landing.footer_login': 'Log in',
 	'terms.title': 'Terms of use',
+	'terms.meta': 'Terms of use for ciphra — the encrypted diary for chronic conditions. Not a medical device, not a substitute for professional medical advice.',
 	'terms.summary_heading': 'In short',
 	'terms.summary_body': 'ciphra is a free, end-to-end encrypted personal notebook. Use it to track your own health. Don\'t use it to document illegal activity or harm others. Because we cannot read your data, the responsibility for what you put in it is entirely yours.',
 	'terms.use_heading': 'What ciphra is for',
@@ -1676,6 +1677,7 @@ export default {
 
 	// Privacy policy
 	'privacy.title': 'Privacy Policy',
+	'privacy.meta': 'How ciphra protects your data: end-to-end encryption in the browser, zero-knowledge, Swiss hosting. What we can see — and what we cannot.',
 	'privacy.last_updated': 'Last updated',
 	'privacy.summary_heading': 'In short',
 	'privacy.summary_body': 'ciphra is end-to-end encrypted. Your password, recovery code, and master key never leave your device. The server stores only encrypted blobs and hashes — we cannot read your health data, and neither can anyone who accesses our database.',

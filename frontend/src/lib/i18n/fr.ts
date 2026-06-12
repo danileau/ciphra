@@ -1094,6 +1094,7 @@ export default {
 	'landing.footer_legal': 'Mentions légales',
 	'landing.footer_login': 'Se connecter',
 	'terms.title': "Conditions d'utilisation",
+	'terms.meta': 'Conditions d\'utilisation de ciphra — le journal chiffre pour les maladies chroniques. Pas un dispositif medical, pas un substitut a un avis medical.',
 	'terms.summary_heading': 'En bref',
 	'terms.summary_body': "ciphra est un carnet personnel gratuit, chiffré de bout en bout. Utilisez-le pour suivre votre propre santé. Ne l'utilisez pas pour documenter des activités illégales ou nuire à autrui. Comme nous ne pouvons pas lire vos données, vous êtes entièrement responsable de leur contenu.",
 	'terms.use_heading': 'À quoi sert ciphra',
@@ -1673,6 +1674,7 @@ export default {
 
 	// Confidentialité
 	'privacy.title': 'Politique de confidentialité',
+	'privacy.meta': 'Comment ciphra protege vos donnees : chiffrement de bout en bout dans le navigateur, zero-knowledge, hebergement suisse.',
 	'privacy.last_updated': 'Dernière mise à jour',
 	'privacy.summary_heading': 'En bref',
 	'privacy.summary_body': "ciphra est chiffré de bout en bout. Votre mot de passe, votre code de récupération et votre clé maître ne quittent jamais votre appareil. Le serveur ne stocke que des blobs chiffrés et des hachages — nous ne pouvons pas lire vos données de santé, et personne ayant accès à notre base de données ne le peut.",

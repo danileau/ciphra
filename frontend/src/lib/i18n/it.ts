@@ -1094,6 +1094,7 @@ export default {
 	'landing.footer_legal': 'Legale',
 	'landing.footer_login': 'Accedi',
 	'terms.title': "Termini d'uso",
+	'terms.meta': 'Condizioni di utilizzo di ciphra — il diario crittografato per le malattie croniche. Non un dispositivo medico, non un sostituto del parere medico.',
 	'terms.summary_heading': 'In sintesi',
 	'terms.summary_body': 'ciphra è un taccuino personale gratuito, cifrato end-to-end. Usalo per monitorare la tua salute. Non usarlo per documentare attività illegali o nuocere ad altri. Poiché non possiamo leggere i tuoi dati, la responsabilità del contenuto è interamente tua.',
 	'terms.use_heading': 'A cosa serve ciphra',
@@ -1673,6 +1674,7 @@ export default {
 
 	// Privacy
 	'privacy.title': 'Informativa sulla privacy',
+	'privacy.meta': 'Come ciphra protegge i tuoi dati: crittografia end-to-end nel browser, zero-knowledge, hosting svizzero. Cosa vediamo — e cosa no.',
 	'privacy.last_updated': 'Ultimo aggiornamento',
 	'privacy.summary_heading': 'In sintesi',
 	'privacy.summary_body': 'ciphra è cifrato end-to-end. La tua password, il codice di recupero e la chiave master non lasciano mai il tuo dispositivo. Il server memorizza solo blob cifrati e hash — non possiamo leggere i tuoi dati sanitari, né può farlo chiunque acceda al nostro database.',

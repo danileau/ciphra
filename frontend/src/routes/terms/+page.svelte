@@ -4,6 +4,7 @@
 
 <svelte:head>
 	<title>{$t('terms.title')} — ciphra</title>
+	<meta name="description" content={$t('terms.meta')} />
 </svelte:head>
 
 <main id="main-content" class="max-w-3xl mx-auto px-4 py-8 space-y-6">
