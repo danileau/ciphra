@@ -335,6 +335,64 @@ postgres is unaffected — but past snapshots are gone forever.
 
 This is why we do paper-stash to 2 locations and quarterly drills.
 
+## Deploying a new version
+
+Since 2026-06-12 CI builds and publishes images on every merge to
+`main`: `ghcr.io/danileau/ciphra-{frontend,api}` tagged with the 7-char
+commit SHA + `latest` (`.github/workflows/release-images.yml`). The
+docs staging for `/docs` is encoded in the workflow. nginx stays
+VPS-built (config lives in `golive/`, changes rarely).
+
+Deploys remain an operator action — CI never touches the VPS.
+
+### Standard deploy (ghcr pull)
+
+One-time setup: `docker login ghcr.io -u danileau -p <PAT read:packages>`
+on the VPS, and in `/opt/ciphra/golive/.env` set
+`CIPHRA_REGISTRY=ghcr.io/danileau`.
+
+```bash
+# 1. note the merge SHA from the GitHub PR (7 chars), then on the VPS:
+docker pull ghcr.io/danileau/ciphra-frontend:<sha>
+docker pull ghcr.io/danileau/ciphra-api:<sha>
+# 2. nginx keeps its locally built tag — retag to the new deploy tag:
+docker tag local/ciphra-nginx:<previous> ghcr.io/danileau/ciphra-nginx:<sha> 2>/dev/null   || docker tag $(docker images --format '{{.Repository}}:{{.Tag}}' | grep ciphra-nginx | head -1) ghcr.io/danileau/ciphra-nginx:<sha>
+# 3. bump + restart (keep commands SHORT — long pastes split):
+sed -i "s|^CIPHRA_TAG=.*|CIPHRA_TAG=<sha>|" /opt/ciphra/golive/.env
+sudo systemctl restart ciphra-app
+docker ps --format 'table {{.Names}}\t{{.Status}}'
+```
+
+Rollback: previous SHA in `CIPHRA_TAG` + restart (old images stay on
+disk).
+
+### Fallback deploy (build on VPS)
+
+The pre-CI path, kept working on purpose. The prod Dockerfile lives
+in-repo at `frontend/Dockerfile.prod`:
+
+```bash
+cd /opt/ciphra/src && git pull --ff-only
+docker build --network=host -f/opt/ciphra/src/frontend/Dockerfile.prod \
+  -t local/ciphra-frontend:<tag> frontend/
+# (build context already contains docs via the repo clone? NO — stage them:)
+rm -rf frontend/_docs-src && mkdir frontend/_docs-src
+cp -r docs README.md SECURITY.md frontend/_docs-src/
+```
+
+(Stage docs BEFORE the build — order above shown for reference, run the
+staging first. See the launch lesson: v0.1.0 shipped an empty /docs.)
+
+### Post-deploy smoke
+
+Browser-level, not curl — the app is client-rendered and SSR HTML is an
+empty shell:
+
+```bash
+cd frontend && PLAYWRIGHT_NO_WEBSERVER=1 PLAYWRIGHT_BASE_URL=https://ciphra.ch \
+  npx playwright test e2e/prod-smoke.spec.ts
+```
+
 ## Common ops tasks
 
 ### Service restart

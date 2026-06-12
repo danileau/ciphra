@@ -1,0 +1,53 @@
+# Prod frontend — multi-stage build of the SvelteKit app.
+#
+# adapter-auto picks adapter-node in a container env, producing build/index.js
+# that listens on $PORT (default 3000). nginx upstream points at frontend:3000.
+#
+# If you decide to switch to adapter-static (fully prerendered SPA), drop the
+# runtime stage entirely and have nginx serve `build/` directly — but that's
+# a code-side decision in svelte.config.js.
+
+# ─── builder ────────────────────────────────────────────────────────────────
+FROM node:24-alpine AS builder
+WORKDIR /app
+
+# Install with npm ci against a locked manifest — reproducible images.
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+COPY . .
+
+# The /docs route renders repo .md files via the ciphraDocs Vite plugin,
+# which resolves its doc root at /docs-src (vite.config.ts docRoot). The
+# deploy ritual stages repo docs into the build context first:
+#   rm -rf frontend/_docs-src && mkdir frontend/_docs-src
+#   cp -r docs README.md SECURITY.md frontend/_docs-src/
+# This COPY lifts them to the absolute path the plugin checks. Launch
+# (v0.1.0) missed this — prod /docs rendered empty until 2026-06-12.
+COPY _docs-src/ /docs-src/
+
+RUN npm run build && npm prune --omit=dev
+
+# ─── runtime ────────────────────────────────────────────────────────────────
+FROM node:24-alpine AS runtime
+WORKDIR /app
+
+# Drop privileges. Node-alpine ships a `node` user uid 1000.
+RUN apk add --no-cache wget && \
+    chown -R node:node /app
+USER node
+
+COPY --from=builder --chown=node:node /app/build         ./build
+COPY --from=builder --chown=node:node /app/node_modules  ./node_modules
+COPY --from=builder --chown=node:node /app/package.json  ./package.json
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOST=0.0.0.0
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+    CMD wget -qO- http://localhost:3000/ >/dev/null || exit 1
+
+CMD ["node", "build/index.js"]
