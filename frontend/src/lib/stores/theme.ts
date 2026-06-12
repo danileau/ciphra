@@ -7,10 +7,10 @@
  * this logic so OS-dark users don't get a white flash before the app
  * boots (keep the two in sync).
  *
- * Default is 'light', NOT 'system' — deliberate two-days-post-launch
- * conservatism: flipping the default would reskin the app for every
- * OS-dark user overnight. Revisit the default once the dark theme has
- * survived a dogfood cycle.
+ * Default is 'system' (flipped from 'light' 2026-06-12 after the dark
+ * theme passed its visual pass): the app follows the OS, so the 2am
+ * photophobic-logging case gets dark without discovering any control.
+ * Users who explicitly chose a theme keep their stored choice.
  *
  * localStorage (not sessionStorage): a durable preference like locale,
  * and not health data. The doctor PDF ignores the theme on purpose —
@@ -26,12 +26,12 @@ const KEY = 'ciphra_theme';
 const CHOICES: ReadonlySet<string> = new Set(['light', 'dark', 'system']);
 
 function initialChoice(): ThemeChoice {
-	if (!browser) return 'light';
+	if (!browser) return 'system';
 	try {
 		const v = localStorage.getItem(KEY);
-		return v && CHOICES.has(v) ? (v as ThemeChoice) : 'light';
+		return v && CHOICES.has(v) ? (v as ThemeChoice) : 'system';
 	} catch {
-		return 'light';
+		return 'system';
 	}
 }
 

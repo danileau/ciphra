@@ -137,7 +137,7 @@ chrome.
 
 Source of truth: the `[data-theme='dark']` token block in `app.css` +
 [`lib/stores/theme.ts`](../stores/theme.ts) (preference: light / dark /
-system, default **light**). `+layout.svelte` mirrors the resolved theme
+system, default **system** — the app follows the OS unless overridden). `+layout.svelte` mirrors the resolved theme
 onto `<html data-theme>`; `app.html` carries a pre-hydration inline
 script so OS-dark users get no white flash (keep it in sync with the
 store; CSP note inside).
