@@ -36,10 +36,10 @@
 		--surface-muted: #f3f0ed;
 		--surface-inset: #ede8e3;
 		/* RGB triples for rgba() translucency (sticky navs, blurred
-		   headers). NOT color-mix: the prod CSS minifier strips
-		   color-mix() from stylesheets entirely (found 2026-06-12 —
-		   the authed header shipped white-on-dark). Inline styles
-		   bypass the minifier, but stylesheets must stick to rgba(). */
+		   headers). One mechanism everywhere — see the warm-overrides
+		   block (bottom of this file) for why those rules live outside
+		   @layer (Tailwind tree-shaking dropped the bg-white\/95
+		   override from every prod build, 2026-06-12). */
 		--surface-rgb: 250, 248, 246;
 		--surface-card-rgb: 255, 255, 255;
 
