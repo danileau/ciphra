@@ -343,9 +343,33 @@ commit SHA + `latest` (`.github/workflows/release-images.yml`). The
 docs staging for `/docs` is encoded in the workflow. nginx stays
 VPS-built (config lives in `golive/`, changes rarely).
 
-Deploys remain an operator action — CI never touches the VPS.
+Deploys remain an operator action — CI never touches the VPS, and the
+VPS holds no GitHub credentials.
 
-### Standard deploy (ghcr pull)
+### Standard deploy (pull-based CD, since 2026-06-12)
+
+The VPS watches the repo for `deploy-<7sha>` tags
+(`ciphra-deploy.timer`, every 3 min → `golive/deploy/ciphra-autodeploy`,
+root: it must restart systemd units — the documented second root task).
+To deploy a merged commit, from the laptop:
+
+```bash
+git fetch origin main
+git tag deploy-<sha> <sha>
+git push origin deploy-<sha>
+```
+
+Within ~3 minutes the VPS: pulls all three images → **digest-pinned
+cosign verification** (unsigned/foreign images are refused — a tag
+alone cannot deploy anything the pipeline didn't sign) → `.env` bump →
+restart → health check. ntfy reports start / OK / BLOCKED / FAILED.
+**On a failed health check it rolls back automatically** to the
+previous registry+tag and says so.
+
+Rollback by hand = push a deploy tag for the previous SHA. Watch a
+deploy live: `journalctl -u ciphra-deploy -f`.
+
+### Fallback: manual ghcr pull
 
 One-time setup: in `/opt/ciphra/golive/.env` set
 `CIPHRA_REGISTRY=ghcr.io/danileau`. The ghcr packages are PUBLIC
