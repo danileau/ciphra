@@ -363,13 +363,20 @@
    static-hex brand/surface utilities from tailwind.config.js, so raw call
    sites follow data-theme).
 
-   DELIBERATELY OUTSIDE @layer: Tailwind tree-shakes custom rules inside
-   @layer blocks by matching selectors against scanned class candidates,
-   and it parses `bg-white/95` as utility-plus-opacity-modifier — the
-   literal `.bg-white\/95` selector never matches a candidate and was
-   silently dropped from every build (shipped white-on-dark authed header,
-   2026-06-12). Top-level rules bypass tree-shaking and emit after the
-   utilities layer. Keep the !important belt anyway. */
+   DELIBERATELY AFTER the @layer block / utilities (root cause verified
+   2026-06-12 by an isolated repro): lightningcss — Vite's CSS
+   transformer — deduplicates rules with identical selector + property
+   set and IGNORES !important while doing it. When this block sat before
+   the utilities, the `.bg-white\/95` override (single background-color
+   declaration, exactly matching the utility's property set) was deleted
+   from every prod build and the authed header shipped white-on-dark.
+   Sibling overrides only survived because Tailwind's utilities carry an
+   extra --tw-*-opacity declaration (different property set, no dedup).
+   Placed after utilities, the dedup keeps THIS rule instead — which is
+   also cascade-correct. THE TRAP, for future readers: any single-
+   property !important override of a fixed-alpha Tailwind utility is at
+   risk; dev mode does not run lightningcss, so only a build-output
+   check catches it — see lib/built-css-guard.test.ts. */
 .bg-white { background-color: var(--surface-card) !important; }
 .bg-surface { background-color: var(--surface) !important; }
 .bg-surface-muted, .hover\:bg-surface-muted:hover { background-color: var(--surface-muted) !important; }
