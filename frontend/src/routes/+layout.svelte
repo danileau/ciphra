@@ -521,8 +521,17 @@
 	// Dark mode (design review 2026-06-11) — mirror the resolved theme
 	// onto <html> so the app.css [data-theme='dark'] block applies.
 	// app.html sets the same attribute pre-hydration to avoid a white
-	// flash; this keeps it live for in-session changes.
-	$: if (browser) document.documentElement.dataset.theme = $resolvedTheme;
+	// flash; this keeps it live for in-session changes. The theme-color
+	// metas are media-scoped for pre-hydration; once JS runs the
+	// resolved theme is the truth (manual overrides included), so both
+	// get the resolved surface tone.
+	$: if (browser) {
+		document.documentElement.dataset.theme = $resolvedTheme;
+		const chrome = $resolvedTheme === 'dark' ? '#181310' : '#faf8f6';
+		document
+			.querySelectorAll('meta[name="theme-color"]')
+			.forEach((m) => m.setAttribute('content', chrome));
+	}
 
 	// Redirect to login when auth is ready but user is not authenticated
 	// and the current route requires auth. Public routes (landing,

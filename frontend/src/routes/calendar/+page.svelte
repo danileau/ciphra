@@ -542,6 +542,7 @@
 					on:click={prevMonth}
 					class="p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
 					style="color: var(--text-secondary)"
+					aria-label={$t('common.previous_month')}
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
@@ -559,6 +560,7 @@
 					on:click={nextMonth}
 					class="p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
 					style="color: var(--text-secondary)"
+					aria-label={$t('common.next_month')}
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>

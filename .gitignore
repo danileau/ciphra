@@ -15,3 +15,9 @@ api/fixtures/
 pdfs
 frontend/test-results
 .vite/
+
+# repo-local deploy artifacts (rsync'd to VPS, never committed)
+golive/
+
+# design-review scratch (static mockups)
+tmp/
