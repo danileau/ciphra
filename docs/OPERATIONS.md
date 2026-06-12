@@ -335,6 +335,79 @@ postgres is unaffected — but past snapshots are gone forever.
 
 This is why we do paper-stash to 2 locations and quarterly drills.
 
+## Deploying a new version
+
+Since 2026-06-12 CI builds and publishes images on every merge to
+`main`: `ghcr.io/danileau/ciphra-{frontend,api}` tagged with the 7-char
+commit SHA + `latest` (`.github/workflows/release-images.yml`). The
+docs staging for `/docs` is encoded in the workflow. nginx stays
+VPS-built (config lives in `golive/`, changes rarely).
+
+Deploys remain an operator action — CI never touches the VPS.
+
+### Standard deploy (ghcr pull)
+
+One-time setup: in `/opt/ciphra/golive/.env` set
+`CIPHRA_REGISTRY=ghcr.io/danileau`. The ghcr packages are PUBLIC
+(repo is open source, images contain no secrets — .env stays on the
+VPS), so pulls need no token; authenticity comes from the cosign
+verify step below, not from registry auth. If the packages are ever
+made private: fine-grained PAT, packages:read on this repo only,
+6-month expiry bundled into the semi-annual key-rotation ritual —
+do NOT build token-refresh machinery for a read-only pull credential.
+
+```bash
+# 1. note the merge SHA from the GitHub PR (7 chars), then on the VPS:
+docker pull ghcr.io/danileau/ciphra-frontend:<sha>
+docker pull ghcr.io/danileau/ciphra-api:<sha>
+
+# 1b. verify the signatures (cosign binary: one-time install on the VPS).
+#     This pins "built by the release workflow of danileau/ciphra on main"
+#     — a tampered or foreign image fails here. Do NOT skip-on-red.
+cosign verify ghcr.io/danileau/ciphra-frontend:<sha> \
+  --certificate-identity-regexp 'https://github.com/danileau/ciphra/.github/workflows/release-images.yml@refs/heads/main' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com -o text
+cosign verify ghcr.io/danileau/ciphra-api:<sha> \
+  --certificate-identity-regexp 'https://github.com/danileau/ciphra/.github/workflows/release-images.yml@refs/heads/main' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com -o text
+# 2. nginx keeps its locally built tag — retag to the new deploy tag:
+docker tag local/ciphra-nginx:<previous> ghcr.io/danileau/ciphra-nginx:<sha> 2>/dev/null   || docker tag $(docker images --format '{{.Repository}}:{{.Tag}}' | grep ciphra-nginx | head -1) ghcr.io/danileau/ciphra-nginx:<sha>
+# 3. bump + restart (keep commands SHORT — long pastes split):
+sed -i "s|^CIPHRA_TAG=.*|CIPHRA_TAG=<sha>|" /opt/ciphra/golive/.env
+sudo systemctl restart ciphra-app
+docker ps --format 'table {{.Names}}\t{{.Status}}'
+```
+
+Rollback: previous SHA in `CIPHRA_TAG` + restart (old images stay on
+disk).
+
+### Fallback deploy (build on VPS)
+
+The pre-CI path, kept working on purpose. The prod Dockerfile lives
+in-repo at `frontend/Dockerfile.prod`:
+
+```bash
+cd /opt/ciphra/src && git pull --ff-only
+docker build --network=host -f/opt/ciphra/src/frontend/Dockerfile.prod \
+  -t local/ciphra-frontend:<tag> frontend/
+# (build context already contains docs via the repo clone? NO — stage them:)
+rm -rf frontend/_docs-src && mkdir frontend/_docs-src
+cp -r docs README.md SECURITY.md frontend/_docs-src/
+```
+
+(Stage docs BEFORE the build — order above shown for reference, run the
+staging first. See the launch lesson: v0.1.0 shipped an empty /docs.)
+
+### Post-deploy smoke
+
+Browser-level, not curl — the app is client-rendered and SSR HTML is an
+empty shell:
+
+```bash
+cd frontend && PLAYWRIGHT_NO_WEBSERVER=1 PLAYWRIGHT_BASE_URL=https://ciphra.ch \
+  npx playwright test e2e/prod-smoke.spec.ts
+```
+
 ## Common ops tasks
 
 ### Service restart

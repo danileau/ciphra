@@ -322,7 +322,9 @@ class TestAdmin:
         assert resp.status_code == 403
 
     def test_admin_stats_success(self, client, mock_db, admin_token):
-        # admin_required pwd_version check + admin_stats's 8 count queries
+        # admin_required pwd_version check + admin_stats's 18 count queries
+        # (Track-2 admin metrics added the 24h/deletion/migration/dormant
+        # rows — the stale 8-row queue starved the mock into a 500).
         mock_db.queue(
             PWD_VERSION_ROW,
             {'total': 10},     # total users
@@ -330,9 +332,19 @@ class TestAdmin:
             {'active': 3},     # active 7d
             {'total': 42},     # total docs
             {'cnt': 1},        # lockouts 30d
-            {'cnt': 20},       # logins success
-            {'cnt': 4},        # logins failed
+            {'cnt': 20},       # logins success 30d
+            {'cnt': 4},        # logins failed 30d
             {'cnt': 2},        # new users 7d
+            {'cnt': 1},        # logins failed 24h
+            {'cnt': 0},        # lockouts 24h
+            {'cnt': 1},        # new users 24h
+            {'cnt': 0},        # deletions 30d
+            {'cnt': 0},        # deletions 24h
+            {'cnt': 1},        # migrations total
+            {'cnt': 1},        # migrations 7d
+            {'cnt': 1},        # migrations 30d
+            None,              # last migration row (none recorded)
+            {'cnt': 0},        # dormant 90d
         )
 
         resp = client.get('/api/admin/stats',
