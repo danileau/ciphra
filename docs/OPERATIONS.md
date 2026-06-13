@@ -361,7 +361,17 @@ VPS holds no GitHub credentials.
 The VPS watches the repo for `deploy-<7sha>` tags
 (`ciphra-deploy.timer`, every 3 min → `golive/deploy/ciphra-autodeploy`,
 root: it must restart systemd units — the documented second root task).
-To deploy a merged commit, from the laptop:
+To deploy a merged commit, from the laptop, just run:
+
+```bash
+scripts/deploy.sh            # deploy the current origin/main tip (everything merged)
+scripts/deploy.sh <sha>      # a specific commit (e.g. rollback to a previous deploy)
+```
+
+It wraps the steps below with guardrails: refuses a commit that isn't on
+`origin/main` or whose `release-images` build hasn't succeeded (no signed
+images), refuses to re-tag an already-deployed commit, confirms, then polls
+`/health`. The raw equivalent it automates:
 
 ```bash
 git fetch origin main
