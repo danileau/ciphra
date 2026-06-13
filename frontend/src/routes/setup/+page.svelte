@@ -11,8 +11,9 @@
 	 * wizard — not replaced here).
 	 */
 	import { t, translateUnit } from '$lib/i18n';
+	import { browser } from '$app/environment';
 	import { isAuthenticated, auth } from '$lib/stores/auth';
-	import { blueprint, presets, isCustomItem, resolveBlueprint } from '$lib/blueprint';
+	import { blueprint, hasBlueprint, presets, isCustomItem, resolveBlueprint } from '$lib/blueprint';
 	import type {
 		Blueprint,
 		BlueprintItem,
@@ -217,6 +218,24 @@
 		// re-trigger Svelte's `$:` blocks otherwise.
 		working = working;
 		closeCustomModal();
+	}
+
+	// A fully set-up user should never sit on the onboarding wizard. The only
+	// deliberate re-entry with an existing blueprint is Settings → "Profil
+	// anpassen" (/setup?customize=1); every other path here (fresh registrant,
+	// caregiver setting up their own tracking) has no blueprint yet. So: if a
+	// blueprint exists and we did NOT arrive via ?customize=1, eject home.
+	// Read the param synchronously at init so the reactive guard below has the
+	// right value on its first run (before onMount).
+	const arrivedViaCustomize = browser
+		&& new URL(window.location.href).searchParams.get('customize') === '1';
+
+	// Reactive (not just onMount): if the layout ever lands a set-up user here
+	// during a transient empty-docs load, they auto-recover the moment the real
+	// blueprint resolves — instead of getting stranded on the wizard until a
+	// manual refresh (the post-login onboarding bug, defense-in-depth).
+	$: if (browser && $isAuthenticated && $hasBlueprint && !arrivedViaCustomize) {
+		goto('/');
 	}
 
 	onMount(() => {

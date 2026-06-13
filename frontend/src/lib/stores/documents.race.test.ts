@@ -43,6 +43,13 @@ vi.mock('$lib/idb', () => ({
 	putDocs: vi.fn(async () => {}),
 	clearDocs: vi.fn(async () => {}),
 }));
+vi.mock('$lib/outbox', () => ({
+	enqueue: vi.fn(async () => 'obx-test'),
+	dequeue: vi.fn(async () => {}),
+	getPending: vi.fn(async () => []),
+	updateCiphertext: vi.fn(async () => {}),
+	refreshPendingCount: vi.fn(async () => {}),
+}));
 vi.mock('./auth', () => ({
 	auth: { subscribe: (run: (v: unknown) => void) => { run({ masterKey: new Uint8Array(32), username: 'hans' }); return () => {}; } },
 }));
@@ -60,11 +67,11 @@ describe('documents.load() concurrent dedup', () => {
 		const p1 = documents.load().then(() => { r1 = true; });
 		const p2 = documents.load().then(() => { r2 = true; });
 
-		// Flush microtasks: a correct store has NOT resolved either caller yet
-		// because the fetch is still pending. The pre-fix store resolved the
-		// second caller (r2) here via its early `return;`.
-		await Promise.resolve();
-		await Promise.resolve();
+		// Wait until load() has reached the underlying fetch (the outbox overlay
+		// and cache read run a few microtasks first). With the fetch in-flight,
+		// a correct store has resolved NEITHER caller — the pre-fix store
+		// resolved the second caller (r2) early via its `return;`.
+		await vi.waitFor(() => expect(typeof h.state.resolve).toBe('function'));
 		expect(r1).toBe(false);
 		expect(r2).toBe(false);
 

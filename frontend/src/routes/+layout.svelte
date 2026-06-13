@@ -9,6 +9,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { documents, documentsError } from '$lib/stores/documents';
+	import { pendingCount } from '$lib/outbox';
 	import { get } from 'svelte/store';
 	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { cohortOf } from '$lib/blueprint/cohort';
@@ -140,6 +141,8 @@
 	// CIPH-767e — sync indicator (Astrid) + PWA install prompt.
 	let syncToastShow = false;
 	let syncToastKey = 0;
+	let queuedToastShow = false;
+	let queuedToastKey = 0;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let deferredInstallPrompt: any = null;
 	let pwaInstallVisible = false;
@@ -194,6 +197,23 @@
 		};
 		window.addEventListener('ciphra:synced', onSynced);
 
+		// Offline-write outbox: a save made while unreachable is encrypted and
+		// queued. Show a brief "saved offline" toast, and replay the queue when
+		// the network returns, the tab regains focus, or on next launch.
+		const onQueued = () => {
+			queuedToastKey += 1;
+			queuedToastShow = true;
+			setTimeout(() => { queuedToastShow = false; }, 2400);
+		};
+		window.addEventListener('ciphra:queued', onQueued);
+
+		const onOnline = () => { documents.flushOutbox(); };
+		window.addEventListener('online', onOnline);
+		const onVisible = () => {
+			if (document.visibilityState === 'visible') documents.flushOutbox();
+		};
+		document.addEventListener('visibilitychange', onVisible);
+
 		// CIPH-767e — PWA install prompt (Astrid / Samsung). Capture the
 		// beforeinstallprompt event so we can offer install from our own UI.
 		// Suppressed for 7 days after dismissal, forever after successful install.
@@ -221,6 +241,9 @@
 		return () => {
 			window.removeEventListener('ciphra:first-daily-log', onFirstDailyLog);
 			window.removeEventListener('ciphra:synced', onSynced);
+			window.removeEventListener('ciphra:queued', onQueued);
+			window.removeEventListener('online', onOnline);
+			document.removeEventListener('visibilitychange', onVisible);
 			window.removeEventListener('beforeinstallprompt', onBeforeInstall as EventListener);
 			window.removeEventListener('appinstalled', onAppInstalled);
 		};
@@ -423,6 +446,8 @@
 			blueprint.loadFromDocuments();
 			docsLoading = false;
 			docsLoaded = true;
+			// Replay anything queued while offline in a previous session.
+			documents.flushOutbox();
 		});
 	}
 
@@ -1074,6 +1099,27 @@
 	{#key syncToastKey}
 		<Toast message={syncToastShow ? $t('sync.synced') : ''} duration={1800} show={syncToastShow} />
 	{/key}
+
+	<!-- Offline outbox: "saved offline" confirmation + a persistent pill while
+		 writes wait to sync. -->
+	{#key queuedToastKey}
+		<Toast message={queuedToastShow ? $t('sync.queued') : ''} duration={2400} show={queuedToastShow} />
+	{/key}
+
+	{#if $isAuthenticated && $pendingCount > 0}
+		<div
+			class="fixed z-[60] flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
+			style="top: calc(0.5rem + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); background: var(--surface-card); border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: var(--text-muted);"
+			role="status"
+			aria-live="polite"
+			transition:fade={{ duration: 200 }}
+		>
+			<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+				<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/>
+			</svg>
+			{$t('sync.pending', { count: $pendingCount })}
+		</div>
+	{/if}
 
 	<!-- CIPH-767e — PWA install banner (Astrid / Samsung). Shown only when
 		 beforeinstallprompt fires and the user hasn't dismissed in the last

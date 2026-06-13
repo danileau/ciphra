@@ -30,6 +30,8 @@ export default {
 	// CIPH-764 — Swiss crisis-resources footer (EN: numbers + Swiss context).
 	// CIPH-767e — sync indicator
 	'sync.synced': 'Synced',
+	'sync.queued': 'Saved offline · will sync',
+	'sync.pending': 'Pending sync: {count}',
 	'pwa.install_title': 'Install ciphra as an app',
 	'pwa.install_cta': 'Install',
 	'pwa.install_dismiss': 'Later',

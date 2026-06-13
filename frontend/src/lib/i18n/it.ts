@@ -30,6 +30,8 @@ export default {
 	// CIPH-764 — Risorse di crisi svizzere (footer statico).
 	// CIPH-767e — indicatore di sincronizzazione
 	'sync.synced': 'Sincronizzato',
+	'sync.queued': 'Salvato offline · verrà sincronizzato',
+	'sync.pending': 'Sincronizzazione in sospeso: {count}',
 	'pwa.install_title': 'Installa ciphra come app',
 	'pwa.install_cta': 'Installa',
 	'pwa.install_dismiss': 'Pi\u00f9 tardi',

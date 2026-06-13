@@ -304,6 +304,54 @@ class TestDocumentsAuth:
 
 
 # ═══════════════════════════════════════════════════════════════════
+# SAST/DAST hardening (security/sast-dast-hardening branch)
+# ═══════════════════════════════════════════════════════════════════
+
+class TestSecurityHardening:
+    # F1 — /api/family/grants/claim/init must require auth so an anonymous
+    # party can't harvest wrapped_master / grant_params for any username.
+    def test_claim_init_requires_token(self, client, mock_db):
+        resp = client.post('/api/family/grants/claim/init',
+            json={'source_username': 'someone'},
+        )
+        assert resp.status_code == 401
+
+    def test_claim_init_with_token_still_works(self, client, mock_db, auth_token):
+        # token pwd_version check, then the grants SELECT (fetchall → empty,
+        # so the anti-enumeration fake list is returned).
+        mock_db.queue(PWD_VERSION_ROW, [])
+        resp = client.post('/api/family/grants/claim/init',
+            json={'source_username': 'someone'},
+            headers={'Authorization': f'Bearer {auth_token}'},
+        )
+        assert resp.status_code == 200
+        assert 'grants' in resp.get_json()
+
+    # F5 — raised HTTP errors must stay JSON, not Flask's HTML error page.
+    def test_malformed_json_returns_json_400(self, client, mock_db):
+        resp = client.post('/api/login',
+            data='{not valid json',
+            content_type='application/json',
+        )
+        assert resp.status_code == 400
+        assert resp.content_type.startswith('application/json')
+        assert resp.get_json()['error'] == 'bad_request'
+
+    def test_unknown_route_returns_json_404(self, client, mock_db):
+        resp = client.get('/api/does-not-exist')
+        assert resp.status_code == 404
+        assert resp.content_type.startswith('application/json')
+        assert resp.get_json()['error'] == 'not_found'
+
+    def test_wrong_method_returns_json_405(self, client, mock_db):
+        # /api/documents has no PATCH handler → 405 as JSON.
+        resp = client.patch('/api/documents')
+        assert resp.status_code == 405
+        assert resp.content_type.startswith('application/json')
+        assert resp.get_json()['error'] == 'method_not_allowed'
+
+
+# ═══════════════════════════════════════════════════════════════════
 # Admin routes
 # ═══════════════════════════════════════════════════════════════════
 

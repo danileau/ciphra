@@ -33,6 +33,8 @@ export default {
 	// 147 (Pro Juventute, under 25s). DE/FR/IT primary; EN gives Swiss context.
 	// CIPH-767e — sync indicator
 	'sync.synced': 'Synchronisiert',
+	'sync.queued': 'Offline gespeichert · wird synchronisiert',
+	'sync.pending': 'Ausstehende Synchronisierung: {count}',
 	'pwa.install_title': 'ciphra als App installieren',
 	'pwa.install_cta': 'Installieren',
 	'pwa.install_dismiss': 'Später',
