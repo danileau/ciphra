@@ -379,6 +379,26 @@ previous registry+tag and says so.
 Rollback by hand = push a deploy tag for the previous SHA. Watch a
 deploy live: `journalctl -u ciphra-deploy -f`.
 
+### CDN caching — `/sw.js` must not be edge-cached
+
+`/sw.js` is the service-worker update mechanism. On the first prod deploy
+(2026-06-13) a new worker was served STALE for hours: Cloudflare edge-cached
+`/sw.js`, and CF's **Browser Cache TTL** (set to 4h) was silently rewriting the
+client `Cache-Control` to `max-age=14400`, overriding the origin. Two fixes,
+both required and both now in place:
+
+- **Origin** (`nginx/ciphra.conf`): `location = /sw.js { … expires -1; }` →
+  `Cache-Control: no-cache`. (Uses `expires`, not `add_header`, so the inherited
+  CSP/HSTS headers survive.)
+- **Cloudflare**: Browser Cache TTL → **"Respect Existing Headers"** (Caching →
+  Configuration). Otherwise CF's TTL overrides the origin no matter what nginx
+  sends. CF respects `immutable`, so the hashed `/_app/immutable/*` assets are
+  unaffected either way.
+
+After any deploy, sanity-check: `curl -sI 'https://ciphra.ch/sw.js?x=1' | grep -i
+cache-control` should be `no-cache`. A leftover stale edge entry shows as
+`cf-cache-status: HIT`; clear it with Caching → Purge Custom URL → `/sw.js`.
+
 ### Fallback: manual ghcr pull
 
 One-time setup: in `/opt/ciphra/golive/.env` set
