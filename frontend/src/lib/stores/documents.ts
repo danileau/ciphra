@@ -5,6 +5,14 @@ import { familyLinks, activeVault } from './familyLinks';
 import * as api from '$lib/api';
 import { encryptDocument, decryptDocument } from '$lib/crypto';
 import { getAllDocs, putDocs, clearDocs, type CachedDoc } from '$lib/idb';
+import {
+	enqueue as outboxEnqueue,
+	dequeue as outboxDequeue,
+	getPending as outboxGetPending,
+	updateCiphertext as outboxUpdateCiphertext,
+	refreshPendingCount,
+	type OutboxRecord,
+} from '$lib/outbox';
 
 export const documentsError = writable<string | null>(null);
 
@@ -12,25 +20,71 @@ export interface CiphraDocument {
 	id: number;
 	serverCreatedAt: string;
 	data: any;
+	/** Optimistic write queued offline, not yet confirmed by the server. */
+	_pending?: boolean;
+	/** Outbox record id backing a pending doc (so edit/cancel can find it). */
+	_tempId?: string;
 }
 
 interface RawDoc { id: number; encrypted_data: string; created_at: string; }
 
-function resolveVault(): { masterKey: Uint8Array | null; sourceUserId: number | null; cacheKey: string } {
+interface VaultCtx {
+	masterKey: Uint8Array | null;
+	sourceUserId: number | null;
+	cacheKey: string;
+	username: string;
+}
+
+function resolveVault(): VaultCtx {
 	const { masterKey, username } = get(auth);
+	const uname = username ?? '';
 	const active = get(activeVault);
 	if (!active) {
-		return { masterKey, sourceUserId: null, cacheKey: `${username ?? ''}:self` };
+		return { masterKey, sourceUserId: null, cacheKey: `${uname}:self`, username: uname };
 	}
 	const link = get(familyLinks).find(l => l.sourceUserId === active);
 	if (!link) {
-		return { masterKey, sourceUserId: null, cacheKey: `${username ?? ''}:self` };
+		return { masterKey, sourceUserId: null, cacheKey: `${uname}:self`, username: uname };
 	}
 	return {
 		masterKey: link.patientMasterKey,
 		sourceUserId: active,
-		cacheKey: `${username ?? ''}:linked:${active}`,
+		cacheKey: `${uname}:linked:${active}`,
+		username: uname,
 	};
+}
+
+// --- Offline write classification ---------------------------------------
+//
+// A write should be queued (not failed) only when the server is genuinely
+// unreachable: a thrown fetch error, the device reporting offline, or the
+// service worker's 503 "offline" stub / a transient 5xx. Real client errors
+// (401 auth, 400 malformed) are NOT queued — they surface as failures.
+
+function isNetworkError(e: unknown): boolean {
+	if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+	return e instanceof TypeError || (e as { name?: string })?.name === 'TypeError';
+}
+
+/** Status codes that mean "try again later", i.e. queue the write. */
+function isOfflineStatus(status: number): boolean {
+	return status === 0 || status === 408 || status === 429 || status === 503 || status >= 500;
+}
+
+/** Status codes during flush that mean "stop and retry on the next trigger". */
+function isRetryableStatus(status: number): boolean {
+	return status === 401 || status === 403 || isOfflineStatus(status);
+}
+
+// Optimistic docs render with negative ids so they never collide with real
+// server ids. The mapping from an outbox tempId to its negative id is stable
+// for the session so Svelte doesn't re-key the row on every reload.
+let tempCounter = -1;
+const tempIdToNeg = new Map<string, number>();
+function negIdFor(tempId: string): number {
+	let n = tempIdToNeg.get(tempId);
+	if (n === undefined) { n = tempCounter--; tempIdToNeg.set(tempId, n); }
+	return n;
 }
 
 function createDocStore() {
@@ -90,6 +144,139 @@ function createDocStore() {
 		return { docs, freshCache };
 	}
 
+	/**
+	 * Overlay the offline outbox on top of an authoritative doc set so queued
+	 * writes stay visible across reloads while still offline. Creates appear as
+	 * pending rows; updates replace the live doc's data; removes hide it. Only
+	 * the active vault's records (matching cacheKey) are applied. Ciphertext is
+	 * decrypted here with the in-memory master key — nothing plaintext is read
+	 * from the outbox at rest.
+	 */
+	async function applyOutbox(
+		base: CiphraDocument[],
+		masterKey: Uint8Array,
+		cacheKey: string,
+		username: string
+	): Promise<CiphraDocument[]> {
+		if (!browser) return base;
+		let pending: OutboxRecord[];
+		try {
+			pending = await outboxGetPending(username);
+		} catch {
+			return base;
+		}
+		const mine = pending.filter(r => r.cacheKey === cacheKey);
+		if (mine.length === 0) return base;
+
+		const removedIds = new Set(
+			mine.filter(r => r.op === 'remove' && r.serverId != null).map(r => r.serverId)
+		);
+		const updates = new Map(
+			mine.filter(r => r.op === 'update' && r.serverId != null).map(r => [r.serverId as number, r])
+		);
+
+		const surviving = await Promise.all(
+			base
+				.filter(d => !removedIds.has(d.id))
+				.map(async (d) => {
+					const u = updates.get(d.id);
+					if (!u || !u.ciphertext) return d;
+					try {
+						const data = await decryptDocument(u.ciphertext, masterKey);
+						return { ...d, data, _pending: true, _tempId: u.tempId };
+					} catch {
+						return d;
+					}
+				})
+		);
+
+		const createDocs: CiphraDocument[] = [];
+		for (const r of mine) {
+			if (r.op !== 'create' || !r.ciphertext) continue;
+			try {
+				const data = await decryptDocument(r.ciphertext, masterKey);
+				if (data?.type === 'family_link') continue;
+				createDocs.push({
+					id: negIdFor(r.tempId),
+					serverCreatedAt: new Date(r.createdAt).toISOString(),
+					data,
+					_pending: true,
+					_tempId: r.tempId,
+				});
+			} catch {
+				// Undecryptable record (wrong vault) — leave it queued, skip render.
+			}
+		}
+		// Newest queued create first; server docs keep their order after.
+		createDocs.reverse();
+		return [...createDocs, ...surviving];
+	}
+
+	/** Find the outbox tempId backing an optimistic (negative-id) doc. */
+	function tempIdOf(negId: number): string | undefined {
+		return get({ subscribe }).find((d) => d.id === negId)?._tempId;
+	}
+
+	function notifyQueued() {
+		if (browser) {
+			try { window.dispatchEvent(new CustomEvent('ciphra:queued')); } catch {}
+		}
+	}
+
+	async function queueCreate(encrypted: string, data: any, ctx: VaultCtx): Promise<boolean> {
+		const tempId = await outboxEnqueue({
+			cacheKey: ctx.cacheKey,
+			username: ctx.username,
+			sourceUserId: ctx.sourceUserId,
+			op: 'create',
+			ciphertext: encrypted,
+		});
+		update((docs) => [
+			{
+				id: negIdFor(tempId),
+				serverCreatedAt: new Date().toISOString(),
+				data,
+				_pending: true,
+				_tempId: tempId,
+			} as CiphraDocument,
+			...docs,
+		]);
+		documentsError.set(null);
+		await refreshPendingCount(ctx.username);
+		notifyQueued();
+		return true;
+	}
+
+	async function queueUpdate(id: number, encrypted: string, data: any, ctx: VaultCtx): Promise<boolean> {
+		await outboxEnqueue({
+			cacheKey: ctx.cacheKey,
+			username: ctx.username,
+			sourceUserId: ctx.sourceUserId,
+			op: 'update',
+			serverId: id,
+			ciphertext: encrypted,
+		});
+		update((docs) => docs.map((d) => (d.id === id ? { ...d, data, _pending: true } : d)));
+		documentsError.set(null);
+		await refreshPendingCount(ctx.username);
+		notifyQueued();
+		return true;
+	}
+
+	async function queueRemove(id: number, ctx: VaultCtx): Promise<boolean> {
+		await outboxEnqueue({
+			cacheKey: ctx.cacheKey,
+			username: ctx.username,
+			sourceUserId: ctx.sourceUserId,
+			op: 'remove',
+			serverId: id,
+		});
+		update((docs) => docs.filter((d) => d.id !== id));
+		await refreshPendingCount(ctx.username);
+		notifyQueued();
+		return true;
+	}
+
 	const store = {
 		subscribe,
 		async load() {
@@ -102,7 +289,7 @@ function createDocStore() {
 			if (loading) return inFlight ?? undefined;
 			loading = true;
 			inFlight = (async () => {
-			const { masterKey, sourceUserId, cacheKey } = resolveVault();
+			const { masterKey, sourceUserId, cacheKey, username } = resolveVault();
 			if (!masterKey) return;
 
 			const t0 = performance.now();
@@ -120,7 +307,10 @@ function createDocStore() {
 						const instant = cached
 							.filter(c => c.data?.type !== 'family_link')
 							.map(c => ({ id: c.id, serverCreatedAt: c.created_at, data: c.data } as CiphraDocument));
-						set(instant);
+						set(await applyOutbox(instant, masterKey, cacheKey, username));
+					} else {
+						// No cache yet, but queued offline writes may still exist.
+						set(await applyOutbox([], masterKey, cacheKey, username));
 					}
 				} catch {
 					// cache miss is fine
@@ -141,7 +331,7 @@ function createDocStore() {
 					}
 					const { docs, freshCache } = await decryptDocs(rawDocs, masterKey, cachedByEtag, cacheKey);
 					const tDecrypt = performance.now();
-					set(docs);
+					set(await applyOutbox(docs, masterKey, cacheKey, username));
 					if (browser && cacheKey) {
 						try {
 							await putDocs(cacheKey, freshCache);
@@ -175,67 +365,170 @@ function createDocStore() {
 			}
 		},
 		async save(data: any): Promise<boolean> {
-			const { masterKey, sourceUserId } = resolveVault();
-			if (!masterKey) return false;
+			const ctx = resolveVault();
+			if (!ctx.masterKey) return false;
+			let encrypted: string;
 			try {
-				const encrypted = await encryptDocument(data, masterKey);
-				const res = sourceUserId
-					? await api.familyDocumentCreate(sourceUserId, encrypted)
+				encrypted = await encryptDocument(data, ctx.masterKey);
+			} catch {
+				documentsError.set('Failed to save document');
+				return false;
+			}
+			try {
+				const res = ctx.sourceUserId
+					? await api.familyDocumentCreate(ctx.sourceUserId, encrypted)
 					: await api.storeDocument(encrypted);
 				if (res.ok) {
 					documentsError.set(null);
 					// CIPH-767e — sync indicator: notify the UI that a successful
 					// save round-trip to the server completed so the layout can
-					// surface a brief "Synced" toast. Online-only by nature since
-					// `res.ok` requires a real API response.
+					// surface a brief "Synced" toast.
 					if (browser) {
-						try {
-							window.dispatchEvent(new CustomEvent('ciphra:synced'));
-						} catch {}
+						try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch {}
 					}
 					await store.load();
-				} else {
-					documentsError.set('Failed to save document');
+					return true;
 				}
-				return res.ok;
-			} catch {
+				if (isOfflineStatus(res.status)) return queueCreate(encrypted, data, ctx);
+				documentsError.set('Failed to save document');
+				return false;
+			} catch (e) {
+				if (isNetworkError(e)) return queueCreate(encrypted, data, ctx);
 				documentsError.set('Failed to save document');
 				return false;
 			}
 		},
 		async updateDoc(id: number, data: any): Promise<boolean> {
-			const { masterKey, sourceUserId } = resolveVault();
-			if (!masterKey) return false;
+			const ctx = resolveVault();
+			if (!ctx.masterKey) return false;
+			let encrypted: string;
 			try {
-				const encrypted = await encryptDocument(data, masterKey);
-				const res = sourceUserId
-					? await api.familyDocumentUpdate(sourceUserId, id, encrypted)
+				encrypted = await encryptDocument(data, ctx.masterKey);
+			} catch {
+				documentsError.set('Failed to update document');
+				return false;
+			}
+			// Editing a not-yet-synced offline create: mutate its queued
+			// ciphertext in place rather than hitting the server with a temp id.
+			if (id < 0) {
+				const tempId = tempIdOf(id);
+				if (tempId) {
+					try { await outboxUpdateCiphertext(tempId, encrypted); } catch {}
+					update((docs) => docs.map((d) => (d.id === id ? { ...d, data } : d)));
+					documentsError.set(null);
+					await refreshPendingCount(ctx.username);
+					return true;
+				}
+			}
+			try {
+				const res = ctx.sourceUserId
+					? await api.familyDocumentUpdate(ctx.sourceUserId, id, encrypted)
 					: await api.updateDocument(id, encrypted);
 				if (res.ok) {
 					documentsError.set(null);
 					await store.load();
-				} else {
-					documentsError.set('Failed to update document');
+					return true;
 				}
-				return res.ok;
-			} catch {
+				if (isOfflineStatus(res.status)) return queueUpdate(id, encrypted, data, ctx);
+				documentsError.set('Failed to update document');
+				return false;
+			} catch (e) {
+				if (isNetworkError(e)) return queueUpdate(id, encrypted, data, ctx);
 				documentsError.set('Failed to update document');
 				return false;
 			}
 		},
 		async remove(id: number): Promise<boolean> {
-			const { sourceUserId } = resolveVault();
-			const res = sourceUserId
-				? await api.familyDocumentDelete(sourceUserId, id)
-				: await api.deleteDocument(id);
-			if (res.ok) {
+			const ctx = resolveVault();
+			// Removing a not-yet-synced offline create: cancel the queued write.
+			if (id < 0) {
+				const tempId = tempIdOf(id);
+				if (tempId) {
+					try { await outboxDequeue(tempId); } catch {}
+				}
 				update((docs) => docs.filter((d) => d.id !== id));
-				await store.load();
+				await refreshPendingCount(ctx.username);
+				return true;
 			}
-			return res.ok;
+			try {
+				const res = ctx.sourceUserId
+					? await api.familyDocumentDelete(ctx.sourceUserId, id)
+					: await api.deleteDocument(id);
+				if (res.ok) {
+					update((docs) => docs.filter((d) => d.id !== id));
+					await store.load();
+					return true;
+				}
+				if (isOfflineStatus(res.status)) return queueRemove(id, ctx);
+				return false;
+			} catch (e) {
+				if (isNetworkError(e)) return queueRemove(id, ctx);
+				return false;
+			}
+		},
+		/**
+		 * Replay every queued write for the logged-in user, oldest first.
+		 * Triggered on reconnect, tab-focus, and once after login. Drops a
+		 * record only on permanent client errors (to avoid a poison queue);
+		 * a transient/offline status stops the drain so the rest retries
+		 * later. Reconciles via a full reload and fires `ciphra:synced`.
+		 */
+		async flushOutbox(): Promise<void> {
+			if (!browser) return;
+			const { username } = get(auth);
+			if (!username) return;
+			let records: OutboxRecord[];
+			try {
+				records = await outboxGetPending(username);
+			} catch {
+				return;
+			}
+			if (records.length === 0) return;
+
+			let flushed = 0;
+			for (const rec of records) {
+				try {
+					let res: { ok: boolean; status: number };
+					if (rec.op === 'create') {
+						res = rec.sourceUserId
+							? await api.familyDocumentCreate(rec.sourceUserId, rec.ciphertext as string)
+							: await api.storeDocument(rec.ciphertext as string);
+					} else if (rec.op === 'update') {
+						res = rec.sourceUserId
+							? await api.familyDocumentUpdate(rec.sourceUserId, rec.serverId as number, rec.ciphertext as string)
+							: await api.updateDocument(rec.serverId as number, rec.ciphertext as string);
+					} else {
+						res = rec.sourceUserId
+							? await api.familyDocumentDelete(rec.sourceUserId, rec.serverId as number)
+							: await api.deleteDocument(rec.serverId as number);
+					}
+					// A remove whose target is already gone is a success.
+					if (res.ok || (rec.op === 'remove' && res.status === 404)) {
+						await outboxDequeue(rec.tempId);
+						flushed++;
+						continue;
+					}
+					if (isRetryableStatus(res.status)) break; // still offline / auth — retry later
+					// Permanent client error: drop so it can't wedge the queue.
+					await outboxDequeue(rec.tempId);
+					flushed++;
+				} catch (e) {
+					if (isNetworkError(e)) break; // network dropped mid-drain
+					break; // unexpected — stop, retry on next trigger
+				}
+			}
+
+			await refreshPendingCount(username);
+			if (flushed > 0) {
+				await store.load();
+				if (browser) {
+					try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch {}
+				}
+			}
 		},
 		clear() {
 			set([]);
+			tempIdToNeg.clear();
 			const { cacheKey } = resolveVault();
 			if (browser && cacheKey) {
 				clearDocs(cacheKey).catch(() => {});
