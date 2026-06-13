@@ -27,6 +27,10 @@ jobs:
         with:
           scan-type: fs
           scan-ref: .
+          # SAST/DAST F7 — add misconfig + secret to the default vuln scan so
+          # Dockerfile/IaC issues (e.g. images running as root, DS002) and any
+          # committed secret gate CI, not just dependency CVEs.
+          scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true

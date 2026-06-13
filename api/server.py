@@ -80,6 +80,27 @@ def _too_large(_e):
     return jsonify({'error': 'request_too_large'}), 413
 
 
+# SAST/DAST F5 — keep every API error in the JSON shape clients expect.
+# Flask's default error pages are HTML ("The browser or proxy sent a request
+# that this server could not understand…") which both leaks the framework and
+# breaks the API contract for callers doing res.json(). These handlers catch
+# only RAISED HTTPExceptions (e.g. malformed-JSON 400, unknown route 404,
+# wrong method 405); explicit `return jsonify(...), 4xx` returns are untouched.
+@app.errorhandler(400)
+def _bad_request(_e):
+    return jsonify({'error': 'bad_request'}), 400
+
+
+@app.errorhandler(404)
+def _not_found(_e):
+    return jsonify({'error': 'not_found'}), 404
+
+
+@app.errorhandler(405)
+def _method_not_allowed(_e):
+    return jsonify({'error': 'method_not_allowed'}), 405
+
+
 @app.after_request
 def set_security_headers(resp):
     """Defense-in-depth headers. CSP is strict: no inline scripts, no eval,
@@ -1522,10 +1543,18 @@ def _fake_grants_for_username(username: str):
 
 @app.route('/api/family/grants/claim/init', methods=['POST'])
 @limiter.limit("10 per minute")
+@token_required
 def family_grant_claim_init():
     """Given a source username, return all claimable grants so the caregiver
     client can test each against the family code locally. Fake list for
-    unknown users (same anti-enumeration pattern as /login/init)."""
+    unknown users (same anti-enumeration pattern as /login/init).
+
+    SAST/DAST F1 — requires auth. The legit caller is always an authenticated
+    caregiver (claiming itself needs a token), so this is no UX change, but it
+    stops an ANONYMOUS party from harvesting `wrapped_master`/`grant_params`
+    for any username (offline brute-force material). Family-code entropy
+    (~49 bits + Argon2id) already makes that attack infeasible; gating behind
+    a token makes harvesting attributable + rate-limit-bound to an account."""
     data = request.get_json() or {}
     source_username = (data.get('source_username') or '').strip().lower()
     if not source_username or not USERNAME_RE.match(source_username):
