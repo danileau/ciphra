@@ -35,7 +35,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -53,7 +53,7 @@ jobs:
   api:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build dev image (adds pytest tooling)
         run: docker build --target dev -t ciphra-api:ci api
       - name: Run api tests
@@ -66,7 +66,7 @@ jobs:
   trivy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Trivy fs scan (HIGH/CRITICAL fail)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
