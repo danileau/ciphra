@@ -32,5 +32,11 @@ updates:
       interval: weekly
       day: monday
     groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+      # Actions are low-risk infra — standard, well-maintained actions
+      # whose major bumps (checkout v4→v6, etc.) rarely change behavior.
+      # Unlike app deps (npm/pip), group ALL update-types into one weekly
+      # PR instead of one-per-action. The majors-ride-their-own-PR rule
+      # (feedback_dependabot_major_versions) is for runtime/app deps; CI
+      # action versions don't warrant that ceremony.
+      actions-all:
+        patterns: ["*"]
