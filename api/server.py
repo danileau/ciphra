@@ -1839,6 +1839,13 @@ if os.environ.get('CIPHRA_DEV_MOCKS') == '1':
             path = _FIXTURES_DIR / 'edge-wrong-version.json'
         elif token.startswith('dev-'):
             name = token[len('dev-'):]
+            # SAST/DAST F6 — defense-in-depth: reject anything that isn't a
+            # plain fixture name before building the path. Flask's <token>
+            # route converter already blocks slashes, but this removes any
+            # doubt about path traversal even if this dev-only block (gated by
+            # CIPHRA_DEV_MOCKS) were ever reached in an unexpected config.
+            if not re.fullmatch(r'[a-z0-9-]+', name):
+                return jsonify({'error': 'unknown_token'}), 404, headers
             path = _FIXTURES_DIR / f'{name}.json'
         else:
             return jsonify({'error': 'unknown_token'}), 404, headers

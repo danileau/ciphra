@@ -31,6 +31,12 @@ jobs:
           # Dockerfile/IaC issues (e.g. images running as root, DS002) and any
           # committed secret gate CI, not just dependency CVEs.
           scanners: vuln,secret,misconfig
+          # F2 — documented risk acceptances (e.g. nginx must bind :443 as
+          # root) live in .trivyignore.yaml. NB: golive/ is gitignored and
+          # untracked, so it isn't in the CI checkout and is never scanned
+          # here — no skip needed. (A local `trivy fs .` WILL see it, which is
+          # fine: it's the operator's deploy dir, not a CI-built image.)
+          trivyignores: .trivyignore.yaml
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true

@@ -1,0 +1,13 @@
+# Documented risk acceptances for the daily Trivy scan (.github/workflows/
+# security-scan.yml). Scoped per-path so a genuinely-bad root image elsewhere
+# still fails CI. Review on every dependency/image change.
+misconfigurations:
+  - id: AVD-DS-0002
+    paths:
+      - "nginx/Dockerfile.prod"
+    statement: >-
+      nginx master must run as root to bind :443, then drops worker processes
+      to the unprivileged `nginx` user — the standard, secure reverse-proxy
+      posture. A fully non-root image (nginxinc/nginx-unprivileged on a high
+      port behind a 443 mapping) is a deploy-contract change and is tracked as
+      an operator follow-up, not a code fix.
