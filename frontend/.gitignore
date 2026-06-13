@@ -12,3 +12,4 @@ vite.config.ts.timestamp-*
 e2e/_screenshots/
 playwright-report/
 test-results/
+.devcerts/

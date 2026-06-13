@@ -36,6 +36,9 @@ function resolveVault(): { masterKey: Uint8Array | null; sourceUserId: number | 
 function createDocStore() {
 	const { subscribe, set, update } = writable<CiphraDocument[]>([]);
 	let loading = false;
+	// The promise of the currently-running load(), shared with concurrent
+	// callers so they await the SAME fetch instead of resolving instantly.
+	let inFlight: Promise<void> | null = null;
 
 	/**
 	 * Decrypt raw docs, reusing plaintext from `cachedByEtag` when the
@@ -90,10 +93,17 @@ function createDocStore() {
 	const store = {
 		subscribe,
 		async load() {
-			if (loading) return;
+			// Concurrent callers (the layout's post-login load + a page
+			// component's own onMount load) must AWAIT the same in-flight fetch.
+			// The old `if (loading) return;` resolved the second caller's
+			// promise instantly while $documents was still empty — so the
+			// dashboard flipped `loaded=true` with no blueprint yet and rendered
+			// its "no profile yet" onboarding state until a manual refresh.
+			if (loading) return inFlight ?? undefined;
 			loading = true;
+			inFlight = (async () => {
 			const { masterKey, sourceUserId, cacheKey } = resolveVault();
-			if (!masterKey) { loading = false; return; }
+			if (!masterKey) return;
 
 			const t0 = performance.now();
 			let cacheHits = 0;
@@ -156,8 +166,13 @@ function createDocStore() {
 			} catch {
 				documentsError.set('Failed to load documents');
 			}
-
-			loading = false;
+			})();
+			try {
+				await inFlight;
+			} finally {
+				loading = false;
+				inFlight = null;
+			}
 		},
 		async save(data: any): Promise<boolean> {
 			const { masterKey, sourceUserId } = resolveVault();

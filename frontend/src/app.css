@@ -394,6 +394,24 @@
 .bg-slate-200 { background-color: var(--surface-inset) !important; }
 
 
+/* Global horizontal-overflow guard. A sub-pixel / few-px overshoot from any
+   descendant makes the WHOLE page — navigation header included — draggable
+   sideways on real iOS Safari. It breaks the feel and (because iOS counts
+   100vw / fixed elements differently) does NOT reproduce in headless WebKit,
+   so per-element detection misses it. Clip it at the root.
+
+   `overflow-x: clip` — NOT `hidden`: clip does not turn the root into a
+   scroll container, so `position: sticky` (the journal month headers) keeps
+   working. `hidden` would force overflow-y to compute to `auto` and break
+   sticky. Independent inner scroll containers (e.g. the /reports grid-table's
+   overflow-x:auto wrapper) are unaffected — this only clips the root. */
+html,
+body {
+	max-width: 100%;
+	overflow-x: clip;
+}
+
+
 /* ═══════════════════════════════════════════════════════════
    THE ASTERISK SYSTEM
    The * is ciphra's visual fingerprint.

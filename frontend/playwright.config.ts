@@ -19,8 +19,22 @@ export default defineConfig({
     use: {
         baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
         trace: 'retain-on-failure',
+        // Allow driving the self-signed HTTPS dev server (DEV_HTTPS=1) used for
+        // on-device crypto testing. Harmless for the default http baseURL.
+        ignoreHTTPSErrors: true,
     },
-    projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+    projects: [
+        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+        // Mobile Safari (WebKit) — the engine real iPhone users run, where
+        // iOS-only layout bugs (safe-area, 100vw, font-scaling overflow) that
+        // Desktop Chrome never shows actually surface. Scoped to the mobile
+        // overflow hunt so it doesn't double the whole e2e suite.
+        {
+            name: 'mobile-webkit',
+            testMatch: /mobile-overflow\.spec\.ts/,
+            use: { ...devices['iPhone 13'] },
+        },
+    ],
     webServer: process.env.PLAYWRIGHT_NO_WEBSERVER
         ? undefined
         : {

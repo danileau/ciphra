@@ -147,6 +147,11 @@ Rules when adding UI:
 1. **Never hardcode an opaque surface or text color** — use the
    semantic vars and both themes come free. Translucent `rgba(...)`
    tints over themed surfaces adapt automatically and are fine.
+   - **Inline-style trap:** `style="background: white"` / `'#fff'` bypasses
+     the warm-overrides block (rule 3 only remaps Tailwind *classes*), so it
+     stays white in dark mode. This has bitten the nav, the quick-add mode
+     toggle, and the landing EncryptionDemo badges. Inline → use
+     `var(--surface-card)` (or the right semantic var), never a literal.
 2. **Text on a `--brand` or `--danger` fill** uses `--on-brand` /
    `--on-danger` (white in light, warm-black in dark — the dark theme
    lifts those fills past white-text contrast).
