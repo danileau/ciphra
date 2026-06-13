@@ -1,0 +1,12 @@
+# ciphra — security disclosure policy (RFC 9116)
+# Full policy + threat model: https://github.com/danileau/ciphra/blob/main/SECURITY.md
+#
+# ciphra is zero-knowledge: health data is encrypted client-side and the
+# server only ever stores ciphertext. Reports about that boundary, the
+# crypto, auth, or the family-sharing flow are especially welcome.
+
+Contact: https://github.com/danileau/ciphra/security/advisories/new
+Expires: 2027-06-13T00:00:00.000Z
+Preferred-Languages: de, en, fr, it
+Canonical: https://ciphra.ch/.well-known/security.txt
+Policy: https://github.com/danileau/ciphra/blob/main/SECURITY.md
