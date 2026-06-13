@@ -303,8 +303,8 @@
 											<path d="{iconPaths[info.icon] || iconPaths['heart']}"/>
 										</svg>
 									</div>
-									<h4 class="font-semibold text-sm mb-1 transition-colors" style="color: var(--text-primary);">{$t(info.titleKey)}</h4>
-									<p class="text-xs leading-snug" style="color: var(--text-muted);">{$t(info.subtitleKey)}</p>
+									<h4 class="font-semibold text-sm mb-1 transition-colors break-words hyphens-auto" style="color: var(--text-primary);">{$t(info.titleKey)}</h4>
+									<p class="text-xs leading-snug break-words hyphens-auto" style="color: var(--text-muted);">{$t(info.subtitleKey)}</p>
 								</a>
 							{/if}
 						{/each}

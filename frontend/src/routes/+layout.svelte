@@ -860,14 +860,14 @@
 								on:click={() => { quickAddMode = 'log'; }}
 								data-testid="quickadd-mode-log"
 								class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px]"
-								style="background: {quickAddMode === 'log' ? 'white' : 'transparent'}; color: {quickAddMode === 'log' ? 'var(--text-primary)' : 'var(--text-muted)'}"
+								style="background: {quickAddMode === 'log' ? 'var(--surface-card)' : 'transparent'}; color: {quickAddMode === 'log' ? 'var(--text-primary)' : 'var(--text-muted)'}"
 							>{$t('quickadd.mode_entry')} / {$t('quickadd.mode_event')}</button>
 							<button
 								type="button"
 								on:click={() => { quickAddMode = 'diary'; if (!diaryDate) diaryDate = new Date().toISOString().slice(0, 10); }}
 								data-testid="quickadd-mode-diary"
 								class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px] inline-flex items-center justify-center gap-1.5"
-								style="background: {quickAddMode === 'diary' ? 'white' : 'transparent'}; color: {quickAddMode === 'diary' ? 'var(--text-primary)' : 'var(--text-muted)'}"
+								style="background: {quickAddMode === 'diary' ? 'var(--surface-card)' : 'transparent'}; color: {quickAddMode === 'diary' ? 'var(--text-primary)' : 'var(--text-muted)'}"
 							>
 								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 									<rect x="4" y="11" width="16" height="10" rx="2" />
@@ -881,7 +881,7 @@
 									on:click={() => { quickAddMode = 'med'; }}
 									data-testid="quickadd-mode-med"
 									class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px] inline-flex items-center justify-center gap-1.5"
-									style="background: {quickAddMode === 'med' ? 'white' : 'transparent'}; color: {quickAddMode === 'med' ? 'var(--text-primary)' : 'var(--text-muted)'}"
+									style="background: {quickAddMode === 'med' ? 'var(--surface-card)' : 'transparent'}; color: {quickAddMode === 'med' ? 'var(--text-primary)' : 'var(--text-muted)'}"
 								>
 									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 										<path d="M19 14l-7 7-7-7a7 7 0 1 1 14 0z"/>

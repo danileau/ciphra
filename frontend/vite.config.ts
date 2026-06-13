@@ -85,6 +85,17 @@ export default defineConfig({
 	server: {
 		host: '0.0.0.0',
 		port: 5173,
+		// DEV_HTTPS=1 serves the dev server over self-signed HTTPS so the Web
+		// Crypto APIs (secure-context only) work when testing from a phone over
+		// the LAN IP. Cert lives in .devcerts/ (gitignored). Not used otherwise.
+		...(process.env.DEV_HTTPS
+			? {
+					https: {
+						key: readFileSync(resolve('.devcerts/dev.key')),
+						cert: readFileSync(resolve('.devcerts/dev.crt')),
+					},
+				}
+			: {}),
 		hmr: {
 			// When accessed through nginx (:8080), HMR WebSocket must connect to the right place
 			clientPort: parseInt(process.env.VITE_HMR_PORT || '5173'),

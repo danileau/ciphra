@@ -149,7 +149,10 @@
 <!-- No min-height — parent controls vertical sizing via h-* classes.
      Chart.js with responsive: true + maintainAspectRatio: false will
      fill whatever box the parent sets. -->
-<div class="w-full h-full relative">
+<!-- overflow-hidden: Chart.js momentarily oversizes the <canvas> during the
+     resize-observer settle, which can spill a few px past the container on
+     narrow viewports. Clip it so it never grows the page. -->
+<div class="w-full h-full relative overflow-hidden">
 	<canvas
 		bind:this={canvas}
 		role={ariaLabel ? 'img' : undefined}

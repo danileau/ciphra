@@ -177,7 +177,7 @@
 				<div
 					class="w-14 h-14 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-white"
 					style="border-color: {step === 2 ? 'var(--brand)' : step > 2 ? 'var(--olive)' : 'var(--border)'};
-					       background: {step === 2 ? 'rgba(178,60,44,0.06)' : step > 2 ? 'rgba(127,130,27,0.06)' : 'white'};
+					       background: {step === 2 ? 'rgba(178,60,44,0.06)' : step > 2 ? 'rgba(127,130,27,0.06)' : 'var(--surface-card)'};
 					       {step === 2 ? 'animation: pulse-ring 0.9s ease-in-out infinite;' : ''}"
 				>
 					{#if step > 2}
@@ -197,7 +197,7 @@
 				<div
 					class="w-14 h-14 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-white"
 					style="border-color: {step === 3 ? 'var(--brand)' : step > 3 ? 'var(--olive)' : 'var(--border)'};
-					       background: {step === 3 ? 'rgba(178,60,44,0.06)' : step > 3 ? 'rgba(127,130,27,0.06)' : 'white'};
+					       background: {step === 3 ? 'rgba(178,60,44,0.06)' : step > 3 ? 'rgba(127,130,27,0.06)' : 'var(--surface-card)'};
 					       {step === 3 ? 'animation: pulse-ring 0.6s ease-in-out infinite;' : ''}"
 				>
 					{#if step > 3}
