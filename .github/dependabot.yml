@@ -16,6 +16,18 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Tailwind 4 is a ground-up rewrite (PostCSS plugin moved to
+      # @tailwindcss/postcss, CSS-first config, changed default behaviours).
+      # It needs a deliberate migration + full visual-regression pass, not a
+      # dependabot bump — hold the major until we do it on purpose. v3
+      # minor/patch still flow through.
+      - dependency-name: tailwindcss
+        update-types: [version-update:semver-major]
+      # jsdom major bumps break the test env (24->29 failed CI). Dev-only,
+      # no urgency; hold the v24 line until a deliberate upgrade.
+      - dependency-name: jsdom
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: pip
     directory: /api
@@ -32,5 +44,11 @@ updates:
       interval: weekly
       day: monday
     groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+      # Actions are low-risk infra — standard, well-maintained actions
+      # whose major bumps (checkout v4→v6, etc.) rarely change behavior.
+      # Unlike app deps (npm/pip), group ALL update-types into one weekly
+      # PR instead of one-per-action. The majors-ride-their-own-PR rule
+      # (feedback_dependabot_major_versions) is for runtime/app deps; CI
+      # action versions don't warrant that ceremony.
+      actions-all:
+        patterns: ["*"]
