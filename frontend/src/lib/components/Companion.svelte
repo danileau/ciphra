@@ -493,6 +493,11 @@
 				type: 'linear' as const,
 				position: 'left' as const,
 				beginAtZero: true,
+				// CIPH-918 — axis title disambiguates the two independently-
+				// scaled lines. Dual-axis (CIPH-915) made "is this 1 or 2?"
+				// ambiguous because each line reads against a different scale;
+				// the title ties the left numbers to the accent episode line.
+				title: { display: true, text: episodeNoun, font: { size: 10 }, color: cohortAccentHex },
 				ticks: { precision: 0, font: { size: 10 }, color: cohortAccentHex, maxTicksLimit: 5 },
 				grid: { color: 'rgba(0,0,0,0.04)' },
 				border: { display: false },
@@ -501,6 +506,7 @@
 				type: 'linear' as const,
 				position: 'right' as const,
 				beginAtZero: true,
+				title: { display: true, text: $t('companion.how_symptom_days'), font: { size: 10 }, color: cohortNeutralHex },
 				ticks: { precision: 0, font: { size: 10 }, color: cohortNeutralHex, maxTicksLimit: 5 },
 				grid: { display: false },
 				border: { display: false },
