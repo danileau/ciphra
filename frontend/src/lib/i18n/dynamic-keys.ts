@@ -63,6 +63,11 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 	// CompanionMain; phases are follicular, luteal, ovulation, menstrual.
 	'cycle.phase_',
 
+	// CIPH-920 — circadian daypart adverbs looked up via
+	// `$t('insight.daypart_' + ins.topKey)` in InsightsSection; keys are
+	// daypart_night / _morning / _afternoon / _evening.
+	'insight.daypart_',
+
 	// Section-jump nav — `$t(`nav_section.${sid}`)` in log/[date]/+page.svelte
 	'nav_section.',
 
