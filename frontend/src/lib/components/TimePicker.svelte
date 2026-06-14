@@ -221,7 +221,7 @@
 	.tp-trigger:hover { border-color: var(--text-muted); }
 	.tp-trigger:focus-visible {
 		outline: none;
-		border-color: var(--brand);
+		border-color: var(--accent);
 		box-shadow: 0 0 0 3px rgba(var(--brand-rgb, 99,102,241), 0.18);
 	}
 	.tp-display { font-variant-numeric: tabular-nums; }
@@ -288,14 +288,14 @@
 	}
 	.tp-cell:focus-visible {
 		outline: none;
-		border-color: var(--brand);
+		border-color: var(--accent);
 	}
 	.tp-cell--selected {
-		background: var(--brand);
+		background: var(--accent);
 		color: var(--on-brand, #fff);
 	}
 	.tp-cell--selected:hover {
-		background: var(--brand);
+		background: var(--accent);
 		opacity: 0.9;
 	}
 	.tp-footer {
@@ -320,12 +320,12 @@
 		background: var(--surface-muted);
 	}
 	.tp-action--primary {
-		background: var(--brand);
+		background: var(--accent);
 		color: var(--on-brand, #fff);
-		border-color: var(--brand);
+		border-color: var(--accent);
 	}
 	.tp-action--primary:hover {
-		background: var(--brand);
+		background: var(--accent);
 		opacity: 0.9;
 	}
 </style>

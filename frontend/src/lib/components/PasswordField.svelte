@@ -110,7 +110,7 @@
 		background: var(--surface-muted);
 	}
 	.pwf-toggle:focus-visible {
-		outline: 2px solid var(--brand);
+		outline: 2px solid var(--accent);
 		outline-offset: 1px;
 		color: var(--text-primary);
 	}

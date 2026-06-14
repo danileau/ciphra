@@ -291,7 +291,7 @@
 	.dp-trigger:hover { border-color: var(--text-muted); }
 	.dp-trigger:focus-visible {
 		outline: none;
-		border-color: var(--brand);
+		border-color: var(--accent);
 		box-shadow: 0 0 0 3px rgba(var(--brand-rgb, 99,102,241), 0.18);
 	}
 	.dp-display {
@@ -391,18 +391,18 @@
 	}
 	.dp-day:focus-visible {
 		outline: none;
-		border-color: var(--brand);
+		border-color: var(--accent);
 	}
 	.dp-day--today {
 		font-weight: 700;
-		color: var(--brand);
+		color: var(--accent);
 	}
 	.dp-day--selected {
-		background: var(--brand);
+		background: var(--accent);
 		color: var(--on-brand, #fff);
 	}
 	.dp-day--selected:hover {
-		background: var(--brand);
+		background: var(--accent);
 		opacity: 0.9;
 	}
 	.dp-footer {
@@ -427,12 +427,12 @@
 		background: var(--surface-muted);
 	}
 	.dp-action--primary {
-		background: var(--brand);
+		background: var(--accent);
 		color: var(--on-brand, #fff);
-		border-color: var(--brand);
+		border-color: var(--accent);
 	}
 	.dp-action--primary:hover {
-		background: var(--brand);
+		background: var(--accent);
 		opacity: 0.9;
 	}
 </style>

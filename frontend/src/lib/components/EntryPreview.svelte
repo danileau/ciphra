@@ -492,7 +492,7 @@
 	<div class="flex flex-wrap items-center gap-2 mt-1.5">
 		<span
 			class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full"
-			style="background: var(--surface-muted); color: var(--brand); border: 1px solid var(--brand)"
+			style="background: var(--surface-muted); color: var(--accent); border: 1px solid var(--accent)"
 		>
 			<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<path d="M19 14l-7 7-7-7a7 7 0 1 1 14 0z"/>

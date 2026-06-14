@@ -12,6 +12,7 @@
 	import VitalTrendReportsCard from '$lib/components/VitalTrendReportsCard.svelte';
 	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
 	import { cohortPalette } from '$lib/cohortPalette';
+	import { conditionColorOf } from '$lib/conditionAccent';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import {
 		resolveReportsPrimaryCard,
@@ -569,7 +570,9 @@
 	// (anchor = currentYear's December); month mode shows it ending at
 	// the visible month — so navigating months keeps the chart in context.
 	$: trendCohort = cohortOf(bp);
-	$: trendAccentHex = bp ? cohortPalette(trendCohort)[0] : '#b23c2c';
+	// CIPH-921c — trend line uses the CONDITION color (matches /conditions +
+	// dashboard chart); the secondary symptom/fact line stays a cohort neutral.
+	$: trendAccentHex = bp ? conditionColorOf(bp) : '#b23c2c';
 	$: trendNeutralHex = bp ? cohortPalette(trendCohort)[4] : '#5c6b73';
 	$: trendAnchor = (() => {
 		if (viewMode === 'year') {

@@ -17,12 +17,24 @@ import {
 	computeInsights,
 	computeSleepEpisodeLink,
 	computeStreak,
+	computeTopSymptoms,
 	computeTriggerLift,
 	computeTypeMix,
 	insightCapabilityMatrix,
 	type InsightDoc,
 } from './insights';
 import { epilepsy } from './presets';
+import type { Blueprint } from './types';
+
+// Episodeless blueprint (custom/lab shape): symptoms + sleep vital + triggers,
+// no episode types. Exercises the symptom-day fallback mode.
+const EPISODELESS: Blueprint = {
+	...epilepsy,
+	conditionId: 'custom',
+	episodeTypes: [],
+	markerEvent: undefined,
+	episodeNoun: undefined,
+};
 
 // Fixed clock so windowing + streak math is deterministic.
 const NOW = new Date(2026, 5, 14); // 2026-06-14
@@ -188,12 +200,78 @@ describe('computeInsights orchestration', () => {
 	});
 });
 
+describe('symptom-day fallback (episodeless blueprints)', () => {
+	it('computeTopSymptoms ranks symptom frequency', () => {
+		const docs: InsightDoc[] = [];
+		for (let i = 0; i < 10; i++) {
+			docs.push(entry(dayBefore(i + 1), { symptoms: { tired: i < 7, headache: i < 3 } }));
+		}
+		const res = computeTopSymptoms(docs, EPISODELESS, NOW);
+		expect(res).not.toBeNull();
+		expect(res!.rows[0].id).toBe('tired');
+		expect(res!.rows[0].count).toBe(7);
+		expect(res!.rows[0].count).toBeGreaterThan(res!.rows[1].count);
+	});
+
+	it('computeTopSymptoms backstops episode blueprints too (with symptom data)', () => {
+		// Relaxed from "episodeless only" to a universal low-priority backstop:
+		// an episode blueprint can still surface top symptoms when it has the
+		// data (it just ranks last, so richer episode cards win the card cap).
+		const docs: InsightDoc[] = [];
+		for (let i = 0; i < 10; i++) docs.push(entry(dayBefore(i + 1), { symptoms: { tired: i < 5 } }));
+		const res = computeTopSymptoms(docs, epilepsy, NOW);
+		expect(res).not.toBeNull();
+		expect(res!.rows[0].id).toBe('tired');
+	});
+
+	it('episode blueprint with too-rare episodes falls back to the symptom outcome', () => {
+		// Hypertension-like (the Klaus case): declares episode types, but none
+		// occur in the window; rich symptom + trigger data instead. The
+		// correlation card must still fire, on symptom-days.
+		const docs: InsightDoc[] = [];
+		for (let i = 0; i < 7; i++) docs.push(entry(dayBefore(i + 1), { triggers: { stress: true }, symptoms: { tired: true } }));
+		for (let i = 0; i < 8; i++) docs.push(entry(dayBefore(i + 20), { triggers: {}, symptoms: { tired: i < 1 } }));
+		const res = computeTriggerLift(docs, epilepsy, NOW); // epilepsy declares episodes; none logged here
+		expect(res).not.toBeNull();
+		expect(res!.outcome).toBe('symptom');
+		expect(res!.rows[0].triggerId).toBe('stress');
+	});
+
+	it('sleep-link falls back to symptom-day outcome', () => {
+		const docs: InsightDoc[] = [];
+		for (let i = 0; i < 5; i++) docs.push(entry(dayBefore(i + 1), { vitals: { sleep_hours: 5 }, symptoms: { tired: i < 4 } }));
+		for (let i = 0; i < 6; i++) docs.push(entry(dayBefore(i + 20), { vitals: { sleep_hours: 8 }, symptoms: { tired: i < 1 } }));
+		const res = computeSleepEpisodeLink(docs, EPISODELESS, NOW);
+		expect(res).not.toBeNull();
+		expect(res!.outcome).toBe('symptom');
+		expect(res!.shortRate).toBeGreaterThan(res!.adequateRate);
+	});
+
+	it('trigger-lift falls back to symptom-day outcome', () => {
+		const docs: InsightDoc[] = [];
+		for (let i = 0; i < 6; i++) docs.push(entry(dayBefore(i + 1), { triggers: { stress: true }, symptoms: { tired: i < 5 } }));
+		for (let i = 0; i < 8; i++) docs.push(entry(dayBefore(i + 20), { triggers: {}, symptoms: { tired: i < 1 } }));
+		const res = computeTriggerLift(docs, EPISODELESS, NOW);
+		expect(res).not.toBeNull();
+		expect(res!.outcome).toBe('symptom');
+		expect(res!.rows[0].triggerId).toBe('stress');
+	});
+
+	it('epilepsy keeps the episode outcome', () => {
+		const docs: InsightDoc[] = [];
+		for (let i = 0; i < 6; i++) docs.push(entry(dayBefore(i + 1), { triggers: { stress: true }, episodes: { focal: i < 5 ? 1 : 0 } }));
+		for (let i = 0; i < 8; i++) docs.push(entry(dayBefore(i + 20), { triggers: {}, episodes: { focal: i < 1 ? 1 : 0 } }));
+		const res = computeTriggerLift(docs, epilepsy, NOW);
+		expect(res!.outcome).toBe('episode');
+	});
+});
+
 describe('cross-blueprint capability matrix', () => {
-	it('every preset declares all six insight keys', () => {
+	it('every preset declares all insight keys', () => {
 		for (const p of presets) {
 			const m = insightCapabilityMatrix(p.blueprint);
 			expect(Object.keys(m).sort()).toEqual(
-				['circadian', 'duration', 'sleep-link', 'streak', 'trigger-lift', 'type-mix'].sort(),
+				['circadian', 'duration', 'sleep-link', 'streak', 'top-symptoms', 'trigger-lift', 'type-mix'].sort(),
 			);
 		}
 	});
@@ -222,28 +300,28 @@ describe('cross-blueprint capability matrix', () => {
 			})
 			.join('\n');
 		expect(table).toMatchInlineSnapshot(`
-			"epilepsy: circadian,duration,sleep-link,streak,trigger-lift,type-mix
-			migraine: circadian,duration,sleep-link,streak,trigger-lift,type-mix
-			ms: sleep-link,streak,trigger-lift,type-mix
-			adhd: sleep-link,trigger-lift,type-mix
-			burnout: sleep-link,trigger-lift,type-mix
-			anxiety_depression: sleep-link,trigger-lift,type-mix
-			diabetes: streak,trigger-lift,type-mix
-			chronic_pain: sleep-link,trigger-lift,type-mix
-			long_covid: sleep-link,streak,trigger-lift,type-mix
-			asthma: circadian,duration,sleep-link,streak,trigger-lift,type-mix
-			hypertension: circadian,sleep-link,trigger-lift,type-mix
-			ibs: streak,trigger-lift,type-mix
-			cancer_treatment: trigger-lift,type-mix
-			endometriosis: sleep-link,trigger-lift,type-mix
-			menopause: circadian,sleep-link,trigger-lift,type-mix
-			pcos: trigger-lift,type-mix
-			bipolar: sleep-link,streak,trigger-lift,type-mix
-			glaucoma: circadian,duration,sleep-link,trigger-lift,type-mix
-			parkinson: circadian,duration,sleep-link,trigger-lift,type-mix
-			ibd: circadian,streak,trigger-lift,type-mix
-			hashimoto: —
-			rheumatoid_arthritis: sleep-link,streak,trigger-lift,type-mix
+			"epilepsy: circadian,duration,sleep-link,streak,top-symptoms,trigger-lift,type-mix
+			migraine: circadian,duration,sleep-link,streak,top-symptoms,trigger-lift,type-mix
+			ms: sleep-link,streak,top-symptoms,trigger-lift,type-mix
+			adhd: sleep-link,top-symptoms,trigger-lift,type-mix
+			burnout: sleep-link,top-symptoms,trigger-lift,type-mix
+			anxiety_depression: sleep-link,top-symptoms,trigger-lift,type-mix
+			diabetes: streak,top-symptoms,trigger-lift,type-mix
+			chronic_pain: sleep-link,top-symptoms,trigger-lift,type-mix
+			long_covid: sleep-link,streak,top-symptoms,trigger-lift,type-mix
+			asthma: circadian,duration,sleep-link,streak,top-symptoms,trigger-lift,type-mix
+			hypertension: circadian,sleep-link,top-symptoms,trigger-lift,type-mix
+			ibs: streak,top-symptoms,trigger-lift,type-mix
+			cancer_treatment: top-symptoms,trigger-lift,type-mix
+			endometriosis: sleep-link,top-symptoms,trigger-lift,type-mix
+			menopause: circadian,sleep-link,top-symptoms,trigger-lift,type-mix
+			pcos: top-symptoms,trigger-lift,type-mix
+			bipolar: sleep-link,streak,top-symptoms,trigger-lift,type-mix
+			glaucoma: circadian,duration,sleep-link,top-symptoms,trigger-lift,type-mix
+			parkinson: circadian,duration,sleep-link,top-symptoms,trigger-lift,type-mix
+			ibd: circadian,streak,top-symptoms,trigger-lift,type-mix
+			hashimoto: top-symptoms,trigger-lift
+			rheumatoid_arthritis: sleep-link,streak,top-symptoms,trigger-lift,type-mix
 			custom: —"
 		`);
 	});

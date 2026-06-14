@@ -238,7 +238,7 @@
 							{#if ev.data.time}
 								<span class="dd-event-time">{ev.data.time}</span>
 							{/if}
-							<span class="dd-event-rescue" style="color: var(--brand)">{rescueMedLabel(ev)}{ev.data.dose ? ` · ${ev.data.dose}${rescueMedUnit(ev)}` : ''}</span>
+							<span class="dd-event-rescue" style="color: var(--accent)">{rescueMedLabel(ev)}{ev.data.dose ? ` · ${ev.data.dose}${rescueMedUnit(ev)}` : ''}</span>
 						</li>
 					{/each}
 					{#each eventDocs as ev}

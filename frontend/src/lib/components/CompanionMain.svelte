@@ -70,10 +70,16 @@
 	export let allDocs: CiphraDocument[] = [];
 	export let bp: Blueprint | null = null;
 
-	// Cohort palette read locally so VitalTrendCard gets the same accent
-	// the existing trend chart uses on the dashboard. Source of truth is
-	// `cohortOf(bp)` upstream — we mirror it via the `cohort` prop.
-	$: vitalAccentHex = cohortPalette(cohort)[0];
+	// CIPH-921b — single dashboard accent = the CONDITION color (the one
+	// /conditions and the header badge use), passed down from Companion.
+	// Previously each card pulled cohortPalette(cohort)[0]; for phase/cycle
+	// cohorts that diverges from the condition color (violet/rose vs the
+	// DATA-palette hue), so the dashboard read as several different colors.
+	// One accent across primary card + insight cards + chart keeps the page
+	// coherent with the badge. Neutral stays the cohort anchor-slate.
+	export let conditionColor: string | null = null;
+
+	$: accentHex = conditionColor || cohortPalette(cohort)[0];
 	$: vitalNeutralHex = cohortPalette(cohort)[4];
 
 	// CIPH-763b — concrete number types for sr-only caption reductions
@@ -152,11 +158,12 @@
 	<a
 		href="/reports"
 		class="card card-rhythmic hay-hero block no-underline"
+		style="--card-accent: {accentHex}"
 		aria-label={$t('companion.how_aria')}
 	>
 		<div class="flex items-baseline justify-between gap-2 mb-2">
 			<h2 class="text-sm font-semibold" style="color: var(--text-primary)">{$t('companion.how_title')}</h2>
-			<span class="text-xs hay-link" style="color: var(--accent)">
+			<span class="text-xs hay-link" style="color: var(--card-accent)">
 				{$t('companion.how_view_trend')} →
 			</span>
 		</div>
@@ -185,11 +192,11 @@
 		{bp}
 		primaryVitalId={primarySpec.primaryVitalId}
 		secondaryVitalIds={primarySpec.secondaryVitalIds}
-		accentHex={vitalAccentHex}
+		accentHex={accentHex}
 		neutralHex={vitalNeutralHex}
 	/>
 {:else if primarySpec?.kind === 'top-triggers'}
-	<TopTriggersCard docs={allDocs} {bp} />
+	<TopTriggersCard docs={allDocs} {bp} {accentHex} />
 {:else if primarySpec?.kind === 'active-phase'}
 	<!-- pi24 dashboard: active-phase resolver kind = PhaseContextCard
 	     (anchor block above) + WithinPhaseRollupCard (here). Two cards
@@ -205,7 +212,7 @@
      cross-signal insight (sleep↔episodes, trigger lift, circadian, type
      mix, duration, episode-free streak) and renders nothing for
      cohorts/users without the data. -->
-<InsightsSection docs={allDocs} {bp} accentHex={vitalAccentHex} neutralHex={vitalNeutralHex} />
+<InsightsSection docs={allDocs} {bp} {accentHex} neutralHex={vitalNeutralHex} />
 
 <!-- CIPH-900 — Episode bar-chart + Top-symptoms bar-chart removed. The
      deep trend lives at /reports (year heatmap + monthly grid + sums).
@@ -222,7 +229,7 @@
 	}
 	.hay-hero:hover,
 	.hay-hero:focus-visible {
-		border-color: var(--accent);
+		border-color: var(--card-accent, var(--accent));
 	}
 	.hay-hero:hover .hay-link,
 	.hay-hero:focus-visible .hay-link {

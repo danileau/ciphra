@@ -229,7 +229,9 @@
 
 <style>
 	.welcome-card {
-		border-left: 3px solid var(--brand);
+		/* CIPH-921c — the onboarding banner's accent stripe follows the
+		   per-condition color (the ciphra✱ logo stays brand-rust). */
+		border-left: 3px solid var(--accent);
 	}
 	.welcome-chip {
 		display: inline-flex;
@@ -250,7 +252,7 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.welcome-chip--link {
-		color: var(--brand);
+		color: var(--accent);
 		background: transparent;
 		border-color: transparent;
 	}
@@ -353,7 +355,7 @@
 	}
 	.welcome-explore svg {
 		flex: 0 0 auto;
-		color: var(--brand);
+		color: var(--accent);
 		opacity: 0.7;
 	}
 </style>

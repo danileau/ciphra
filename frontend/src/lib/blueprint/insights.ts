@@ -139,6 +139,60 @@ function durationEpisodeTypes(bp: Blueprint): EpisodeType[] {
 	return (bp.episodeTypes || []).filter((e) => e.trackDuration);
 }
 
+/** All trackable symptom items across the blueprint's groups. */
+function symptomItems(bp: Blueprint): { id: string; label: string }[] {
+	const out: { id: string; label: string }[] = [];
+	for (const g of bp.symptomGroups || []) {
+		for (const it of g.items || []) out.push({ id: it.id, label: it.label });
+	}
+	return out;
+}
+
+function hasSymptoms(bp: Blueprint): boolean {
+	return symptomItems(bp).length > 0;
+}
+
+/** A day with any symptom logged (mirrors Companion's symptom-day count). */
+function symptomDay(d: InsightDoc): boolean {
+	const s = d.data?.symptoms || {};
+	for (const v of Object.values(s)) if (v) return true;
+	return false;
+}
+
+/** Minimum adverse-outcome days in-window for a correlation card to run. */
+const MIN_OUTCOME_DAYS = 3;
+
+/**
+ * Pick the adverse-outcome predicate for the correlation cards (sleep,
+ * trigger) from the DATA, not just the blueprint shape.
+ *
+ * Episode cohorts normally key off "a day with an episode". But some
+ * blueprints declare episode types that are RARE emergencies — hypertensive
+ * crisis, orthostatic drop — which in a 180-day window barely occur. Keying
+ * off them starves every card and leaves the dashboard empty (the Klaus
+ * case). When the episode signal is too thin, fall back to "a day with any
+ * symptom" so the same correlation still surfaces. Episodeless blueprints
+ * (custom, hashimoto, …) skip straight to the symptom outcome.
+ */
+function resolveOutcome(
+	entries: InsightDoc[],
+	bp: Blueprint,
+): { adverse: (d: InsightDoc) => boolean; outcome: 'episode' | 'symptom' } | null {
+	const epIds = episodeIds(bp);
+	if (epIds.length > 0) {
+		let epDays = 0;
+		for (const e of entries) if (episodeCount(e, epIds) > 0) epDays++;
+		if (epDays >= MIN_OUTCOME_DAYS)
+			return { adverse: (d) => episodeCount(d, epIds) > 0, outcome: 'episode' };
+	}
+	if (hasSymptoms(bp)) {
+		let sDays = 0;
+		for (const e of entries) if (symptomDay(e)) sDays++;
+		if (sDays >= MIN_OUTCOME_DAYS) return { adverse: symptomDay, outcome: 'symptom' };
+	}
+	return null;
+}
+
 /** Sleep-hours vital, if the blueprint tracks one (id convention + unit). */
 function sleepVitalId(bp: Blueprint): string | null {
 	const v = (bp.vitals || []).find(
@@ -165,6 +219,8 @@ export interface TriggerLiftRow {
 
 export interface TriggerLiftInsight {
 	kind: 'trigger-lift';
+	/** 'episode' or 'symptom' — drives the outcome noun in the UI. */
+	outcome: 'episode' | 'symptom';
 	rows: TriggerLiftRow[];
 }
 
@@ -174,15 +230,14 @@ export function computeTriggerLift(
 	now: Date = new Date(),
 ): TriggerLiftInsight | null {
 	const triggerIds = (bp.triggers || []).map((t) => t.id);
-	const epIds = episodeIds(bp);
-	if (triggerIds.length === 0 || epIds.length === 0) return null;
+	if (triggerIds.length === 0) return null;
 
 	const entries = windowedEntries(docs, now);
 	if (entries.length < 8) return null;
 
-	let totalEpisodeDays = 0;
-	for (const e of entries) if (episodeCount(e, epIds) > 0) totalEpisodeDays++;
-	if (totalEpisodeDays < 3) return null;
+	const resolved = resolveOutcome(entries, bp);
+	if (!resolved) return null;
+	const { adverse, outcome } = resolved;
 
 	const labelOf = new Map((bp.triggers || []).map((t) => [t.id, t.label]));
 	const rows: TriggerLiftRow[] = [];
@@ -193,7 +248,7 @@ export function computeTriggerLift(
 		let withoutEpisode = 0;
 		for (const e of entries) {
 			const present = triggersOnDay(e, triggerIds).has(id);
-			const hasEp = episodeCount(e, epIds) > 0;
+			const hasEp = adverse(e);
 			if (present) {
 				withDays++;
 				if (hasEp) withEpisode++;
@@ -226,7 +281,7 @@ export function computeTriggerLift(
 		if (al !== bl) return bl - al;
 		return b.rateWith - a.rateWith;
 	});
-	return { kind: 'trigger-lift', rows: rows.slice(0, 4) };
+	return { kind: 'trigger-lift', outcome, rows: rows.slice(0, 4) };
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -235,9 +290,11 @@ export function computeTriggerLift(
 
 export interface SleepLinkInsight {
 	kind: 'sleep-link';
+	/** 'episode' or 'symptom' — drives the outcome noun in the UI. */
+	outcome: 'episode' | 'symptom';
 	thresholdH: number;
-	shortRate: number; // episode incidence on short-sleep days (0..1)
-	adequateRate: number; // episode incidence on adequate-sleep days
+	shortRate: number; // adverse-outcome incidence on short-sleep days (0..1)
+	adequateRate: number; // adverse-outcome incidence on adequate-sleep days
 	liftPct: number | null;
 	shortDays: number;
 	adequateDays: number;
@@ -249,10 +306,13 @@ export function computeSleepEpisodeLink(
 	now: Date = new Date(),
 ): SleepLinkInsight | null {
 	const vid = sleepVitalId(bp);
-	const epIds = episodeIds(bp);
-	if (!vid || epIds.length === 0) return null;
+	if (!vid) return null;
 
 	const entries = windowedEntries(docs, now);
+	const resolved = resolveOutcome(entries, bp);
+	if (!resolved) return null;
+	const { adverse, outcome } = resolved;
+
 	let shortDays = 0;
 	let shortEp = 0;
 	let adeqDays = 0;
@@ -261,7 +321,7 @@ export function computeSleepEpisodeLink(
 	for (const e of entries) {
 		const sleep = vitalNumber(e, vid);
 		if (sleep === null) continue;
-		const hasEp = episodeCount(e, epIds) > 0;
+		const hasEp = adverse(e);
 		if (hasEp) totalEp++;
 		if (sleep < SHORT_SLEEP_H) {
 			shortDays++;
@@ -279,6 +339,7 @@ export function computeSleepEpisodeLink(
 	const liftPct = adequateRate > 0 ? Math.round((shortRate / adequateRate - 1) * 100) : null;
 	return {
 		kind: 'sleep-link',
+		outcome,
 		thresholdH: SHORT_SLEEP_H,
 		shortRate,
 		adequateRate,
@@ -519,6 +580,59 @@ export function computeStreak(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// 7. Top symptoms — frequency, for episodeless blueprints (custom/lab)
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface TopSymptomRow {
+	id: string;
+	label: string;
+	count: number;
+	pct: number; // share of logged days in the window (0..100)
+}
+
+export interface TopSymptomsInsight {
+	kind: 'top-symptoms';
+	rows: TopSymptomRow[];
+	loggedDays: number;
+}
+
+export function computeTopSymptoms(
+	docs: InsightDoc[],
+	bp: Blueprint,
+	now: Date = new Date(),
+): TopSymptomsInsight | null {
+	// Universal low-priority backstop (last in INSIGHT_ORDER): episode cohorts
+	// fill the card cap with their richer episode-based cards first, so this
+	// only surfaces when there's spare room — which is exactly the sparse /
+	// episodeless case where the dashboard would otherwise be naked.
+	const items = symptomItems(bp);
+	if (items.length === 0) return null;
+
+	const entries = windowedEntries(docs, now);
+	if (entries.length < 8) return null;
+
+	const counts = new Map<string, number>();
+	let loggedDays = 0;
+	for (const e of entries) {
+		loggedDays++;
+		const syms = e.data?.symptoms || {};
+		for (const it of items) if (syms[it.id]) counts.set(it.id, (counts.get(it.id) || 0) + 1);
+	}
+	const rows: TopSymptomRow[] = items
+		.filter((it) => (counts.get(it.id) || 0) > 0)
+		.map((it) => ({
+			id: it.id,
+			label: it.label,
+			count: counts.get(it.id) || 0,
+			pct: pct((counts.get(it.id) || 0) / loggedDays),
+		}))
+		.sort((a, b) => b.count - a.count);
+	// Need a real signal: the top symptom on at least a few days.
+	if (rows.length === 0 || rows[0].count < 3) return null;
+	return { kind: 'top-symptoms', rows: rows.slice(0, 5), loggedDays };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Orchestration + capability matrix
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -528,7 +642,8 @@ export type Insight =
 	| CircadianInsight
 	| TypeMixInsight
 	| DurationInsight
-	| StreakInsight;
+	| StreakInsight
+	| TopSymptomsInsight;
 
 export type InsightKind = Insight['kind'];
 
@@ -540,6 +655,9 @@ export const INSIGHT_ORDER: InsightKind[] = [
 	'streak',
 	'type-mix',
 	'duration',
+	// Last: a universal backstop so sparse / episodeless cohorts never show a
+	// naked dashboard, without displacing richer episode cards when they exist.
+	'top-symptoms',
 ];
 
 /** Max cards rendered at once — keeps the column rich but not a wall (CIPH-900). */
@@ -559,6 +677,7 @@ export function computeInsights(
 	const all: (Insight | null)[] = [
 		computeSleepEpisodeLink(docs, bp, now),
 		computeTriggerLift(docs, bp, now),
+		computeTopSymptoms(docs, bp, now),
 		computeCircadian(docs, bp, now),
 		computeStreak(docs, bp, now),
 		computeTypeMix(docs, bp, now),
@@ -577,9 +696,15 @@ export function computeInsights(
  */
 export function insightCapabilityMatrix(bp: Blueprint): Record<InsightKind, boolean> {
 	const hasEpisodes = (bp.episodeTypes || []).length > 0;
+	const symptoms = hasSymptoms(bp);
+	// Correlation cards key off an adverse-outcome day: an episode day when the
+	// blueprint logs episodes, else (or when episodes are too rare in-window —
+	// decided at compute time by resolveOutcome) a symptom day.
+	const outcomeAvailable = hasEpisodes || symptoms;
 	return {
-		'sleep-link': !!sleepVitalId(bp) && hasEpisodes,
-		'trigger-lift': (bp.triggers || []).length > 0 && hasEpisodes,
+		'sleep-link': !!sleepVitalId(bp) && outcomeAvailable,
+		'trigger-lift': (bp.triggers || []).length > 0 && outcomeAvailable,
+		'top-symptoms': symptoms,
 		circadian: timedEpisodeTypes(bp).length > 0,
 		'type-mix': (bp.episodeTypes || []).length >= 2,
 		duration: durationEpisodeTypes(bp).length > 0,
