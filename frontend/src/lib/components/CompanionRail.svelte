@@ -127,15 +127,15 @@
 			<div class="flex items-center gap-3">
 				<div
 					class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-					style="background: var(--brand-light, rgba(176,75,47,0.08))"
+					style="background: rgba(var(--accent-rgb), 0.08)"
 				>
-					<svg class="w-4 h-4" style="color: var(--brand)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+					<svg class="w-4 h-4" style="color: var(--accent)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
 						<path d="M19 14l-7 7-7-7a7 7 0 1 1 14 0z"/>
 						<circle cx="12" cy="11" r="3"/>
 					</svg>
 				</div>
 				<div class="flex-1 min-w-0">
-					<p class="text-2xl font-bold num-data" style="color: var(--brand)">{rescueMedsThisMonth}</p>
+					<p class="text-2xl font-bold num-data" style="color: var(--accent)">{rescueMedsThisMonth}</p>
 					<p class="text-[11px]" style="color: var(--text-muted)">{$t('rescue_med.dashboard_count')}</p>
 				</div>
 			</div>

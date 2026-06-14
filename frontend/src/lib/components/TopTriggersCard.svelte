@@ -29,6 +29,9 @@
 	export let bp: Blueprint | null = null;
 	export let windowMonths = 12;
 	export let limit = 5;
+	// CIPH-921b — dashboard accent (the condition color). Falls back to the
+	// global brand accent so the card still renders standalone in tests.
+	export let accentHex: string | null = null;
 
 	$: triggerLabels = (() => {
 		const map = new Map<string, string>();
@@ -84,13 +87,14 @@
 	<a
 		href="/reports"
 		class="card card-rhythmic top-triggers-card block no-underline"
+		style="--card-accent: {accentHex || 'var(--accent)'}"
 		aria-label={$t('companion.top_triggers_aria')}
 	>
 		<div class="flex items-baseline justify-between gap-2 mb-3">
 			<h2 class="text-sm font-semibold" style="color: var(--text-primary)">
 				{$t('companion.top_triggers_title')}
 			</h2>
-			<span class="text-xs trigger-link" style="color: var(--accent)">
+			<span class="text-xs trigger-link" style="color: var(--card-accent)">
 				{$t('companion.how_view_trend')} →
 			</span>
 		</div>
@@ -101,7 +105,7 @@
 					<span class="flex-1 max-w-[60%] rounded-full h-1.5" style="background: var(--surface-inset)">
 						<span
 							class="block h-1.5 rounded-full"
-							style="width: {(item.count / maxCount) * 100}%; background: var(--accent)"
+							style="width: {(item.count / maxCount) * 100}%; background: var(--card-accent)"
 						></span>
 					</span>
 					<span class="text-xs font-mono tabular-nums shrink-0 min-w-[2.5em] text-right" style="color: var(--text-muted)">{item.count}×</span>
@@ -121,7 +125,7 @@
 	}
 	.top-triggers-card:hover,
 	.top-triggers-card:focus-visible {
-		border-color: var(--accent);
+		border-color: var(--card-accent, var(--accent));
 	}
 	.top-triggers-card:hover .trigger-link,
 	.top-triggers-card:focus-visible .trigger-link {

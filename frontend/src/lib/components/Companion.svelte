@@ -22,6 +22,16 @@
 	} from '$lib/blueprint/dashboardPrimary';
 	import { computeCycleStateToday, hasCycleTracking, PHASE_COLORS } from '$lib/cycleState';
 	import { cohortPalette } from '$lib/cohortPalette';
+	import { conditionInfoMap } from '$lib/conditionInfo';
+
+	// CIPH-921 — the dashboard condition label must use the SAME per-condition
+	// color as /conditions (the landing #conditions section + condition deep
+	// pages), not a uniform olive badge. Source of truth is conditionInfoMap;
+	// fall back to the blueprint's own accent for custom/unlisted conditions.
+	// All three fallbacks are hex so the `{color}1a` / `{color}33` alpha
+	// suffixes below stay valid CSS (never a var()).
+	$: conditionColor =
+		(bp && conditionInfoMap[bp.conditionId]?.color) || bp?.accentColor || cohortAccentHex;
 
 	// CIPH-873 — exportForDoctor() helper + generateDoctorPdf import removed.
 	// The "Export for doctor" rail button now deep-links to
@@ -398,13 +408,13 @@
 			{
 				label: episodeNoun,
 				data: howAreYouTrend.episodes,
-				borderColor: cohortAccentHex,
+				borderColor: conditionColor,
 				backgroundColor: 'transparent',
 				borderWidth: 2,
 				tension: 0.3,
 				pointRadius: 2,
 				pointHoverRadius: 5,
-				pointBackgroundColor: cohortAccentHex,
+				pointBackgroundColor: conditionColor,
 				fill: false,
 				yAxisID: 'y',
 			},
@@ -497,8 +507,8 @@
 				// scaled lines. Dual-axis (CIPH-915) made "is this 1 or 2?"
 				// ambiguous because each line reads against a different scale;
 				// the title ties the left numbers to the accent episode line.
-				title: { display: true, text: episodeNoun, font: { size: 10 }, color: cohortAccentHex },
-				ticks: { precision: 0, font: { size: 10 }, color: cohortAccentHex, maxTicksLimit: 5 },
+				title: { display: true, text: episodeNoun, font: { size: 10 }, color: conditionColor },
+				ticks: { precision: 0, font: { size: 10 }, color: conditionColor, maxTicksLimit: 5 },
 				grid: { color: 'rgba(0,0,0,0.04)' },
 				border: { display: false },
 			},
@@ -646,7 +656,7 @@
 					<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('companion.greeting', { name: $auth.username || '' })}</h1>
 					<p class="text-sm mt-0.5" style="color: var(--text-secondary)">{new Date().toLocaleDateString($locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
 				</div>
-				{#if bp}<span class="badge badge-olive shrink-0">{$t(bp.conditionLabel)}</span>{/if}
+				{#if bp}<span class="badge shrink-0" style="background: {conditionColor}1a; color: {conditionColor}; border: 1px solid {conditionColor}33;">{$t(bp.conditionLabel)}</span>{/if}
 			</div>
 
 			{#if todayLog}
@@ -660,7 +670,7 @@
 							<span class="text-sm" style="color: var(--text-muted)">· {part}</span>
 						{/each}
 					</div>
-					<a href="/log/today" class="text-xs font-medium hover:underline shrink-0" style="color: var(--brand)">{$t('common.edit')}</a>
+					<a href="/log/today" class="text-xs font-medium hover:underline shrink-0" style="color: var(--accent)">{$t('common.edit')}</a>
 				</div>
 			{:else}
 				<!-- 2026-06-07 — no-today-log affordance. Mobile users reach
@@ -703,6 +713,7 @@
 				{primarySpec}
 				{allDocs}
 				{bp}
+				{conditionColor}
 			/>
 		</div>
 		<aside class="min-w-0">
@@ -716,7 +727,7 @@
 				{complianceVisible}
 				{rescueMedsThisMonth}
 				{markerGapTrend}
-				markerAccentHex={cohortAccentHex}
+				markerAccentHex={conditionColor}
 				canExport={!!bp && allDocs.length > 0}
 				{todayEntries}
 				{bp}

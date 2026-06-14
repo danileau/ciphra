@@ -209,13 +209,13 @@
 			<div class="rounded-lg p-3 mb-3" style="background: var(--surface-card); border: 1px solid var(--border)">
 				<p class="text-xs mb-1" style="color: var(--text-muted)">{$t('family.code_label')}</p>
 				<p class="font-mono text-base select-all leading-relaxed" style="color: var(--text-primary)">{createdCode}</p>
-				<button type="button" on:click={copyCode} class="text-xs mt-2 underline" style="color: var(--brand)">{$t('common.copy')}</button>
+				<button type="button" on:click={copyCode} class="text-xs mt-2 underline" style="color: var(--accent)">{$t('common.copy')}</button>
 			</div>
 
 			<div class="rounded-lg p-3 mb-3" style="background: var(--surface-card); border: 1px solid var(--border)">
 				<p class="text-xs mb-1" style="color: var(--text-muted)">{$t('family.link_label')}</p>
 				<p class="font-mono text-xs break-all select-all" style="color: var(--text-primary)">{shareLink}</p>
-				<button type="button" on:click={copyLink} class="text-xs mt-2 underline" style="color: var(--brand)">{$t('common.copy')}</button>
+				<button type="button" on:click={copyLink} class="text-xs mt-2 underline" style="color: var(--accent)">{$t('common.copy')}</button>
 			</div>
 
 			<button

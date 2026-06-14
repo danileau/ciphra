@@ -1251,7 +1251,7 @@
 	.log-goto-today {
 		font-size: 12px;
 		font-weight: 500;
-		color: var(--brand);
+		color: var(--accent);
 		background: none;
 		border: none;
 		cursor: pointer;
@@ -1387,7 +1387,7 @@
 	.log-chip:focus-visible,
 	.log-counter-btn:focus-visible,
 	.log-nav-btn:focus-visible {
-		outline: 3px solid var(--brand);
+		outline: 3px solid var(--accent);
 		outline-offset: 2px;
 	}
 
@@ -1499,7 +1499,7 @@
 		transition: border-color 0.15s ease-out;
 	}
 	.log-detail-input:focus {
-		border-color: var(--brand);
+		border-color: var(--accent);
 	}
 	/* CIPH-pi24-5d — Bring <select.log-detail-input> in line with the rest
 	   of the app: strip the native chevron + paint the brand SVG one. */

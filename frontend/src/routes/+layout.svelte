@@ -14,6 +14,7 @@
 	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import { pathToRoute } from '$lib/cohortPalette';
+	import { conditionAccent } from '$lib/conditionAccent';
 	import { resolvedTheme } from '$lib/stores/theme';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
@@ -542,6 +543,18 @@
 	// CIPH-892 rhythm tokens and the cohort accent overrides in app.css.
 	$: currentRoute = pathToRoute(currentPath);
 	$: currentCohort = cohortOf($resolvedBlueprint);
+	// CIPH-921c — repoint the primary accent (--accent/-hover/-rgb) from the
+	// CONDITION color so the whole authed surface (buttons, rings, links, FAB)
+	// matches /conditions + the dashboard badge, not the per-cohort accent.
+	// Only when a blueprint is resolved; public routes keep the brand accent.
+	// The cohort still drives --accent-info/-calm/-neutral (semantic secondaries)
+	// and the rhythm tokens via data-cohort.
+	$: accentOverride = $resolvedBlueprint
+		? (() => {
+				const a = conditionAccent($resolvedBlueprint);
+				return `--accent:${a.hex};--accent-hover:${a.hover};--accent-rgb:${a.rgb};`;
+			})()
+		: '';
 
 	// Dark mode (design review 2026-06-11) — mirror the resolved theme
 	// onto <html> so the app.css [data-theme='dark'] block applies.
@@ -674,8 +687,10 @@
 	>{$t('landing.skip_to_content')}</a>
 	<!-- Sticky-footer shell (matches the unauth branch). Pushes the
 	     authed footer to the bottom of short pages instead of letting
-	     it float in mid-viewport. -->
-	<div class="min-h-screen flex flex-col">
+	     it float in mid-viewport. CIPH-921c — the condition-accent override
+	     lives here (not on <main>) so the header nav + active state inherit
+	     it too; the <main> below keeps data-cohort for the rhythm tokens. -->
+	<div class="min-h-screen flex flex-col" style={accentOverride}>
 	<!-- Top Bar -->
 	<header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b">
 		<div class="max-w-6xl mx-auto px-4 flex items-center justify-between h-14 gap-2">
@@ -705,7 +720,7 @@
 					<a
 						href={item.href}
 						class="text-sm font-medium px-3 py-2 rounded-lg transition-colors"
-						style="color: {active ? 'var(--brand)' : 'var(--text-secondary)'};
+						style="color: {active ? 'var(--accent)' : 'var(--text-secondary)'};
 						       {active ? 'background: var(--surface-muted);' : ''}"
 						aria-current={active ? 'page' : undefined}
 					>{item.label}</a>
@@ -825,7 +840,7 @@
 		data-route={currentRoute}
 		data-cohort={currentCohort}
 		class="flex-1"
-		style="padding-bottom: 2rem"
+		style="padding-bottom: 2rem;{accentOverride}"
 	>
 		<slot />
 	</main>
@@ -928,9 +943,9 @@
 										on:click={() => selectRescueMed(med.id)}
 										data-testid="quickadd-med-{med.id}"
 										class="flex items-center gap-2 px-4 py-2 rounded-xl border transition-all min-h-[44px]"
-										style="border-color: {quickAddSelectedMedId === med.id ? 'var(--brand)' : 'var(--border)'}; background: {quickAddSelectedMedId === med.id ? 'var(--brand-light, rgba(176,75,47,0.08))' : 'var(--surface-muted)'}"
+										style="border-color: {quickAddSelectedMedId === med.id ? 'var(--accent)' : 'var(--border)'}; background: {quickAddSelectedMedId === med.id ? 'rgba(var(--accent-rgb), 0.08)' : 'var(--surface-muted)'}"
 									>
-										<span class="text-sm font-medium" style="color: {quickAddSelectedMedId === med.id ? 'var(--brand)' : 'var(--text-primary)'}">{$t(med.label)}</span>
+										<span class="text-sm font-medium" style="color: {quickAddSelectedMedId === med.id ? 'var(--accent)' : 'var(--text-primary)'}">{$t(med.label)}</span>
 										{#if med.defaultDose}
 											<span class="text-[11px]" style="color: var(--text-muted)">{med.defaultDose}{med.unit ? ' ' + translateUnit($t, med.unit) : ''}</span>
 										{/if}

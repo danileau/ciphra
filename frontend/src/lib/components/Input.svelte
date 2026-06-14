@@ -76,7 +76,7 @@
 	}
 
 	.input-field:focus {
-		border-color: var(--brand);
+		border-color: var(--accent);
 		box-shadow: 0 0 0 3px rgba(178, 60, 44, 0.15);
 	}
 
