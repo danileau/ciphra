@@ -34,6 +34,14 @@
 		afternoon: '12–18',
 		evening: '18–24',
 	};
+
+	// Calendar date for streak dot i (0 = oldest, dotDays-1 = today) — used
+	// in the per-dot hover title so each day is identifiable.
+	function dotDate(dotDays: number, i: number): string {
+		const d = new Date();
+		d.setDate(d.getDate() - (dotDays - 1 - i));
+		return d.toLocaleDateString($locale, { day: 'numeric', month: 'short' });
+	}
 </script>
 
 {#if insights.length}
@@ -44,59 +52,90 @@
 			<div class="card card-rhythmic insight-card">
 				{#if ins.kind === 'sleep-link'}
 					{@const factor = ins.liftPct}
-					<p class="insight-title">{$t('insight.sleep_title')}</p>
+					{@const outNoun = ins.outcome === 'symptom' ? $t('insight.symptom_days_noun') : noun}
+					<p class="insight-title">{$t('insight.sleep_title')}<span class="insight-info" title={$t('insight.tip_sleep', { noun: outNoun })} aria-label={$t('insight.tip_sleep', { noun: outNoun })}>ⓘ</span></p>
 					<p class="insight-headline">
 						{#if factor !== null}
-							{$t('insight.sleep_headline', { h: ins.thresholdH, pct: factor, noun })}
+							{$t('insight.sleep_headline', { h: ins.thresholdH, pct: factor, noun: outNoun })}
 						{:else}
-							{$t('insight.sleep_headline_only', { h: ins.thresholdH, noun })}
+							{$t('insight.sleep_headline_only', { h: ins.thresholdH, noun: outNoun })}
 						{/if}
 					</p>
 					<div class="bar-rows">
 						<div class="bar-row">
-							<span class="bar-label">{$t('insight.sleep_short', { h: ins.thresholdH })}</span>
+							<span class="bar-label" title={$t('insight.tip_short', { h: ins.thresholdH })}>{$t('insight.sleep_short', { h: ins.thresholdH })}</span>
 							<div class="bar-track">
 								<div class="bar-fill" style="width: {Math.round(ins.shortRate * 100)}%; background: {accentHex}"></div>
 							</div>
-							<span class="bar-val num-data">{Math.round(ins.shortRate * 100)}%</span>
+							<span class="bar-val num-data" title={$t('insight.tip_rate', { noun: outNoun })}>{Math.round(ins.shortRate * 100)}%</span>
 						</div>
 						<div class="bar-row">
-							<span class="bar-label">{$t('insight.sleep_adequate', { h: ins.thresholdH })}</span>
+							<span class="bar-label" title={$t('insight.tip_adequate', { h: ins.thresholdH })}>{$t('insight.sleep_adequate', { h: ins.thresholdH })}</span>
 							<div class="bar-track">
 								<div class="bar-fill" style="width: {Math.round(ins.adequateRate * 100)}%; background: {neutralHex}"></div>
 							</div>
-							<span class="bar-val num-data">{Math.round(ins.adequateRate * 100)}%</span>
+							<span class="bar-val num-data" title={$t('insight.tip_rate', { noun: outNoun })}>{Math.round(ins.adequateRate * 100)}%</span>
 						</div>
 					</div>
 					<p class="insight-foot">{plural($t, $locale, 'insight.days', ins.shortDays)} · {plural($t, $locale, 'insight.days', ins.adequateDays)}</p>
 
 				{:else if ins.kind === 'trigger-lift'}
-					<p class="insight-title">{$t('insight.trigger_title')}</p>
+					{@const outNoun = ins.outcome === 'symptom' ? $t('insight.symptom_days_noun') : noun}
+					<p class="insight-title">{$t('insight.trigger_title')}<span class="insight-info" title={$t('insight.tip_trigger', { noun: outNoun })} aria-label={$t('insight.tip_trigger', { noun: outNoun })}>ⓘ</span></p>
 					<p class="insight-sub">{$t('insight.trigger_sub')}</p>
-					{@const maxRate = Math.max(...ins.rows.map((r) => r.rateWith))}
+					<!-- Bars encode the relative LIFT (how much more often the
+					     outcome occurs with the trigger), normalised to the
+					     strongest row — not the absolute incidence. Absolute
+					     incidence saturates near 100% for everything when the
+					     outcome is common, so the bars all read full and convey
+					     nothing; lift is the differentiator the badge shows. A
+					     null lift (outcome only ever seen WITH the trigger) is
+					     the strongest signal → full bar. -->
+					{@const maxLift = Math.max(1, ...ins.rows.map((r) => r.liftPct ?? 0))}
 					<div class="bar-rows">
 						{#each ins.rows as r (r.triggerId)}
+							{@const barPct = r.liftPct === null ? 100 : Math.max(8, Math.round((r.liftPct / maxLift) * 100))}
 							<div class="bar-row">
-								<span class="bar-label">{$t(r.label)}</span>
-								<div class="bar-track">
-									<div class="bar-fill" style="width: {Math.round((r.rateWith / maxRate) * 100)}%; background: {accentHex}"></div>
+								<span class="bar-label" title={$t(r.label)}>{$t(r.label)}</span>
+								<div class="bar-track" title={r.liftPct !== null ? $t('insight.tip_more', { pct: r.liftPct, noun: outNoun }) : $t('insight.tip_only', { noun: outNoun })}>
+									<div class="bar-fill" style="width: {barPct}%; background: {accentHex}"></div>
 								</div>
-								<span class="bar-badge" class:bar-badge-strong={r.liftPct !== null}>
+								<span
+									class="bar-badge"
+									class:bar-badge-strong={r.liftPct !== null}
+									title={r.liftPct !== null ? $t('insight.tip_more', { pct: r.liftPct, noun: outNoun }) : $t('insight.tip_only', { noun: outNoun })}
+								>
 									{r.liftPct !== null ? $t('insight.trigger_more', { pct: r.liftPct }) : $t('insight.trigger_only')}
 								</span>
 							</div>
 						{/each}
 					</div>
 
+				{:else if ins.kind === 'top-symptoms'}
+					{@const maxPct = Math.max(...ins.rows.map((r) => r.pct))}
+					<p class="insight-title">{$t('insight.top_title')}<span class="insight-info" title={$t('insight.tip_top')} aria-label={$t('insight.tip_top')}>ⓘ</span></p>
+					<p class="insight-sub">{$t('insight.top_sub')}</p>
+					<div class="bar-rows">
+						{#each ins.rows as r (r.id)}
+							<div class="bar-row">
+								<span class="bar-label" title={$t(r.label)}>{$t(r.label)}</span>
+								<div class="bar-track">
+									<div class="bar-fill" style="width: {maxPct > 0 ? Math.round((r.pct / maxPct) * 100) : 0}%; background: {accentHex}"></div>
+								</div>
+								<span class="bar-val num-data">{r.pct}%</span>
+							</div>
+						{/each}
+					</div>
+
 				{:else if ins.kind === 'circadian'}
 					{@const maxCount = Math.max(...ins.buckets.map((b) => b.count))}
-					<p class="insight-title">{$t('insight.circadian_title')}</p>
+					<p class="insight-title">{$t('insight.circadian_title')}<span class="insight-info" title={$t('insight.tip_circadian', { noun })} aria-label={$t('insight.tip_circadian', { noun })}>ⓘ</span></p>
 					<p class="insight-headline">
 						<span class="num-data">{ins.topPct}%</span> {$t('insight.daypart_' + ins.topKey)}
 					</p>
 					<div class="daypart-cols">
 						{#each ins.buckets as b (b.key)}
-							<div class="daypart-col">
+							<div class="daypart-col" title="{$t('insight.daypart_' + b.key)} ({DAYPART_RANGE[b.key]}): {b.count}× {noun}">
 								<div class="daypart-bar-wrap">
 									<div
 										class="daypart-bar"
@@ -110,7 +149,7 @@
 					<p class="insight-foot">{$t('insight.circadian_sub', { noun })}</p>
 
 				{:else if ins.kind === 'type-mix'}
-					<p class="insight-title">{$t('insight.type_title')}</p>
+					<p class="insight-title">{$t('insight.type_title')}<span class="insight-info" title={$t('insight.tip_type', { noun })} aria-label={$t('insight.tip_type', { noun })}>ⓘ</span></p>
 					<p class="insight-sub">{$t('insight.type_sub', { noun })}</p>
 					<div class="mix-bar" role="img" aria-label={$t('insight.type_sub', { noun })}>
 						{#each ins.slices as s (s.id)}
@@ -128,12 +167,12 @@
 					</ul>
 
 				{:else if ins.kind === 'duration'}
-					<p class="insight-title">{$t('insight.duration_title')}</p>
+					<p class="insight-title">{$t('insight.duration_title')}<span class="insight-info" title={$t('insight.tip_duration', { noun })} aria-label={$t('insight.tip_duration', { noun })}>ⓘ</span></p>
 					<p class="insight-sub">{$t('insight.duration_sub', { noun })}</p>
 					<div class="mix-bar">
-						{#if ins.under1 > 0}<div class="mix-seg" style="width: {Math.round((ins.under1 / ins.total) * 100)}%; background: {neutralHex}" title="{$t('protocol.duration_under1')}"></div>{/if}
-						{#if ins.oneToFive > 0}<div class="mix-seg" style="width: {Math.round((ins.oneToFive / ins.total) * 100)}%; background: {accentHex}" title="{$t('protocol.duration_1to5')}"></div>{/if}
-						{#if ins.overFive > 0}<div class="mix-seg" style="width: {Math.round((ins.overFive / ins.total) * 100)}%; background: var(--danger)" title="{$t('protocol.duration_over5')}"></div>{/if}
+						{#if ins.under1 > 0}<div class="mix-seg" style="width: {Math.round((ins.under1 / ins.total) * 100)}%; background: {neutralHex}" title="{$t('protocol.duration_under1')}: {ins.under1}×"></div>{/if}
+						{#if ins.oneToFive > 0}<div class="mix-seg" style="width: {Math.round((ins.oneToFive / ins.total) * 100)}%; background: {accentHex}" title="{$t('protocol.duration_1to5')}: {ins.oneToFive}×"></div>{/if}
+						{#if ins.overFive > 0}<div class="mix-seg" style="width: {Math.round((ins.overFive / ins.total) * 100)}%; background: var(--danger)" title="{$t('protocol.duration_over5')}: {ins.overFive}×"></div>{/if}
 					</div>
 					{#if ins.hasProlonged}
 						<p class="insight-flag">{plural($t, $locale, 'insight.duration_prolonged', ins.overFive)}</p>
@@ -142,7 +181,7 @@
 					{/if}
 
 				{:else if ins.kind === 'streak'}
-					<p class="insight-title">{$t('insight.streak_title')}</p>
+					<p class="insight-title">{$t('insight.streak_title')}<span class="insight-info" title={$t('insight.tip_streak', { noun: $t(ins.nounKey) })} aria-label={$t('insight.tip_streak', { noun: $t(ins.nounKey) })}>ⓘ</span></p>
 					{#if ins.currentStreak === 0}
 						<p class="insight-headline">{$t('insight.streak_today', { noun: $t(ins.nounKey) })}</p>
 					{:else}
@@ -151,8 +190,18 @@
 					{/if}
 					<div class="streak-dots" role="img" aria-label={$t('insight.streak_dots_aria', { n: ins.dotDays })}>
 						{#each ins.dots as d, i (i)}
-							<span class="streak-dot streak-dot-{d}" style={d === 'episode' ? 'background: var(--danger)' : d === 'clear' ? `background: ${neutralHex}` : ''}></span>
+							<span
+								class="streak-dot streak-dot-{d}"
+								style={d === 'episode' ? 'background: var(--danger)' : d === 'clear' ? `background: ${neutralHex}` : ''}
+								title="{dotDate(ins.dotDays, i)} — {$t('insight.tip_streak_' + d, { noun: $t(ins.nounKey) })}"
+							></span>
 						{/each}
+					</div>
+					<!-- dot legend so the colors are legible without hover too -->
+					<div class="streak-legend">
+						<span class="streak-legend-item"><span class="streak-dot" style="background: var(--danger)"></span>{$t('insight.tip_streak_episode', { noun: $t(ins.nounKey) })}</span>
+						<span class="streak-legend-item"><span class="streak-dot" style="background: {neutralHex}"></span>{$t('insight.tip_streak_clear', { noun: $t(ins.nounKey) })}</span>
+						<span class="streak-legend-item"><span class="streak-dot streak-dot-unlogged"></span>{$t('insight.tip_streak_unlogged')}</span>
 					</div>
 					<p class="insight-foot">{$t('insight.streak_longest', { n: ins.longestStreak })}</p>
 				{/if}
@@ -176,6 +225,42 @@
 		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--text-primary);
+	}
+	/* Hover-explanation affordance on each diagram title. The glyph carries
+	   a `title` (native tooltip) + aria-label; cursor:help signals it. */
+	.insight-info {
+		display: inline-block;
+		margin-left: 0.3rem;
+		font-size: 0.6875rem;
+		color: var(--text-muted);
+		cursor: help;
+		vertical-align: middle;
+	}
+	.insight-info:hover {
+		color: var(--accent);
+	}
+	/* Elements carrying a hover tooltip get the help cursor too. */
+	.bar-label[title],
+	.bar-val[title],
+	.bar-track[title],
+	.bar-badge[title],
+	.daypart-col[title],
+	.mix-seg[title],
+	.streak-dot[title] {
+		cursor: help;
+	}
+	.streak-legend {
+		margin-top: 0.5rem;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.75rem;
+	}
+	.streak-legend-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		font-size: 0.625rem;
+		color: var(--text-muted);
 	}
 	.insight-headline {
 		font-size: 0.875rem;
