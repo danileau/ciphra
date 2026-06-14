@@ -349,6 +349,18 @@ route kind.
   "{N} more values on /reports" link via plural() if
   secondaries have data. Mounted by `CompanionMain` when
   `resolvePrimaryDashboardCard` returns `kind: 'vital-trend'`.
+- **InsightsSection.svelte** (CIPH-920) — dashboard "Muster"
+  (patterns) section rendered below the primary card in
+  `CompanionMain`. Capability-driven: computes cross-signal
+  insight cards via `$lib/blueprint/insights.ts`
+  (`computeInsights`) — sleep↔episodes, trigger lift, circadian
+  daypart, episode-type mix, duration, and episode-free streak.
+  Each card self-gates on blueprint capability + a minimum-data
+  threshold, so the section enriches epilepsy/migraine/parkinson/
+  etc. and renders nothing for cohorts/users without the data (no
+  gaslighting empty state). Lightweight CSS/SVG viz, NOT Chart.js
+  (CIPH-900 "insight over raw charts" lesson). Per-blueprint
+  coverage is pinned by `insights.test.ts`.
 - **MonthMiniSummary.svelte** (CIPH-pi19-B) — calendar right-rail
   tail. Shows trigger-day + rescue-med-day counts for the visible
   month, gated on `showTrigger` / `showRescue` props (which the

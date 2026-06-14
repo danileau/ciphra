@@ -19,6 +19,7 @@
 	import PhaseContextCard from '$lib/components/PhaseContextCard.svelte';
 	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
 	import VitalTrendCard from '$lib/components/VitalTrendCard.svelte';
+	import InsightsSection from '$lib/components/InsightsSection.svelte';
 	import TopTriggersCard from '$lib/components/TopTriggersCard.svelte';
 	import WithinPhaseRollupCard from '$lib/components/WithinPhaseRollupCard.svelte';
 	import { cohortPalette } from '$lib/cohortPalette';
@@ -197,6 +198,14 @@
 {:else if primarySpec?.kind === 'last-entries'}
 	<LastEntriesStrip docs={allDocs} {bp} />
 {/if}
+
+<!-- CIPH-920 — "Muster" insight cards. Capability-driven (see insights.ts):
+     each card self-gates on what the blueprint declares + enough logged
+     data, so the section fills the formerly-naked main column with
+     cross-signal insight (sleep↔episodes, trigger lift, circadian, type
+     mix, duration, episode-free streak) and renders nothing for
+     cohorts/users without the data. -->
+<InsightsSection docs={allDocs} {bp} accentHex={vitalAccentHex} neutralHex={vitalNeutralHex} />
 
 <!-- CIPH-900 — Episode bar-chart + Top-symptoms bar-chart removed. The
      deep trend lives at /reports (year heatmap + monthly grid + sums).
