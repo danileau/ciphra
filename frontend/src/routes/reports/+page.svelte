@@ -4,7 +4,7 @@
 	import { anyPhaseDayCount } from '$lib/monthAggregates';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
+	import { resolvedBlueprint, isCustomItem, resolveMedDisplay } from '$lib/blueprint';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
@@ -1247,10 +1247,9 @@
 						{#if ev.data.kind === 'medication'}
 							<!-- CIPH-881b — rescue-medication events render with med
 								 name + dose + time, distinct from freeform notes. -->
-							{@const medId = ev.data.medicationId}
-							{@const presetMed = bp?.rescueMedications?.find(m => m.id === medId)}
-							{@const medLabel = presetMed ? $t(presetMed.label) : (medId || '')}
-							{@const unit = presetMed?.unit ? ` ${presetMed.unit}` : ''}
+							{@const med = resolveMedDisplay(bp, ev.data.medicationId, $t)}
+							{@const medLabel = med.label}
+							{@const unit = med.unit ? ` ${med.unit}` : ''}
 							<span class="truncate" style="color: var(--brand)">
 								{medLabel}{ev.data.dose ? ` · ${ev.data.dose}${unit}` : ''}{ev.data.time ? ` · ${ev.data.time}` : ''}
 							</span>

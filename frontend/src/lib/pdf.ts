@@ -20,7 +20,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Blueprint, VitalField } from '$lib/blueprint';
-import { isCustomItem, resolveBlueprint } from '$lib/blueprint';
+import { isCustomItem, resolveBlueprint, resolveMedDisplay, bedarfMedColumns } from '$lib/blueprint';
 import { cohortOf } from '$lib/blueprint/cohort';
 import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
 import { sectionsForCohort } from '$lib/cohortSections';
@@ -2440,11 +2440,9 @@ export function generateDoctorPdf(
 			// separate visual track.
 			let raw: string;
 			if (d.data.kind === 'medication') {
-				const medId = (d.data as any).medicationId;
-				const presetMed = blueprint.rescueMedications?.find((m) => m.id === medId);
-				const label = presetMed ? labelOf(t, presetMed) : (medId || '');
+				const { label, unit } = resolveMedDisplay(blueprint, (d.data as any).medicationId, t);
 				const dose = (d.data as any).dose;
-				const unitStr = presetMed?.unit ? ` ${translateUnit(t, presetMed.unit)}` : '';
+				const unitStr = unit ? ` ${unit}` : '';
 				raw = dose ? `${label} ${dose}${unitStr}` : label;
 			} else {
 				raw = String(d.data.notes || '').replace(/\s+/g, ' ').trim();
@@ -3892,10 +3890,12 @@ export function exportCsv(
 			episodeDetailCols.push({ id: ep.id, type: 'duration', label: `${labelOf(t, ep)} — ${t('protocol.duration')}` });
 		}
 	}
-	// CIPH-881b — one column per rescue medication, count of doses on each day.
-	const rescueMedCols = (blueprint.rescueMedications || []).map((m) => ({
+	// One column per as-needed ("Bedarfsmedikation") med, count of doses on
+	// each day. Unions configured meds with any legacy preset ids so a
+	// migrant's historical events are still counted.
+	const rescueMedCols = bedarfMedColumns(blueprint, t).map((m) => ({
 		id: m.id,
-		label: `${labelOf(t, m)}${m.unit ? ` (${translateUnit(t, m.unit)})` : ''}`,
+		label: `${m.label}${m.unit ? ` (${m.unit})` : ''}`,
 	}));
 
 	const headers = [

@@ -36,8 +36,8 @@ describe('CIPH-pi19-A render gates are blueprint-driven', () => {
 		expect(CAL).toMatch(/\$:\s*showTriggerMark\s*=\s*\(bp\?\.triggers\?\.length\s*\?\?\s*0\)\s*>\s*0/);
 	});
 
-	it('showRescueMedMark gates on bp.rescueMedications length', () => {
-		expect(CAL).toMatch(/\$:\s*showRescueMedMark\s*=\s*\(bp\?\.rescueMedications\?\.length\s*\?\?\s*0\)\s*>\s*0/);
+	it('showRescueMedMark gates on configured as-needed meds', () => {
+		expect(CAL).toMatch(/\$:\s*showRescueMedMark\s*=\s*hasBedarfMeds\(bp\)/);
 	});
 
 	it('cell template threads gates into hasTrigger / hasRescueMed @const', () => {

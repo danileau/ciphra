@@ -96,6 +96,26 @@ export function mapSeizureType(typeName: string | null | undefined): string {
 	return 'unknown';
 }
 
+/** A dose token: a number (decimal/ratio) followed by a recognised unit. The
+ *  unit is REQUIRED — we never strip a bare number, so a number that is part of
+ *  a drug's identity ("Vitamin B12", "5-HTP") is preserved. No leading `\b`, so
+ *  the glued form ("urbanyl10mg") is caught too. */
+const DOSE_TOKEN = /\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?\s*(?:mcg|µg|ug|mg|kg|ml|iu|ie|hübe?|hub|puffs?|tropfen|gtt|tabletten?|tabs?|stk|g|l|%)\b\.?/gi;
+
+/** Parse an epilepc freetext medication name into a dedup key + clean base
+ *  name + any embedded dose. Grouping is case- and whitespace-insensitive and
+ *  ignores an embedded dose token — so "Urbanyl", "urbanyl", "urbanyl10mg" and
+ *  "URBANyL 15mg" all collapse to ONE definition (matching a `grep -i urbanyl`
+ *  intuition), while a typo like "urbayl" stays separate (NO fuzzy matching —
+ *  fusing distinct drugs would be a medical-safety bug). */
+export function parseEpilepcMedName(raw: string): { base: string; key: string; embeddedDose: string } {
+	const doses: string[] = [];
+	const stripped = raw.replace(DOSE_TOKEN, (mm) => { doses.push(mm.trim()); return ' '; });
+	const base = stripped.replace(/\s+/g, ' ').trim();
+	const key = base.toLowerCase().replace(/\s+/g, '');
+	return { base, key, embeddedDose: doses.join(' ').replace(/\s+/g, ' ').trim() };
+}
+
 export interface MappedDocs {
 	entries: Array<Record<string, unknown>>;
 	events: Array<Record<string, unknown>>;
@@ -147,18 +167,56 @@ export function mapBundle(b: EpilepcBundle): MappedDocs {
 		return doc;
 	});
 
-	const medications: MedicationSlot[] = b.medications.map((m) => ({
-		id: `epilepc-m-${m.epilepc_id}`,
-		name: m.name,
-		dose: m.dose ?? '',
-		schedule: m.notes ?? '',
-		asNeeded: !!m.as_needed,
-		// Carry-along, not part of MedicationSlot but harmless extra fields.
-		...(m.started_at ? { startedAt: m.started_at } : {}),
-		...(m.ended_at ? { endedAt: m.ended_at } : { ongoing: true }),
-	}) as MedicationSlot);
+	// CIPH-pi19 — epilepc modelled each medication INTAKE as its own medication
+	// row, so a single PRN drug (e.g. Urbanyl) arrived as dozens/hundreds of
+	// duplicate rows. ciphra's model is: one medication DEFINITION + one event
+	// per intake. So we (1) collapse records to a single MedicationSlot per
+	// normalized name+dose, and (2) turn each original record with a
+	// `started_at` into a `kind:'medication'` intake event so the dosing
+	// history survives on the timeline / calendar / reports / PDF.
+	const medications: MedicationSlot[] = [];
+	const medEvents: Array<Record<string, unknown>> = [];
+	const slotByKey = new Map<string, MedicationSlot>();
+	const slugify = (s: string) => s.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'med';
 
-	return { entries, events, diaries, medications };
+	for (const m of b.medications) {
+		const name = m.name.trim();
+		const { base, key, embeddedDose } = parseEpilepcMedName(name);
+		// Dose to record on the intake: the structured field wins, else the
+		// dose that was embedded in the freetext name (e.g. "Urbanyl 10mg").
+		const dose = (m.dose ?? '').trim() || embeddedDose;
+		let slot = slotByKey.get(key);
+		if (!slot) {
+			// First occurrence wins the (dose-stripped) display name + a default dose.
+			slot = { id: `epilepc-med-${slugify(key)}`, name: base || name, dose, schedule: m.notes ?? '', asNeeded: !!m.as_needed };
+			slotByKey.set(key, slot);
+			medications.push(slot);
+		} else {
+			if (m.as_needed) slot.asNeeded = true; // any as-needed intake flags the definition
+			if (!slot.dose && dose) slot.dose = dose; // backfill a default dose if the first was blank
+		}
+		// One intake event per original record (dated at started_at).
+		if (m.started_at) {
+			const dt = String(m.started_at);
+			const ev: Record<string, unknown> = {
+				type: 'event',
+				kind: 'medication',
+				date: dt.slice(0, 10),
+				medicationId: slot.id,
+				source: 'epilepc',
+				source_id: `m-${m.epilepc_id}`,
+			};
+			const hhmm = dt.slice(11, 16);
+			if (/^\d{2}:\d{2}$/.test(hhmm)) ev.time = hhmm;
+			if (dose) ev.dose = dose;
+			// Preserve the exact freetext name typed for THIS intake, so the
+			// normalized merge is non-destructive and auditable.
+			if (name) ev.notes = name;
+			medEvents.push(ev);
+		}
+	}
+
+	return { entries, events: [...events, ...medEvents], diaries, medications };
 }
 
 /** Stable source_id list for checkpointing. */
