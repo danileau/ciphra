@@ -440,16 +440,38 @@
 	$: if (browser && $isAuthenticated && !docsLoadStarted) {
 		docsLoadStarted = true;
 		docsLoading = true;
-		Promise.all([
+		loadInitialDocs();
+	}
+
+	// Initial post-login document load, with auto-retry. We only flip
+	// `docsLoaded` once the SERVER fetch genuinely succeeds. The old code set
+	// `docsLoaded = true` unconditionally in `.then()`, so a transient fetch
+	// failure on a CACHELESS device (a brand-new browser/phone, where there's
+	// no IndexedDB copy to fall back on) left `$documents` empty, made
+	// `loadFromDocuments()` find no blueprint, and the setup-redirect guard
+	// below bounced a fully-set-up returning user onto the wizard — until they
+	// manually refreshed and the second fetch happened to work. We now do that
+	// refresh automatically instead of stranding them.
+	async function loadInitialDocs(attempt = 1): Promise<void> {
+		const [docsOk] = await Promise.all([
 			documents.load(),
 			familyLinks.load(),
-		]).then(() => {
-			blueprint.loadFromDocuments();
+		]);
+		blueprint.loadFromDocuments();
+		if (docsOk) {
 			docsLoading = false;
 			docsLoaded = true;
 			// Replay anything queued while offline in a previous session.
 			documents.flushOutbox();
-		});
+		} else if (attempt < 4) {
+			// Back off a little between attempts (0.8s, 1.6s, 2.4s).
+			setTimeout(() => loadInitialDocs(attempt + 1), attempt * 800);
+		} else {
+			// Give up after a few tries. Leave `docsLoaded` false so the
+			// redirect never fires; the $documentsError banner + manual retry
+			// button (below) stay visible for the user to act on.
+			docsLoading = false;
+		}
 	}
 
 	// Redirect to setup when authenticated but no blueprint, only for
