@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
 	import { auth } from '$lib/stores/auth';
-	import { documents, type CiphraDocument } from '$lib/stores/documents';
+	import { documents, documentsError, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -561,14 +561,19 @@
 	}
 </script>
 
-{#if !loaded || (!bp && $documents.some(d => d.data?.type === 'blueprint'))}
+{#if !loaded || $documentsError || (!bp && $documents.some(d => d.data?.type === 'blueprint'))}
 	<!-- ── Loading state (CIPH-204): the asterisk *is* the loading state.
 	     The second condition prevents the caregiver-empty flash on hard
 	     refresh: documents.load() can finish (loaded=true) before the
 	     blueprint store has finished decrypting the blueprint doc. While a
 	     blueprint doc exists in $documents but $blueprint is still null,
 	     keep showing the loading state instead of falsely declaring the
-	     user has no blueprint. -->
+	     user has no blueprint.
+	     The $documentsError condition keeps us in the loading state while the
+	     layout auto-retries a failed initial load (cacheless-device fetch
+	     hiccup) — otherwise an authed returning user would flash the
+	     caregiver-empty screen on top of the error banner. When the retry
+	     succeeds the error clears and $documents/$blueprint populate. -->
 	<div class="max-w-3xl mx-auto px-4 py-20 flex flex-col items-center justify-center">
 		<Asterisk size={56} mode="loading" color="brand" />
 		<p class="mt-4 text-sm" style="color: var(--text-muted)">{$t('common.loading')}</p>

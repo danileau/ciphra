@@ -133,6 +133,74 @@ success/completed, ochre = warning/empty). Tailwind color
 utilities (`text-slate-500`, `bg-white`) are fine for generic
 chrome.
 
+## Accent architecture (CIPH-921c) — read this before touching any accent color
+
+Color in the authed app comes from **four distinct layers**. Most "why is
+this the wrong color?" bugs are using the wrong layer. Decide which one a
+surface belongs to *before* picking a token.
+
+| Layer | Token(s) | Driven by | Use for |
+|---|---|---|---|
+| **Brand identity** | `--brand` (+ `--on-brand`) | constant ciphra rust, never themed-per-user | the ciphra✱ logo / `Wordmark`, the load bar, the `EncryptionDemo` trust moment. Things that say "this is *ciphra*", not "this is *your* condition". |
+| **Condition accent** | `--accent`, `--accent-hover`, `--accent-rgb` | the **condition** color (see below) | all functional chrome: buttons, links, rings, FAB, active nav, selected/focus states, the primary chart line. |
+| **Cohort secondaries** | `--accent-info` / `--accent-calm` / `--accent-neutral` | per-cohort (`[data-cohort=X]` in `app.css`) | semantic seconds (info=ochre, calm=success-green, neutral=slate dividers). Intentionally *not* the condition color. |
+| **Data encoding** | `--data-*`, episode `.color`, `--olive`/`--danger` glyphs | the DATA palette (`dataPalette.ts`) | chart series, episode-type markers, calendar day-marks, heatmap cells. Encodes *meaning*, not chrome. |
+
+### Where `--accent` comes from
+
+The accent is the **condition** color — the same hue `/conditions` and the
+dashboard badge use — *not* the cohort accent. Resolution order
+(`lib/conditionAccent.ts` → `conditionColorOf`): `conditionInfoMap[id].color`
+→ blueprint `accentColor` → cohort slot-1 fallback.
+
+- `conditionAccent(bp)` returns the `{hex, hover, rgb}` trio. `hover` =
+  −8% lightness (matches the hand-tuned `app.css` cohort values exactly);
+  `rgb` is the `"r, g, b"` triple for `rgba(var(--accent-rgb), α)`.
+- It is injected as an **inline `style` on the authed shell wrapper** in
+  `+layout.svelte` (`accentOverride`), which overrides the per-cohort
+  `[data-cohort=X] { --accent: … }` defaults in `app.css`. The override
+  sits on **both** the shell wrapper (so the header/nav inherit it) **and**
+  `<main>` (whose own `data-cohort` rule would otherwise re-override the
+  inherited value for page content). Public routes (no resolved blueprint)
+  get no override and keep the `:root` brand-rust default.
+- `chromeSafeAccent()` darkens only the tones that dip below AA as a
+  white-text button (olive `#7f821b`, clay `#a87559`) — applied at the
+  accent layer **only**, because olive doubles as `--olive`/`--success`, so
+  retuning the raw DATA token would silently shift success states app-wide.
+- JS that feeds Chart.js can't read the CSS var — pass `conditionColorOf(bp)`
+  (or the `accentHex` the dashboard threads down) into the dataset.
+
+### Picking a color for a new surface
+
+1. Is it the ciphra logo / a brand moment? → `--brand`. Done.
+2. Is it interactive chrome (button / link / focus / active / selected)?
+   → `var(--accent)`. It defaults to brand-rust on public pages, so it's
+   safe everywhere.
+3. Is it encoding data (a chart line, a calendar mark, an episode dot)?
+   → the DATA palette / the episode's own `.color`. Never `--accent`.
+4. Is it a semantic state (success/warning/divider)? → the cohort
+   secondary or the `--olive`/`--ochre`/`--danger` semantic var.
+
+### Seed-data trap
+
+Demo seeds (`api/seed_*.py`, gitignored) must use **DATA_PALETTE hexes** for
+`episodeTypes[].color`, same as the real presets. They previously hardcoded
+Tailwind hexes (`#DC2626`, `#1E40AF`, `#7C3AED`…) which clash hard with the
+warm brand — invisible to tests, very visible on multi-phase cohorts
+(bipolar showed blue + purple bands). `api/seed_reseed_all.py` re-applies.
+
+### Open threads (future sessions)
+
+- **Per-condition unique colors.** Today the 6 DATA tones are shared across
+  ~23 conditions (epilepsy / chronic_pain / hypertension / RA all = rust).
+  Goal is a *unique* hue per condition, possibly **auto-generated** — not the
+  shared 6-tone set. When doing this, keep `chromeSafeAccent` + dark-mode
+  legibility (accent-as-*text* on dark is the weak spot) in the loop.
+- **Calendar data-glyphs → condition color.** `MonthMiniSummary`'s heat-cell
+  bar (and the main calendar day-marks it mirrors) still use `--brand` rust;
+  a test pins it. Not biting today, but should follow the condition color —
+  needs main calendar + mini + the `rail.test.ts` contract changed together.
+
 ## Dark mode (design review 2026-06-11)
 
 Source of truth: the `[data-theme='dark']` token block in `app.css` +

@@ -92,7 +92,12 @@ function createDocStore() {
 	let loading = false;
 	// The promise of the currently-running load(), shared with concurrent
 	// callers so they await the SAME fetch instead of resolving instantly.
-	let inFlight: Promise<void> | null = null;
+	// Resolves to `true` only when the server fetch actually succeeded — a
+	// failed/early-returned load resolves `false` so callers can distinguish
+	// "loaded, genuinely no documents" from "couldn't load" (the latter must
+	// NOT be treated as an authoritative empty vault — see the layout's
+	// setup-redirect guard).
+	let inFlight: Promise<boolean> | null = null;
 
 	/**
 	 * Decrypt raw docs, reusing plaintext from `cachedByEtag` when the
@@ -279,18 +284,18 @@ function createDocStore() {
 
 	const store = {
 		subscribe,
-		async load() {
+		async load(): Promise<boolean> {
 			// Concurrent callers (the layout's post-login load + a page
 			// component's own onMount load) must AWAIT the same in-flight fetch.
 			// The old `if (loading) return;` resolved the second caller's
 			// promise instantly while $documents was still empty — so the
 			// dashboard flipped `loaded=true` with no blueprint yet and rendered
 			// its "no profile yet" onboarding state until a manual refresh.
-			if (loading) return inFlight ?? undefined;
+			if (loading) return inFlight ?? Promise.resolve(false);
 			loading = true;
-			inFlight = (async () => {
+			inFlight = (async (): Promise<boolean> => {
 			const { masterKey, sourceUserId, cacheKey, username } = resolveVault();
-			if (!masterKey) return;
+			if (!masterKey) return false;
 
 			const t0 = performance.now();
 			let cacheHits = 0;
@@ -350,15 +355,18 @@ function createDocStore() {
 							`total:${(tEnd - t0).toFixed(0)}ms (cached on disk: ${cachedCount})`
 						);
 					}
+					return true;
 				} else {
 					documentsError.set('Failed to load documents');
+					return false;
 				}
 			} catch {
 				documentsError.set('Failed to load documents');
+				return false;
 			}
 			})();
 			try {
-				await inFlight;
+				return await inFlight;
 			} finally {
 				loading = false;
 				inFlight = null;

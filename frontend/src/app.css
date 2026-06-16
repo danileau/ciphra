@@ -622,6 +622,17 @@ body {
 	.input::placeholder {
 		color: var(--text-muted);
 	}
+	/* iOS Safari auto-zooms any focused input whose font-size is < 16px, and
+	   because our viewport meta intentionally omits `maximum-scale` (an a11y
+	   requirement — users must be able to pinch-zoom), the page never zooms
+	   back out: it stays stuck at the zoomed-in width until the user manually
+	   pinches out. Bumping to 16px on touch devices kills the focus-zoom
+	   without touching the denser desktop sizing. `pointer: coarse` targets
+	   touch primary-input devices (phones/tablets) — exactly where it bites.
+	   Same `.input` selector, later source order inside the layer → wins. */
+	@media (pointer: coarse) {
+		.input { font-size: 16px; }
+	}
 
 	/* ═══ STYLED SELECT (CIPH-pi24-5d) ═══
 	   Browser-native <select> chrome is the single most jarring un-styled
