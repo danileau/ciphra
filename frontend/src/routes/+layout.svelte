@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { isAuthenticated, authReady, auth, needsUnlock } from '$lib/stores/auth';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
-	import { t, translateUnit } from '$lib/i18n';
+	import { t } from '$lib/i18n';
 	import type { Locale } from '$lib/i18n';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -11,7 +11,7 @@
 	import { documents, documentsError } from '$lib/stores/documents';
 	import { pendingCount } from '$lib/outbox';
 	import { get } from 'svelte/store';
-	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
+	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem, hasBedarfMeds, bedarfMedsForPicker, foldRescueMedications } from '$lib/blueprint';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import { pathToRoute } from '$lib/cohortPalette';
 	import { conditionAccent } from '$lib/conditionAccent';
@@ -105,9 +105,9 @@
 				if (v === 'diary' || v === 'log' || v === 'med') last = v;
 			} catch {}
 		}
-		// CIPH-881 — if user previously used 'med' but switched to a blueprint
-		// without rescue meds, the third mode chip won't render. Fall back.
-		if (last === 'med' && !(bp?.rescueMedications && bp.rescueMedications.length > 0)) {
+		// CIPH-881 — if user previously used 'med' but has no as-needed meds
+		// configured, the third mode chip won't render. Fall back.
+		if (last === 'med' && !hasBedarfMeds(bp)) {
 			last = 'log';
 		}
 		quickAddMode = last;
@@ -267,6 +267,10 @@
 	}
 
 	$: bp = $resolvedBlueprint;
+	// FAB "Bedarfsmedikation" picker source — the user's configured as-needed
+	// meds (single source of truth, edited in Settings). Replaces the old
+	// preset-only `rescueMedications` list.
+	$: bedarfMeds = bedarfMedsForPicker(bp);
 
 	function selectEpisodeType(id: string) {
 		quickAddSelectedEpisode = quickAddSelectedEpisode === id ? null : id;
@@ -288,11 +292,11 @@
 
 	function selectRescueMed(id: string) {
 		quickAddSelectedMedId = quickAddSelectedMedId === id ? null : id;
-		// Pre-fill the dose input with the preset's defaultDose so the user
+		// Pre-fill the dose input with the configured med's dose so the user
 		// can confirm by tapping save, or override before saving.
 		if (quickAddSelectedMedId) {
-			const m = bp?.rescueMedications?.find((r) => r.id === id);
-			if (m?.defaultDose && !quickAddDose.trim()) quickAddDose = m.defaultDose;
+			const m = bedarfMedsForPicker(bp).find((r) => r.id === id);
+			if (m?.dose && !quickAddDose.trim()) quickAddDose = m.dose;
 		} else {
 			quickAddDose = '';
 		}
@@ -308,8 +312,8 @@
 			if (!quickAddSelectedMedId) return;
 			quickAddSaving = true;
 			const nowTime = now.toTimeString().slice(0, 5);
-			const med = bp?.rescueMedications?.find((m) => m.id === quickAddSelectedMedId);
-			const dose = quickAddDose.trim() || med?.defaultDose || undefined;
+			const med = bedarfMedsForPicker(bp).find((m) => m.id === quickAddSelectedMedId);
+			const dose = quickAddDose.trim() || med?.dose || undefined;
 			await documents.save({
 				type: 'event',
 				kind: 'medication',
@@ -461,6 +465,13 @@
 		if (docsOk) {
 			docsLoading = false;
 			docsLoaded = true;
+			// One-time single-source migration: fold any legacy preset
+			// `rescueMedications` into the editable `medications` list so the
+			// FAB + Settings read one source. No-op for blueprints already in
+			// the new shape (incl. all new presets). Persist once; subsequent
+			// loads find nothing to fold.
+			const migrated = foldRescueMedications(get(blueprint), $t);
+			if (migrated) blueprint.save(migrated);
 			// Replay anything queued while offline in a previous session.
 			documents.flushOutbox();
 		} else if (attempt < 4) {
@@ -937,7 +948,7 @@
 								</svg>
 								{$t('quickadd.mode_diary')}
 							</button>
-							{#if bp.rescueMedications && bp.rescueMedications.length > 0}
+							{#if bedarfMeds.length > 0}
 								<button
 									type="button"
 									on:click={() => { quickAddMode = 'med'; }}
@@ -954,12 +965,13 @@
 							{/if}
 						</div>
 
-						{#if quickAddMode === 'med' && bp.rescueMedications && bp.rescueMedications.length > 0}
-							<!-- CIPH-881 — Rescue medication picker. Tap a chip to select;
-								 dose pre-fills from preset defaultDose, override if needed. -->
+						{#if quickAddMode === 'med' && bedarfMeds.length > 0}
+							<!-- Bedarfsmedikation picker, sourced from the user's configured
+								 as-needed meds. Tap a chip to select; dose pre-fills from the
+								 configured dose, override if needed. -->
 							<p class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('quickadd.pick_med')}</p>
 							<div class="flex flex-wrap gap-2 mb-4">
-								{#each bp.rescueMedications as med}
+								{#each bedarfMeds as med}
 									<button
 										type="button"
 										on:click={() => selectRescueMed(med.id)}
@@ -967,21 +979,18 @@
 										class="flex items-center gap-2 px-4 py-2 rounded-xl border transition-all min-h-[44px]"
 										style="border-color: {quickAddSelectedMedId === med.id ? 'var(--accent)' : 'var(--border)'}; background: {quickAddSelectedMedId === med.id ? 'rgba(var(--accent-rgb), 0.08)' : 'var(--surface-muted)'}"
 									>
-										<span class="text-sm font-medium" style="color: {quickAddSelectedMedId === med.id ? 'var(--accent)' : 'var(--text-primary)'}">{$t(med.label)}</span>
-										{#if med.defaultDose}
-											<span class="text-[11px]" style="color: var(--text-muted)">{med.defaultDose}{med.unit ? ' ' + translateUnit($t, med.unit) : ''}</span>
+										<span class="text-sm font-medium" style="color: {quickAddSelectedMedId === med.id ? 'var(--accent)' : 'var(--text-primary)'}">{med.name}</span>
+										{#if med.dose}
+											<span class="text-[11px]" style="color: var(--text-muted)">{med.dose}</span>
 										{/if}
 									</button>
 								{/each}
 							</div>
 							{#if quickAddSelectedMedId}
-								{@const selectedMed = bp.rescueMedications.find(m => m.id === quickAddSelectedMedId)}
+								{@const selectedMed = bedarfMeds.find(m => m.id === quickAddSelectedMedId)}
 								<div class="mb-3">
 									<label class="text-xs" style="color: var(--text-secondary)" for="qa-dose">
 										{$t('quickadd.dose')}
-										{#if selectedMed?.unit}
-											<span style="color: var(--text-muted)">({translateUnit($t, selectedMed.unit)})</span>
-										{/if}
 										<span style="color: var(--text-muted)">— {$t('quickadd.dose_optional')}</span>
 									</label>
 									<input
@@ -989,7 +998,7 @@
 										type="text"
 										inputmode="decimal"
 										bind:value={quickAddDose}
-										placeholder={selectedMed?.defaultDose ?? ''}
+										placeholder={selectedMed?.dose ?? ''}
 										data-testid="quickadd-dose"
 										class="input mt-1"
 									/>

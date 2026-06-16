@@ -19,7 +19,7 @@
 -->
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
-	import { isCustomItem } from '$lib/blueprint';
+	import { isCustomItem, resolveMedDisplay } from '$lib/blueprint';
 	import type { Blueprint } from '$lib/blueprint/types';
 	import type { CiphraDocument } from '$lib/stores/documents';
 
@@ -139,15 +139,12 @@
 	}
 	function rescueMedLabel(doc: CiphraDocument): string {
 		const id = (doc.data as Record<string, unknown>).medicationId as string | undefined;
-		if (!bp?.rescueMedications || !id) return id || '?';
-		const m = bp.rescueMedications.find((rm) => rm.id === id);
-		return m ? $t(m.label) : id;
+		return resolveMedDisplay(bp, id, $t).label;
 	}
 	function rescueMedUnit(doc: CiphraDocument): string {
 		const id = (doc.data as Record<string, unknown>).medicationId as string | undefined;
-		if (!bp?.rescueMedications || !id) return '';
-		const m = bp.rescueMedications.find((rm) => rm.id === id);
-		return m?.unit ? ' ' + translateUnit($t, m.unit) : '';
+		const u = resolveMedDisplay(bp, id, $t).unit;
+		return u ? ' ' + u : '';
 	}
 
 	$: hasAnyContent =
@@ -271,8 +268,8 @@
 	/* CIPH-913 — visual polish. Smoke flagged the day-detail panel as
 	   "shine-less, just text." Added: hairline divider + cohort-accent
 	   dot per section, vitals as a 2-column grid with right-aligned
-	   tabular values, diary text retains the serif treatment, the notes
-	   section reads as quote-pulled text. Calm Threema-style "designed"
+	   tabular values, the notes section reads as quote-pulled text. Calm
+	   Threema-style "designed"
 	   feel without sparkle. */
 	.dd {
 		display: flex;
@@ -396,9 +393,8 @@
 		margin: 0 0 4px;
 	}
 	.dd-diary-text {
-		font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', Cambria, 'Times New Roman', serif;
-		font-size: 15px;
-		line-height: 1.55;
+		font-size: 14px;
+		line-height: 1.5;
 		color: var(--text-secondary);
 		white-space: pre-wrap;
 		margin: 0;

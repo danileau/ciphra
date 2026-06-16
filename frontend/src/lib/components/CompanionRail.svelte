@@ -15,6 +15,7 @@
 	import GapTrendSpark from '$lib/components/GapTrendSpark.svelte';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint } from '$lib/blueprint/types';
+	import { hasBedarfMeds } from '$lib/blueprint';
 
 	// CIPH-872 — `todayLogged` + Asterisk import removed with the
 	// redundant Quick-Action rail card.
@@ -122,7 +123,7 @@
 		 that declare `rescueMedications` AND have at least one event in the
 		 current month, so presets without a clinical rescue protocol stay
 		 clean and the card stays out of empty months. -->
-	{#if bp?.rescueMedications && bp.rescueMedications.length > 0 && rescueMedsThisMonth > 0}
+	{#if hasBedarfMeds(bp) && rescueMedsThisMonth > 0}
 		<section class="card p-4">
 			<div class="flex items-center gap-3">
 				<div
