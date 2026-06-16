@@ -2,7 +2,7 @@
 	import { t, locale, plural } from '$lib/i18n';
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
+	import { resolvedBlueprint, isCustomItem, hasBedarfMeds } from '$lib/blueprint';
 	import { onMount, tick } from 'svelte';
 	import { rememberFocusMonth, recallFocusMonth } from '$lib/stores/focusMonth';
 	import { goto } from '$app/navigation';
@@ -187,7 +187,7 @@
 	// the corresponding feature. ADHD blueprints (no rescueMedications) skip
 	// the edge bar entirely; data-driven, not cohort-switched.
 	$: showTriggerMark = (bp?.triggers?.length ?? 0) > 0;
-	$: showRescueMedMark = (bp?.rescueMedications?.length ?? 0) > 0;
+	$: showRescueMedMark = hasBedarfMeds(bp);
 
 	// CIPH-pi19-B — month-level tallies powering the rail's mini-summary.
 	$: triggerDayCount = triggerCountByDay.size;

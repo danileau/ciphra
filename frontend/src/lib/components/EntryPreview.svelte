@@ -14,7 +14,7 @@
 	import { t, locale, translateUnit, plural } from '$lib/i18n';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint, VitalField } from '$lib/blueprint/types';
-	import { isCustomItem } from '$lib/blueprint';
+	import { isCustomItem, resolveMedDisplay } from '$lib/blueprint';
 
 	export let entry: CiphraDocument;
 	export let bp: Blueprint | null = null;
@@ -150,16 +150,10 @@
 	// / dashboard never collapse them into a generic "Event" row.
 	$: isMedEvent = entry.data?.type === 'event' && entry.data?.kind === 'medication';
 	function rescueMedLabel(doc: CiphraDocument): string {
-		const id = (doc.data as any)?.medicationId;
-		if (!bp?.rescueMedications || !id) return id || '?';
-		const m = bp.rescueMedications.find((rm) => rm.id === id);
-		return m ? $t(m.label) : id;
+		return resolveMedDisplay(bp, (doc.data as any)?.medicationId, $t).label;
 	}
 	function rescueMedUnit(doc: CiphraDocument): string {
-		const id = (doc.data as any)?.medicationId;
-		if (!bp?.rescueMedications || !id) return '';
-		const m = bp.rescueMedications.find((rm) => rm.id === id);
-		return m?.unit ? translateUnit($t, m.unit) : '';
+		return resolveMedDisplay(bp, (doc.data as any)?.medicationId, $t).unit;
 	}
 
 	// CIPH-713 — diary docs are always private; entries/events become private
@@ -477,8 +471,6 @@
 {/if}
 
 {#if entry.data.type === 'diary' && entry.data.text}
-	<!-- CIPH-902 — Diary text gets a serif treatment so narrative reads
-		 differently from data. System-stack serif: zero font load. -->
 	<p
 		class="mt-1.5 line-clamp-3 whitespace-pre-wrap entry-preview-diary-text"
 		style="color: var(--text-secondary)"
@@ -523,11 +515,10 @@
 {/if}
 
 <style>
-	/* CIPH-902 — diary serif treatment. System stack — Charter on macOS,
-	   Bitstream Charter on Linux, Sitka Text on Windows, Cambria older
-	   Windows, Times New Roman fallback. No webfont load. */
+	/* Diary text uses the same sans body treatment as every other displayed
+	   text (CIPH-902's serif treatment was reverted — it read as inconsistent
+	   against the rest of the app). Inherits the app font stack. */
 	.entry-preview-diary-text {
-		font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', Cambria, 'Times New Roman', serif;
 		font-size: 14px;
 		line-height: 1.5;
 	}

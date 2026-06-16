@@ -2,7 +2,7 @@
 	import { t, locale, plural } from '$lib/i18n';
 	import { auth } from '$lib/stores/auth';
 	import { documents, documentsError, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint } from '$lib/blueprint';
+	import { resolvedBlueprint, hasBedarfMeds } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Asterisk from '$lib/components/Asterisk.svelte';
@@ -275,7 +275,7 @@
 	// surfaced when the active blueprint declares rescueMedications, so
 	// presets without a clinical rescue protocol stay clean.
 	$: rescueMedsThisMonth = (() => {
-		if (!bp?.rescueMedications || bp.rescueMedications.length === 0) return 0;
+		if (!hasBedarfMeds(bp)) return 0;
 		const monthPrefix = todayStr.slice(0, 7);
 		return allDocs.filter(
 			(d) => d.data?.type === 'event'

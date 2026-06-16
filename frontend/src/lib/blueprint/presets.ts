@@ -63,7 +63,14 @@ export const epilepsy: Blueprint = {
 		{ id: 'mood', label: 'vital.mood', unit: '1-10', placeholder: '5' },
 		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
 	],
-	medications: [],
+	// Single source of truth: as-needed ("Bedarfsmedikation") starter meds live
+	// here, editable in Settings and surfaced in the FAB. (Folded from the old
+	// preset-only `rescueMedications` list — ids preserved so already-logged
+	// events still resolve.)
+	medications: [
+		{ id: 'midazolam_buccal', name: 'Midazolam', dose: '5 mg', schedule: '', asNeeded: true },
+		{ id: 'diazepam_rectal', name: 'Diazepam', dose: '10 mg', schedule: '', asNeeded: true },
+	],
 	gridSymptomColumns: ['tired', 'aggressive', 'restless', 'nausea', 'dizzy', 'headache', 'aura'],
 	gridEpisodeColumns: ['focal', 'generalized'],
 	streamFilters: [
@@ -74,10 +81,6 @@ export const epilepsy: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
-	rescueMedications: [
-		{ id: 'midazolam_buccal', label: 'rescue_med.midazolam', unit: 'mg', defaultDose: '5' },
-		{ id: 'diazepam_rectal', label: 'rescue_med.diazepam', unit: 'mg', defaultDose: '10' },
-	],
 	markerEvent: {
 		episodeIds: ['focal', 'generalized', 'absence', 'myoclonic', 'unknown'],
 		nounKey: 'marker_noun.seizure',
@@ -376,7 +379,10 @@ export const migraine: Blueprint = {
 		{ id: 'duration_hours', label: 'vital.duration_hours', unit: 'h', placeholder: '4' },
 		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
 	],
-	medications: [],
+	medications: [
+		{ id: 'sumatriptan', name: 'Sumatriptan', dose: '50 mg', schedule: '', asNeeded: true },
+		{ id: 'rizatriptan', name: 'Rizatriptan', dose: '10 mg', schedule: '', asNeeded: true },
+	],
 	gridSymptomColumns: ['headache', 'nausea', 'light_sensitive', 'visual_aura', 'tired'],
 	gridEpisodeColumns: ['migraine_with_aura', 'migraine_without_aura', 'tension_headache'],
 	streamFilters: [
@@ -387,10 +393,6 @@ export const migraine: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'journal',
-	rescueMedications: [
-		{ id: 'sumatriptan', label: 'rescue_med.sumatriptan', unit: 'mg', defaultDose: '50' },
-		{ id: 'rizatriptan', label: 'rescue_med.rizatriptan', unit: 'mg', defaultDose: '10' },
-	],
 	markerEvent: {
 		episodeIds: ['migraine_with_aura', 'migraine_without_aura', 'cluster_headache'],
 		nounKey: 'marker_noun.attack',
@@ -811,7 +813,10 @@ export const asthma: Blueprint = {
 		{ id: 'rescue_inhaler_puffs', label: 'vital.rescue_inhaler_puffs', unit: 'puffs', placeholder: '0' },
 		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
 	],
-	medications: [],
+	medications: [
+		{ id: 'salbutamol_puff', name: 'Salbutamol', dose: '2 Hübe', schedule: '', asNeeded: true },
+		{ id: 'prednisolone', name: 'Prednisolon', dose: '30 mg', schedule: '', asNeeded: true },
+	],
 	gridSymptomColumns: ['wheezing', 'shortness_of_breath', 'chest_tightness', 'persistent_cough', 'nocturnal_waking', 'tired'],
 	gridEpisodeColumns: ['asthma_attack', 'copd_exacerbation'],
 	streamFilters: [
@@ -822,10 +827,6 @@ export const asthma: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
-	rescueMedications: [
-		{ id: 'salbutamol_puff', label: 'rescue_med.salbutamol', unit: 'puff', defaultDose: '2' },
-		{ id: 'prednisolone', label: 'rescue_med.prednisolone', unit: 'mg', defaultDose: '30' },
-	],
 	markerEvent: {
 		episodeIds: ['asthma_attack', 'copd_exacerbation'],
 		nounKey: 'marker_noun.attack',
@@ -1525,7 +1526,10 @@ export const bipolar: Blueprint = {
 		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
 		{ id: 'weight', label: 'vital.weight', unit: 'kg', placeholder: '70' },
 	],
-	medications: [],
+	medications: [
+		{ id: 'lorazepam', name: 'Lorazepam', dose: '1 mg', schedule: '', asNeeded: true },
+		{ id: 'quetiapine_prn', name: 'Quetiapin', dose: '25 mg', schedule: '', asNeeded: true },
+	],
 	gridSymptomColumns: ['elevated_mood', 'depressed_mood', 'anhedonia', 'insomnia', 'racing_thoughts', 'irritable'],
 	gridEpisodeColumns: ['manic', 'depressive'],
 	streamFilters: [
@@ -1536,10 +1540,6 @@ export const bipolar: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
-	rescueMedications: [
-		{ id: 'lorazepam', label: 'rescue_med.lorazepam', unit: 'mg', defaultDose: '1' },
-		{ id: 'quetiapine_prn', label: 'rescue_med.quetiapine', unit: 'mg', defaultDose: '25' },
-	],
 	markerEvent: {
 		episodeIds: ['manic', 'depressive', 'hypomanic'],
 		nounKey: 'marker_noun.episode',
@@ -1738,7 +1738,10 @@ export const ibd: Blueprint = {
 		{ id: 'crp', label: 'vital.crp', unit: 'mg/L', placeholder: '5' },
 		{ id: 'calprotectin', label: 'vital.calprotectin', unit: 'µg/g', placeholder: '50' },
 	],
-	medications: [],
+	medications: [
+		{ id: 'prednisone_burst', name: 'Prednison', dose: '40 mg', schedule: '', asNeeded: true },
+		{ id: 'loperamide', name: 'Loperamid', dose: '4 mg', schedule: '', asNeeded: true },
+	],
 	gridSymptomColumns: ['diarrhea', 'bloody_stool', 'abdominal_pain', 'fever', 'tired'],
 	gridEpisodeColumns: ['flare'],
 	streamFilters: [
@@ -1749,10 +1752,6 @@ export const ibd: Blueprint = {
 	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
-	rescueMedications: [
-		{ id: 'prednisone_burst', label: 'rescue_med.prednisone', unit: 'mg', defaultDose: '40' },
-		{ id: 'loperamide', label: 'rescue_med.loperamide', unit: 'mg', defaultDose: '4' },
-	],
 	markerEvent: {
 		episodeIds: ['flare'],
 		nounKey: 'marker_noun.flare',

@@ -1498,6 +1498,12 @@
 		outline: none;
 		transition: border-color 0.15s ease-out;
 	}
+	/* iOS Safari auto-zooms any focused input under 16px and never zooms back
+	   out (viewport meta omits maximum-scale for a11y). Match the .input fix in
+	   app.css: bump to 16px on touch devices only, leaving desktop density. */
+	@media (pointer: coarse) {
+		.log-detail-input { font-size: 16px; }
+	}
 	.log-detail-input:focus {
 		border-color: var(--accent);
 	}

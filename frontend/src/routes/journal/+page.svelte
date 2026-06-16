@@ -17,10 +17,11 @@
 	for entries, behind the EntryComposer save bar) so it can't be
 	triggered in panic or by mistake.
 
-	Diary text gets a serif treatment so narrative reads differently from
-	data. Per-chip color stripes and the +N truncation on chips were
-	dropped (see EntryPreview); the journal now lets card height carry
-	"loud day vs quiet day" as visual rhythm.
+	Diary text uses the same sans body treatment as the rest of the app
+	(the earlier serif treatment was reverted — it read as inconsistent).
+	Per-chip color stripes and the +N truncation on chips were dropped
+	(see EntryPreview); the journal now lets card height carry "loud day
+	vs quiet day" as visual rhythm.
 -->
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
@@ -601,7 +602,7 @@
 						id="moment-text"
 						bind:value={momentText}
 						rows="6"
-						class="input resize-y mt-1 diary-text-edit"
+						class="input resize-y mt-1"
 					></textarea>
 				</div>
 			{/if}
@@ -902,11 +903,4 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	/* Diary text editing: same serif treatment as the read-only excerpt
-	   inside EntryPreview. Narrative reads narrative, even in the editor. */
-	.diary-text-edit {
-		font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', Cambria, 'Times New Roman', serif;
-		font-size: 15px;
-		line-height: 1.5;
-	}
 </style>

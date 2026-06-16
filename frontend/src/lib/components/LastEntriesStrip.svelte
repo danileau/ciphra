@@ -22,7 +22,7 @@
 	import { t, locale, plural } from '$lib/i18n';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint } from '$lib/blueprint/types';
-	import { isCustomItem } from '$lib/blueprint';
+	import { isCustomItem, resolveMedDisplay } from '$lib/blueprint';
 
 	export let docs: CiphraDocument[];
 	export let bp: Blueprint | null = null;
@@ -95,8 +95,7 @@
 			const kind = String((d as Record<string, unknown>).kind || '');
 			if (kind === 'medication') {
 				const medId = String((d as Record<string, unknown>).medicationId || '');
-				const med = bp?.rescueMedications?.find((m) => m.id === medId);
-				return med ? $t(med.label) : medId;
+				return resolveMedDisplay(bp, medId, $t).label;
 			}
 			const note = String((d as Record<string, unknown>).note || '').trim();
 			return note.length > 60 ? note.slice(0, 57) + '…' : note;

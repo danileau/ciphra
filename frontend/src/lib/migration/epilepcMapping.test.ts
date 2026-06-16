@@ -21,6 +21,7 @@ import {
     mergeMedications,
     allSourceIds,
     defaultEpilepsyBlueprint,
+    parseEpilepcMedName,
     type EpilepcBundle,
 } from './epilepcMapping';
 import type { MedicationSlot } from '$lib/blueprint/types';
@@ -236,11 +237,14 @@ describe('mapBundle', () => {
     });
 
     it('events carry title + notes (notes default to empty string)', () => {
-        expect(mapped.events).toHaveLength(1);
-        expect(mapped.events[0].type).toBe('event');
-        expect(mapped.events[0].title).toBe('MRI');
-        expect(mapped.events[0].notes).toBe('clear');
-        expect(mapped.events[0].source_id).toBe('e-e1');
+        // Freeform (non-medication) events only — medication intake events are
+        // appended to the same array (asserted separately below).
+        const real = mapped.events.filter((e) => e.kind !== 'medication');
+        expect(real).toHaveLength(1);
+        expect(real[0].type).toBe('event');
+        expect(real[0].title).toBe('MRI');
+        expect(real[0].notes).toBe('clear');
+        expect(real[0].source_id).toBe('e-e1');
     });
 
     // CIPH-760 — title (epilepc `name`) and notes (epilepc `description`)
@@ -283,16 +287,151 @@ describe('mapBundle', () => {
     it('medications are produced with prefixed id and carried fields', () => {
         expect(mapped.medications).toHaveLength(1);
         const m = mapped.medications[0];
-        expect(m.id).toBe('epilepc-m-m1');
+        // Single-source id derived from the case/whitespace-normalized NAME
+        // (not epilepc_id), so duplicate intake rows collapse to one definition.
+        expect(m.id).toBe('epilepc-med-keppra');
         expect(m.name).toBe('Keppra');
         expect(m.dose).toBe('500mg');
         expect(m.schedule).toBe('2x/day');
         expect(m.asNeeded).toBe(false);
     });
 
-    it('allSourceIds covers entries + events + diaries but not medications', () => {
+    it('each medication record becomes an intake event (dated at started_at)', () => {
+        const intakes = mapped.events.filter((e) => e.kind === 'medication');
+        expect(intakes).toHaveLength(1);
+        expect(intakes[0].type).toBe('event');
+        expect(intakes[0].date).toBe('2025-06-01');
+        expect(intakes[0].medicationId).toBe('epilepc-med-keppra');
+        expect(intakes[0].dose).toBe('500mg');
+        expect(intakes[0].source_id).toBe('m-m1');
+        // original freetext name preserved per intake (non-destructive merge)
+        expect(intakes[0].notes).toBe('Keppra');
+    });
+
+    it('allSourceIds covers entries + events (incl. med intakes) + diaries', () => {
         const ids = allSourceIds(mapped);
-        expect(ids).toEqual(['s-s1', 's-s2', 'e-e1', 'd-d1']);
+        expect(ids).toEqual(['s-s1', 's-s2', 'e-e1', 'm-m1', 'd-d1']);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// parseEpilepcMedName — dose-aware name normalization
+// ---------------------------------------------------------------------------
+
+describe('parseEpilepcMedName', () => {
+    const key = (s: string) => parseEpilepcMedName(s).key;
+
+    it('groups case / whitespace / embedded-dose variants to one key', () => {
+        const k = key('Urbanyl');
+        expect(key('urbanyl')).toBe(k);
+        expect(key('  URBANYL ')).toBe(k);
+        expect(key('urbanyl10mg')).toBe(k);     // glued dose
+        expect(key('URBANyL 15mg')).toBe(k);    // spaced dose + case
+        expect(key('Urbanyl 0.5 mg')).toBe(k);  // decimal dose
+        expect(key('Urbanyl 25/100mg')).toBe(k); // ratio dose
+    });
+
+    it('does NOT merge typos (no fuzzy matching)', () => {
+        expect(key('urbayl')).not.toBe(key('urbanyl'));
+    });
+
+    it('keeps a number that is part of the name (no unit → not a dose)', () => {
+        // "B12" / "5-HTP" must survive — only number+unit is treated as a dose.
+        expect(parseEpilepcMedName('Vitamin B12').base).toBe('Vitamin B12');
+        expect(parseEpilepcMedName('5-HTP').base).toBe('5-HTP');
+        expect(key('Vitamin D3')).not.toBe(key('Vitamin D'));
+    });
+
+    it('extracts the embedded dose and strips it from the base', () => {
+        const p = parseEpilepcMedName('Urbanyl 10mg');
+        expect(p.base).toBe('Urbanyl');
+        expect(p.embeddedDose).toBe('10mg');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Medication intake dedup (the "100 Urbanyl rows" problem)
+// ---------------------------------------------------------------------------
+
+describe('mapBundle medication dedup + intake events', () => {
+    const bundleWith = (meds: EpilepcBundle['medications']): EpilepcBundle => ({
+        schema_version: '1.1',
+        exported_at: '2026-04-14T08:00:00Z',
+        epilepc_decommission_at: '2026-12-31T00:00:00Z',
+        epilepc_user_id: 'u-3',
+        seizures: [],
+        events: [],
+        medications: meds,
+        diary: [],
+    });
+
+    it('collapses N same-name+dose intake rows into ONE medication slot', () => {
+        const meds = Array.from({ length: 100 }, (_, i) => ({
+            epilepc_id: `u${i}`,
+            name: 'Urbanyl',
+            dose: '10mg',
+            as_needed: true,
+            started_at: `2026-01-${String((i % 28) + 1).padStart(2, '0')}T09:00:00`,
+        }));
+        const m = mapBundle(bundleWith(meds));
+        expect(m.medications).toHaveLength(1);
+        expect(m.medications[0].name).toBe('Urbanyl');
+        expect(m.medications[0].asNeeded).toBe(true);
+        // ...but every intake survives as its own event.
+        const intakes = m.events.filter((e) => e.kind === 'medication');
+        expect(intakes).toHaveLength(100);
+        expect(new Set(intakes.map((e) => e.medicationId))).toEqual(new Set([m.medications[0].id]));
+        expect(intakes[0].time).toBe('09:00');
+    });
+
+    it('merges by name only — same drug at different doses → one definition, dose kept per intake', () => {
+        const m = mapBundle(bundleWith([
+            { epilepc_id: 'a', name: 'Urbanyl', dose: '10mg', started_at: '2026-01-01' },
+            { epilepc_id: 'b', name: 'Urbanyl', dose: '20mg', started_at: '2026-01-02' },
+        ]));
+        expect(m.medications).toHaveLength(1);
+        const intakes = m.events.filter((e) => e.kind === 'medication');
+        expect(intakes.map((e) => e.dose)).toEqual(['10mg', '20mg']);
+    });
+
+    it('groups case + whitespace + embedded dose together (grep intuition); only typos stay separate', () => {
+        const m = mapBundle(bundleWith([
+            { epilepc_id: '1', name: 'Urbanyl', started_at: '2026-01-01' },
+            { epilepc_id: '2', name: 'urbanyl', started_at: '2026-01-02' },
+            { epilepc_id: '3', name: '  URBANYL ', started_at: '2026-01-03' },
+            { epilepc_id: '4', name: 'urbanyl10mg', started_at: '2026-01-04' },   // dose glued → merges
+            { epilepc_id: '5', name: 'URBANyL 15mg', started_at: '2026-01-05' },  // dose + case → merges
+            { epilepc_id: '6', name: 'urbayl', started_at: '2026-01-06' },        // typo → separate
+        ]));
+        const names = m.medications.map((s) => s.name).sort();
+        // 2 groups: the whole Urbanyl cluster (incl. dose variants), and the typo.
+        expect(m.medications).toHaveLength(2);
+        expect(names).toEqual(['Urbanyl', 'urbayl']);
+        // The 5 Urbanyl intakes all point at the one definition; dose preserved.
+        const intakes = m.events.filter((e) => e.kind === 'medication');
+        const urbanylId = m.medications.find((s) => s.name === 'Urbanyl')!.id;
+        expect(intakes.filter((e) => e.medicationId === urbanylId)).toHaveLength(5);
+        expect(intakes.find((e) => e.source_id === 'm-4')!.dose).toBe('10mg');
+        expect(intakes.find((e) => e.source_id === 'm-5')!.dose).toBe('15mg');
+    });
+
+    it('preserves the exact original name per intake even after merge', () => {
+        const m = mapBundle(bundleWith([
+            { epilepc_id: '1', name: 'Urbanyl', started_at: '2026-01-01' },
+            { epilepc_id: '2', name: 'URBANYL 10mg', started_at: '2026-01-02' },
+        ]));
+        const intakes = m.events.filter((e) => e.kind === 'medication');
+        expect(intakes.map((e) => e.notes)).toEqual(['Urbanyl', 'URBANYL 10mg']);
+        // both point at the one merged definition
+        expect(new Set(intakes.map((e) => e.medicationId)).size).toBe(1);
+    });
+
+    it('records without started_at produce a slot but no intake event', () => {
+        const m = mapBundle(bundleWith([
+            { epilepc_id: 'a', name: 'Lamotrigin', dose: '100mg', started_at: null },
+        ]));
+        expect(m.medications).toHaveLength(1);
+        expect(m.events.filter((e) => e.kind === 'medication')).toHaveLength(0);
     });
 });
 
