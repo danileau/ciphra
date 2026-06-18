@@ -4,6 +4,13 @@
 
 const API_BASE = '/api';
 
+// Endpoints where a 401 means "bad credentials" (handled by the caller), NOT
+// "your session expired" — so the global session-expiry catch must skip them.
+const AUTH_ENDPOINTS = ['/login', '/register', '/recover'];
+function isAuthEndpoint(path: string): boolean {
+	return AUTH_ENDPOINTS.some((p) => path === p || path.startsWith(p + '/'));
+}
+
 async function request(
 	path: string,
 	options: RequestInit = {}
@@ -23,6 +30,15 @@ async function request(
 	if (token) headers['Authorization'] = `Bearer ${token}`;
 
 	const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+	// Central session-expiry catch: a 401 on an AUTHENTICATED request (we sent a
+	// token) to a non-auth endpoint means the session is dead (expired/revoked).
+	// Notify the app shell to clear auth + redirect to /login, instead of letting
+	// the failed load render as a stale-looking "no profile yet" / caregiver view.
+	if (res.status === 401 && token && !isAuthEndpoint(path) && typeof window !== 'undefined') {
+		window.dispatchEvent(new CustomEvent('ciphra:unauthorized'));
+	}
+
 	const data = await res.json();
 	return { ok: res.ok, status: res.status, data };
 }

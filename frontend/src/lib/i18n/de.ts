@@ -95,6 +95,7 @@ export default {
 	'auth.error_credentials': 'Benutzername oder Passwort stimmen nicht. Bitte nochmals versuchen oder den Recovery-Code verwenden.',
 	'auth.error_vault_decrypt': 'Wir konnten dein Notizbuch nicht öffnen. Bitte erneut anmelden.',
 	'auth.error_locked': 'Zu viele Versuche. Bitte 15 Minuten warten und erneut versuchen.',
+	'auth.session_expired': 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.',
 	'auth.technical_details': 'Technische Details anzeigen',
 	'auth.phase_checking': 'Prüfen…',
 	'auth.phase_deriving': 'Schlüssel wird abgeleitet (dauert ein paar Sekunden)…',

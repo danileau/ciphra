@@ -18,6 +18,9 @@
 		initialMode === 'register' ? 'register'
 		: initialMode === 'recovery' ? 'recovery'
 		: 'login';
+	// Shown when the app shell bounced the user here after a 401 (expired /
+	// revoked session). Dismissed as soon as they switch tabs.
+	let sessionExpired = $page.url.searchParams.get('session') === 'expired';
 	let error = '';
 	let technicalError = '';
 	let loading = false;
@@ -151,6 +154,11 @@
 				</div>
 
 				<div class="p-6">
+					{#if sessionExpired && tab === 'login'}
+						<div class="rounded-xl p-3 mb-4" style="background: rgba(180,83,9,0.06); border: 1px solid rgba(180,83,9,0.25)">
+							<p class="text-sm" style="color: var(--text-secondary)">{$t('auth.session_expired')}</p>
+						</div>
+					{/if}
 					{#if tab !== 'login' && error}
 						<div class="rounded-xl p-3 mb-4" style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)">
 							<p class="text-sm" style="color: var(--danger)">{error}</p>

@@ -208,6 +208,9 @@
 		};
 		window.addEventListener('ciphra:queued', onQueued);
 
+		const onUnauthorizedEvt = () => { onUnauthorized(); };
+		window.addEventListener('ciphra:unauthorized', onUnauthorizedEvt);
+
 		const onOnline = () => { documents.flushOutbox(); };
 		window.addEventListener('online', onOnline);
 		const onVisible = () => {
@@ -243,6 +246,7 @@
 			window.removeEventListener('ciphra:first-daily-log', onFirstDailyLog);
 			window.removeEventListener('ciphra:synced', onSynced);
 			window.removeEventListener('ciphra:queued', onQueued);
+			window.removeEventListener('ciphra:unauthorized', onUnauthorizedEvt);
 			window.removeEventListener('online', onOnline);
 			document.removeEventListener('visibilitychange', onVisible);
 			window.removeEventListener('beforeinstallprompt', onBeforeInstall as EventListener);
@@ -528,6 +532,26 @@
 		familyLinks.clear();
 		activeVault.set(null);
 		goto('/login');
+	}
+
+	// Session-expiry catch. `api.ts` fires `ciphra:unauthorized` when an
+	// authenticated request gets a 401 (token expired/revoked). Without this the
+	// app still LOOKS logged in — the doc fetch 401s and the dashboard renders
+	// the misleading "Du hast noch keine eigene Erfassung eingerichtet" caregiver
+	// view. Wipe local auth/state and bounce straight to login with a notice.
+	let handlingUnauthorized = false;
+	async function onUnauthorized() {
+		if (handlingUnauthorized) return; // dedupe concurrent 401s
+		handlingUnauthorized = true;
+		await auth.logout();
+		docsLoadStarted = false;
+		docsLoaded = false;
+		blueprint.clear();
+		documents.clear();
+		familyLinks.clear();
+		activeVault.set(null);
+		await goto('/login?session=expired');
+		handlingUnauthorized = false;
 	}
 
 	// When the caregiver switches vault, clear cached docs + blueprint and

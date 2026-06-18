@@ -90,6 +90,7 @@ export default {
 	'auth.error_credentials': 'Wrong username or password. Try again or use your recovery code.',
 	'auth.error_vault_decrypt': 'We couldn\'t unlock your notebook. Try logging in again.',
 	'auth.error_locked': 'Too many attempts. Please wait 15 minutes and try again.',
+	'auth.session_expired': 'Your session has expired. Please sign in again.',
 	'auth.technical_details': 'Show technical details',
 	'auth.phase_checking': 'Checking…',
 	'auth.phase_deriving': 'Deriving key (takes a few seconds)…',
