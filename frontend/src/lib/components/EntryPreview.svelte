@@ -519,11 +519,12 @@
 {/if}
 
 <style>
-	/* Diary text uses the same sans body treatment as every other displayed
-	   text (CIPH-902's serif treatment was reverted — it read as inconsistent
-	   against the rest of the app). Inherits the app font stack. */
+	/* Diary text matches the body size of every other journal entry (the
+	   notes/secondary text-xs = 12px) — it previously rendered at 14px and read
+	   as larger than other cards. Same sans stack as the rest of the app
+	   (CIPH-902's serif treatment was reverted earlier). */
 	.entry-preview-diary-text {
-		font-size: 14px;
+		font-size: 12px;
 		line-height: 1.5;
 	}
 	/* CIPH-911b — placeholder for streak-only days. */
