@@ -11,7 +11,7 @@
  */
 
 const DB_NAME = 'ciphra_cache';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'decrypted_documents';
 const LEGACY_STORE = 'documents';
 
@@ -32,10 +32,17 @@ function openDB(): Promise<IDBDatabase> {
 			if (db.objectStoreNames.contains(LEGACY_STORE)) {
 				db.deleteObjectStore(LEGACY_STORE);
 			}
-			if (!db.objectStoreNames.contains(STORE_NAME)) {
-				const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-				store.createIndex('user_id', 'user_id', { unique: false });
+			// v3 — composite [user_id, id] key. Document ids are per-user server
+			// sequences, so a bare `id` key collided across vaults (a caregiver's
+			// own doc id=5 and a linked patient's doc id=5), letting putDocs for
+			// one vault overwrite the other's cached plaintext. Recreate the store
+			// with a partition-scoped key; it rebuilds from the server on next load
+			// (the cache is non-authoritative, so dropping it is safe).
+			if (db.objectStoreNames.contains(STORE_NAME)) {
+				db.deleteObjectStore(STORE_NAME);
 			}
+			const store = db.createObjectStore(STORE_NAME, { keyPath: ['user_id', 'id'] });
+			store.createIndex('user_id', 'user_id', { unique: false });
 		};
 
 		req.onsuccess = () => resolve(req.result);

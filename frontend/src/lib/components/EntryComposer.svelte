@@ -897,7 +897,7 @@
 										<div class="log-multi-add-time">
 											<TimePicker
 												bind:value={multiEntryNewTime[vital.id]}
-												ariaLabel={$t('vital.time_label') ?? $t('common.time')}
+												ariaLabel={$t('common.time')}
 												compact
 											/>
 										</div>
@@ -1647,7 +1647,7 @@
 		font-size: 14px;
 		font-weight: 500;
 		background: var(--danger);
-		color: white;
+		color: var(--on-danger, #fff);
 		border: none;
 		cursor: pointer;
 		transition: all 0.15s ease-out;
@@ -1741,7 +1741,7 @@
 	.log-multiday-toggle--on {
 		background: var(--danger);
 		border-color: var(--danger);
-		color: white;
+		color: var(--on-danger, #fff);
 	}
 	.log-multiday-toggle--on:hover {
 		background: var(--danger);

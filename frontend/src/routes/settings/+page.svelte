@@ -3,6 +3,7 @@
 	import type { Locale } from '$lib/i18n';
 	import { auth, isAuthenticated } from '$lib/stores/auth';
 	import { documents } from '$lib/stores/documents';
+	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import { blueprint, hasBlueprint, presets, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import {
 		applyDateFormatChoice,
@@ -114,7 +115,11 @@
 				return;
 			}
 			const m = await import('$lib/idb');
-			const docs = await m.getAllDocs(state.username);
+			// Cache partitions are keyed `${username}:self` / `:linked:N`, never
+			// the bare username — the old `getAllDocs(username)` always returned 0,
+			// understating the on-device plaintext disclosure. Count the user's own
+			// partition (linked-vault caches aren't the user's own data).
+			const docs = await m.getAllDocs(`${state.username}:self`);
 			cachedDocCount = docs.length;
 		} catch {
 			cachedDocCount = null;
@@ -485,9 +490,14 @@
 			const authKey = await deriveAuthKey(deletePassword, state.authParams);
 			const res = await deleteAccount(authKey);
 			if (res.ok) {
-				auth.logout();
+				// Await the on-disk wipe before navigating (PI v16) and clear ALL
+				// session state — links + active vault too — so nothing survives
+				// into the next mount on this tab.
+				await auth.logout();
 				documents.clear();
 				blueprint.clear();
+				familyLinks.clear();
+				activeVault.set(null);
 				goto('/login');
 			} else {
 				deleteError = (res.data?.error as string) || $t('auth.error_credentials');

@@ -1679,8 +1679,11 @@ export function generateDoctorPdf(
 
 	// Scope window — drives header + stat cards + grid loop.
 	const scopeMonths = scope === 'month' ? 1 : scope === 'year' ? 12 : 24;
-	const scopeEndDate = new Date(year, month + 1, 0);
-	const scopeStartDate = new Date(year, month + 1 - scopeMonths, 1);
+	// Noon anchor: `.toISOString()` is UTC, so a local-midnight date in any
+	// positive-offset tz (CET/CEST) slips to the previous day — shifting the
+	// whole scope window back a day and dropping the month's last day.
+	const scopeEndDate = new Date(year, month + 1, 0, 12);
+	const scopeStartDate = new Date(year, month + 1 - scopeMonths, 1, 12);
 	const scopeStartISO = scopeStartDate.toISOString().slice(0, 10);
 	const scopeEndISO = scopeEndDate.toISOString().slice(0, 10);
 
@@ -3844,8 +3847,10 @@ export function exportCsv(
 	scope: ReportScope = 'month'
 ): void {
 	const scopeMonths = scope === 'month' ? 1 : scope === 'year' ? 12 : 24;
-	const endDate = new Date(year, month + 1, 0);
-	const startDate = new Date(year, month + 1 - scopeMonths, 1);
+	// Noon anchor — see scope-window note above; also keeps the CSV day-loop
+	// (cur.toISOString()) on the correct local day.
+	const endDate = new Date(year, month + 1, 0, 12);
+	const startDate = new Date(year, month + 1 - scopeMonths, 1, 12);
 	const startISO = startDate.toISOString().slice(0, 10);
 	const endISO = endDate.toISOString().slice(0, 10);
 	const filePrefix = scope === 'month'

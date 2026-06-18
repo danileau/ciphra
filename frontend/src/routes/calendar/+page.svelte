@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
+	import { todayISO } from '$lib/date';
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem, hasBedarfMeds } from '$lib/blueprint';
@@ -310,7 +311,7 @@
 	// we're not on the current month.
 	$: railSelectedDate = (() => {
 		if (selectedDate) return selectedDate;
-		if (isOnCurrentMonth) return new Date().toISOString().slice(0, 10);
+		if (isOnCurrentMonth) return todayISO();
 		const logged = monthDocs
 			.map(d => String(d.data.date || ''))
 			.filter(Boolean)
@@ -676,7 +677,7 @@
 
 				{#each Array.from({ length: daysInMonth }, (_, i) => i + 1) as day}
 					{@const dayStr = `${monthPrefix}-${String(day).padStart(2, '0')}`}
-					{@const isToday = dayStr === new Date().toISOString().slice(0, 10)}
+					{@const isToday = dayStr === todayISO()}
 					{@const isSelected = dayStr === selectedDate}
 					{@const hasEpisode = dayHasEpisode(day)}
 					{@const hasLog = dayHasLog(day)}

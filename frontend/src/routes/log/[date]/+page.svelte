@@ -12,13 +12,14 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { t } from '$lib/i18n';
+	import { todayISO } from '$lib/date';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import EntryComposer, { type EntryData } from '$lib/components/EntryComposer.svelte';
 
-	let currentDate = new Date().toISOString().slice(0, 10);
+	let currentDate = todayISO();
 
 	$: bp = $resolvedBlueprint;
-	$: isToday = currentDate === new Date().toISOString().slice(0, 10);
+	$: isToday = currentDate === todayISO();
 	$: existingDoc = $documents.find(d => d.data.type === 'entry' && d.data.date === currentDate) || null;
 	$: previousDoc = (() => {
 		const prev = new Date(currentDate + 'T12:00:00');
@@ -31,7 +32,7 @@
 		if (!$isAuthenticated) { goto('/login'); return; }
 		const paramDate = $page.params.date;
 		if (paramDate === 'today') {
-			currentDate = new Date().toISOString().slice(0, 10);
+			currentDate = todayISO();
 		} else if (paramDate && /^\d{4}-\d{2}-\d{2}$/.test(paramDate)) {
 			currentDate = paramDate;
 		}
@@ -74,7 +75,7 @@
 	}
 
 	function handleJumpToToday() {
-		const today = new Date().toISOString().slice(0, 10);
+		const today = todayISO();
 		goto(`/log/${today}`, { replaceState: true });
 		currentDate = today;
 	}
