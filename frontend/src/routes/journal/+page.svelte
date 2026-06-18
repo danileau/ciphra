@@ -25,6 +25,7 @@
 -->
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
+	import { todayISO } from '$lib/date';
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
@@ -229,7 +230,7 @@
 	// ("Manie · 4 Tage" with a `{`-style bracket). Open phases (still
 	// active today) keep using the per-day phase tag — no bracket, since
 	// the streak hasn't ended.
-	const TODAY_DATE = new Date().toISOString().slice(0, 10);
+	const TODAY_DATE = todayISO();
 	function computeRenderGroups(monthDays: DayGroup[]): RenderItem[] {
 		const out: RenderItem[] = [];
 		let i = 0;

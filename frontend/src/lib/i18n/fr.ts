@@ -90,6 +90,7 @@ export default {
 	'auth.error_credentials': "Nom d'utilisateur ou mot de passe incorrect. Réessayez ou utilisez votre code de récupération.",
 	'auth.error_vault_decrypt': "Impossible de déverrouiller votre carnet. Veuillez vous reconnecter.",
 	'auth.error_locked': 'Trop de tentatives. Veuillez attendre 15 minutes.',
+	'auth.session_expired': 'Votre session a expiré. Veuillez vous reconnecter.',
 	'auth.technical_details': 'Afficher les détails techniques',
 	'auth.phase_checking': 'Vérification…',
 	'auth.phase_deriving': 'Dérivation de clé (quelques secondes)…',

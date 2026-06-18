@@ -3,6 +3,7 @@
 	import { isAuthenticated, authReady, auth, needsUnlock } from '$lib/stores/auth';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import { t } from '$lib/i18n';
+	import { todayISO } from '$lib/date';
 	import type { Locale } from '$lib/i18n';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -111,7 +112,7 @@
 			last = 'log';
 		}
 		quickAddMode = last;
-		if (last === 'diary' && !diaryDate) diaryDate = new Date().toISOString().slice(0, 10);
+		if (last === 'diary' && !diaryDate) diaryDate = todayISO();
 		fabOpenPicker();
 	}
 	function onFabPointerDown() {
@@ -208,6 +209,18 @@
 		};
 		window.addEventListener('ciphra:queued', onQueued);
 
+		const onUnauthorizedEvt = () => { onUnauthorized(); };
+		window.addEventListener('ciphra:unauthorized', onUnauthorizedEvt);
+
+		// Cross-tab logout sync. `storage` fires in OTHER tabs when localStorage
+		// changes; if another tab cleared `ciphra_auth` (logout / account delete),
+		// mirror it here so a shared device doesn't leave a second tab authed with
+		// a live in-memory master key.
+		const onStorage = (e: StorageEvent) => {
+			if (e.key === 'ciphra_auth' && !e.newValue && get(auth).token) onUnauthorized();
+		};
+		window.addEventListener('storage', onStorage);
+
 		const onOnline = () => { documents.flushOutbox(); };
 		window.addEventListener('online', onOnline);
 		const onVisible = () => {
@@ -243,6 +256,8 @@
 			window.removeEventListener('ciphra:first-daily-log', onFirstDailyLog);
 			window.removeEventListener('ciphra:synced', onSynced);
 			window.removeEventListener('ciphra:queued', onQueued);
+			window.removeEventListener('ciphra:unauthorized', onUnauthorizedEvt);
+			window.removeEventListener('storage', onStorage);
 			window.removeEventListener('online', onOnline);
 			document.removeEventListener('visibilitychange', onVisible);
 			window.removeEventListener('beforeinstallprompt', onBeforeInstall as EventListener);
@@ -457,12 +472,14 @@
 	// manually refreshed and the second fetch happened to work. We now do that
 	// refresh automatically instead of stranding them.
 	async function loadInitialDocs(attempt = 1): Promise<void> {
-		const [docsOk] = await Promise.all([
+		const [docsOk, linksOk] = await Promise.all([
 			documents.load(),
 			familyLinks.load(),
 		]);
 		blueprint.loadFromDocuments();
-		if (docsOk) {
+		// Require BOTH loads: a docs-success / links-failure combo would leave
+		// `$familyLinks` empty and wrongly bounce a caregiver-only user to /setup.
+		if (docsOk && linksOk) {
 			docsLoading = false;
 			docsLoaded = true;
 			// One-time single-source migration: fold any legacy preset
@@ -530,6 +547,26 @@
 		goto('/login');
 	}
 
+	// Session-expiry catch. `api.ts` fires `ciphra:unauthorized` when an
+	// authenticated request gets a 401 (token expired/revoked). Without this the
+	// app still LOOKS logged in — the doc fetch 401s and the dashboard renders
+	// the misleading "Du hast noch keine eigene Erfassung eingerichtet" caregiver
+	// view. Wipe local auth/state and bounce straight to login with a notice.
+	let handlingUnauthorized = false;
+	async function onUnauthorized() {
+		if (handlingUnauthorized) return; // dedupe concurrent 401s
+		handlingUnauthorized = true;
+		await auth.logout();
+		docsLoadStarted = false;
+		docsLoaded = false;
+		blueprint.clear();
+		documents.clear();
+		familyLinks.clear();
+		activeVault.set(null);
+		await goto('/login?session=expired');
+		handlingUnauthorized = false;
+	}
+
 	// When the caregiver switches vault, clear cached docs + blueprint and
 	// reload from the new vault. `lastVault` lets us detect real changes and
 	// skip the initial render that fires while the store hydrates.
@@ -540,9 +577,13 @@
 			docsLoaded = false;
 			documents.clear();
 			blueprint.clear();
-			documents.load().then(() => {
+			documents.load().then((ok) => {
 				blueprint.loadFromDocuments();
-				docsLoaded = true;
+				// Only commit docsLoaded on a genuine fetch success — a failed
+				// switch (offline / transient / revoked 403) must not flip to an
+				// authoritative empty state for the linked vault. The
+				// $documentsError banner + retry button stay visible instead.
+				if (ok) docsLoaded = true;
 			});
 		}
 		lastVault = v;
@@ -937,7 +978,7 @@
 							>{$t('quickadd.mode_entry')} / {$t('quickadd.mode_event')}</button>
 							<button
 								type="button"
-								on:click={() => { quickAddMode = 'diary'; if (!diaryDate) diaryDate = new Date().toISOString().slice(0, 10); }}
+								on:click={() => { quickAddMode = 'diary'; if (!diaryDate) diaryDate = todayISO(); }}
 								data-testid="quickadd-mode-diary"
 								class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px] inline-flex items-center justify-center gap-1.5"
 								style="background: {quickAddMode === 'diary' ? 'var(--surface-card)' : 'transparent'}; color: {quickAddMode === 'diary' ? 'var(--text-primary)' : 'var(--text-muted)'}"

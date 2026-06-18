@@ -18,6 +18,7 @@
 -->
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
+	import { todayISO } from '$lib/date';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint } from '$lib/blueprint/types';
 	import { isCustomItem } from '$lib/blueprint';
@@ -41,7 +42,7 @@
 		return id;
 	}
 
-	$: today = new Date().toISOString().slice(0, 10);
+	$: today = todayISO();
 	$: rollup = (() => {
 		if (!activePhase) return null;
 		const startedOn = activePhase.startedOn;

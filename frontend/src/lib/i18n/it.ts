@@ -90,6 +90,7 @@ export default {
 	'auth.error_credentials': 'Nome utente o password errati. Riprova o usa il codice di recupero.',
 	'auth.error_vault_decrypt': 'Non siamo riusciti ad aprire il tuo taccuino. Accedi di nuovo.',
 	'auth.error_locked': 'Troppi tentativi. Attendi 15 minuti e riprova.',
+	'auth.session_expired': 'La tua sessione è scaduta. Accedi di nuovo.',
 	'auth.technical_details': 'Mostra dettagli tecnici',
 	'auth.phase_checking': 'Verifica in corso…',
 	'auth.phase_deriving': 'Derivazione chiave (pochi secondi)…',

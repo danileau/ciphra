@@ -501,7 +501,11 @@
 	</div>
 {/if}
 
-{#if entry.data.notes}
+{#if entry.data.type === 'event' && entry.data.title}
+	<!-- Migrated epilepc events carry the name in `title`; render it (with notes
+		 if any) so title-only events aren't blank rows. -->
+	<p class="text-xs mt-1.5 italic line-clamp-2" style="color: var(--text-secondary)">"{[entry.data.title, entry.data.notes].filter(Boolean).join(' · ')}"</p>
+{:else if entry.data.notes}
 	<p class="text-xs mt-1.5 italic line-clamp-2" style="color: var(--text-secondary)">"{entry.data.notes}"</p>
 {/if}
 

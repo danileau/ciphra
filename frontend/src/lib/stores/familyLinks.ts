@@ -35,12 +35,15 @@ function createStore() {
 	const { subscribe, set, update } = writable<FamilyLink[]>([]);
 	let loaded = false;
 
-	async function load() {
-		if (!browser) return;
+	async function load(): Promise<boolean> {
+		if (!browser) return false;
 		const state = get(auth);
-		if (!state.masterKey) return;
+		if (!state.masterKey) return false;
 		const res = await getDocuments();
-		if (!res.ok) return;
+		// Report failure so callers don't treat an empty list as authoritative —
+		// a swallowed failure here made the layout bounce a caregiver-only user
+		// (no own blueprint, but linked) to /setup.
+		if (!res.ok) return false;
 		const docs = (res.data.documents as Array<{ id: number; encrypted_data: string }>) || [];
 		const links: FamilyLink[] = [];
 		for (const d of docs) {
@@ -81,6 +84,7 @@ function createStore() {
 
 		set(links);
 		loaded = true;
+		return true;
 	}
 
 	async function addLink(params: {

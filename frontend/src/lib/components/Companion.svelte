@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
+	import { todayISO } from '$lib/date';
 	import { auth } from '$lib/stores/auth';
 	import { documents, documentsError, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, hasBedarfMeds } from '$lib/blueprint';
@@ -46,7 +47,7 @@
 
 	$: bp = $resolvedBlueprint;
 	$: allDocs = $documents;
-	$: todayStr = new Date().toISOString().slice(0, 10);
+	$: todayStr = todayISO();
 	$: todayEntries = allDocs.filter(d => String(d.data.date || '').startsWith(todayStr));
 
 	// CIPH-854 — Cohort drives home card ordering + which extra context

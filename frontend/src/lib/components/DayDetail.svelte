@@ -45,22 +45,25 @@
 		const notes: string[] = [];
 		for (const d of entryDocs) {
 			const data = d.data;
+			// Filter ids unknown to the current blueprint (deleted custom items,
+			// legacy/migration leftovers) so they don't render as raw-id chips —
+			// mirrors the CIPH-915 guard already in EntryPreview.
 			for (const [k, v] of Object.entries(data.symptoms || {})) {
-				if (v && !POSITIVE_MARKERS.has(k)) symptoms.add(k);
+				if (v && !POSITIVE_MARKERS.has(k) && isKnownSymptom(k)) symptoms.add(k);
 			}
 			const trs = data.triggers as unknown;
 			if (Array.isArray(trs)) {
-				for (const id of trs) triggers.add(String(id));
+				for (const id of trs) { if (isKnownTrigger(String(id))) triggers.add(String(id)); }
 			} else if (trs && typeof trs === 'object') {
 				for (const [k, v] of Object.entries(trs as Record<string, boolean>)) {
-					if (v) triggers.add(k);
+					if (v && isKnownTrigger(k)) triggers.add(k);
 				}
 			}
 			for (const [k, n] of Object.entries(data.episodes || data.seizures || {})) {
 				if (Number(n) > 0) episodes[k] = (episodes[k] || 0) + Number(n);
 			}
 			for (const [k, v] of Object.entries(data.vitals || {})) {
-				if (v != null && String(v).trim() !== '' && String(v).trim() !== '0') {
+				if (v != null && String(v).trim() !== '' && String(v).trim() !== '0' && isKnownVital(k)) {
 					vitals[k] = String(v);
 				}
 			}
@@ -89,6 +92,15 @@
 				.map((ep) => ({ ep, count: aggregated.episodes[ep.id] }))
 		: [];
 
+	function isKnownSymptom(id: string): boolean {
+		return (bp?.symptomGroups || []).some((g) => g.items.some((it) => it.id === id));
+	}
+	function isKnownTrigger(id: string): boolean {
+		return (bp?.triggers || []).some((tr) => tr.id === id);
+	}
+	function isKnownVital(id: string): boolean {
+		return (bp?.vitals || []).some((v) => v.id === id);
+	}
 	function symptomLabel(id: string): string {
 		for (const g of bp?.symptomGroups || []) {
 			const it = g.items.find((x) => x.id === id);
@@ -243,7 +255,7 @@
 							{#if ev.data.time}
 								<span class="dd-event-time">{ev.data.time}</span>
 							{/if}
-							<span class="dd-event-text">{ev.data.notes || ''}</span>
+							<span class="dd-event-text">{[ev.data.title, ev.data.notes].filter(Boolean).join(' · ') || ''}</span>
 						</li>
 					{/each}
 				</ul>

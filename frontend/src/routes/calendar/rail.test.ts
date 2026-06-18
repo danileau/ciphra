@@ -49,7 +49,7 @@ describe('CIPH-pi19-B railSelectedDate fallback chain', () => {
 		// Order matters: selectedDate wins, then today (when isOnCurrentMonth),
 		// then the last (most recent) logged day in monthDocs.
 		expect(CAL).toMatch(/\$:\s*railSelectedDate\s*=\s*\(\(\)\s*=>\s*\{[\s\S]*?if\s*\(selectedDate\)\s*return\s*selectedDate/);
-		expect(CAL).toMatch(/if\s*\(isOnCurrentMonth\)\s*return\s*new Date\(\)\.toISOString\(\)\.slice\(0,\s*10\)/);
+		expect(CAL).toMatch(/if\s*\(isOnCurrentMonth\)\s*return\s*todayISO\(\)/);
 		expect(CAL).toMatch(/logged\.length\s*>\s*0\s*\?\s*logged\[logged\.length\s*-\s*1\]\s*:\s*null/);
 	});
 
