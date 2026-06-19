@@ -108,6 +108,7 @@ export default {
 	'companion.caregiver_revoked_desc': "Ces comptes ont révoqué votre accès. Vous ne pouvez plus voir leurs données.",
 	'companion.caregiver_revoked_cleanup': 'Nettoyer depuis les paramètres →',
 	'family.link_revoked': 'Accès révoqué par le propriétaire',
+	'family.access_removed': "L'accès à ce compte a été retiré.",
 	'family.remove': 'Supprimer',
 
 	// Partage famille

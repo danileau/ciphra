@@ -113,6 +113,7 @@ export default {
 	'companion.caregiver_revoked_desc': 'Diese Konten haben deinen Zugriff widerrufen. Du siehst deren Daten nicht mehr.',
 	'companion.caregiver_revoked_cleanup': 'In den Einstellungen aufräumen →',
 	'family.link_revoked': 'Zugriff vom Besitzer widerrufen',
+	'family.access_removed': 'Der Zugriff auf dieses Konto wurde entzogen.',
 	'family.remove': 'Entfernen',
 
 	// Family sharing

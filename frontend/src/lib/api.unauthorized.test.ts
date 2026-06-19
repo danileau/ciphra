@@ -61,3 +61,31 @@ describe('api 401 session-expiry interceptor', () => {
 		expect(firedUnauthorized(dispatchSpy)).toBe(false);
 	});
 });
+
+function firedFamilyRevoked(spy: ReturnType<typeof vi.spyOn>): boolean {
+	return spy.mock.calls.some((c) => (c[0] as Event)?.type === 'ciphra:family-revoked');
+}
+
+describe('api 403 family-revoke', () => {
+	let dispatchSpy: ReturnType<typeof vi.spyOn>;
+	beforeEach(() => {
+		localStorage.setItem('ciphra_auth', JSON.stringify({ token: 'tok' }));
+		dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+	});
+	afterEach(() => { localStorage.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+	it('fires ciphra:family-revoked on a 403 to a family vault, NOT unauthorized', async () => {
+		mockFetch(403);
+		const api = await import('./api');
+		await api.familyDocuments(7);
+		expect(firedFamilyRevoked(dispatchSpy)).toBe(true);
+		expect(firedUnauthorized(dispatchSpy)).toBe(false);
+	});
+
+	it('does NOT fire family-revoke on a 403 to a non-family endpoint', async () => {
+		mockFetch(403);
+		const api = await import('./api');
+		await api.getDocuments();
+		expect(firedFamilyRevoked(dispatchSpy)).toBe(false);
+	});
+});

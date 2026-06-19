@@ -145,6 +145,8 @@
 	let syncToastKey = 0;
 	let queuedToastShow = false;
 	let queuedToastKey = 0;
+	let revokedToastShow = false;
+	let revokedToastKey = 0;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let deferredInstallPrompt: any = null;
 	let pwaInstallVisible = false;
@@ -221,6 +223,17 @@
 		};
 		window.addEventListener('storage', onStorage);
 
+		// A linked patient revoked the caregiver's grant mid-view (403 on the
+		// family vault). Reconcile links — the reactive below snaps activeVault
+		// back to the caregiver's own vault — and surface a brief notice.
+		const onFamilyRevoked = () => {
+			familyLinks.load();
+			revokedToastKey += 1;
+			revokedToastShow = true;
+			setTimeout(() => { revokedToastShow = false; }, 3000);
+		};
+		window.addEventListener('ciphra:family-revoked', onFamilyRevoked);
+
 		const onOnline = () => { documents.flushOutbox(); };
 		window.addEventListener('online', onOnline);
 		const onVisible = () => {
@@ -258,6 +271,7 @@
 			window.removeEventListener('ciphra:queued', onQueued);
 			window.removeEventListener('ciphra:unauthorized', onUnauthorizedEvt);
 			window.removeEventListener('storage', onStorage);
+			window.removeEventListener('ciphra:family-revoked', onFamilyRevoked);
 			window.removeEventListener('online', onOnline);
 			document.removeEventListener('visibilitychange', onVisible);
 			window.removeEventListener('beforeinstallprompt', onBeforeInstall as EventListener);
@@ -664,7 +678,12 @@
 	// Previously this fired on /migrate when a user with a stale JWT hit
 	// the inbound migration link — bounced them to /login instead of letting
 	// them sign up a fresh ciphra account via the inline SignupFlow.
-	$: if (browser && $needsUnlock && currentShell.requiresAuth && currentPath !== '/login') {
+	// Also covers the landing `/`: a token-present / key-absent user renders the
+	// authed dashboard shell there (isAuthenticated is true), but every vault
+	// read no-ops silently → a broken empty view. Redirect to re-unlock.
+	// /migrate and /join keep their own inbound signup/claim flows (excluded).
+	$: if (browser && $needsUnlock && currentPath !== '/login'
+		&& (currentShell.requiresAuth || currentPath === '/')) {
 		// auth.logout() is async (PI v16); fire-and-forget here is fine
 		// because the master key is already gone — no plaintext to leak.
 		// The wipe still runs in background.
@@ -1191,6 +1210,11 @@
 		 writes wait to sync. -->
 	{#key queuedToastKey}
 		<Toast message={queuedToastShow ? $t('sync.queued') : ''} duration={2400} show={queuedToastShow} />
+	{/key}
+
+	<!-- A linked vault was revoked while viewing it — snapped back to own vault. -->
+	{#key revokedToastKey}
+		<Toast message={revokedToastShow ? $t('family.access_removed') : ''} duration={3000} show={revokedToastShow} />
 	{/key}
 
 	{#if $isAuthenticated && $pendingCount > 0}
