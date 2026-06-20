@@ -296,8 +296,8 @@ export default {
 	'companion.streak_no_type': 'Giorni senza {type}',
 	'companion.tooltip_trigger_days_one': '1 giorno con fattori scatenanti',
 	'companion.tooltip_trigger_days_other': '{count} giorni con fattori scatenanti',
-	'companion.marker_best': 'Intervallo più lungo finora: {days} giorni',
-	'companion.marker_sr': 'Intervalli tra i recenti eventi {noun}: {gaps}. Attualmente {current} giorni.',
+	'companion.marker_best': 'Periodo più lungo senza finora: {days} giorni',
+	'companion.marker_sr': 'Giorni senza {noun} tra i recenti eventi: {gaps}. Attualmente {current} giorni.',
 
 	'marker_noun.seizure': 'crisi',
 	'marker_noun.attack': 'attacco',

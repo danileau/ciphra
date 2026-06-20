@@ -296,8 +296,8 @@ export default {
 	'companion.streak_no_type': 'Days without {type}',
 	'companion.tooltip_trigger_days_one': '1 trigger day',
 	'companion.tooltip_trigger_days_other': '{count} trigger days',
-	'companion.marker_best': 'Longest gap so far: {days} days',
-	'companion.marker_sr': 'Gap between recent {noun} events: {gaps}. Currently {current} days.',
+	'companion.marker_best': 'Longest time without so far: {days} days',
+	'companion.marker_sr': 'Days without {noun} between recent events: {gaps}. Currently {current} days.',
 
 	'marker_noun.seizure': 'seizure',
 	'marker_noun.attack': 'attack',

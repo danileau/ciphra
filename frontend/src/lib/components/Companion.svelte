@@ -219,11 +219,19 @@
 		if (dates.length < 3) return null;
 
 		dates.sort();
+		// Episode-FREE days between consecutive marker events (interval − 1).
+		// This keeps the whole card in one unit: the header reads "Tage ohne
+		// {type}", the big number is the current days-without (open run, no
+		// −1 since it isn't terminated by an episode), and `bestGap` must be
+		// comparable to it — the longest run the user actually went WITHOUT an
+		// episode, not the raw interval. Previously gaps were raw intervals,
+		// so the longest read one day higher than the streak card's count and
+		// the two contradicted (154 vs 153). One unit, one number now.
 		const gaps: number[] = [];
 		for (let i = 1; i < dates.length; i++) {
 			const prev = new Date(dates[i - 1] + 'T12:00:00');
 			const curr = new Date(dates[i] + 'T12:00:00');
-			gaps.push(Math.round((curr.getTime() - prev.getTime()) / 86400000));
+			gaps.push(Math.max(0, Math.round((curr.getTime() - prev.getTime()) / 86400000) - 1));
 		}
 
 		const lastDate = dates[dates.length - 1];

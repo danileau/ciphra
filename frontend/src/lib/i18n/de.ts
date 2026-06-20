@@ -302,8 +302,8 @@ export default {
 	'companion.streak_no_type': 'Tage ohne {type}',
 	'companion.tooltip_trigger_days_one': '1 Auslöser-Tag',
 	'companion.tooltip_trigger_days_other': '{count} Auslöser-Tage',
-	'companion.marker_best': 'Längster Abstand bisher: {days} Tage',
-	'companion.marker_sr': 'Abstand zwischen den letzten {noun}-Ereignissen: {gaps}. Aktuell {current} Tage.',
+	'companion.marker_best': 'Längste Zeit ohne bisher: {days} Tage',
+	'companion.marker_sr': 'Tage ohne {noun} zwischen den letzten Ereignissen: {gaps}. Aktuell {current} Tage.',
 
 	'marker_noun.seizure': 'Anfall',
 	'marker_noun.attack': 'Attacke',

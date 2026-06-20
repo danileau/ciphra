@@ -296,8 +296,8 @@ export default {
 	'companion.streak_no_type': 'Jours sans {type}',
 	'companion.tooltip_trigger_days_one': '1 jour déclencheur',
 	'companion.tooltip_trigger_days_other': '{count} jours déclencheurs',
-	'companion.marker_best': 'Plus long intervalle jusqu’ici : {days} jours',
-	'companion.marker_sr': 'Intervalles entre les derniers événements {noun} : {gaps}. Actuellement {current} jours.',
+	'companion.marker_best': 'Plus longue période sans jusqu’ici : {days} jours',
+	'companion.marker_sr': 'Jours sans {noun} entre les derniers événements : {gaps}. Actuellement {current} jours.',
 
 	'marker_noun.seizure': 'crise',
 	'marker_noun.attack': 'crise',
