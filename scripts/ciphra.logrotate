@@ -1,0 +1,27 @@
+# ciphra VPS log rotation — Track 3 P0 (3.3).
+#
+# The cron/ops scripts (vps_pulse.sh, nightly digest, metadata snapshot, …)
+# append to /var/log/ciphra-*.log and grow unbounded. This rotates them so
+# /var/log can't fill over months of 5-minute cron ticks.
+#
+# Install (operator, on the VPS):
+#   sudo cp scripts/ciphra.logrotate /etc/logrotate.d/ciphra
+#   sudo chown root:root /etc/logrotate.d/ciphra
+#   sudo chmod 644 /etc/logrotate.d/ciphra
+#   sudo logrotate --debug /etc/logrotate.d/ciphra   # dry-run: prints what it WOULD do, changes nothing
+#   sudo logrotate --force /etc/logrotate.d/ciphra   # optional: force one rotation now to confirm
+#
+# Retention: weekly rotation × 4 ≈ 30 days, gzip'd after the first week.
+/var/log/ciphra-*.log {
+    weekly
+    rotate 4
+    missingok
+    notifempty
+    compress
+    delaycompress
+    # copytruncate: the ops scripts hold the log open and append (>>). Truncate
+    # the original in place after copying so we don't need to signal/restart the
+    # writer — a couple of log lines can be lost at the exact rotation instant,
+    # acceptable for ops/cron logs (not used for the metadata-snapshot CSVs).
+    copytruncate
+}
