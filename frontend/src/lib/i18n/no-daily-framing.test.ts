@@ -32,17 +32,10 @@ const HOW_STEP_KEYS = [
 	'landing.how_step3_desc',
 ] as const;
 
-// The notapp "what an entry looks like" cluster used to be a "Die
-// Abendroutine / Le rituel du soir" daily-ritual pitch with a
-// "3 minutes every evening" promise. 2026-06-07 sweep neutralized it
-// to an example-of-an-entry framing. The who_2 caregiver line dropped
-// its "täglich / daily / chaque jour / ogni giorno" qualifier in the
-// same pass.
-const NOTAPP_KEYS = [
-	'landing.notapp_routine_title',
-	'landing.notapp_routine_desc',
-	'landing.notapp_who_2',
-] as const;
+// (The landing notapp_* "what an entry looks like" cluster — once a "Die
+// Abendroutine / Le rituel du soir" daily-ritual pitch — was deleted
+// entirely in the 2026-06-20 storyline sweep along with the other unmounted
+// landing keys, so it no longer needs a guard.)
 
 // Authed-app surfaces (2026-06-20 storyline sweep). The dashboard/setup
 // must keep the same no-daily-habit voice the landing promises — a
@@ -77,7 +70,7 @@ const DICTS: Array<[string, Record<string, string>]> = [
 describe('landing brand voice — must not frame ciphra as daily-habit', () => {
 	for (const [name, dict] of DICTS) {
 		const pattern = FORBIDDEN[name];
-		for (const key of [...HOW_STEP_KEYS, ...NOTAPP_KEYS, ...AUTHED_KEYS]) {
+		for (const key of [...HOW_STEP_KEYS, ...AUTHED_KEYS]) {
 			it(`${name}: ${key} contains no daily-frequency phrasing`, () => {
 				const value = dict[key];
 				expect(value, `${name}: ${key} is missing`).toBeDefined();

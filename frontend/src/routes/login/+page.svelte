@@ -180,6 +180,7 @@
 					{#if tab === 'login'}
 						<LoginForm on:login-complete={handleLoginComplete} />
 					{:else if tab === 'register'}
+						<p class="text-sm text-center mb-4" style="color: var(--text-muted)">{$t('auth.register_continuity')}</p>
 						<SignupFlow on:signup-complete={handleSignupComplete} />
 					{:else if tab === 'recovery'}
 						<form on:submit|preventDefault={handleRecover} class="space-y-4">

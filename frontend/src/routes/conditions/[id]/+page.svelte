@@ -291,7 +291,7 @@
 				<h2 class="text-2xl font-bold mb-3" style="color: var(--text-primary);">{$t('condition.cta_title')}</h2>
 				<p class="mb-6 max-w-lg mx-auto" style="color: var(--text-muted);">{$t('condition.cta_subtitle')}</p>
 				<a
-					href="/login"
+					href="/login?mode=register"
 					class="btn-primary inline-flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-lg"
 				>
 					{$t('condition.cta_button')}
