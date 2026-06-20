@@ -4,7 +4,7 @@
 	import { anyPhaseDayCount } from '$lib/monthAggregates';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, isCustomItem, resolveMedDisplay } from '$lib/blueprint';
+	import { resolvedBlueprint, isCustomItem, prettifyCustomId, resolveMedDisplay } from '$lib/blueprint';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
@@ -450,7 +450,7 @@
 		return Object.entries(counts)
 			.sort(([, a], [, b]) => b - a)
 			.slice(0, 3)
-			.map(([id, days]) => ({ id, label: labelMap[id] || id, days }));
+			.map(([id, days]) => ({ id, label: labelMap[id] || prettifyCustomId(id), days }));
 	})();
 
 	// Phase-days: total days in the month where ANY multiDay episode was
@@ -537,7 +537,7 @@
 		return Object.entries(counts)
 			.sort(([, a], [, b]) => b - a)
 			.slice(0, 3)
-			.map(([id, days]) => ({ id, label: labelMap[id] || id, days }));
+			.map(([id, days]) => ({ id, label: labelMap[id] || prettifyCustomId(id), days }));
 	})();
 
 	$: phaseDaysThisYear = hasMultiDayPhases && bp ? anyPhaseDayCount(bp, yearDocs) : 0;

@@ -19,6 +19,7 @@ import {
 	generateCustomId,
 	resolveBlueprint,
 	validateCustomItem,
+	prettifyCustomId,
 	CUSTOM_GROUP_ID,
 	CUSTOM_GROUP_LABEL_KEY,
 } from './customizations';
@@ -327,5 +328,23 @@ describe('validateCustomItem', () => {
 	it('returns null for a valid symptom and trigger', () => {
 		expect(validateCustomItem('symptom', { label: 'Tooth flare-up' })).toBeNull();
 		expect(validateCustomItem('trigger', { label: 'Cold drink' })).toBeNull();
+	});
+});
+
+describe('prettifyCustomId (orphaned custom-id fallback)', () => {
+	it('recovers a readable label from a custom id (no raw id leak)', () => {
+		expect(prettifyCustomId('custom_wutend_r0ye3')).toBe('Wutend');
+		expect(prettifyCustomId('custom_item_aaaaa')).toBe('Item');
+	});
+	it('handles multi-word slugs', () => {
+		expect(prettifyCustomId('custom_tooth_flare_up_aaaaa')).toBe('Tooth flare up');
+	});
+	it('leaves non-custom ids unchanged (usable as a blanket fallback)', () => {
+		expect(prettifyCustomId('slept_well')).toBe('slept_well');
+		expect(prettifyCustomId('focal')).toBe('focal');
+	});
+	it('round-trips a generated id back to a readable label', () => {
+		const id = generateCustomId('Wütend'); // → custom_wutend_<suffix>
+		expect(prettifyCustomId(id)).toBe('Wutend');
 	});
 });
