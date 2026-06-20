@@ -16,7 +16,16 @@
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import EntryComposer, { type EntryData } from '$lib/components/EntryComposer.svelte';
 
-	let currentDate = todayISO();
+	// Derive from the URL param REACTIVELY (not once in onMount): SvelteKit
+	// reuses this route component across /log/<a> → /log/<b> client-side
+	// navigations (e.g. clicking a day in /reports), so a one-shot onMount
+	// read leaves currentDate stale → {#key currentDate} never remounts →
+	// EntryComposer shows the previous day's data on an empty day.
+	$: currentDate = (() => {
+		const p = $page.params.date;
+		if (!p || p === 'today') return todayISO();
+		return /^\d{4}-\d{2}-\d{2}$/.test(p) ? p : todayISO();
+	})();
 
 	$: bp = $resolvedBlueprint;
 	$: isToday = currentDate === todayISO();
@@ -30,12 +39,6 @@
 
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
-		const paramDate = $page.params.date;
-		if (paramDate === 'today') {
-			currentDate = todayISO();
-		} else if (paramDate && /^\d{4}-\d{2}-\d{2}$/.test(paramDate)) {
-			currentDate = paramDate;
-		}
 		documents.load();
 	});
 
@@ -70,14 +73,12 @@
 		const d = new Date(currentDate + 'T12:00:00');
 		d.setDate(d.getDate() + delta);
 		const newDate = d.toISOString().slice(0, 10);
+		// currentDate is derived from $page.params.date — the goto drives it.
 		goto(`/log/${newDate}`, { replaceState: true });
-		currentDate = newDate;
 	}
 
 	function handleJumpToToday() {
-		const today = todayISO();
-		goto(`/log/${today}`, { replaceState: true });
-		currentDate = today;
+		goto(`/log/${todayISO()}`, { replaceState: true });
 	}
 </script>
 

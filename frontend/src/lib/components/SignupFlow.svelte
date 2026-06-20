@@ -202,7 +202,6 @@
 				id="signup-pass"
 				bind:value={password}
 				required
-				minlength={12}
 				autocomplete="new-password"
 				on:blur={() => { touched.pass = true; }}
 				ariaInvalid={passInvalid}
@@ -219,7 +218,6 @@
 				id="signup-pass2"
 				bind:value={confirm}
 				required
-				minlength={12}
 				autocomplete="new-password"
 				on:blur={() => { touched.pass2 = true; }}
 				ariaInvalid={pass2Invalid}
