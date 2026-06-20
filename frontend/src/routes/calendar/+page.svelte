@@ -35,7 +35,7 @@
 	$: bp = $resolvedBlueprint;
 
 	// CIPH-855a — Cycle-overlay mode. For cycle-cohort blueprints
-	// (endometriosis / menopause / PCOS) the calendar renders a soft
+	// (endometriosis / menopause / PMOS) the calendar renders a soft
 	// phase-colored background on each day cell so the monthly phase
 	// pattern is readable at a glance. Starts at 15% opacity — can be
 	// tuned up to 20% or down to 10% post-persona dry-run.

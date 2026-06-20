@@ -2074,8 +2074,8 @@ export default {
 
 	// CIPH-411d — PDF observance médicamenteuse
 
-	// CIPH-501 — PCOS preset
-	'landing.template_pcos': 'SOPK',
+	// CIPH-501 — PMOS preset
+	'landing.template_pcos': 'PMOS',
 	'landing.template_pcos_desc': 'Suivre irrégularités du cycle, symptômes androgéniques et marqueurs métaboliques',
 	'symptom_group.menstrual': 'Menstruel',
 	'symptom_group.androgen': 'Lié aux androgènes',
@@ -2098,14 +2098,14 @@ export default {
 	'condition.scale.mfg_desc': 'Évaluation visuelle de la pilosité terminale sur neuf zones androgéno-sensibles — le standard pour évaluer l\'hirsutisme.',
 	'condition.scale.fai': 'FAI — Indice d\'androgènes libres',
 	'condition.scale.fai_desc': 'Calculé à partir de la testostérone totale et de la SHBG ; mesure sanguine des androgènes biologiquement actifs.',
-	'condition.pcos.title': 'SOPK (Syndrome des ovaires polykystiques)',
+	'condition.pcos.title': 'PMOS (Syndrome ovarien métabolique polyendocrinien)',
 	'condition.pcos.subtitle': 'Suivre cycles, symptômes androgéniques et santé métabolique.',
-	'condition.pcos.intro': 'Le SOPK est un trouble métabolique et endocrinien fréquent qui touche environ 1 personne sur 10 en âge de procréer. Il associe irrégularité des cycles, excès d\'androgènes (acné, pilosité, chute de cheveux) et insulino-résistance. Suivre les cycles avec le poids, l\'HbA1c et l\'humeur permet de voir si le mode de vie ou la metformine fonctionnent.',
-	'condition.pcos.rationale_menstrual': 'Les cycles du SOPK sont souvent longs et imprévisibles. Noter quand les règles arrivent, leur intensité et leur durée donne le premier signal objectif de la restauration de l\'ovulation.',
+	'condition.pcos.intro': 'Le PMOS (anciennement SOPK) est un trouble métabolique et endocrinien fréquent qui touche environ 1 personne sur 10 en âge de procréer. Il associe irrégularité des cycles, excès d\'androgènes (acné, pilosité, chute de cheveux) et insulino-résistance. Suivre les cycles avec le poids, l\'HbA1c et l\'humeur permet de voir si le mode de vie ou la metformine fonctionnent.',
+	'condition.pcos.rationale_menstrual': 'Les cycles du PMOS sont souvent longs et imprévisibles. Noter quand les règles arrivent, leur intensité et leur durée donne le premier signal objectif de la restauration de l\'ovulation.',
 	'condition.pcos.rationale_androgen': 'Hirsutisme, acné et chute des cheveux sont la signature clinique de l\'excès d\'androgènes. Un suivi mensuel révèle l\'effet des anti-androgènes ou de la pilule.',
 	'condition.pcos.rationale_metabolic': 'L\'insulino-résistance provoque prise de poids, faim et envies de sucre. Suivi avec le poids et l\'HbA1c, l\'amélioration métabolique devient visible.',
-	'condition.pcos.rationale_mood': 'Les personnes atteintes de SOPK présentent plus d\'anxiété et de dépression — partiellement biologique, partiellement lié à vivre avec des symptômes visibles. Suivre l\'humeur compte.',
-	'condition.pcos.episodes_rationale': 'Le SOPK n\'a pas de poussées classiques, mais les consultations de fertilité et les poussées aiguës d\'acné méritent d\'être notées pour garder le contexte d\'une visite à l\'autre.',
+	'condition.pcos.rationale_mood': 'Les personnes atteintes de PMOS présentent plus d\'anxiété et de dépression — partiellement biologique, partiellement lié à vivre avec des symptômes visibles. Suivre l\'humeur compte.',
+	'condition.pcos.episodes_rationale': 'Le PMOS n\'a pas de poussées classiques, mais les consultations de fertilité et les poussées aiguës d\'acné méritent d\'être notées pour garder le contexte d\'une visite à l\'autre.',
 	'condition.pcos.triggers_rationale': 'Repas et encas à IG élevé, stress, oublis de traitement et manque de sommeil peuvent aggraver les symptômes métaboliques et de l\'humeur. Le suivi révèle les schémas personnels.',
 	'condition.pcos.vitals_rationale': 'Jour et longueur du cycle (même irréguliers), poids, tour de taille, HbA1c et humeur sont les valeurs que les endocrinologues et gynécologues suivent dans le temps.',
 	'condition.pcos.for_doctor': 'Le rapport PDF montre la variabilité de la longueur des cycles, les schémas de symptômes androgéniques/métaboliques/humoraux, les tendances du poids et de l\'HbA1c — pour orienter les décisions thérapeutiques en endocrinologie et gynécologie.',

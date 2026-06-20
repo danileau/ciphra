@@ -7,7 +7,7 @@
  *
  * - `discrete`   — epilepsy/ADHD/hypertension/glaucoma/asthma/diabetes/parkinson.
  *                  Episodes are point events. Trend chart is the primary signal.
- * - `cycle`      — endometriosis/menopause/PCOS. Cycle phase is the mental model.
+ * - `cycle`      — endometriosis/menopause/PMOS. Cycle phase is the mental model.
  *                  Calendar with cycle overlay is primary.
  * - `phase`      — bipolar/MS/long-covid/IBD/IBS/chronic_pain/anxiety_depression/
  *                  burnout. Multi-day episode bands are clinically central.

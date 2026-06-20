@@ -2074,8 +2074,8 @@ export default {
 
 	// CIPH-411d — PDF aderenza farmacologica
 
-	// CIPH-501 — PCOS preset
-'landing.template_pcos': 'PCOS',
+	// CIPH-501 — PMOS preset
+'landing.template_pcos': 'PMOS',
 	'landing.template_pcos_desc': 'Monitora irregolarità del ciclo, sintomi androgenici e marcatori metabolici',
 	'symptom_group.menstrual': 'Mestruale',
 	'symptom_group.androgen': 'Legato agli androgeni',
@@ -2098,14 +2098,14 @@ export default {
 	'condition.scale.mfg_desc': 'Valutazione visiva della crescita dei peli terminali in nove aree androgeno-sensibili — lo standard per l\'irsutismo.',
 	'condition.scale.fai': 'FAI — Indice androgeni liberi',
 	'condition.scale.fai_desc': 'Calcolato da testosterone totale e SHBG; misura ematica degli androgeni biologicamente attivi.',
-	'condition.pcos.title': 'PCOS (Sindrome dell\'ovaio policistico)',
+	'condition.pcos.title': 'PMOS (Sindrome ovarica metabolica poliendocrina)',
 	'condition.pcos.subtitle': 'Monitora cicli, sintomi androgenici e salute metabolica.',
-	'condition.pcos.intro': 'La PCOS è un comune disturbo metabolico-endocrino che colpisce circa 1 persona su 10 in età riproduttiva. Combina irregolarità del ciclo, eccesso di androgeni (acne, irsutismo, diradamento dei capelli) e insulino-resistenza. Monitorare il ciclo insieme a peso, HbA1c e umore aiuta a vedere se lo stile di vita o la metformina funzionano.',
-	'condition.pcos.rationale_menstrual': 'I cicli con PCOS sono spesso lunghi e imprevedibili. Annotare quando arrivano le mestruazioni, quanto sono abbondanti e quanto durano fornisce il primo segnale oggettivo del ripristino dell\'ovulazione.',
+	'condition.pcos.intro': 'La PMOS (prima PCOS) è un comune disturbo metabolico-endocrino che colpisce circa 1 persona su 10 in età riproduttiva. Combina irregolarità del ciclo, eccesso di androgeni (acne, irsutismo, diradamento dei capelli) e insulino-resistenza. Monitorare il ciclo insieme a peso, HbA1c e umore aiuta a vedere se lo stile di vita o la metformina funzionano.',
+	'condition.pcos.rationale_menstrual': 'I cicli con PMOS sono spesso lunghi e imprevedibili. Annotare quando arrivano le mestruazioni, quanto sono abbondanti e quanto durano fornisce il primo segnale oggettivo del ripristino dell\'ovulazione.',
 	'condition.pcos.rationale_androgen': 'Irsutismo, acne e caduta dei capelli sono l\'impronta clinica dell\'eccesso di androgeni. Monitorarli mese dopo mese mostra la risposta a anti-androgeni o pillola combinata.',
 	'condition.pcos.rationale_metabolic': 'L\'insulino-resistenza causa aumento di peso, fame e voglia di dolci. Insieme a peso e HbA1c rende visibile il miglioramento metabolico.',
-	'condition.pcos.rationale_mood': 'Le persone con PCOS presentano tassi più elevati di ansia e depressione — in parte biologici, in parte legati al vivere con sintomi visibili. Monitorare l\'umore è importante.',
-	'condition.pcos.episodes_rationale': 'La PCOS non ha riacutizzazioni classiche, ma consulti per la fertilità e riacutizzazioni acute di acne vanno annotati per mantenere il contesto tra le visite.',
+	'condition.pcos.rationale_mood': 'Le persone con PMOS presentano tassi più elevati di ansia e depressione — in parte biologici, in parte legati al vivere con sintomi visibili. Monitorare l\'umore è importante.',
+	'condition.pcos.episodes_rationale': 'La PMOS non ha riacutizzazioni classiche, ma consulti per la fertilità e riacutizzazioni acute di acne vanno annotati per mantenere il contesto tra le visite.',
 	'condition.pcos.triggers_rationale': 'Pasti e snack ad alto indice glicemico, stress, farmaci saltati e carenza di sonno possono peggiorare i sintomi metabolici e dell\'umore. Monitorarli fa emergere i pattern personali.',
 	'condition.pcos.vitals_rationale': 'Giorno e lunghezza del ciclo (anche se irregolari), peso, circonferenza vita, HbA1c e umore sono i valori che endocrinologi e ginecologi seguono nel tempo.',
 	'condition.pcos.for_doctor': 'Il report PDF mostra la variabilità della lunghezza dei cicli, i pattern dei sintomi per gruppi androgenici/metabolici/umore, le tendenze di peso e HbA1c — a supporto delle decisioni terapeutiche in endocrinologia e ginecologia.',

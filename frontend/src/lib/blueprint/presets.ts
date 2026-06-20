@@ -1758,7 +1758,9 @@ export const ibd: Blueprint = {
 	},
 };
 
-// ─── PCOS (Polycystic Ovary Syndrome) ───────────────────────
+// ─── PMOS (Polyendocrine Metabolic Ovarian Syndrome; renamed from PCOS,
+//     Lancet 2026-05-12). conditionId stays 'pcos' — it's the stable key
+//     inside existing users' encrypted blueprints; only labels changed. ──────
 
 export const pcos: Blueprint = {
 	version: 1,

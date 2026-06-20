@@ -2102,8 +2102,8 @@ export default {
 
 	// CIPH-411d — PDF Medikamenten-Compliance
 
-	// CIPH-501 — PCOS preset
-	'landing.template_pcos': 'PCOS',
+	// CIPH-501 — PMOS preset
+	'landing.template_pcos': 'PMOS',
 	'landing.template_pcos_desc': 'Zyklus-Unregelmässigkeiten, Androgen-Symptome und Stoffwechselwerte erfassen',
 	'symptom_group.menstrual': 'Menstruation',
 	'symptom_group.androgen': 'Androgen-bedingt',
@@ -2126,14 +2126,14 @@ export default {
 	'condition.scale.mfg_desc': 'Visuelle Bewertung des Terminalhaar-Wachstums in neun androgen-sensitiven Körperregionen — der Standard zur Hirsutismus-Beurteilung.',
 	'condition.scale.fai': 'FAI — Freier Androgen-Index',
 	'condition.scale.fai_desc': 'Aus Gesamt-Testosteron und SHBG berechnet; Laborwert für biologisch aktive Androgene.',
-	'condition.pcos.title': 'PCOS (Polyzystisches Ovar-Syndrom)',
+	'condition.pcos.title': 'PMOS (Polyendokrines metabolisches Ovarialsyndrom)',
 	'condition.pcos.subtitle': 'Zyklusmuster, Androgen-Symptome und Stoffwechsel verfolgen.',
-	'condition.pcos.intro': 'PCOS ist eine häufige Stoffwechsel- und Hormonstörung, die etwa 1 von 10 Personen im fruchtbaren Alter betrifft. Sie verbindet unregelmässige Zyklen, Androgen-Überschuss (Akne, Haarwuchs, Kopfhaar-Ausdünnung) und Insulinresistenz. Zyklus, Gewicht, HbA1c und Stimmung gemeinsam zu erfassen zeigt, ob Lebensstil oder Metformin wirken.',
-	'condition.pcos.rationale_menstrual': 'PCOS-Zyklen sind oft lang und unvorhersehbar. Wann die Periode kommt, wie stark sie ist und wie lange sie dauert — das ist das erste objektive Signal, ob die Behandlung den Eisprung wiederherstellt.',
+	'condition.pcos.intro': 'PMOS (früher PCOS) ist eine häufige Stoffwechsel- und Hormonstörung, die etwa 1 von 10 Personen im fruchtbaren Alter betrifft. Sie verbindet unregelmässige Zyklen, Androgen-Überschuss (Akne, Haarwuchs, Kopfhaar-Ausdünnung) und Insulinresistenz. Zyklus, Gewicht, HbA1c und Stimmung gemeinsam zu erfassen zeigt, ob Lebensstil oder Metformin wirken.',
+	'condition.pcos.rationale_menstrual': 'PMOS-Zyklen sind oft lang und unvorhersehbar. Wann die Periode kommt, wie stark sie ist und wie lange sie dauert — das ist das erste objektive Signal, ob die Behandlung den Eisprung wiederherstellt.',
 	'condition.pcos.rationale_androgen': 'Hirsutismus, Akne und Haarausfall sind der klinische Fingerabdruck erhöhter Androgene. Monat für Monat zu verfolgen zeigt, wie Anti-Androgene oder die Pille wirken.',
-	'condition.pcos.rationale_metabolic': 'Insulinresistenz treibt Gewichtszunahme, Hunger und Heisshunger bei PCOS. Zusammen mit Gewicht und HbA1c wird die Stoffwechsel-Verbesserung sichtbar.',
-	'condition.pcos.rationale_mood': 'Menschen mit PCOS haben häufiger Angst und Depression — teils biologisch, teils durch das Leben mit sichtbaren Symptomen. Stimmung zu erfassen ist wichtig.',
-	'condition.pcos.episodes_rationale': 'PCOS hat keine klassischen Schübe, aber Fruchtbarkeits-Termine und akute Akne-Schübe sind markierenswert, damit der Kontext über Visiten hinweg erhalten bleibt.',
+	'condition.pcos.rationale_metabolic': 'Insulinresistenz treibt Gewichtszunahme, Hunger und Heisshunger bei PMOS. Zusammen mit Gewicht und HbA1c wird die Stoffwechsel-Verbesserung sichtbar.',
+	'condition.pcos.rationale_mood': 'Menschen mit PMOS haben häufiger Angst und Depression — teils biologisch, teils durch das Leben mit sichtbaren Symptomen. Stimmung zu erfassen ist wichtig.',
+	'condition.pcos.episodes_rationale': 'PMOS hat keine klassischen Schübe, aber Fruchtbarkeits-Termine und akute Akne-Schübe sind markierenswert, damit der Kontext über Visiten hinweg erhalten bleibt.',
 	'condition.pcos.triggers_rationale': 'Hochglykämische Mahlzeiten und Snacks, Stress, vergessene Medikamente und Schlafmangel können Stoffwechsel- und Stimmungs-Symptome verschlimmern. Erfassen macht persönliche Muster sichtbar.',
 	'condition.pcos.vitals_rationale': 'Zyklustag und -länge (auch wenn unregelmässig), Gewicht, Taillenumfang, HbA1c und Stimmung — das sind die Werte, die Endokrinologie und Gynäkologie über die Zeit verfolgen.',
 	'condition.pcos.for_doctor': 'Der PDF-Bericht zeigt Zykluslängen-Variabilität, Symptom-Muster nach Androgen/Stoffwechsel/Stimmung, Gewichts- und HbA1c-Trends — als Grundlage für endokrinologische und gynäkologische Therapieentscheidungen.',
