@@ -13,6 +13,7 @@ export { presets } from './presets';
 export type { PresetInfo } from './presets';
 export {
 	isCustomItem,
+	prettifyCustomId,
 	generateCustomId,
 	resolveBlueprint,
 	validateCustomItem,

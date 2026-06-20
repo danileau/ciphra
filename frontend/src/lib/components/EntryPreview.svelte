@@ -14,7 +14,7 @@
 	import { t, locale, translateUnit, plural } from '$lib/i18n';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint, VitalField } from '$lib/blueprint/types';
-	import { isCustomItem, resolveMedDisplay } from '$lib/blueprint';
+	import { isCustomItem, prettifyCustomId, resolveMedDisplay } from '$lib/blueprint';
 
 	export let entry: CiphraDocument;
 	export let bp: Blueprint | null = null;
@@ -49,16 +49,16 @@
 			const it = g.items.find(x => x.id === id);
 			if (it) return isCustomItem(it.id) ? it.label : $t(it.label);
 		}
-		return id;
+		return prettifyCustomId(id);
 	}
 	function triggerLabelFor(id: string): string {
 		const tr = (bp?.triggers || []).find(x => x.id === id);
-		if (!tr) return id;
+		if (!tr) return prettifyCustomId(id);
 		return isCustomItem(tr.id) ? tr.label : $t(tr.label);
 	}
 	function epLabelFor(id: string): string {
 		const ep = (bp?.episodeTypes || []).find(e => e.id === id);
-		if (!ep) return id;
+		if (!ep) return prettifyCustomId(id);
 		return isCustomItem(ep.id) ? ep.label : $t(ep.label);
 	}
 	function vitalFor(id: string) {

@@ -62,6 +62,24 @@ export function generateCustomId(label: string): string {
 	return `custom_${slug}_${suffix}`;
 }
 
+/** Human-readable fallback label for an ORPHANED custom id — one logged into
+ *  an entry but no longer present in the blueprint (e.g. after a condition
+ *  switch resets customizations per the one-blueprint model, or the item was
+ *  deleted). The id is `custom_<slug>_<5char>`; recover the slug as a readable
+ *  label so no surface ever leaks the raw id. Non-custom ids are returned
+ *  unchanged so call sites can use it as a blanket `|| prettifyCustomId(id)`
+ *  fallback. The umlaut/casing lost at slug time isn't recoverable, so
+ *  `custom_wutend_r0ye3` → "Wutend" — still far better than the raw id. */
+export function prettifyCustomId(id: string): string {
+	if (!isCustomItem(id)) return id;
+	const body = id
+		.replace(/^custom_/, '')
+		.replace(/_[a-z0-9]{5}$/, ''); // strip the trailing random suffix
+	const words = body.replace(/_/g, ' ').trim();
+	if (!words) return id;
+	return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /** Synthetic group id used when a `customSymptoms` item has no `groupId`
  *  or its `groupId` does not match any existing group. */
 export const CUSTOM_GROUP_ID = 'custom';
