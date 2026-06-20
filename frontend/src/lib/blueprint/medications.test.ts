@@ -12,6 +12,7 @@ import {
 	resolveMedDisplay,
 	bedarfMedColumns,
 	foldRescueMedications,
+	medAdherence,
 } from './medications';
 import type { Blueprint, MedicationSlot, RescueMedication } from './types';
 
@@ -111,5 +112,39 @@ describe('foldRescueMedications (one-time migration)', () => {
 		});
 		// Returns null → layout does no save → the user's blueprint is untouched.
 		expect(foldRescueMedications(b, t)).toBeNull();
+	});
+});
+
+describe('medAdherence (assume-taken model)', () => {
+	const doc = (data: Record<string, unknown>) => ({ data: { type: 'entry', ...data } });
+
+	it('scheduled meds: assumed taken on every logged day when nothing is missed', () => {
+		const med = slot({ id: 'lev', asNeeded: false });
+		const docs = [doc({}), doc({}), doc({})]; // 3 logged days, no misses
+		expect(medAdherence(med, docs, 3)).toEqual({ taken: 3, total: 3, pct: 100 });
+	});
+
+	it('scheduled meds: subtracts only explicitly-missed days', () => {
+		const med = slot({ id: 'lev', asNeeded: false });
+		const docs = [doc({ missedMedications: ['lev'] }), doc({}), doc({ missedMedications: ['other'] }), doc({})];
+		// 4 logged days, 1 missed for this med → 3 taken, 75%
+		expect(medAdherence(med, docs, 4)).toEqual({ taken: 3, total: 4, pct: 75 });
+	});
+
+	it('scheduled meds: legacy entries (per-day toggle, no missedMedications) read as taken', () => {
+		const med = slot({ id: 'lev', asNeeded: false });
+		// Old-model docs carry medications:{lev:false} but no missedMedications.
+		const docs = [doc({ medications: { lev: false } }), doc({ medications: { lev: true } })];
+		expect(medAdherence(med, docs, 2)).toEqual({ taken: 2, total: 2, pct: 100 });
+	});
+
+	it('as-needed meds: counts only days the taken-toggle was on', () => {
+		const med = slot({ id: 'ibu', asNeeded: true });
+		const docs = [doc({ medications: { ibu: true } }), doc({ medications: { ibu: false } }), doc({})];
+		expect(medAdherence(med, docs, 3)).toEqual({ taken: 1, total: 3, pct: 33 });
+	});
+
+	it('zero logged days → 0% (no divide-by-zero)', () => {
+		expect(medAdherence(slot({ asNeeded: false }), [], 0)).toEqual({ taken: 0, total: 0, pct: 0 });
 	});
 });

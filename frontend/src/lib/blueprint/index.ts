@@ -26,5 +26,6 @@ export {
 	resolveMedDisplay,
 	bedarfMedColumns,
 	foldRescueMedications,
+	medAdherence,
 } from './medications';
-export type { MedDisplay } from './medications';
+export type { MedDisplay, MedAdherence } from './medications';
