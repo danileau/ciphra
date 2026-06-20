@@ -99,14 +99,17 @@ describe('foldRescueMedications (one-time migration)', () => {
 		expect(foldRescueMedications(bp({ medications: [slot()] }), t)).toBeNull();
 		expect(foldRescueMedications(null, t)).toBeNull();
 	});
-	it('does not duplicate a med already present by id', () => {
+	it('NEVER injects into a non-empty medications list — curated/migrated data is left untouched', () => {
+		// The data-loss report: an epilepc migrant who curated their meds had
+		// preset Midazolam/Diazepam auto-appended on a deploy. Fold must no-op.
 		const b = bp({
-			medications: [slot({ id: 'midazolam_buccal', name: 'Midazolam' })],
-			rescueMedications: [{ id: 'midazolam_buccal', label: 'rescue_med.midazolam' } as RescueMedication],
+			medications: [slot({ id: 'urbanyl', name: 'Urbanyl' }), slot({ id: 'keppra', name: 'Keppra' })],
+			rescueMedications: [
+				{ id: 'midazolam_buccal', label: 'rescue_med.midazolam', unit: 'mg', defaultDose: '5' } as RescueMedication,
+				{ id: 'diazepam_rectal', label: 'rescue_med.diazepam', unit: 'mg', defaultDose: '10' } as RescueMedication,
+			],
 		});
-		const out = foldRescueMedications(b, t);
-		// Only the rescueMedications field is dropped; no duplicate slot added.
-		expect(out!.medications).toHaveLength(1);
-		expect(out!.rescueMedications).toBeUndefined();
+		// Returns null → layout does no save → the user's blueprint is untouched.
+		expect(foldRescueMedications(b, t)).toBeNull();
 	});
 });

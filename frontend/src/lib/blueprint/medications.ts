@@ -74,15 +74,20 @@ export function foldRescueMedications(
 	t: Translator,
 ): Blueprint | null {
 	if (!bp || !bp.rescueMedications || bp.rescueMedications.length === 0) return null;
+	// NEVER touch a user who already has medications. A configured or
+	// epilepc-migrated list is curated data — appending preset rescue meds
+	// (Midazolam/Diazepam) would contaminate it. Only SEED a brand-new/empty
+	// list. Existing users keep the now-unused `rescueMedications` field (it's
+	// harmless; resolveMedDisplay reads it only as a fallback for already-logged
+	// events). Returning null here means the layout performs no blueprint.save,
+	// so the migration is a true no-op for them.
+	if (bp.medications && bp.medications.length > 0) return null;
 	const next: Blueprint = JSON.parse(JSON.stringify(bp));
 	const meds = next.medications ?? (next.medications = []);
-	const existingIds = new Set(meds.map((m) => m.id));
 	for (const rm of bp.rescueMedications) {
-		if (existingIds.has(rm.id)) continue;
 		const unit = rm.unit ? translateUnit(t, rm.unit) : '';
 		const dose = [rm.defaultDose, unit].filter(Boolean).join(' ');
 		meds.push({ id: rm.id, name: t(rm.label), dose, schedule: '', asNeeded: true });
-		existingIds.add(rm.id);
 	}
 	delete next.rescueMedications;
 	return next;
