@@ -18,7 +18,7 @@
 		MedicationSlot,
 		VitalField,
 	} from '$lib/blueprint';
-	import type { PresetInfo, CustomKind } from '$lib/blueprint';
+	import type { CustomKind } from '$lib/blueprint';
 	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
 	import { changePassword, deleteAccount } from '$lib/api';
 	import { get } from 'svelte/store';
@@ -87,8 +87,6 @@
 		}
 	}
 
-	let showConfirmSwitch = false;
-	let selectedPreset: PresetInfo | null = null;
 
 	// Change password state
 	let showChangePassword = false;
@@ -377,32 +375,6 @@
 	// items (profile card stats, etc.).
 	$: bp = $blueprint;
 	$: bpResolved = $resolvedBlueprint;
-
-	function startSwitch(preset: PresetInfo) {
-		selectedPreset = preset;
-		showConfirmSwitch = true;
-	}
-
-	async function confirmSwitch() {
-		if (!selectedPreset) return;
-		const current = get(blueprint);
-		// Switching the template must NEVER delete the user's own data.
-		// Same condition you already have → no-op (don't reset to a bare preset).
-		if (current && current.conditionId === selectedPreset.blueprint.conditionId) {
-			showConfirmSwitch = false;
-			selectedPreset = null;
-			return;
-		}
-		// A real switch to a DIFFERENT condition adopts that condition's template
-		// cleanly — a plain preset. It does NOT carry over the previous
-		// condition's symptoms/triggers/medications (each condition's blueprint
-		// is independent). Logged entries (separate docs) are untouched. The
-		// confirm dialog warns first.
-		const newBp = JSON.parse(JSON.stringify(selectedPreset.blueprint));
-		await blueprint.save(newBp);
-		showConfirmSwitch = false;
-		selectedPreset = null;
-	}
 
 	function goToSetup() {
 		// CIPH-874 — "Profil anpassen" is fine-tuning (symptom/trigger/vital
@@ -977,33 +949,11 @@
 	     ships an actual consumer (dashboard primary slot / browse
 	     links). i18n keys parked in ORPHAN_AUDIT_BACKLOG. -->
 
-	<!-- Quick switch (profile template) -->
-	<section class="card p-5">
-		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.switch_template')}</h3>
-		<p class="text-sm mb-4" style="color: var(--text-secondary)">{$t('settings.switch_description')}</p>
-		<div class="grid gap-2">
-			{#each presets as preset}
-				<button
-					on:click={() => startSwitch(preset)}
-					disabled={bp?.conditionId === preset.id}
-					class="w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl transition-colors min-h-[48px]"
-					style="{bp?.conditionId === preset.id
-						? 'border: 1px solid rgba(127,130,27,0.3); background: var(--olive-light)'
-						: 'border: 1px solid var(--border); background: var(--surface-card)'}"
-				>
-					<div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background: {preset.color}15; color: {preset.color}">
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d={iconPath(preset.icon)} stroke-width="2"/></svg>
-					</div>
-					<div class="flex-1">
-						<span class="text-sm font-medium" style="color: var(--text-primary)">{$t(preset.labelKey)}</span>
-						{#if bp?.conditionId === preset.id}
-							<span class="text-xs ml-2" style="color: var(--olive)">{$t('settings.active')}</span>
-						{/if}
-					</div>
-				</button>
-			{/each}
-		</div>
-	</section>
+	<!-- "Vorlage wechseln" (preset quick-switch) removed (2026-06-20): with the
+	     one-blueprint-per-user model a condition switch is a deliberate, rare
+	     action (and its old "data is preserved" copy was misleading). Switching
+	     remains reachable from the per-condition pages (/conditions/[id]).
+	     Profil anpassen below stays — it's fine-tuning, not a preset change. -->
 
 	</div>
 	{/if}
@@ -1040,40 +990,6 @@
 	 remove preset) with a blur backdrop and in-dialog danger chrome the current
 	 Modal primitive does not expose. Sweep target for a future visual pass. -->
 <!-- Confirm switch modal -->
-{#if showConfirmSwitch && selectedPreset}
-<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-<div
-	class="fixed inset-0 z-50 flex items-center justify-center p-4"
-	style="background: rgba(0,0,0,0.4); backdrop-filter: blur(4px)"
-	on:click|self={() => { showConfirmSwitch = false; }}
-	on:keydown={(e) => { if (e.key === 'Escape') showConfirmSwitch = false; }}
-	role="dialog"
-	aria-modal="true"
-	tabindex="-1"
->
-	<div class="rounded-2xl p-6 max-w-sm w-full" style="background: var(--surface-card); border: 1px solid var(--border); box-shadow: 0 25px 50px -12px rgba(44,37,32,0.15)">
-		<h3 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">{$t('settings.switch_confirm_title')}</h3>
-		<p class="text-sm mb-4" style="color: var(--text-secondary)">
-			{$t('settings.switch_confirm_text', { name: $t(selectedPreset.labelKey) })}
-		</p>
-		<div class="flex gap-3">
-			<button
-				on:click={() => { showConfirmSwitch = false; }}
-				class="btn-secondary flex-1 rounded-xl text-sm font-medium min-h-[44px]"
-			>
-				{$t('common.cancel')}
-			</button>
-			<button
-				on:click={confirmSwitch}
-				class="btn-primary flex-1 rounded-xl text-sm font-medium min-h-[44px]"
-			>
-				{$t('settings.switch_button')}
-			</button>
-		</div>
-	</div>
-</div>
-{/if}
-
 <!-- Delete account modal -->
 {#if showDeleteModal}
 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
