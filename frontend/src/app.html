@@ -10,9 +10,10 @@
 	<meta name="theme-color" content="#181310" media="(prefers-color-scheme: dark)" />
 	<!-- Dark mode (design review 2026-06-11) — apply the stored theme
 	     before first paint so OS-dark users don't get a white flash.
-	     Mirrors $lib/stores/theme.ts (keep in sync). CSP note: relies on
-	     script-src 'unsafe-inline' (launch tactical); when the Track-3
-	     CSP tightening lands, add this script's sha256 hash instead. -->
+	     Mirrors $lib/stores/theme.ts (keep in sync). CSP: script-src is
+	     hash-pinned (no 'unsafe-inline'), so EDITING this script requires
+	     updating its sha256 in svelte.config.js kit.csp — the test
+	     src/app-html-csp.test.ts recomputes + fails CI on drift. -->
 	<script>
 		try {
 			var c = localStorage.getItem('ciphra_theme');

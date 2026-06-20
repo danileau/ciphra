@@ -605,21 +605,75 @@ For api specifically: if logs show `relation "users" does not exist`,
 container CMD (not direct gunicorn). See
 `memory/project_launch_complete.md` for the history.
 
+## Track 3 P0 hardening (2026-06-20)
+
+Closed before broader announcement. 3.1 ships in code; **3.2 + 3.3 are
+operator actions** (Cloudflare dashboard / VPS file).
+
+### 3.1 — CSP: script-src `'unsafe-inline'` dropped ✅ (code)
+
+CSP is now emitted by **SvelteKit per-response** (`frontend/svelte.config.js`
+→ `kit.csp`, mode `hash`), not by nginx. `script-src` no longer allows
+`'unsafe-inline'`: SvelteKit hashes its own inline hydration bootstrap, and
+the two `src/app.html` author scripts (dark-mode pre-paint init + SW
+registration) are pinned by sha256 hash. `style-src` KEEPS `'unsafe-inline'`
+(~970 dynamic inline `style=""` attributes can't be hashed). The nginx CSP
+`add_header` was removed from `nginx/ciphra.conf` — **do not re-add it** (a
+second CSP header would intersect with SvelteKit's, and the per-build script
+hashes only live in the app).
+
+- Guard: `frontend/src/app-html-csp.test.ts` fails CI if either app.html
+  inline script is edited without updating its hash in `svelte.config.js`.
+- **Deploy:** ships with the normal frontend build + deploy. After deploy,
+  verify in a real browser on prod:
+  - Network → document response `content-security-policy` header: `script-src`
+    has `'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com` plus
+    three `'sha256-…'` and **no** `'unsafe-inline'`.
+  - Console: **zero** CSP violations; page hydrates, dark mode applies with no
+    white flash, SW registers, the Cloudflare beacon loads.
+  - A violation = a missing hash → add it to `kit.csp.directives['script-src']`.
+
+### 3.2 — Cloudflare WAF rate-limit on `/api/login` (operator, ~15 min)
+
+Edge-throttle login bruteforce before it reaches origin (origin already has
+flask-limiter + the nginx `api_login` zone — this is defense-in-depth).
+
+Cloudflare dashboard → **ciphra.ch** → Security → WAF → **Rate limiting rules**
+→ Create:
+- Name: `ciphra-login-ratelimit`
+- Match: `URI Path` **equals** `/api/login` (optionally `OR` `/api/login/init`)
+  AND `Request Method` **equals** `POST`
+- Rate: **10** requests per **1 minute**, characteristic **IP**
+- Action: **Block** for **1 hour** (mitigation timeout 3600 s), response **429**
+
+Verify: `for i in $(seq 1 12); do curl -s -o /dev/null -w "%{http_code}\n" -X POST https://ciphra.ch/api/login -H 'content-type: application/json' -d '{}'; done` → first ~10 return 400/401, then 429.
+
+### 3.3 — Logrotate for `/var/log/ciphra-*.log` (operator, ~15 min)
+
+Config is versioned at `scripts/ciphra.logrotate`. Install on the VPS:
+
+```
+sudo cp scripts/ciphra.logrotate /etc/logrotate.d/ciphra
+sudo chown root:root /etc/logrotate.d/ciphra && sudo chmod 644 /etc/logrotate.d/ciphra
+sudo logrotate --debug /etc/logrotate.d/ciphra    # dry-run; changes nothing
+```
+
+Weekly × 4 ≈ 30-day retention, gzip after week 1, `copytruncate` so the cron
+writers keep appending across a rotation.
+
 ## Future work
 
 These are known gaps in the production posture. Not blocking 10-15
 migrants but should close before broader rollout (Inselspital
 announcement / Verbände).
 
-- **CSP migration to SvelteKit hash mode** — drop `'unsafe-inline'`
-  from `script-src`. See `memory/project_csp_inline_scripts_todo.md`.
-  P0 before any wider user announcement.
+- ✅ **CSP migration to SvelteKit hash mode (done 2026-06-20)** — `script-src`
+  `'unsafe-inline'` dropped. See the "Track 3 P0 hardening" section above (3.1).
 - **Offsite backup secondary** — currently Infomaniak-only. Add a
   cross-vendor secondary (Cloudflare R2 or Backblaze B2). Set
   `RCLONE_SECONDARY` in `.env`; the rest of the code already supports it.
-- **Logrotate** — `/var/log/ciphra-*.log` files grow unbounded.
-  Add a `/etc/logrotate.d/ciphra` config when the security_threshold
-  log starts firing regularly.
+- ✅ **Logrotate (config shipped 2026-06-20)** — `scripts/ciphra.logrotate`;
+  operator install steps in the "Track 3 P0 hardening" section above (3.3).
 - **Calendar-driven age key rotation reminder** — currently manual.
   Add an entry to a calendar (or cron itself, sending ntfy on
   Dec 15 and Jun 15).
@@ -627,9 +681,9 @@ announcement / Verbände).
   Mode + a custom WAF rule block `*.php` / dotfile / CMS probe paths at
   the edge (403). Origin-side companion: the nginx 444 sink in
   `nginx/ciphra.conf`. Login bruteforce is still bounded by
-  flask-limiter + per-account lockout + the nginx `api_login` zone; a
-  dedicated CF rate-limit rule on `/api/login` remains a possible
-  future add but is not pressing at Wave-1 volume.
+  flask-limiter + per-account lockout + the nginx `api_login` zone. The
+  dedicated CF rate-limit rule on `/api/login` is now spec'd as an operator
+  step — see "Track 3 P0 hardening" above (3.2).
 
 ## Operator memory references
 
