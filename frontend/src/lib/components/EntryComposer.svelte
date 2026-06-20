@@ -34,8 +34,11 @@
 
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
-	import type { Blueprint } from '$lib/blueprint';
-	import { isCustomItem } from '$lib/blueprint';
+	import type { Blueprint, CustomKind, MedicationSlot } from '$lib/blueprint';
+	import { isCustomItem, blueprint } from '$lib/blueprint';
+	import { get } from 'svelte/store';
+	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import type { Phase } from '$lib/cycleState';
@@ -59,6 +62,67 @@
 
 	let collapsed: Record<string, boolean> = {};
 	function toggleSection(id: string) { collapsed[id] = !collapsed[id]; }
+
+	// Inline "add a new symptom / trigger" from the entry screen (the common
+	// need: you're logging and the item you want isn't in your set yet). Adds it
+	// to the blueprint's customizations (APPEND — never a destructive replace),
+	// persists, and pre-selects it for the entry you're composing. The new item
+	// renders via the reactive `bp` ($resolvedBlueprint) prop.
+	let customModalOpen = false;
+	let customModalKind: CustomKind = 'symptom';
+	function openInlineCustom(kind: CustomKind) { customModalKind = kind; customModalOpen = true; }
+	async function handleInlineCustomSave(
+		e: CustomEvent<{ kind: CustomKind; item: { id: string } }>,
+	) {
+		const { kind, item } = e.detail;
+		if (kind !== 'symptom' && kind !== 'trigger') { customModalOpen = false; return; }
+		const raw = get(blueprint);
+		if (!raw) { customModalOpen = false; return; }
+		const next: Blueprint = JSON.parse(JSON.stringify(raw));
+		const cz = next.customizations || (next.customizations = {});
+		const arrKey = kind === 'symptom' ? 'customSymptoms' : 'customTriggers';
+		const arr = ((cz as Record<string, { id: string }[]>)[arrKey] ||= []);
+		if (!arr.some((x) => x.id === item.id)) arr.push(item);
+		await blueprint.save(next);
+		// Pre-select the freshly added item for the entry being composed.
+		if (kind === 'symptom') symptoms = { ...symptoms, [item.id]: true };
+		else triggers = { ...triggers, [item.id]: true };
+		markChanged();
+		customModalOpen = false;
+	}
+
+	// Inline "add a new medication" from the entry screen. Same append-only
+	// semantics: a new MedicationSlot is pushed onto blueprint.medications,
+	// persisted, and selected for the current entry.
+	let medAddOpen = false;
+	let newMedName = '';
+	let newMedDose = '';
+	let newMedSchedule = '';
+	let newMedAsNeeded = false;
+	function openAddMed() {
+		newMedName = ''; newMedDose = ''; newMedSchedule = ''; newMedAsNeeded = false;
+		medAddOpen = true;
+	}
+	function newMedId(): string {
+		try {
+			if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+		} catch { /* fallthrough */ }
+		return `med-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+	}
+	async function handleAddMed() {
+		const name = newMedName.trim();
+		const dose = newMedDose.trim();
+		if (!name || !dose) return;
+		const raw = get(blueprint);
+		if (!raw) { medAddOpen = false; return; }
+		const next: Blueprint = JSON.parse(JSON.stringify(raw));
+		const med: MedicationSlot = { id: newMedId(), name, dose, schedule: newMedSchedule.trim(), asNeeded: newMedAsNeeded };
+		(next.medications ||= []).push(med);
+		await blueprint.save(next);
+		medications = { ...medications, [med.id]: true };
+		markChanged();
+		medAddOpen = false;
+	}
 
 	// CIPH-420b — Section-jump nav (mobile).
 	// CIPH-904 — `medications` and `phaseOverride` were missing from the
@@ -617,6 +681,11 @@
 						{/each}
 					</div>
 				{/each}
+				<div class="log-chip-wrap">
+					<button type="button" class="log-chip log-chip--add" on:click={() => openInlineCustom('symptom')}>
+						<span class="log-chip-plus" aria-hidden="true">+</span> {$t('customization.add_symptom')}
+					</button>
+				</div>
 				{/if}
 			</section>
 			{/if}
@@ -642,6 +711,9 @@
 							{isCustomItem(trig.id) ? trig.label : $t(trig.label)}
 						</button>
 					{/each}
+					<button type="button" class="log-chip log-chip--add" on:click={() => openInlineCustom('trigger')}>
+						<span class="log-chip-plus" aria-hidden="true">+</span> {$t('customization.add_trigger')}
+					</button>
 				</div>
 				{/if}
 			</section>
@@ -688,6 +760,11 @@
 							{/each}
 						</div>
 					{/if}
+					<div class="log-chip-wrap">
+						<button type="button" class="log-chip log-chip--add" on:click={openAddMed}>
+							<span class="log-chip-plus" aria-hidden="true">+</span> {$t('settings.add_medication')}
+						</button>
+					</div>
 					{/if}
 				</section>
 			{/if}
@@ -1123,6 +1200,43 @@
 	</div>
 </div>
 
+<!-- Inline add-new (symptom / trigger) from the entry screen. Appends to the
+	 blueprint customizations and pre-selects the new item. -->
+<CustomItemModal
+	open={customModalOpen}
+	kind={customModalKind}
+	groups={bp.symptomGroups}
+	on:save={handleInlineCustomSave}
+	on:close={() => (customModalOpen = false)}
+/>
+
+<!-- Inline add-new medication (name / dose / schedule / as-needed). Appends to
+	 blueprint.medications and pre-selects it for the entry. -->
+<Modal open={medAddOpen} title={$t('settings.add_medication')} onClose={() => (medAddOpen = false)}>
+	<form on:submit|preventDefault={handleAddMed} class="space-y-3">
+		<div>
+			<label class="text-xs block mb-1" for="ec-med-name" style="color: var(--text-secondary)">{$t('settings.medication_name')}</label>
+			<input id="ec-med-name" type="text" bind:value={newMedName} class="input" required />
+		</div>
+		<div>
+			<label class="text-xs block mb-1" for="ec-med-dose" style="color: var(--text-secondary)">{$t('settings.medication_dose')}</label>
+			<input id="ec-med-dose" type="text" bind:value={newMedDose} class="input" placeholder="10mg" required />
+		</div>
+		<div>
+			<label class="text-xs block mb-1" for="ec-med-schedule" style="color: var(--text-secondary)">{$t('settings.medication_schedule')}</label>
+			<input id="ec-med-schedule" type="text" bind:value={newMedSchedule} class="input" placeholder={$t('setup.med_schedule_placeholder')} />
+		</div>
+		<label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--text-primary)">
+			<input type="checkbox" bind:checked={newMedAsNeeded} class="w-4 h-4" style="accent-color: var(--olive)" />
+			{$t('settings.medication_as_needed')}
+		</label>
+		<div class="flex gap-3 pt-1">
+			<button type="button" on:click={() => (medAddOpen = false)} class="btn-secondary flex-1 rounded-xl text-sm font-medium min-h-[44px]">{$t('common.cancel')}</button>
+			<button type="submit" disabled={!newMedName.trim() || !newMedDose.trim()} class="btn-primary flex-1 rounded-xl text-sm font-medium min-h-[44px]">{$t('settings.medication_save')}</button>
+		</div>
+	</form>
+</Modal>
+
 <style>
 	/* ─── Section-jump nav (mobile) — CIPH-420b ─── */
 	.log-section-nav {
@@ -1340,6 +1454,26 @@
 	}
 	.log-chip:active {
 		transform: scale(0.97);
+	}
+	/* Inline "add new" chip — dashed outline to read as an affordance, not a
+	   selectable value. Theme-token colors (dark-mode safe). */
+	.log-chip--add {
+		background: transparent;
+		border: 1px dashed var(--border);
+		color: var(--text-muted);
+		/* Own full-width row, clearly separated from the item chips above
+		   (their borders sat too close otherwise). */
+		flex-basis: 100%;
+		justify-content: center;
+		margin-top: 10px;
+	}
+	.log-chip--add:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+	.log-chip-plus {
+		font-weight: 600;
+		margin-right: 2px;
 	}
 
 	.log-chip--olive-active {
