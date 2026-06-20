@@ -20,7 +20,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Blueprint, VitalField } from '$lib/blueprint';
-import { isCustomItem, resolveBlueprint, resolveMedDisplay, bedarfMedColumns } from '$lib/blueprint';
+import { isCustomItem, resolveBlueprint, resolveMedDisplay, bedarfMedColumns, medAdherence } from '$lib/blueprint';
 import { cohortOf } from '$lib/blueprint/cohort';
 import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
 import { sectionsForCohort } from '$lib/cohortSections';
@@ -3393,13 +3393,10 @@ export function generateDoctorPdf(
 		cursorY += 2;
 
 		const medRows = blueprint.medications.map((med) => {
-			const taken = monthDocs.filter((d) => d.data?.medications?.[med.id]).length;
-			return [
-				`${med.name} ${med.dose}`,
-				med.schedule,
-				`${taken} / ${daysLogged}`,
-				`${daysLogged > 0 ? Math.round((taken / daysLogged) * 100) : 0}%`,
-			];
+			// Assume-taken model for scheduled meds, taken-toggle for as-needed.
+			// See medAdherence() for the two models + back-compat note.
+			const { taken, total, pct } = medAdherence(med, monthDocs, daysLogged);
+			return [`${med.name} ${med.dose}`, med.schedule, `${taken} / ${total}`, `${pct}%`];
 		});
 
 		autoTable(doc, {

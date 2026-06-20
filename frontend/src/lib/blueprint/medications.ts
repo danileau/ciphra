@@ -43,6 +43,49 @@ export function hasBedarfMeds(bp: Blueprint | null | undefined): boolean {
 	return bedarfMedsForPicker(bp).length > 0;
 }
 
+export interface MedAdherence {
+	/** Days the med counts as taken, over `total`. */
+	taken: number;
+	/** Logged days in the window (the denominator). */
+	total: number;
+	/** Adherence percentage (0–100), 0 when there are no logged days. */
+	pct: number;
+}
+
+/**
+ * Adherence for one medication over a set of logged-day docs — the model
+ * behind the doctor-PDF table.
+ *
+ * Two models, by med kind:
+ *  - **As-needed / rescue** (`asNeeded: true`): an explicit "taken today"
+ *    toggle. `taken` = number of logged days the toggle was on.
+ *  - **Scheduled** (`asNeeded: false`): assume-taken. The med is part of the
+ *    daily regimen, so the user makes no per-day "taken" tap; `taken` =
+ *    logged days minus the days the dose was explicitly marked missed
+ *    (`missedMedications`). Back-compat: legacy entries used a per-day toggle
+ *    and carry no `missedMedications`, so those days read as taken.
+ */
+export function medAdherence(
+	med: MedicationSlot,
+	loggedDocs: Array<{ data?: Record<string, unknown> }>,
+	daysLogged: number,
+): MedAdherence {
+	let taken: number;
+	if (med.asNeeded) {
+		taken = loggedDocs.filter(
+			(d) => !!(d.data?.medications as Record<string, unknown> | undefined)?.[med.id],
+		).length;
+	} else {
+		const missed = loggedDocs.filter((d) => {
+			const m = d.data?.missedMedications;
+			return Array.isArray(m) && m.includes(med.id);
+		}).length;
+		taken = Math.max(0, daysLogged - missed);
+	}
+	const pct = daysLogged > 0 ? Math.round((taken / daysLogged) * 100) : 0;
+	return { taken, total: daysLogged, pct };
+}
+
 /** Resolve a logged event's `medicationId` to a display label + unit.
  *  Configured meds win over presets so renaming/removing a preset never
  *  orphans an event; presets remain a fallback for historical/migrated data. */

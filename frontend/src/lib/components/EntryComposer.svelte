@@ -23,6 +23,10 @@
 		triggers: Record<string, boolean>;
 		vitals: Record<string, string>;
 		medications: Record<string, boolean>;
+		// CIPH — scheduled (non-asNeeded) meds the user marked MISSED this day.
+		// Assume-taken model: daily meds need no per-day "taken" tap; we record
+		// only the exceptions. As-needed meds stay in `medications`.
+		missedMedications?: string[];
 		notes: string;
 		private?: true;
 		// CIPH-886 — per-day phase override for the cycle cohort. When present,
@@ -203,6 +207,9 @@
 	let triggers: Record<string, boolean> = {};
 	let vitals: Record<string, string> = {};
 	let medications: Record<string, boolean> = {};
+	// Scheduled meds marked as missed today (assume-taken model). Default {}
+	// = nothing missed = all scheduled doses assumed taken.
+	let missedMeds: Record<string, boolean> = {};
 	let notes = '';
 	// CIPH-713 — per-entry private flag. When true, this entry is hard-
 	// excluded from every export (PDF/CSV/reports/share) via isExportable().
@@ -387,7 +394,9 @@
 			for (const v of b.vitals) vitals[v.id] = '';
 		}
 		if (Object.keys(medications).length === 0) {
-			for (const med of b.medications) medications[med.id] = false;
+			// Only as-needed meds use the "taken today" toggle. Scheduled meds
+			// are assumed taken and tracked by exception (missedMeds).
+			for (const med of b.medications) if (med.asNeeded) medications[med.id] = false;
 		}
 	}
 
@@ -432,6 +441,10 @@
 		if (d.triggers) triggers = { ...triggers, ...d.triggers };
 		if (d.vitals) vitals = { ...vitals, ...d.vitals };
 		if (d.medications) medications = { ...medications, ...d.medications };
+		if (Array.isArray(d.missedMedications)) {
+			missedMeds = {};
+			for (const id of d.missedMedications) missedMeds[id] = true;
+		}
 		if (d.episodeTimes) episodeTimes = { ...episodeTimes, ...d.episodeTimes };
 		if (d.episodeDurations) episodeDurations = { ...episodeDurations, ...d.episodeDurations };
 		if (d.episodeNotes) episodeNotes = { ...episodeNotes, ...d.episodeNotes };
@@ -459,6 +472,10 @@
 			triggers,
 			vitals,
 			medications,
+			missedMedications: (() => {
+				const ids = Object.keys(missedMeds).filter((id) => missedMeds[id]);
+				return ids.length > 0 ? ids : undefined;
+			})(),
 			notes,
 			private: isPrivate ? true : undefined,
 			phaseOverride: phaseOverride || undefined,
@@ -730,16 +747,22 @@
 					</button>
 					{#if !collapsed['medications']}
 					{#if standardMeds.length > 0}
+						<!-- Assume-taken model: scheduled meds are part of the daily
+							 regimen, so there's no per-day "taken" tap. Tapping a chip
+							 marks that dose MISSED for this day (the exception). -->
+						<p class="log-group-label log-meds-hint">{$t('protocol.meds_daily_hint')}</p>
 						<div class="log-chip-wrap">
 							{#each standardMeds as med}
 								<button
 									type="button"
-									on:click={() => { medications[med.id] = !medications[med.id]; markChanged(); }}
-									class="log-chip log-chip--med {medications[med.id] ? 'log-chip--olive-active' : ''}"
-									aria-pressed={medications[med.id]}
+									on:click={() => { missedMeds[med.id] = !missedMeds[med.id]; markChanged(); }}
+									class="log-chip log-chip--med {missedMeds[med.id] ? 'log-chip--missed' : ''}"
+									aria-pressed={missedMeds[med.id]}
+									title={missedMeds[med.id] ? $t('protocol.meds_missed_on') : $t('protocol.meds_missed_off')}
 								>
 									<span class="log-chip-med-name">{med.name}</span>
 									<span class="log-chip-med-dose">{med.dose}</span>
+									{#if missedMeds[med.id]}<span class="log-chip-missed-tag">{$t('protocol.meds_missed_tag')}</span>{/if}
 								</button>
 							{/each}
 						</div>
@@ -1534,6 +1557,32 @@
 	.log-chip-med-dose {
 		font-size: 12px;
 		opacity: 0.7;
+	}
+
+	/* Assume-taken hint above the scheduled-med chips. Overrides the
+	   uppercase group-label treatment — it's a sentence, not a label. */
+	.log-meds-hint {
+		text-transform: none;
+		letter-spacing: 0;
+		font-weight: 400;
+		margin-bottom: 10px;
+	}
+	/* A scheduled med tapped as MISSED for this day. Danger tint + strike
+	   so a skipped dose reads clearly against the assumed-taken default. */
+	.log-chip--missed {
+		background: var(--danger-light, rgba(178, 60, 44, 0.12));
+		color: var(--danger);
+		border-color: rgba(178, 60, 44, 0.35);
+		font-weight: 500;
+	}
+	.log-chip--missed .log-chip-med-name {
+		text-decoration: line-through;
+	}
+	.log-chip-missed-tag {
+		font-size: 11px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
 	}
 
 	/* ─── Episodes ─── */

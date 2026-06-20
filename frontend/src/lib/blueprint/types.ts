@@ -235,6 +235,12 @@ export interface EntryDoc {
 	type: 'entry';
 	date: string;
 	private?: boolean;
+	/** Scheduled (non-asNeeded) medication IDs the user marked as MISSED on
+	 *  this day. Scheduled meds are assumed taken (part of the regimen), so we
+	 *  record only the exceptions — no daily "taken" tap. Absent/empty = all
+	 *  scheduled doses assumed taken. As-needed meds use `medications` instead
+	 *  (an explicit "taken today" toggle / FAB event). */
+	missedMedications?: string[];
 	[k: string]: unknown;
 }
 
