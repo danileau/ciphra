@@ -55,6 +55,14 @@ const ALLOWLIST: ReadonlyArray<{ path: string; reason: string }> = [
 		path: 'routes/conditions/[id]/+page.svelte',
 		reason: 'Only calls `blueprint.save()` to switch presets.',
 	},
+	{
+		path: 'lib/components/WelcomeCard.svelte',
+		reason:
+			'Reads raw `$blueprint` ONLY as the SAVE base for the dismissal ' +
+			'flag — `$resolvedBlueprint` is stripped of `customizations.custom*`, ' +
+			'so saving it would wipe every custom item (the data-loss bug this ' +
+			'allowlist entry guards against). Rendering uses `$resolvedBlueprint`.',
+	},
 ];
 
 const ALLOW_SET = new Set(ALLOWLIST.map((e) => e.path));
