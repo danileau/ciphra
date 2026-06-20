@@ -1,7 +1,7 @@
 /**
  * CIPH-pi21-Track-B-4 — Cycle phase strip aggregation for the doctor PDF.
  *
- * Cycle cohort (endometriosis / menopause / PCOS) renders a per-day
+ * Cycle cohort (endometriosis / menopause / PMOS) renders a per-day
  * horizontal strip showing the cycle phase (menstrual / follicular /
  * ovulation / luteal) for each day of the focus month. Mirrors the calendar
  * v3 cell tinting so a doctor reading the PDF sees the same phase encoding

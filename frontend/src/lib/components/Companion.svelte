@@ -287,7 +287,7 @@
 
 	// ─── Cycle-phase card (CIPH-401 / CIPH-855a) ───────────────────────────
 	// Only rendered for blueprints that track `cycle_day` (endometriosis,
-	// menopause, PCOS). Heavy lifting lives in `$lib/cycleState.ts` so the
+	// menopause, PMOS). Heavy lifting lives in `$lib/cycleState.ts` so the
 	// Calendar route can reuse the anchor + phase math to render its
 	// phase-colored day-cell overlay. PHASE_COLORS comes from the same
 	// module (still pulled from data palette — CIPH-801).

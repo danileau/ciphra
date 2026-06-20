@@ -2090,8 +2090,8 @@ export default {
 
 	// CIPH-411d — PDF med compliance bullet
 
-	// CIPH-501 — PCOS preset
-	'landing.template_pcos': 'PCOS',
+	// CIPH-501 — PMOS preset
+	'landing.template_pcos': 'PMOS',
 	'landing.template_pcos_desc': 'Track cycle irregularity, androgen symptoms and metabolic markers',
 	'symptom_group.menstrual': 'Menstrual',
 	'symptom_group.androgen': 'Androgen-related',
@@ -2114,14 +2114,14 @@ export default {
 	'condition.scale.mfg_desc': 'Visual score of terminal hair growth in nine androgen-sensitive body areas — the standard hirsutism assessment.',
 	'condition.scale.fai': 'FAI — Free Androgen Index',
 	'condition.scale.fai_desc': 'Calculated from total testosterone and SHBG; a blood-based measure of biologically active androgens.',
-	'condition.pcos.title': 'PCOS (Polycystic Ovary Syndrome)',
+	'condition.pcos.title': 'PMOS (Polyendocrine Metabolic Ovarian Syndrome)',
 	'condition.pcos.subtitle': 'Track cycle patterns, androgen symptoms and metabolic health.',
-	'condition.pcos.intro': 'PCOS is a common metabolic-endocrine disorder affecting roughly 1 in 10 people of reproductive age. It combines cycle irregularity, androgen excess (acne, excess hair, scalp thinning) and insulin resistance. Tracking cycles alongside weight, HbA1c and mood helps you and your clinician see how lifestyle changes or metformin are working.',
-	'condition.pcos.rationale_menstrual': 'PCOS cycles are often long and unpredictable. Logging when periods come, how heavy they are and how long they last gives the first objective signal of whether treatment is restoring ovulation.',
+	'condition.pcos.intro': 'PMOS (formerly PCOS) is a common metabolic-endocrine disorder affecting roughly 1 in 10 people of reproductive age. It combines cycle irregularity, androgen excess (acne, excess hair, scalp thinning) and insulin resistance. Tracking cycles alongside weight, HbA1c and mood helps you and your clinician see how lifestyle changes or metformin are working.',
+	'condition.pcos.rationale_menstrual': 'PMOS cycles are often long and unpredictable. Logging when periods come, how heavy they are and how long they last gives the first objective signal of whether treatment is restoring ovulation.',
 	'condition.pcos.rationale_androgen': 'Hirsutism, acne and scalp hair loss are the clinical fingerprint of elevated androgens. Tracking them month to month is how response to anti-androgens or combined pill shows up.',
-	'condition.pcos.rationale_metabolic': 'Insulin resistance drives weight gain, hunger and sugar cravings in PCOS. Logging these alongside weight and HbA1c makes metabolic improvement visible.',
-	'condition.pcos.rationale_mood': 'People with PCOS have higher rates of anxiety and depression — partly biological, partly from living with visible symptoms. Tracking mood matters.',
-	'condition.pcos.episodes_rationale': 'PCOS does not have classic flares, but fertility-related consultations and acute acne flare-ups are worth marking so context is preserved across visits.',
+	'condition.pcos.rationale_metabolic': 'Insulin resistance drives weight gain, hunger and sugar cravings in PMOS. Logging these alongside weight and HbA1c makes metabolic improvement visible.',
+	'condition.pcos.rationale_mood': 'People with PMOS have higher rates of anxiety and depression — partly biological, partly from living with visible symptoms. Tracking mood matters.',
+	'condition.pcos.episodes_rationale': 'PMOS does not have classic flares, but fertility-related consultations and acute acne flare-ups are worth marking so context is preserved across visits.',
 	'condition.pcos.triggers_rationale': 'High-glycemic meals and snacks, stress, missed medication and sleep loss can all worsen metabolic and mood symptoms. Tracking surfaces personal patterns.',
 	'condition.pcos.vitals_rationale': 'Cycle day and length (even when irregular), weight, waist circumference, HbA1c and mood are the values endocrinologists and gynecologists follow over time.',
 	'condition.pcos.for_doctor': 'The PDF report shows cycle-length variability, symptom patterns by androgen/metabolic/mood groups, weight and HbA1c trends — supporting endocrinology and gynecology treatment decisions.',
