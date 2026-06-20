@@ -507,79 +507,6 @@ export function computeDurationSignal(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 6. Episode-free streak (all-time) — marker-event cohorts
-// ─────────────────────────────────────────────────────────────────────────
-
-export interface StreakInsight {
-	kind: 'streak';
-	/** Days since the most recent marker episode. */
-	currentStreak: number;
-	/** Longest clear gap (days) between consecutive marker episodes, all-time. */
-	longestStreak: number;
-	/** Per-day dots for the last `dotDays` days: 'episode' | 'clear' | 'unlogged'. */
-	dots: ('episode' | 'clear' | 'unlogged')[];
-	dotDays: number;
-	nounKey: string;
-}
-
-const STREAK_DOT_DAYS = 90;
-
-export function computeStreak(
-	docs: InsightDoc[],
-	bp: Blueprint,
-	now: Date = new Date(),
-): StreakInsight | null {
-	const marker = bp.markerEvent;
-	if (!marker || !marker.episodeIds?.length) return null;
-	const epIds = marker.episodeIds;
-
-	// All-time episode + logged day sets.
-	const episodeDays = new Set<string>();
-	const loggedDays = new Set<string>();
-	for (const d of docs) {
-		if (!isEntry(d)) continue;
-		const k = dayKey(d);
-		if (!k) continue;
-		loggedDays.add(k);
-		if (episodeCount(d, epIds) > 0) episodeDays.add(k);
-	}
-	if (episodeDays.size === 0) return null;
-
-	const sorted = [...episodeDays].sort();
-	const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-	const dayMs = 86_400_000;
-	const toDate = (k: string) => new Date(k + 'T00:00:00');
-	const diffDays = (a: string, b: string) => Math.round((toDate(a).getTime() - toDate(b).getTime()) / dayMs);
-
-	const lastEp = sorted[sorted.length - 1];
-	const currentStreak = Math.max(0, diffDays(todayKey, lastEp));
-
-	let longestStreak = currentStreak;
-	for (let i = 1; i < sorted.length; i++) {
-		const gap = diffDays(sorted[i], sorted[i - 1]) - 1; // clear days strictly between
-		if (gap > longestStreak) longestStreak = gap;
-	}
-
-	const dots: ('episode' | 'clear' | 'unlogged')[] = [];
-	for (let i = STREAK_DOT_DAYS - 1; i >= 0; i--) {
-		const d = daysAgo(now, i);
-		const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-		if (episodeDays.has(k)) dots.push('episode');
-		else if (loggedDays.has(k)) dots.push('clear');
-		else dots.push('unlogged');
-	}
-
-	return {
-		kind: 'streak',
-		currentStreak,
-		longestStreak,
-		dots,
-		dotDays: STREAK_DOT_DAYS,
-		nounKey: marker.nounKey,
-	};
-}
-
-// ─────────────────────────────────────────────────────────────────────────
 // 7. Top symptoms — frequency, for episodeless blueprints (custom/lab)
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -642,7 +569,6 @@ export type Insight =
 	| CircadianInsight
 	| TypeMixInsight
 	| DurationInsight
-	| StreakInsight
 	| TopSymptomsInsight;
 
 export type InsightKind = Insight['kind'];
@@ -652,7 +578,6 @@ export const INSIGHT_ORDER: InsightKind[] = [
 	'sleep-link',
 	'trigger-lift',
 	'circadian',
-	'streak',
 	'type-mix',
 	'duration',
 	// Last: a universal backstop so sparse / episodeless cohorts never show a
@@ -679,7 +604,6 @@ export function computeInsights(
 		computeTriggerLift(docs, bp, now),
 		computeTopSymptoms(docs, bp, now),
 		computeCircadian(docs, bp, now),
-		computeStreak(docs, bp, now),
 		computeTypeMix(docs, bp, now),
 		computeDurationSignal(docs, bp, now),
 	];
@@ -708,6 +632,5 @@ export function insightCapabilityMatrix(bp: Blueprint): Record<InsightKind, bool
 		circadian: timedEpisodeTypes(bp).length > 0,
 		'type-mix': (bp.episodeTypes || []).length >= 2,
 		duration: durationEpisodeTypes(bp).length > 0,
-		streak: !!bp.markerEvent && (bp.markerEvent.episodeIds?.length ?? 0) > 0,
 	};
 }

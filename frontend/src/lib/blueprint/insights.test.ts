@@ -16,7 +16,6 @@ import {
 	computeDurationSignal,
 	computeInsights,
 	computeSleepEpisodeLink,
-	computeStreak,
 	computeTopSymptoms,
 	computeTriggerLift,
 	computeTypeMix,
@@ -36,7 +35,7 @@ const EPISODELESS: Blueprint = {
 	episodeNoun: undefined,
 };
 
-// Fixed clock so windowing + streak math is deterministic.
+// Fixed clock so windowing math is deterministic.
 const NOW = new Date(2026, 5, 14); // 2026-06-14
 
 function entry(date: string, data: Partial<InsightDoc['data']> = {}): InsightDoc {
@@ -151,26 +150,6 @@ describe('computeDurationSignal', () => {
 	});
 });
 
-describe('computeStreak', () => {
-	it('counts days since the last marker episode + longest clear gap', () => {
-		const docs: InsightDoc[] = [
-			entry(dayBefore(40), { episodes: { focal: 1 } }),
-			entry(dayBefore(10), { episodes: { focal: 1 } }),
-		];
-		const res = computeStreak(docs, epilepsy, NOW);
-		expect(res).not.toBeNull();
-		expect(res!.currentStreak).toBe(10);
-		// gap between the two episodes is 30 days apart → 29 clear days between.
-		expect(res!.longestStreak).toBeGreaterThanOrEqual(10);
-		expect(res!.dots).toHaveLength(90);
-	});
-
-	it('returns null without a marker event', () => {
-		const noMarker = { ...epilepsy, markerEvent: undefined };
-		expect(computeStreak([entry(dayBefore(1), { episodes: { focal: 1 } })], noMarker, NOW)).toBeNull();
-	});
-});
-
 describe('computeInsights orchestration', () => {
 	it('orders by clinical priority and caps the count', () => {
 		const docs: InsightDoc[] = [];
@@ -271,7 +250,7 @@ describe('cross-blueprint capability matrix', () => {
 		for (const p of presets) {
 			const m = insightCapabilityMatrix(p.blueprint);
 			expect(Object.keys(m).sort()).toEqual(
-				['circadian', 'duration', 'sleep-link', 'streak', 'top-symptoms', 'trigger-lift', 'type-mix'].sort(),
+				['circadian', 'duration', 'sleep-link', 'top-symptoms', 'trigger-lift', 'type-mix'].sort(),
 			);
 		}
 	});
@@ -283,7 +262,6 @@ describe('cross-blueprint capability matrix', () => {
 			if (m.circadian) expect(bp.episodeTypes.some((e) => e.trackTimeOfDay)).toBe(true);
 			if (m.duration) expect(bp.episodeTypes.some((e) => e.trackDuration)).toBe(true);
 			if (m['type-mix']) expect(bp.episodeTypes.length).toBeGreaterThanOrEqual(2);
-			if (m.streak) expect(bp.markerEvent).toBeTruthy();
 		}
 	});
 
@@ -300,28 +278,28 @@ describe('cross-blueprint capability matrix', () => {
 			})
 			.join('\n');
 		expect(table).toMatchInlineSnapshot(`
-			"epilepsy: circadian,duration,sleep-link,streak,top-symptoms,trigger-lift,type-mix
-			migraine: circadian,duration,sleep-link,streak,top-symptoms,trigger-lift,type-mix
-			ms: sleep-link,streak,top-symptoms,trigger-lift,type-mix
+			"epilepsy: circadian,duration,sleep-link,top-symptoms,trigger-lift,type-mix
+			migraine: circadian,duration,sleep-link,top-symptoms,trigger-lift,type-mix
+			ms: sleep-link,top-symptoms,trigger-lift,type-mix
 			adhd: sleep-link,top-symptoms,trigger-lift,type-mix
 			burnout: sleep-link,top-symptoms,trigger-lift,type-mix
 			anxiety_depression: sleep-link,top-symptoms,trigger-lift,type-mix
-			diabetes: streak,top-symptoms,trigger-lift,type-mix
+			diabetes: top-symptoms,trigger-lift,type-mix
 			chronic_pain: sleep-link,top-symptoms,trigger-lift,type-mix
-			long_covid: sleep-link,streak,top-symptoms,trigger-lift,type-mix
-			asthma: circadian,duration,sleep-link,streak,top-symptoms,trigger-lift,type-mix
+			long_covid: sleep-link,top-symptoms,trigger-lift,type-mix
+			asthma: circadian,duration,sleep-link,top-symptoms,trigger-lift,type-mix
 			hypertension: circadian,sleep-link,top-symptoms,trigger-lift,type-mix
-			ibs: streak,top-symptoms,trigger-lift,type-mix
+			ibs: top-symptoms,trigger-lift,type-mix
 			cancer_treatment: top-symptoms,trigger-lift,type-mix
 			endometriosis: sleep-link,top-symptoms,trigger-lift,type-mix
 			menopause: circadian,sleep-link,top-symptoms,trigger-lift,type-mix
 			pcos: top-symptoms,trigger-lift,type-mix
-			bipolar: sleep-link,streak,top-symptoms,trigger-lift,type-mix
+			bipolar: sleep-link,top-symptoms,trigger-lift,type-mix
 			glaucoma: circadian,duration,sleep-link,top-symptoms,trigger-lift,type-mix
 			parkinson: circadian,duration,sleep-link,top-symptoms,trigger-lift,type-mix
-			ibd: circadian,streak,top-symptoms,trigger-lift,type-mix
+			ibd: circadian,top-symptoms,trigger-lift,type-mix
 			hashimoto: top-symptoms,trigger-lift
-			rheumatoid_arthritis: sleep-link,streak,top-symptoms,trigger-lift,type-mix
+			rheumatoid_arthritis: sleep-link,top-symptoms,trigger-lift,type-mix
 			custom: —"
 		`);
 	});

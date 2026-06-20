@@ -190,40 +190,6 @@
 		};
 	})();
 
-	// Compliance metric: unique days logged in the last 30, framed as
-	// data-reliability (not a streak). Klara / QA called out streak framing
-	// as hostile during chronic flares — "days since last episode" gamifies
-	// symptom-free days and shames people in flare cycles.
-	$: complianceLogged = (() => {
-		const cutoff = new Date();
-		cutoff.setHours(0, 0, 0, 0);
-		cutoff.setDate(cutoff.getDate() - 29); // inclusive 30-day window
-		const cutoffStr = cutoff.toISOString().slice(0, 10);
-		const days = new Set<string>();
-		for (const d of allDocs) {
-			if (d.data.type !== 'entry') continue;
-			const ds = String(d.data.date || '').slice(0, 10);
-			if (ds && ds >= cutoffStr && ds <= todayStr) days.add(ds);
-		}
-		return days.size;
-	})();
-	$: complianceTotal = 30;
-	$: complianceRatio = complianceLogged / complianceTotal;
-	$: complianceTone = (complianceRatio >= 0.8 ? 'high' : complianceRatio >= 0.5 ? 'mid' : 'low') as 'high' | 'mid' | 'low';
-	$: complianceMessage = $t(
-		complianceTone === 'high' ? 'companion.compliance_high'
-			: complianceTone === 'mid' ? 'companion.compliance_mid'
-			: 'companion.compliance_low',
-		{ logged: complianceLogged, total: complianceTotal }
-	);
-	$: complianceAccent = complianceTone === 'high' ? 'var(--olive)' : complianceTone === 'mid' ? 'var(--ochre)' : 'var(--text-muted)';
-	// CIPH-904 — Suppress the compliance card for new users. Day-1 users
-	// would otherwise read "0% logged in 30 days" as a failure on first
-	// visit. Threshold = 3 entry docs (~3 days of use); after that, the
-	// percentage is meaningful even at "low" tones.
-	$: entryDocCount = allDocs.filter((d) => d.data?.type === 'entry').length;
-	$: complianceVisible = entryDocCount >= 3;
-
 	// CIPH-pi24-5c — Marker-event gap-trend. Only computed for presets that
 	// declare `markerEvent` (10 cleanly-episodic conditions: epilepsy,
 	// migraine, bipolar, MS, long-COVID, asthma, RA, IBD, IBS, diabetes).
@@ -724,13 +690,6 @@
 		</div>
 		<aside class="min-w-0">
 			<CompanionRail
-				{complianceLogged}
-				{complianceTotal}
-				{complianceRatio}
-				{complianceTone}
-				{complianceMessage}
-				{complianceAccent}
-				{complianceVisible}
 				{rescueMedsThisMonth}
 				{markerGapTrend}
 				markerAccentHex={conditionColor}

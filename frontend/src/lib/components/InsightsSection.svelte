@@ -21,8 +21,7 @@
 	export let accentHex = '#b23c2c';
 	export let neutralHex = '#5c6b73';
 
-	// episodeNoun (plural, e.g. "Anfälle") for headlines; marker noun
-	// (singular, e.g. "Anfall") is read per-streak from the insight.
+	// episodeNoun (plural, e.g. "Anfälle") for insight headlines.
 	$: noun = bp?.episodeNoun ? $t(bp.episodeNoun) : $t('companion.how_episodes');
 
 	$: insights = computeInsights(docs as unknown as InsightDoc[], bp);
@@ -35,13 +34,6 @@
 		evening: '18–24',
 	};
 
-	// Calendar date for streak dot i (0 = oldest, dotDays-1 = today) — used
-	// in the per-dot hover title so each day is identifiable.
-	function dotDate(dotDays: number, i: number): string {
-		const d = new Date();
-		d.setDate(d.getDate() - (dotDays - 1 - i));
-		return d.toLocaleDateString($locale, { day: 'numeric', month: 'short' });
-	}
 </script>
 
 {#if insights.length}
@@ -180,30 +172,6 @@
 						<p class="insight-foot">{$t('insight.duration_safe')}</p>
 					{/if}
 
-				{:else if ins.kind === 'streak'}
-					<p class="insight-title">{$t('insight.streak_title')}<span class="insight-info" title={$t('insight.tip_streak', { noun: $t(ins.nounKey) })} aria-label={$t('insight.tip_streak', { noun: $t(ins.nounKey) })}>ⓘ</span></p>
-					{#if ins.currentStreak === 0}
-						<p class="insight-headline">{$t('insight.streak_today', { noun: $t(ins.nounKey) })}</p>
-					{:else}
-						<p class="streak-number num-data" style="color: {accentHex}">{ins.currentStreak}</p>
-						<p class="insight-headline">{plural($t, $locale, 'insight.streak_current', ins.currentStreak, { noun: $t(ins.nounKey) })}</p>
-					{/if}
-					<div class="streak-dots" role="img" aria-label={$t('insight.streak_dots_aria', { n: ins.dotDays })}>
-						{#each ins.dots as d, i (i)}
-							<span
-								class="streak-dot streak-dot-{d}"
-								style={d === 'episode' ? 'background: var(--danger)' : d === 'clear' ? `background: ${neutralHex}` : ''}
-								title="{dotDate(ins.dotDays, i)} — {$t('insight.tip_streak_' + d, { noun: $t(ins.nounKey) })}"
-							></span>
-						{/each}
-					</div>
-					<!-- dot legend so the colors are legible without hover too -->
-					<div class="streak-legend">
-						<span class="streak-legend-item"><span class="streak-dot" style="background: var(--danger)"></span>{$t('insight.tip_streak_episode', { noun: $t(ins.nounKey) })}</span>
-						<span class="streak-legend-item"><span class="streak-dot" style="background: {neutralHex}"></span>{$t('insight.tip_streak_clear', { noun: $t(ins.nounKey) })}</span>
-						<span class="streak-legend-item"><span class="streak-dot streak-dot-unlogged"></span>{$t('insight.tip_streak_unlogged')}</span>
-					</div>
-					<p class="insight-foot">{$t('insight.streak_longest', { n: ins.longestStreak })}</p>
 				{/if}
 			</div>
 		{/each}
@@ -245,22 +213,8 @@
 	.bar-track[title],
 	.bar-badge[title],
 	.daypart-col[title],
-	.mix-seg[title],
-	.streak-dot[title] {
+	.mix-seg[title] {
 		cursor: help;
-	}
-	.streak-legend {
-		margin-top: 0.5rem;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem 0.75rem;
-	}
-	.streak-legend-item {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		font-size: 0.625rem;
-		color: var(--text-muted);
 	}
 	.insight-headline {
 		font-size: 0.875rem;
@@ -407,28 +361,5 @@
 	}
 	.mix-pct {
 		color: var(--text-muted);
-	}
-
-	/* Streak */
-	.streak-number {
-		font-size: 1.75rem;
-		font-weight: 700;
-		line-height: 1.1;
-		margin-top: 0.25rem;
-	}
-	.streak-dots {
-		margin-top: 0.625rem;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 2px;
-	}
-	.streak-dot {
-		width: 0.375rem;
-		height: 0.375rem;
-		border-radius: 9999px;
-		background: var(--surface-inset);
-	}
-	.streak-dot-unlogged {
-		background: var(--surface-inset);
 	}
 </style>
