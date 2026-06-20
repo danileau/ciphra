@@ -84,6 +84,11 @@
 	// onMount block below may override this default once it knows.
 	let step: 0 | 1 | 2 | 3 | 4 = 1;
 	let working: Blueprint | null = null;
+	// The user's blueprint at entry (if any). Used so switching template via the
+	// preset picker preserves their own data (medications + customizations)
+	// instead of cloning a bare preset over it. Defensive: existing users are
+	// normally ejected before the picker, but this guards any future entry path.
+	let existingBlueprint: Blueprint | null = null;
 	// CIPH-882 — Resolved view for step-2/3 iteration so user-added
 	// custom items render alongside preset ones. `working` stays the
 	// source of truth that gets persisted at finishAndSave.
@@ -243,6 +248,7 @@
 		// Fresh registrants see step 0 (caregiver vs own tracking).
 		// Returning users with an existing blueprint go straight to step 1.
 		const existing = get(blueprint);
+		existingBlueprint = existing ? JSON.parse(JSON.stringify(existing)) : null;
 		if (!existing) {
 			step = 0;
 		}
@@ -288,6 +294,17 @@
 
 	function selectPreset(preset: PresetInfo) {
 		working = JSON.parse(JSON.stringify(preset.blueprint));
+		// Switching template must not destroy an existing user's own data.
+		// Same condition → keep their whole blueprint; otherwise carry over the
+		// non-condition-specific parts (medications + customizations).
+		if (existingBlueprint && working) {
+			if (existingBlueprint.conditionId === preset.blueprint.conditionId) {
+				working = JSON.parse(JSON.stringify(existingBlueprint));
+			} else {
+				if (existingBlueprint.medications?.length) working.medications = JSON.parse(JSON.stringify(existingBlueprint.medications));
+				if (existingBlueprint.customizations) working.customizations = JSON.parse(JSON.stringify(existingBlueprint.customizations));
+			}
+		}
 		// Defaults: all groups / items / triggers / vitals ON (spec: "default ALL ON").
 		if (working) {
 			for (const g of working.symptomGroups) {
