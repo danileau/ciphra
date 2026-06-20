@@ -14,8 +14,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
-    "@sveltejs/adapter-auto": "^3.1.1",
-    "@sveltejs/kit": "^2.63.0",
+    "@sveltejs/kit": "^2.65.1",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^5.3.1",
@@ -29,7 +28,7 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "type": "module",
   "dependencies": {
@@ -43,7 +42,7 @@
     "vite-plugin-wasm": "^3.6.0"
   },
   "overrides": {
-    "dompurify": "^3.4.0",
+    "dompurify": "^3.4.11",
     "uuid": "^14.0.0"
   }
 }
