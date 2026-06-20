@@ -385,7 +385,21 @@
 
 	async function confirmSwitch() {
 		if (!selectedPreset) return;
+		const current = get(blueprint);
+		// Switching the template must NEVER delete the user's own data.
+		// Same condition you already have → no-op (don't reset to a bare preset).
+		if (current && current.conditionId === selectedPreset.blueprint.conditionId) {
+			showConfirmSwitch = false;
+			selectedPreset = null;
+			return;
+		}
 		const newBp = JSON.parse(JSON.stringify(selectedPreset.blueprint));
+		// Carry over non-condition-specific data so a switch can't wipe it:
+		// the medication list and custom items.
+		if (current) {
+			if (current.medications?.length) newBp.medications = JSON.parse(JSON.stringify(current.medications));
+			if (current.customizations) newBp.customizations = JSON.parse(JSON.stringify(current.customizations));
+		}
 		await blueprint.save(newBp);
 		showConfirmSwitch = false;
 		selectedPreset = null;
