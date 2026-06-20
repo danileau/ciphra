@@ -34,8 +34,10 @@
 
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
-	import type { Blueprint } from '$lib/blueprint';
-	import { isCustomItem } from '$lib/blueprint';
+	import type { Blueprint, CustomKind } from '$lib/blueprint';
+	import { isCustomItem, blueprint } from '$lib/blueprint';
+	import { get } from 'svelte/store';
+	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import type { Phase } from '$lib/cycleState';
@@ -59,6 +61,34 @@
 
 	let collapsed: Record<string, boolean> = {};
 	function toggleSection(id: string) { collapsed[id] = !collapsed[id]; }
+
+	// Inline "add a new symptom / trigger" from the entry screen (the common
+	// need: you're logging and the item you want isn't in your set yet). Adds it
+	// to the blueprint's customizations (APPEND — never a destructive replace),
+	// persists, and pre-selects it for the entry you're composing. The new item
+	// renders via the reactive `bp` ($resolvedBlueprint) prop.
+	let customModalOpen = false;
+	let customModalKind: CustomKind = 'symptom';
+	function openInlineCustom(kind: CustomKind) { customModalKind = kind; customModalOpen = true; }
+	async function handleInlineCustomSave(
+		e: CustomEvent<{ kind: CustomKind; item: { id: string } }>,
+	) {
+		const { kind, item } = e.detail;
+		if (kind !== 'symptom' && kind !== 'trigger') { customModalOpen = false; return; }
+		const raw = get(blueprint);
+		if (!raw) { customModalOpen = false; return; }
+		const next: Blueprint = JSON.parse(JSON.stringify(raw));
+		const cz = next.customizations || (next.customizations = {});
+		const arrKey = kind === 'symptom' ? 'customSymptoms' : 'customTriggers';
+		const arr = ((cz as Record<string, { id: string }[]>)[arrKey] ||= []);
+		if (!arr.some((x) => x.id === item.id)) arr.push(item);
+		await blueprint.save(next);
+		// Pre-select the freshly added item for the entry being composed.
+		if (kind === 'symptom') symptoms = { ...symptoms, [item.id]: true };
+		else triggers = { ...triggers, [item.id]: true };
+		markChanged();
+		customModalOpen = false;
+	}
 
 	// CIPH-420b — Section-jump nav (mobile).
 	// CIPH-904 — `medications` and `phaseOverride` were missing from the
@@ -617,6 +647,11 @@
 						{/each}
 					</div>
 				{/each}
+				<div class="log-chip-wrap">
+					<button type="button" class="log-chip log-chip--add" on:click={() => openInlineCustom('symptom')}>
+						<span class="log-chip-plus" aria-hidden="true">+</span> {$t('customization.add_symptom')}
+					</button>
+				</div>
 				{/if}
 			</section>
 			{/if}
@@ -642,6 +677,9 @@
 							{isCustomItem(trig.id) ? trig.label : $t(trig.label)}
 						</button>
 					{/each}
+					<button type="button" class="log-chip log-chip--add" on:click={() => openInlineCustom('trigger')}>
+						<span class="log-chip-plus" aria-hidden="true">+</span> {$t('customization.add_trigger')}
+					</button>
 				</div>
 				{/if}
 			</section>
@@ -1123,6 +1161,16 @@
 	</div>
 </div>
 
+<!-- Inline add-new (symptom / trigger) from the entry screen. Appends to the
+	 blueprint customizations and pre-selects the new item. -->
+<CustomItemModal
+	open={customModalOpen}
+	kind={customModalKind}
+	groups={bp.symptomGroups}
+	on:save={handleInlineCustomSave}
+	on:close={() => (customModalOpen = false)}
+/>
+
 <style>
 	/* ─── Section-jump nav (mobile) — CIPH-420b ─── */
 	.log-section-nav {
@@ -1340,6 +1388,21 @@
 	}
 	.log-chip:active {
 		transform: scale(0.97);
+	}
+	/* Inline "add new" chip — dashed outline to read as an affordance, not a
+	   selectable value. Theme-token colors (dark-mode safe). */
+	.log-chip--add {
+		background: transparent;
+		border: 1px dashed var(--border);
+		color: var(--text-muted);
+	}
+	.log-chip--add:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+	.log-chip-plus {
+		font-weight: 600;
+		margin-right: 2px;
 	}
 
 	.log-chip--olive-active {
