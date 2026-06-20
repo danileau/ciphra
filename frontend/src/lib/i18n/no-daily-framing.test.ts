@@ -44,6 +44,18 @@ const NOTAPP_KEYS = [
 	'landing.notapp_who_2',
 ] as const;
 
+// Authed-app surfaces (2026-06-20 storyline sweep). The dashboard/setup
+// must keep the same no-daily-habit voice the landing promises — a
+// "Tägliche Einträge" tile or a "jeden Abend" setup pitch contradicted
+// the public "keine Erinnerungen, kein schlechtes Gewissen" line. These
+// are the first authed touchpoints (welcome card, setup wizard, quick
+// action), pinned so the contradiction can't silently return.
+const AUTHED_KEYS = [
+	'welcome.new_log_title',
+	'setup.mode_protokoll_desc',
+	'quick_action.log_day',
+] as const;
+
 // Locale-specific banned phrases. Match is case-insensitive. Each
 // pattern targets phrasing that asserts a daily cadence or evening
 // ritual — both of which violate the no-gaslight stance for the
@@ -65,7 +77,7 @@ const DICTS: Array<[string, Record<string, string>]> = [
 describe('landing brand voice — must not frame ciphra as daily-habit', () => {
 	for (const [name, dict] of DICTS) {
 		const pattern = FORBIDDEN[name];
-		for (const key of [...HOW_STEP_KEYS, ...NOTAPP_KEYS]) {
+		for (const key of [...HOW_STEP_KEYS, ...NOTAPP_KEYS, ...AUTHED_KEYS]) {
 			it(`${name}: ${key} contains no daily-frequency phrasing`, () => {
 				const value = dict[key];
 				expect(value, `${name}: ${key} is missing`).toBeDefined();
