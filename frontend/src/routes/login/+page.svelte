@@ -201,7 +201,6 @@
 									id="rec-new-pass"
 									bind:value={recNewPass}
 									required
-									minlength={12}
 									class="input"
 								/>
 							</div>
@@ -211,7 +210,6 @@
 									id="rec-new-pass2"
 									bind:value={recNewPassConfirm}
 									required
-									minlength={12}
 									class="input"
 								/>
 							</div>

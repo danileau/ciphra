@@ -293,21 +293,26 @@
 	let isCustomizeMode = false;
 
 	function selectPreset(preset: PresetInfo) {
-		working = JSON.parse(JSON.stringify(preset.blueprint));
 		// Re-picking the SAME condition you already have keeps your whole
-		// blueprint (no destructive reset). Picking a DIFFERENT condition adopts
-		// that preset cleanly (plain) — each condition's blueprint is independent.
-		if (existingBlueprint && existingBlueprint.conditionId === preset.blueprint.conditionId) {
-			working = JSON.parse(JSON.stringify(existingBlueprint));
-		}
-		// Defaults: all groups / items / triggers / vitals ON (spec: "default ALL ON").
+		// blueprint incl. customizations (no destructive reset). Picking a
+		// DIFFERENT condition adopts that preset cleanly (plain) — each
+		// condition's blueprint is independent.
+		const sameCondition = !!(existingBlueprint && existingBlueprint.conditionId === preset.blueprint.conditionId);
+		working = JSON.parse(JSON.stringify(sameCondition ? existingBlueprint : preset.blueprint));
+		// Seed toggles: a DIFFERENT preset starts all-ON (no prior opt-outs);
+		// the SAME condition re-seeds from its existing hidden* so the user's
+		// previous hide selections survive a re-pick (mirrors onMount).
 		if (working) {
+			const cz = sameCondition ? (working.customizations || {}) : {};
+			const hSym = new Set(cz.hiddenSymptoms || []);
+			const hTrg = new Set(cz.hiddenTriggers || []);
+			const hVit = new Set(cz.hiddenVitals || []);
 			for (const g of working.symptomGroups) {
-				symptomGroupOn[g.id] = true;
-				for (const it of g.items) symptomItemOn[it.id] = true;
+				symptomGroupOn[g.id] = !g.items.every((it) => hSym.has(it.id));
+				for (const it of g.items) symptomItemOn[it.id] = !hSym.has(it.id);
 			}
-			for (const tr of working.triggers) triggerOn[tr.id] = true;
-			for (const v of working.vitals) vitalOn[v.id] = true;
+			for (const tr of working.triggers) triggerOn[tr.id] = !hTrg.has(tr.id);
+			for (const v of working.vitals) vitalOn[v.id] = !hVit.has(v.id);
 		}
 		step = 2;
 	}
@@ -446,7 +451,15 @@
 	function goBack() {
 		if (step === 4) step = 3;
 		else if (step === 3) step = 2;
-		else if (step === 2) step = 1;
+		else if (step === 2) {
+			// Customize-mode fine-tuners (entered via Settings → "Profil
+			// anpassen") must NOT fall back into the preset picker (step 1):
+			// re-picking runs selectPreset, which resets toggles and risks
+			// dropping customizations. "Zurück" here is a pure exit back to
+			// Settings — nothing is saved on this path.
+			if (isCustomizeMode) { goto('/settings?tab=tracking'); return; }
+			step = 1;
+		}
 	}
 
 	// Vitals worth a "target" input = vitals that already carry a

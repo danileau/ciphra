@@ -2225,11 +2225,11 @@ export default {
 	// CIPH-882 — Eigene Symptome / Auslöser / Messwerte / Episodentypen
 	'customization.add_symptom': 'Eigenes Symptom hinzufügen',
 	'customization.add_trigger': 'Eigenen Auslöser hinzufügen',
-	'customization.add_vital': 'Eigenes Messwert hinzufügen',
+	'customization.add_vital': 'Eigenen Messwert hinzufügen',
 	'customization.add_episode': 'Eigenen Episodentyp hinzufügen',
 	'customization.edit_symptom': 'Eigenes Symptom bearbeiten',
 	'customization.edit_trigger': 'Eigenen Auslöser bearbeiten',
-	'customization.edit_vital': 'Eigenes Messwert bearbeiten',
+	'customization.edit_vital': 'Eigenen Messwert bearbeiten',
 	'customization.edit_episode': 'Eigenen Episodentyp bearbeiten',
 	'customization.label': 'Bezeichnung',
 	'customization.group': 'Gruppe (optional)',
