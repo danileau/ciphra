@@ -636,17 +636,26 @@ hashes only live in the app).
 ### 3.2 — Cloudflare WAF rate-limit on `/api/login` (operator, ~15 min)
 
 Edge-throttle login bruteforce before it reaches origin (origin already has
-flask-limiter + the nginx `api_login` zone — this is defense-in-depth).
+flask-limiter + per-account lockout + the nginx `api_login` zone — this is
+defense-in-depth, so the edge rule can be coarse).
+
+⚠️ ciphra.ch is on the Cloudflare **Free** plan. Free rate limiting is capped
+at a **10-second** window, **IP** counting, and the builder exposes **no HTTP
+method field**. That's fine: `/api/login` only accepts POST (a GET just
+404/405s), so match the path alone — no method filter needed. (1-min/1-hr
+windows + method-aware matching + longer block durations require CF **Pro**.)
 
 Cloudflare dashboard → **ciphra.ch** → Security → WAF → **Rate limiting rules**
 → Create:
 - Name: `ciphra-login-ratelimit`
-- Match: `URI Path` **equals** `/api/login` (optionally `OR` `/api/login/init`)
-  AND `Request Method` **equals** `POST`
-- Rate: **10** requests per **1 minute**, characteristic **IP**
-- Action: **Block** for **1 hour** (mitigation timeout 3600 s), response **429**
+- Match: `URI Path` **contains** `/api/login` (covers `/api/login` + `/api/login/init`)
+- Rate: **10** requests per **10 seconds**, characteristic **IP**
+- Action: **Block** (Free block/mitigation duration ≈ 10 s)
 
-Verify: `for i in $(seq 1 12); do curl -s -o /dev/null -w "%{http_code}\n" -X POST https://ciphra.ch/api/login -H 'content-type: application/json' -d '{}'; done` → first ~10 return 400/401, then 429.
+A legit login is ~2 requests (init + login), so 10/10 s leaves wide headroom
+while stopping scripted hammering.
+
+Verify: `for i in $(seq 1 15); do curl -s -o /dev/null -w "%{http_code}\n" -X POST https://ciphra.ch/api/login -H 'content-type: application/json' -d '{}'; done` → the first ~10 return 400/401, then 429/403 once the edge rule trips.
 
 ### 3.3 — Logrotate for `/var/log/ciphra-*.log` (operator, ~15 min)
 
