@@ -223,6 +223,7 @@ export default {
 	'calendar.trigger_pressure_cell_empty': 'Tag {day}, keine Auslöser',
 	'conditions.switch_logged_in_hint': 'Eigenes Tracking auf diese Erkrankung umstellen',
 	'conditions.switch_confirm': 'Gewechselt zu {condition}. Dein Tagesprotokoll zeigt jetzt die neuen Felder.',
+	'conditions.switch_warn': 'Das stellt deine Erfassung auf diese Vorlage um (Symptome, Auslöser, Vitalwerte). Deine Medikamente und eigenen Einträge bleiben erhalten. Fortfahren?',
 	'conditions.switch_cta': 'Diese Vorlage verwenden',
 	'nav_section.symptoms': 'Symptome',
 	'nav_section.episodes': 'Episoden',

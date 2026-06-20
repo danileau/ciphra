@@ -9,6 +9,7 @@
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { blueprint, presets } from '$lib/blueprint';
 	import { goto } from '$app/navigation';
+	import { get } from 'svelte/store';
 
 	$: conditionId = $page.params.id || '';
 	$: info = conditionId ? conditionInfoMap[conditionId] as ConditionInfo | undefined : undefined;
@@ -25,8 +26,25 @@
 
 	async function switchBlueprint() {
 		if (!matchingPreset) return;
+		const current = get(blueprint);
+		// You already track this condition — NEVER reset your own data. Switching
+		// to the condition you already have used to clone a bare preset over your
+		// blueprint, wiping your medication list + custom items. Just go to today.
+		if (current && current.conditionId === matchingPreset.blueprint.conditionId) {
+			goto('/log/today');
+			return;
+		}
+		// A real switch replaces the condition's symptom/trigger/vital setup —
+		// confirm it, since it's destructive.
+		if (current && typeof confirm === 'function' && !confirm($t('conditions.switch_warn'))) return;
 		switching = true;
 		const newBp = JSON.parse(JSON.stringify(matchingPreset.blueprint));
+		// Carry over the user's own data that isn't condition-specific so a switch
+		// never silently deletes it: their medication list and custom items.
+		if (current) {
+			if (current.medications?.length) newBp.medications = JSON.parse(JSON.stringify(current.medications));
+			if (current.customizations) newBp.customizations = JSON.parse(JSON.stringify(current.customizations));
+		}
 		const ok = await blueprint.save(newBp);
 		switching = false;
 		if (ok) {
