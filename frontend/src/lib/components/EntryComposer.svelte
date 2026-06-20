@@ -34,10 +34,11 @@
 
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
-	import type { Blueprint, CustomKind } from '$lib/blueprint';
+	import type { Blueprint, CustomKind, MedicationSlot } from '$lib/blueprint';
 	import { isCustomItem, blueprint } from '$lib/blueprint';
 	import { get } from 'svelte/store';
 	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import type { Phase } from '$lib/cycleState';
@@ -88,6 +89,39 @@
 		else triggers = { ...triggers, [item.id]: true };
 		markChanged();
 		customModalOpen = false;
+	}
+
+	// Inline "add a new medication" from the entry screen. Same append-only
+	// semantics: a new MedicationSlot is pushed onto blueprint.medications,
+	// persisted, and selected for the current entry.
+	let medAddOpen = false;
+	let newMedName = '';
+	let newMedDose = '';
+	let newMedSchedule = '';
+	let newMedAsNeeded = false;
+	function openAddMed() {
+		newMedName = ''; newMedDose = ''; newMedSchedule = ''; newMedAsNeeded = false;
+		medAddOpen = true;
+	}
+	function newMedId(): string {
+		try {
+			if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+		} catch { /* fallthrough */ }
+		return `med-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+	}
+	async function handleAddMed() {
+		const name = newMedName.trim();
+		const dose = newMedDose.trim();
+		if (!name || !dose) return;
+		const raw = get(blueprint);
+		if (!raw) { medAddOpen = false; return; }
+		const next: Blueprint = JSON.parse(JSON.stringify(raw));
+		const med: MedicationSlot = { id: newMedId(), name, dose, schedule: newMedSchedule.trim(), asNeeded: newMedAsNeeded };
+		(next.medications ||= []).push(med);
+		await blueprint.save(next);
+		medications = { ...medications, [med.id]: true };
+		markChanged();
+		medAddOpen = false;
 	}
 
 	// CIPH-420b — Section-jump nav (mobile).
@@ -726,6 +760,11 @@
 							{/each}
 						</div>
 					{/if}
+					<div class="log-chip-wrap">
+						<button type="button" class="log-chip log-chip--add" on:click={openAddMed}>
+							<span class="log-chip-plus" aria-hidden="true">+</span> {$t('settings.add_medication')}
+						</button>
+					</div>
 					{/if}
 				</section>
 			{/if}
@@ -1170,6 +1209,33 @@
 	on:save={handleInlineCustomSave}
 	on:close={() => (customModalOpen = false)}
 />
+
+<!-- Inline add-new medication (name / dose / schedule / as-needed). Appends to
+	 blueprint.medications and pre-selects it for the entry. -->
+<Modal open={medAddOpen} title={$t('settings.add_medication')} onClose={() => (medAddOpen = false)}>
+	<form on:submit|preventDefault={handleAddMed} class="space-y-3">
+		<div>
+			<label class="text-xs block mb-1" for="ec-med-name" style="color: var(--text-secondary)">{$t('settings.medication_name')}</label>
+			<input id="ec-med-name" type="text" bind:value={newMedName} class="input" required />
+		</div>
+		<div>
+			<label class="text-xs block mb-1" for="ec-med-dose" style="color: var(--text-secondary)">{$t('settings.medication_dose')}</label>
+			<input id="ec-med-dose" type="text" bind:value={newMedDose} class="input" placeholder="10mg" required />
+		</div>
+		<div>
+			<label class="text-xs block mb-1" for="ec-med-schedule" style="color: var(--text-secondary)">{$t('settings.medication_schedule')}</label>
+			<input id="ec-med-schedule" type="text" bind:value={newMedSchedule} class="input" placeholder={$t('setup.med_schedule_placeholder')} />
+		</div>
+		<label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--text-primary)">
+			<input type="checkbox" bind:checked={newMedAsNeeded} class="w-4 h-4" style="accent-color: var(--olive)" />
+			{$t('settings.medication_as_needed')}
+		</label>
+		<div class="flex gap-3 pt-1">
+			<button type="button" on:click={() => (medAddOpen = false)} class="btn-secondary flex-1 rounded-xl text-sm font-medium min-h-[44px]">{$t('common.cancel')}</button>
+			<button type="submit" disabled={!newMedName.trim() || !newMedDose.trim()} class="btn-primary flex-1 rounded-xl text-sm font-medium min-h-[44px]">{$t('settings.medication_save')}</button>
+		</div>
+	</form>
+</Modal>
 
 <style>
 	/* ─── Section-jump nav (mobile) — CIPH-420b ─── */
