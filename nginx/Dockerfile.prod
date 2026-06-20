@@ -9,6 +9,15 @@
 
 FROM nginx:1.27-alpine
 
+# Patch the Alpine base packages (openssl/libcrypto3, musl, nghttp2, zlib,
+# libexpat, libpng, libxml2, …). The pinned nginx:1.27-alpine tag lags the
+# Alpine security repo, so Trivy flags fixed-upstream CVEs; `apk upgrade` pulls
+# the current patched builds at image-build time. Most are unreachable in this
+# reverse-proxy role (no PNG/XML/expat parsing; zlib untgz unused; the 32-bit
+# X.509 overflow needs a 32-bit host) — but openssl (TLS) / musl / nghttp2 are
+# in the request path, so we patch the whole base regardless.
+RUN apk upgrade --no-cache
+
 COPY ciphra.conf       /etc/nginx/conf.d/default.conf
 COPY proxy_params.conf /etc/nginx/proxy_params.conf
 

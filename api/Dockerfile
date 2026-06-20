@@ -9,9 +9,19 @@
 
 FROM python:3.11-slim AS base
 
-RUN apt-get update && apt-get install -y --no-install-recommends gcc curl && rm -rf /var/lib/apt/lists/*
+# `apt-get upgrade` patches the Debian base packages (the slim base lags the
+# security repo); install build/runtime extras; then drop the apt lists.
+RUN apt-get update \
+ && apt-get upgrade -y \
+ && apt-get install -y --no-install-recommends gcc curl \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+# Patch the build tooling bundled in the python base (wheel / setuptools, which
+# vendors jaraco.context). These are NOT runtime deps of the Flask app — their
+# CVEs (malicious tar/wheel during install) aren't reachable in the running
+# container — but upgrading clears the scan and shrinks the supply-chain surface.
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
