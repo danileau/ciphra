@@ -1461,6 +1461,11 @@
 		background: transparent;
 		border: 1px dashed var(--border);
 		color: var(--text-muted);
+		/* Own full-width row, clearly separated from the item chips above
+		   (their borders sat too close otherwise). */
+		flex-basis: 100%;
+		justify-content: center;
+		margin-top: 10px;
 	}
 	.log-chip--add:hover {
 		border-color: var(--accent);
