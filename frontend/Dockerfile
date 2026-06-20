@@ -1,4 +1,6 @@
-FROM node:18-alpine
+# node 22 (LTS): vite 8 requires Node >=20.19 / >=22.12 — node:18 crashes
+# with "CustomEvent is not defined" / adapter-node ESM resolution errors.
+FROM node:22-alpine
 
 WORKDIR /app
 
