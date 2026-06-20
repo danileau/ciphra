@@ -4,7 +4,7 @@ import { auth } from './auth';
 import { familyLinks, activeVault } from './familyLinks';
 import * as api from '$lib/api';
 import { encryptDocument, decryptDocument } from '$lib/crypto';
-import { getAllDocs, putDocs, clearDocs, type CachedDoc } from '$lib/idb';
+import { getAllDocs, putDocs, type CachedDoc } from '$lib/idb';
 import {
 	enqueue as outboxEnqueue,
 	dequeue as outboxDequeue,
@@ -98,6 +98,9 @@ function createDocStore() {
 	// NOT be treated as an authoritative empty vault — see the layout's
 	// setup-redirect guard).
 	let inFlight: Promise<boolean> | null = null;
+	// cacheKey (vault identity) of the in-flight load. A load for a DIFFERENT
+	// vault must NOT be coalesced into this one (caregiver switched mid-load).
+	let inFlightKey: string | null = null;
 
 	/**
 	 * Decrypt raw docs, reusing plaintext from `cachedByEtag` when the
@@ -282,6 +285,16 @@ function createDocStore() {
 		return true;
 	}
 
+	// After a server write, guarantee a FRESH fetch even if a (pre-write) load
+	// is already in flight: await the in-flight one (so we don't interleave two
+	// set() sequences), then run a new load. Without this, a writer's reconcile
+	// load() would be coalesced into the stale in-flight read and the new doc
+	// wouldn't appear until the next load.
+	async function reloadAfterWrite(): Promise<boolean> {
+		if (loading && inFlight) { try { await inFlight; } catch { /* ignore */ } }
+		return store.load();
+	}
+
 	const store = {
 		subscribe,
 		async load(): Promise<boolean> {
@@ -291,10 +304,22 @@ function createDocStore() {
 			// promise instantly while $documents was still empty — so the
 			// dashboard flipped `loaded=true` with no blueprint yet and rendered
 			// its "no profile yet" onboarding state until a manual refresh.
-			if (loading) return inFlight ?? Promise.resolve(false);
+			// Capture the vault context ONCE so a mid-load activeVault change
+			// can't make this fetch write the wrong partition.
+			const ctx = resolveVault();
+			if (!ctx.masterKey) return false;
+			// Concurrent SAME-vault callers (layout post-login load + a page's
+			// onMount load) AWAIT the same in-flight fetch. A DIFFERENT vault
+			// (caregiver switched mid-load) must NOT piggyback on the previous
+			// vault's load — wait for it to settle, then run a fresh one.
+			if (loading) {
+				if (inFlightKey === ctx.cacheKey) return inFlight ?? Promise.resolve(false);
+				try { await inFlight; } catch { /* settle the prior vault's load */ }
+			}
 			loading = true;
+			inFlightKey = ctx.cacheKey;
 			inFlight = (async (): Promise<boolean> => {
-			const { masterKey, sourceUserId, cacheKey, username } = resolveVault();
+			const { masterKey, sourceUserId, cacheKey, username } = ctx;
 			if (!masterKey) return false;
 
 			const t0 = performance.now();
@@ -370,6 +395,7 @@ function createDocStore() {
 			} finally {
 				loading = false;
 				inFlight = null;
+				inFlightKey = null;
 			}
 		},
 		async save(data: any): Promise<boolean> {
@@ -394,7 +420,7 @@ function createDocStore() {
 					if (browser) {
 						try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch {}
 					}
-					await store.load();
+					await reloadAfterWrite();
 					return true;
 				}
 				if (isOfflineStatus(res.status)) return queueCreate(encrypted, data, ctx);
@@ -434,7 +460,7 @@ function createDocStore() {
 					: await api.updateDocument(id, encrypted);
 				if (res.ok) {
 					documentsError.set(null);
-					await store.load();
+					await reloadAfterWrite();
 					return true;
 				}
 				if (isOfflineStatus(res.status)) return queueUpdate(id, encrypted, data, ctx);
@@ -464,7 +490,7 @@ function createDocStore() {
 					: await api.deleteDocument(id);
 				if (res.ok) {
 					update((docs) => docs.filter((d) => d.id !== id));
-					await store.load();
+					await reloadAfterWrite();
 					return true;
 				}
 				if (isOfflineStatus(res.status)) return queueRemove(id, ctx);
@@ -528,19 +554,21 @@ function createDocStore() {
 
 			await refreshPendingCount(username);
 			if (flushed > 0) {
-				await store.load();
+				await reloadAfterWrite();
 				if (browser) {
 					try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch {}
 				}
 			}
 		},
+		// In-memory reset only. On logout/delete, auth.logout() wipes ALL
+		// on-disk partitions via clearAllPartitions(); on vault switch we WANT
+		// to keep the cache for fast re-entry. The old targeted clearDocs() here
+		// also resolved the wrong partition after auth state was reset (empty
+		// username → ':self'), so it wiped nothing useful anyway.
 		clear() {
 			set([]);
 			tempIdToNeg.clear();
-			const { cacheKey } = resolveVault();
-			if (browser && cacheKey) {
-				clearDocs(cacheKey).catch(() => {});
-			}
+			inFlightKey = null;
 		}
 	};
 

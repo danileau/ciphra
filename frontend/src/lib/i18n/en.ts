@@ -108,6 +108,7 @@ export default {
 	'companion.caregiver_revoked_desc': 'These accounts revoked your access. You can\'t see their data anymore.',
 	'companion.caregiver_revoked_cleanup': 'Clean up from settings →',
 	'family.link_revoked': 'Access revoked by owner',
+	'family.access_removed': 'Access to this account was removed.',
 	'family.remove': 'Remove',
 
 	// Family sharing (Approach C)

@@ -1735,7 +1735,9 @@
 	   global app.css prefers-reduced-motion block. */
 	.log-multiday-toggle:hover {
 		transform: translateY(-1px);
-		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+		/* Accent-tinted lift reads in both themes; a black shadow vanished on
+		   the dark surface. */
+		box-shadow: 0 2px 6px rgba(var(--accent-rgb), 0.15);
 		background: var(--surface-muted);
 	}
 	.log-multiday-toggle--on {

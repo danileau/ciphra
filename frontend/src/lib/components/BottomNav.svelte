@@ -166,9 +166,9 @@
 		/* CIPH-891 — cohort-aware nav active state. */
 		color: var(--accent);
 	}
-	.bn-tab--active .bn-label {
-		font-weight: 700;
-	}
+	/* Active state is marked by accent color + the 3px brand pill below; no
+	   font-weight bump — bolding the label widened it and nudged sibling tabs
+	   (1px layout shift) on every navigation. */
 	.bn-tab--active::before {
 		content: '';
 		position: absolute;

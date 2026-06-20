@@ -39,6 +39,14 @@ async function request(
 		window.dispatchEvent(new CustomEvent('ciphra:unauthorized'));
 	}
 
+	// A 403 on a linked patient's vault means the grant was revoked while the
+	// caregiver was viewing it. Distinct from 401 (own session is fine) — tell
+	// the shell to reconcile family links + snap back to the caregiver's own
+	// vault, instead of leaving a stuck switcher + generic "load failed" error.
+	if (res.status === 403 && token && path.startsWith('/family/documents') && typeof window !== 'undefined') {
+		window.dispatchEvent(new CustomEvent('ciphra:family-revoked'));
+	}
+
 	const data = await res.json();
 	return { ok: res.ok, status: res.status, data };
 }
