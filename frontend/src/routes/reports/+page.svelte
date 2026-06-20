@@ -222,7 +222,9 @@
 		for (const g of bp.symptomGroups) {
 			for (const item of g.items) {
 				if (curatedSet.has(item.id)) continue;
-				const hasData = exportableDocs.some((d: any) => {
+				// Custom items the user explicitly created are ALWAYS shown (even
+				// in months without data); preset extras stay data-gated.
+				const hasData = isCustomItem(item.id) || exportableDocs.some((d: any) => {
 					if (d.data?.type !== 'entry') return false;
 					if (!String(d.data?.date || '').startsWith(prefix)) return false;
 					return !!d.data.symptoms?.[item.id];
@@ -241,7 +243,7 @@
 			const extras: string[] = [];
 			for (const ep of bp.episodeTypes) {
 				if (curatedSet.has(ep.id)) continue;
-				const hasData = exportableDocs.some((d: any) => {
+				const hasData = isCustomItem(ep.id) || exportableDocs.some((d: any) => {
 					if (!isEpisodeBearing(d)) return false;
 					if (!String(d.data?.date || '').startsWith(prefix)) return false;
 					return (d.data.episodes?.[ep.id] || d.data.seizures?.[ep.id] || 0) > 0;
@@ -249,6 +251,25 @@
 				if (hasData) extras.push(ep.id);
 		}
 		return [...curated, ...extras];
+	})();
+
+	// CIPH — Trigger columns for the monthly table. The on-screen grid never
+	// had a trigger dimension, so logged Auslöser (preset OR custom) were
+	// invisible there. Mirror the symptom auto-expand: custom triggers are
+	// always shown; preset triggers appear once logged in the period.
+	$: effectiveTriggerColumns = ((): string[] => {
+		if (!bp) return [];
+		const prefix = currentDate.slice(0, 7);
+		const cols: string[] = [];
+		for (const tr of bp.triggers || []) {
+			const hasData = isCustomItem(tr.id) || exportableDocs.some((d: any) => {
+				if (d.data?.type !== 'entry') return false;
+				if (!String(d.data?.date || '').startsWith(prefix)) return false;
+				return getTrigger(d, tr.id);
+			});
+			if (hasData) cols.push(tr.id);
+		}
+		return cols;
 	})();
 
 	// CIPH-885 — Per-month "auto-added" ID sets, used to decorate column
@@ -280,6 +301,16 @@
 	function getSymptom(doc: any, col: string): boolean {
 		return doc?.data?.symptoms?.[col] || false;
 	}
+	// Triggers may be stored as a Record<string,boolean> (current) or a
+	// string[] (legacy / epilepc-migrated) — handle both.
+	function getTrigger(doc: any, col: string): boolean {
+		const trs = doc?.data?.triggers;
+		if (Array.isArray(trs)) return trs.includes(col);
+		return !!(trs && trs[col]);
+	}
+	function triggerSum(col: string): number {
+		return monthDocs.filter((d) => getTrigger(d, col)).length;
+	}
 	function getEpisodeCount(doc: any, col: string): number {
 		return doc?.data?.episodes?.[col] || doc?.data?.seizures?.[col] || 0;
 	}
@@ -304,7 +335,9 @@
 		}
 		const ep = bp.episodeTypes.find(e => e.id === id);
 		if (ep) return isCustomItem(ep.id) ? ep.label : $t(ep.label);
-		return id;
+		const tr = bp.triggers?.find(t => t.id === id);
+		if (tr) return isCustomItem(tr.id) ? tr.label : $t(tr.label);
+		return prettifyCustomId(id);
 	}
 
 	function changeMonth(delta: number) {
@@ -1002,6 +1035,22 @@
 		}
 	}
 
+	async function toggleGridTrigger(dayStr: string, triggerId: string) {
+		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
+		if (existing) {
+			// Normalize legacy array-shaped triggers to an object before toggling.
+			const cur = existing.data.triggers;
+			const obj: Record<string, boolean> = Array.isArray(cur)
+				? Object.fromEntries((cur as string[]).map((id) => [id, true]))
+				: { ...(cur || {}) };
+			obj[triggerId] = !obj[triggerId];
+			await documents.updateDoc(existing.id, { ...existing.data, triggers: obj });
+		} else {
+			const data: any = { type: 'entry', date: dayStr, symptoms: {}, episodes: {}, triggers: { [triggerId]: true }, vitals: {}, medications: {}, notes: '' };
+			await documents.save(data);
+		}
+	}
+
 	async function incrementGridEpisode(dayStr: string, episodeId: string) {
 		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
 		if (existing) {
@@ -1415,7 +1464,7 @@
 	{#if monthDocs.length > 0}
 	<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
 		<div class="overflow-x-auto">
-			<table class="grid-table w-full text-xs" class:grid-table--compact={effectiveSymptomColumns.length + effectiveEpisodeColumns.length >= 12} class:grid-table--ultra={effectiveSymptomColumns.length + effectiveEpisodeColumns.length >= 18}>
+			<table class="grid-table w-full text-xs" class:grid-table--compact={effectiveSymptomColumns.length + effectiveEpisodeColumns.length + effectiveTriggerColumns.length >= 12} class:grid-table--ultra={effectiveSymptomColumns.length + effectiveEpisodeColumns.length + effectiveTriggerColumns.length >= 18}>
 				<thead>
 					<tr class="bg-slate-50">
 						<th class="bg-slate-50 px-3 py-2 text-left font-medium text-slate-500 border-b border-slate-200">{$t('common.day')}</th>
@@ -1424,6 +1473,9 @@
 						{/each}
 						{#each effectiveEpisodeColumns as col}
 							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" class:rpt-col--auto={autoAddedEpisodeSet.has(col)} title={autoAddedEpisodeSet.has(col) ? $t('reports.col_auto_tooltip') : ''} style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{itemLabel(col)}{#if autoAddedEpisodeSet.has(col)}<span class="rpt-col-auto-dot" aria-label={$t('reports.col_auto_tooltip')}>·</span>{/if}</th>
+						{/each}
+						{#each effectiveTriggerColumns as col}
+							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" style="color: var(--ochre)">{itemLabel(col)}</th>
 						{/each}
 						<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200">{$t('common.notes')}</th>
 					</tr>
@@ -1492,6 +1544,24 @@
 									</div>
 								</td>
 							{/each}
+							{#each effectiveTriggerColumns as col}
+								{@const present = getTrigger(dayDoc, col)}
+								<td class="px-2 py-1.5 text-center grid-symptom-cell">
+									<button
+										type="button"
+										class="grid-symptom-toggle"
+										aria-pressed={present}
+										aria-label={`${dayStr} — ${itemLabel(col)}`}
+										on:click|stopPropagation={() => toggleGridTrigger(dayStr, col)}
+									>
+										{#if present}
+											<span class="inline-block w-4 h-4 rounded-sm" style="background: var(--ochre)"></span>
+										{:else}
+											<span class="inline-block w-4 h-4 rounded-sm" style="background: var(--surface-inset)"></span>
+										{/if}
+									</button>
+								</td>
+							{/each}
 							<td class="px-2 py-1.5 max-w-[240px] truncate" style="color: var(--text-secondary)">
 								{dayDoc?.data?.notes || ''}
 							</td>
@@ -1507,6 +1577,9 @@
 						{#each effectiveEpisodeColumns as col}
 							<td class="px-2 py-2 text-center font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{episodeSum(col)}</td>
 						{/each}
+						{#each effectiveTriggerColumns as col}
+							<td class="px-2 py-2 text-center text-slate-700">{triggerSum(col)}</td>
+						{/each}
 						<td></td>
 					</tr>
 					<tr class="bg-slate-50 text-slate-500">
@@ -1518,6 +1591,11 @@
 						{/each}
 						{#each effectiveEpisodeColumns as _}
 							<td></td>
+						{/each}
+						{#each effectiveTriggerColumns as col}
+							{@const total = daysInMonth}
+							{@const count = triggerSum(col)}
+							<td class="px-2 py-2 text-center text-xs">{total > 0 ? Math.round(count / total * 100) : 0}%</td>
 						{/each}
 						<td></td>
 					</tr>

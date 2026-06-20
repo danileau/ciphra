@@ -73,7 +73,11 @@
 		// follows the account, not the browser profile. Fire-and-forget —
 		// the local flip above already happened; a failed save just means
 		// the card may show once more on another device.
-		const bp = $resolvedBlueprint;
+		// MUST use the RAW blueprint, never $resolvedBlueprint: resolveBlueprint
+		// STRIPS customizations.custom* (it merges them into symptomGroups for a
+		// read-only view). Saving the resolved view here silently wiped every
+		// custom symptom/trigger/vital/episode on dismiss.
+		const bp = $blueprint;
 		if (bp) {
 			blueprint.save(applyWelcomeDismissed(bp, bpVariantKey)).catch(() => {});
 		}
