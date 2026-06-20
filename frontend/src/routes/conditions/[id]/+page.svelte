@@ -5,11 +5,14 @@
 	import type { ConditionInfo } from '$lib/conditionInfo';
 	import { iconPath } from '$lib/conditionIcons';
 	import Asterisk from '$lib/components/Asterisk.svelte';
-	import Toast from '$lib/components/Toast.svelte';
 	import { isAuthenticated } from '$lib/stores/auth';
-	import { blueprint, presets } from '$lib/blueprint';
-	import { goto } from '$app/navigation';
-	import { get } from 'svelte/store';
+
+	// NOTE: this page intentionally has NO in-app condition-switch. The
+	// one-blueprint model treats comorbidity as custom items, and a wholesale
+	// switch plain-resets the blueprint — orphaning custom symptoms/triggers
+	// (the last custom-data-loss vector). Removed 2026-06-20; see
+	// feedback_blueprint_model. The page is informational; the register CTA
+	// below shows to logged-out visitors only.
 
 	$: conditionId = $page.params.id || '';
 	$: info = conditionId ? conditionInfoMap[conditionId] as ConditionInfo | undefined : undefined;
@@ -18,37 +21,6 @@
 	$: relatedInfos = (info?.relatedConditions || [])
 		.map(id => conditionInfoMap[id])
 		.filter(Boolean);
-	$: matchingPreset = presets.find((p) => p.id === conditionId);
-
-	let switching = false;
-	let toastMsg = '';
-	let toastShow = false;
-
-	async function switchBlueprint() {
-		if (!matchingPreset) return;
-		const current = get(blueprint);
-		// You already track this condition — NEVER reset your own data. Switching
-		// to the condition you already have used to clone a bare preset over your
-		// blueprint, wiping your medication list + custom items. Just go to today.
-		if (current && current.conditionId === matchingPreset.blueprint.conditionId) {
-			goto('/log/today');
-			return;
-		}
-		// A real switch to a DIFFERENT condition adopts that condition's template
-		// cleanly (plain preset) — it does NOT carry over the previous condition's
-		// symptoms/triggers/medications. Confirm first, since it replaces the
-		// current setup. Logged entries (separate docs) are kept.
-		if (current && typeof confirm === 'function' && !confirm($t('conditions.switch_warn'))) return;
-		switching = true;
-		const newBp = JSON.parse(JSON.stringify(matchingPreset.blueprint));
-		const ok = await blueprint.save(newBp);
-		switching = false;
-		if (ok) {
-			toastMsg = $t('conditions.switch_confirm', { condition: $t(matchingPreset.labelKey) });
-			toastShow = true;
-			setTimeout(() => { goto('/log/today'); }, 1200);
-		}
-	}
 </script>
 
 <svelte:head>
@@ -86,9 +58,6 @@
 	{/if}
 </svelte:head>
 
-{#if toastShow}
-	<Toast message={toastMsg} bind:show={toastShow} />
-{/if}
 
 {#if !info}
 	<div class="min-h-screen flex items-center justify-center" style="background: var(--surface);">
@@ -127,19 +96,6 @@
 					<p class="text-lg mt-1" style="color: var(--text-muted);">{subtitle}</p>
 				</div>
 			</div>
-			{#if $isAuthenticated && matchingPreset}
-				<div class="mb-8 card-olive rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
-					<p class="text-sm" style="color: var(--text-primary);">{$t('conditions.switch_logged_in_hint')}</p>
-					<button
-						type="button"
-						on:click={switchBlueprint}
-						disabled={switching}
-						class="btn-primary inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm disabled:opacity-50"
-					>
-						{switching ? $t('common.loading') : $t('conditions.switch_cta')}
-					</button>
-				</div>
-			{/if}
 			<!-- Introduction -->
 			<article class="prose max-w-none mb-12">
 				<p class="text-lg leading-relaxed" style="color: var(--text-secondary);">{$t(info.introKey)}</p>
@@ -286,18 +242,22 @@
 				<Asterisk size={14} color="muted" />
 			</div>
 
-			<!-- CTA -->
-			<section class="text-center py-8">
-				<h2 class="text-2xl font-bold mb-3" style="color: var(--text-primary);">{$t('condition.cta_title')}</h2>
-				<p class="mb-6 max-w-lg mx-auto" style="color: var(--text-muted);">{$t('condition.cta_subtitle')}</p>
-				<a
-					href="/login?mode=register"
-					class="btn-primary inline-flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-lg"
-				>
-					{$t('condition.cta_button')}
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				</a>
-			</section>
+			<!-- CTA — register prompt, logged-out visitors only. A logged-in
+				 user on a condition page just reads the info; no switch, no
+				 register nag. -->
+			{#if !$isAuthenticated}
+				<section class="text-center py-8">
+					<h2 class="text-2xl font-bold mb-3" style="color: var(--text-primary);">{$t('condition.cta_title')}</h2>
+					<p class="mb-6 max-w-lg mx-auto" style="color: var(--text-muted);">{$t('condition.cta_subtitle')}</p>
+					<a
+						href="/login?mode=register"
+						class="btn-primary inline-flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-lg"
+					>
+						{$t('condition.cta_button')}
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</a>
+				</section>
+			{/if}
 		</main>
 
 		<!-- CIPH-917 — inline footer (cross-link to other conditions +
