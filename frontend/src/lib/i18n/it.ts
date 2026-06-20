@@ -217,7 +217,7 @@ export default {
 	'calendar.trigger_pressure_cell_empty': 'Giorno {day}, nessun fattore scatenante',
 	'conditions.switch_logged_in_hint': 'Passa il tuo monitoraggio a questa condizione',
 	'conditions.switch_confirm': 'Passato a {condition}. Il protocollo giornaliero mostra ora i nuovi campi.',
-	'conditions.switch_warn': 'Questo cambia il tuo monitoraggio con questo modello (sintomi, fattori scatenanti, parametri). I tuoi farmaci e le tue voci vengono mantenuti. Continuare?',
+	'conditions.switch_warn': 'Questo cambia il tuo monitoraggio con questo modello — sintomi, fattori scatenanti, parametri e farmaci vengono sostituiti. Le tue voci esistenti vengono mantenute. Continuare?',
 	'conditions.switch_cta': 'Usa questo modello',
 	'nav_section.symptoms': 'Sintomi',
 	'nav_section.episodes': 'Episodi',

@@ -217,7 +217,7 @@ export default {
 	'calendar.trigger_pressure_cell_empty': 'Day {day}, no triggers',
 	'conditions.switch_logged_in_hint': 'Switch your tracking to this condition',
 	'conditions.switch_confirm': 'Switched to {condition}. Your daily log now shows the new fields.',
-	'conditions.switch_warn': 'This switches your tracking to this template (symptoms, triggers, vitals). Your medications and your own entries are kept. Continue?',
+	'conditions.switch_warn': 'This switches your tracking to this template — symptoms, triggers, vitals and medications are replaced. Your existing entries are kept. Continue?',
 	'conditions.switch_cta': 'Use this template',
 	'nav_section.symptoms': 'Symptoms',
 	'nav_section.episodes': 'Episodes',

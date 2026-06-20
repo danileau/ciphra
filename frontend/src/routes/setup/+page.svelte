@@ -294,16 +294,11 @@
 
 	function selectPreset(preset: PresetInfo) {
 		working = JSON.parse(JSON.stringify(preset.blueprint));
-		// Switching template must not destroy an existing user's own data.
-		// Same condition → keep their whole blueprint; otherwise carry over the
-		// non-condition-specific parts (medications + customizations).
-		if (existingBlueprint && working) {
-			if (existingBlueprint.conditionId === preset.blueprint.conditionId) {
-				working = JSON.parse(JSON.stringify(existingBlueprint));
-			} else {
-				if (existingBlueprint.medications?.length) working.medications = JSON.parse(JSON.stringify(existingBlueprint.medications));
-				if (existingBlueprint.customizations) working.customizations = JSON.parse(JSON.stringify(existingBlueprint.customizations));
-			}
+		// Re-picking the SAME condition you already have keeps your whole
+		// blueprint (no destructive reset). Picking a DIFFERENT condition adopts
+		// that preset cleanly (plain) — each condition's blueprint is independent.
+		if (existingBlueprint && existingBlueprint.conditionId === preset.blueprint.conditionId) {
+			working = JSON.parse(JSON.stringify(existingBlueprint));
 		}
 		// Defaults: all groups / items / triggers / vitals ON (spec: "default ALL ON").
 		if (working) {

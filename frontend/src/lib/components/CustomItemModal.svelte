@@ -266,7 +266,7 @@
 		<div class="flex justify-end gap-2 pt-2">
 			<button
 				type="button"
-				class="btn-ghost min-h-[44px] px-4"
+				class="btn-secondary min-h-[44px] px-4"
 				on:click={close}
 				data-testid="custom-item-cancel"
 			>

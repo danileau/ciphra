@@ -217,7 +217,7 @@ export default {
 	'calendar.trigger_pressure_cell_empty': 'Jour {day}, aucun déclencheur',
 	'conditions.switch_logged_in_hint': 'Passer mon suivi à cette condition',
 	'conditions.switch_confirm': 'Passé à {condition}. Votre journal affiche désormais les nouveaux champs.',
-	'conditions.switch_warn': 'Cela bascule votre suivi vers ce modèle (symptômes, déclencheurs, constantes). Vos médicaments et vos propres entrées sont conservés. Continuer ?',
+	'conditions.switch_warn': 'Cela bascule votre suivi vers ce modèle — symptômes, déclencheurs, constantes et médicaments sont remplacés. Vos entrées existantes sont conservées. Continuer ?',
 	'conditions.switch_cta': 'Utiliser ce modèle',
 	'nav_section.symptoms': 'Symptômes',
 	'nav_section.episodes': 'Épisodes',

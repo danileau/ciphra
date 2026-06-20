@@ -34,17 +34,13 @@
 			goto('/log/today');
 			return;
 		}
-		// A real switch replaces the condition's symptom/trigger/vital setup —
-		// confirm it, since it's destructive.
+		// A real switch to a DIFFERENT condition adopts that condition's template
+		// cleanly (plain preset) — it does NOT carry over the previous condition's
+		// symptoms/triggers/medications. Confirm first, since it replaces the
+		// current setup. Logged entries (separate docs) are kept.
 		if (current && typeof confirm === 'function' && !confirm($t('conditions.switch_warn'))) return;
 		switching = true;
 		const newBp = JSON.parse(JSON.stringify(matchingPreset.blueprint));
-		// Carry over the user's own data that isn't condition-specific so a switch
-		// never silently deletes it: their medication list and custom items.
-		if (current) {
-			if (current.medications?.length) newBp.medications = JSON.parse(JSON.stringify(current.medications));
-			if (current.customizations) newBp.customizations = JSON.parse(JSON.stringify(current.customizations));
-		}
 		const ok = await blueprint.save(newBp);
 		switching = false;
 		if (ok) {

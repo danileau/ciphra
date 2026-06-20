@@ -393,13 +393,12 @@
 			selectedPreset = null;
 			return;
 		}
+		// A real switch to a DIFFERENT condition adopts that condition's template
+		// cleanly — a plain preset. It does NOT carry over the previous
+		// condition's symptoms/triggers/medications (each condition's blueprint
+		// is independent). Logged entries (separate docs) are untouched. The
+		// confirm dialog warns first.
 		const newBp = JSON.parse(JSON.stringify(selectedPreset.blueprint));
-		// Carry over non-condition-specific data so a switch can't wipe it:
-		// the medication list and custom items.
-		if (current) {
-			if (current.medications?.length) newBp.medications = JSON.parse(JSON.stringify(current.medications));
-			if (current.customizations) newBp.customizations = JSON.parse(JSON.stringify(current.customizations));
-		}
 		await blueprint.save(newBp);
 		showConfirmSwitch = false;
 		selectedPreset = null;
@@ -924,7 +923,7 @@
 								{#if section.kind !== 'episode'}
 									<button
 										type="button"
-										class="text-xs px-2 py-1 rounded min-h-[36px]"
+										class="text-xs px-2 py-1 rounded-lg min-h-[36px]"
 										style="color: var(--text-secondary); background: var(--surface-card); border: 1px solid var(--border)"
 										on:click={() => toggleCustomHidden(section.kind, item.id)}
 										data-testid="toggle-custom-{section.kind}-{item.id}"
@@ -934,7 +933,7 @@
 								{/if}
 								<button
 									type="button"
-									class="text-xs px-2 py-1 rounded min-h-[36px]"
+									class="text-xs px-2 py-1 rounded-lg min-h-[36px]"
 									style="color: var(--text-secondary); background: var(--surface-card); border: 1px solid var(--border)"
 									on:click={() => openCustomModal(section.kind, item)}
 									data-testid="edit-custom-{section.kind}-{item.id}"
@@ -943,7 +942,7 @@
 								</button>
 								<button
 									type="button"
-									class="text-xs px-2 py-1 rounded min-h-[36px]"
+									class="text-xs px-2 py-1 rounded-lg min-h-[36px]"
 									style="color: var(--brand); background: var(--surface-card); border: 1px solid var(--border)"
 									on:click={() => deleteCustom(section.kind, item)}
 									data-testid="delete-custom-{section.kind}-{item.id}"
