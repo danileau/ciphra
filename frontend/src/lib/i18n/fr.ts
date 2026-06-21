@@ -173,6 +173,7 @@ export default {
 	'auth.error_recovery': 'La récupération a échoué. Vérifiez les 12 mots et réessayez.',
 	'auth.error_password_short': 'Le mot de passe doit contenir au moins 12 caractères',
 	'auth.error_username_short': 'Le nom d\'utilisateur doit comporter au moins 3 caractères',
+	'auth.error_username_format': 'Le nom d\'utilisateur ne peut contenir que des lettres minuscules, des chiffres et des tirets bas.',
 
 	'companion.greeting': 'Bonjour {name}',
 	'companion.last_seizure': 'Dernière crise : {date}',

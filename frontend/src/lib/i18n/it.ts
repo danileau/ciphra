@@ -173,6 +173,7 @@ export default {
 	'auth.error_recovery': 'Recupero non riuscito. Controlla le 12 parole e riprova.',
 	'auth.error_password_short': 'La password deve contenere almeno 12 caratteri',
 	'auth.error_username_short': 'Il nome utente deve avere almeno 3 caratteri',
+	'auth.error_username_format': 'Il nome utente può contenere solo lettere minuscole, numeri e trattini bassi.',
 
 	'companion.greeting': 'Ciao {name}',
 	'companion.last_seizure': 'Ultima crisi: {date}',

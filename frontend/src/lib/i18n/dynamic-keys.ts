@@ -12,6 +12,11 @@
  * A prefix matches a key if the key starts with the prefix string.
  */
 export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
+	// SignupFlow username validation (2026-06-21) — the active username
+	// error is computed by usernameError() and rendered via `$t(userErrKey)`,
+	// so the specific key (auth.error_username_short / _format) is dynamic.
+	'auth.error_username_',
+
 	// PublicFooter theme switch (2026-06-12) — the three option labels
 	// are looked up via `$t(opt.labelKey)` from the THEME_OPTIONS array.
 	// theme_light / theme_dark / theme_system are also statically used
