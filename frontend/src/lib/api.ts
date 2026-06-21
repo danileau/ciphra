@@ -86,6 +86,20 @@ export async function storeDocument(encryptedData: string) {
 	});
 }
 
+// Track-3 3.4 — bulk import (used by /migrate). Up to 100 encrypted docs per
+// round-trip. `client_key` (opaque, optional) makes each blob idempotent so a
+// resumed migration re-sends the same batch without duplicating. Response:
+// { results: [{client_key, status: 'created'|'skipped'|'error', id?, error?}],
+//   created, skipped, errored }.
+export async function storeDocumentsBatch(
+	documents: { client_key?: string; encrypted_data: string }[]
+) {
+	return request('/documents/batch', {
+		method: 'POST',
+		body: JSON.stringify({ documents })
+	});
+}
+
 export async function getDocuments() {
 	return request('/documents');
 }

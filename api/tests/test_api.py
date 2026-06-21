@@ -223,6 +223,95 @@ class TestDocuments:
         )
         assert resp.status_code == 400
 
+    # --- Track-3 3.4: bulk import (POST /api/documents/batch) ---
+
+    def test_batch_creates_each_doc(self, client, mock_db, auth_token):
+        # Queue: token pwd_version, SELECT COUNT, then one RETURNING row per insert.
+        mock_db.queue(PWD_VERSION_ROW, {'n': 0}, {'id': 11}, {'id': 12})
+        resp = client.post('/api/documents/batch',
+            json={'documents': [
+                {'client_key': 'v1:aaa', 'encrypted_data': 'enc1'},
+                {'client_key': 'v1:bbb', 'encrypted_data': 'enc2'},
+            ]},
+            headers={'Authorization': f'Bearer {auth_token}'},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['created'] == 2 and data['skipped'] == 0 and data['errored'] == 0
+        assert [r['status'] for r in data['results']] == ['created', 'created']
+        assert data['results'][0]['client_key'] == 'v1:aaa'
+
+    def test_batch_skips_on_conflict(self, client, mock_db, auth_token):
+        # Second insert's RETURNING yields None → ON CONFLICT DID NOTHING → skipped.
+        mock_db.queue(PWD_VERSION_ROW, {'n': 0}, {'id': 21}, None)
+        resp = client.post('/api/documents/batch',
+            json={'documents': [
+                {'client_key': 'v1:new', 'encrypted_data': 'enc1'},
+                {'client_key': 'v1:dup', 'encrypted_data': 'enc2'},
+            ]},
+            headers={'Authorization': f'Bearer {auth_token}'},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['created'] == 1 and data['skipped'] == 1
+        assert [r['status'] for r in data['results']] == ['created', 'skipped']
+
+    def test_batch_per_blob_error_does_not_fail_batch(self, client, mock_db, auth_token):
+        # One blob missing encrypted_data → error; the valid one still inserts.
+        mock_db.queue(PWD_VERSION_ROW, {'n': 0}, {'id': 31})
+        resp = client.post('/api/documents/batch',
+            json={'documents': [
+                {'client_key': 'v1:bad'},
+                {'client_key': 'v1:ok', 'encrypted_data': 'enc'},
+            ]},
+            headers={'Authorization': f'Bearer {auth_token}'},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['errored'] == 1 and data['created'] == 1
+        assert data['results'][0]['status'] == 'error'
+        assert data['results'][1]['status'] == 'created'
+
+    def test_batch_quota_overflow_partial_fills(self, client, mock_db, auth_token):
+        # Start one under quota: first doc fits, second is over → quota_exceeded.
+        import server
+        mock_db.queue(PWD_VERSION_ROW, {'n': server.DOCUMENT_QUOTA_PER_USER - 1}, {'id': 41})
+        resp = client.post('/api/documents/batch',
+            json={'documents': [
+                {'client_key': 'v1:a', 'encrypted_data': 'e1'},
+                {'client_key': 'v1:b', 'encrypted_data': 'e2'},
+            ]},
+            headers={'Authorization': f'Bearer {auth_token}'},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['created'] == 1 and data['errored'] == 1
+        assert data['results'][1]['error'] == 'quota_exceeded'
+
+    def test_batch_rejects_empty(self, client, mock_db, auth_token):
+        mock_db.queue(PWD_VERSION_ROW)
+        resp = client.post('/api/documents/batch',
+            json={'documents': []},
+            headers={'Authorization': f'Bearer {auth_token}'},
+        )
+        assert resp.status_code == 400
+
+    def test_batch_rejects_too_large(self, client, mock_db, auth_token):
+        mock_db.queue(PWD_VERSION_ROW)
+        big = [{'client_key': f'v1:{i}', 'encrypted_data': 'e'} for i in range(101)]
+        resp = client.post('/api/documents/batch',
+            json={'documents': big},
+            headers={'Authorization': f'Bearer {auth_token}'},
+        )
+        assert resp.status_code == 400
+        assert resp.get_json()['error'] == 'batch_too_large'
+
+    def test_batch_requires_auth(self, client, mock_db):
+        resp = client.post('/api/documents/batch',
+            json={'documents': [{'encrypted_data': 'e'}]},
+        )
+        assert resp.status_code == 401
+
     def test_get_documents(self, client, mock_db, auth_token):
         now = datetime.now(timezone.utc)
         # Queue: token pwd_version, then fetchall payload.
