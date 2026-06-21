@@ -43,9 +43,25 @@
 	let error = '';
 	let technicalError = '';
 
+	// Username rule (mirrors the server): the value is normalized to
+	// trim().toLowerCase() before use, and must be >=3 chars of [a-z0-9_].
+	// Validated in JS with styled errors — the form is `novalidate` so the
+	// browser's native bubbles ("Please match the requested format" from a
+	// `pattern` attr, "Please fill out this field" from `required`) never
+	// appear in their own un-styled, browser-locale chrome.
+	const USERNAME_RE = /^[a-z0-9_]+$/;
+	/** First username error i18n key, or '' when valid. */
+	function usernameError(raw: string): string {
+		const u = raw.trim().toLowerCase();
+		if (u.length < 3) return 'auth.error_username_short';
+		if (!USERNAME_RE.test(u)) return 'auth.error_username_format';
+		return '';
+	}
+
 	// A11y validation reactives — used by aria-invalid + aria-describedby
 	// linking on the inputs (PI v13 a11y review LB-2).
-	$: userInvalid = touched.user && username.length > 0 && username.length < 3;
+	$: userErrKey = touched.user && username.length > 0 ? usernameError(username) : '';
+	$: userInvalid = userErrKey !== '';
 	$: passInvalid = touched.pass && password.length > 0 && password.length < 12;
 	$: pass2Invalid = touched.pass2 && confirm.length > 0 && password !== confirm;
 
@@ -78,6 +94,12 @@
 	async function handleRegister() {
 		error = '';
 		technicalError = '';
+		const uErr = usernameError(username);
+		if (uErr) {
+			touched.user = true;
+			setError($t(uErr));
+			return;
+		}
 		if (password !== confirm) {
 			setError($t('auth.error_password_match'));
 			return;
@@ -183,17 +205,17 @@
 </script>
 
 {#if !showRecovery}
-	<form on:submit|preventDefault={handleRegister} class="space-y-4">
+	<form on:submit|preventDefault={handleRegister} class="space-y-4" novalidate>
 		<div>
 			<label for="signup-user" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.username')}</label>
-			<input id="signup-user" type="text" bind:value={username} required minlength="3" pattern="[a-z0-9_]+"
+			<input id="signup-user" type="text" bind:value={username}
 				autocomplete="username"
 				on:blur={() => { touched.user = true; }}
 				aria-invalid={userInvalid}
 				aria-describedby={userInvalid ? 'signup-user-err' : undefined}
 				class="input" />
-			{#if userInvalid}
-				<p id="signup-user-err" class="text-xs mt-1" style="color: var(--danger)">{$t('auth.error_username_short')}</p>
+			{#if userErrKey}
+				<p id="signup-user-err" class="text-xs mt-1" style="color: var(--danger)">{$t(userErrKey)}</p>
 			{/if}
 		</div>
 		<div>

@@ -183,7 +183,7 @@
 						<p class="text-sm text-center mb-4" style="color: var(--text-muted)">{$t('auth.register_continuity')}</p>
 						<SignupFlow on:signup-complete={handleSignupComplete} />
 					{:else if tab === 'recovery'}
-						<form on:submit|preventDefault={handleRecover} class="space-y-4">
+						<form on:submit|preventDefault={handleRecover} class="space-y-4" novalidate>
 							<div>
 								<label for="rec-user" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.username')}</label>
 								<input id="rec-user" type="text" bind:value={recUser} required minlength="3"

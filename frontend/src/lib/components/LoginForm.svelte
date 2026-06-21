@@ -88,7 +88,7 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleLogin} class="space-y-4">
+<form on:submit|preventDefault={handleLogin} class="space-y-4" novalidate>
 	{#if error}
 		<div class="rounded-xl p-3" style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)">
 			<p class="text-sm" style="color: var(--danger)">{error}</p>

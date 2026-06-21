@@ -173,6 +173,7 @@ export default {
 	'auth.error_recovery': 'Recovery didn\'t work. Double-check the 12 words and try again.',
 	'auth.error_password_short': 'Password must be at least 12 characters',
 	'auth.error_username_short': 'Username must be at least 3 characters',
+	'auth.error_username_format': 'Username may only contain lowercase letters, numbers, and underscores.',
 
 	'companion.greeting': 'Hello {name}',
 	'companion.last_seizure': 'Last seizure: {date}',

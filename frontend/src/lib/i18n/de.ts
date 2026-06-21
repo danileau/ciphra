@@ -178,6 +178,7 @@ export default {
 	'auth.error_recovery': 'Wiederherstellung hat nicht geklappt. Bitte die 12 Wörter nochmals prüfen.',
 	'auth.error_password_short': 'Passwort muss mindestens 12 Zeichen lang sein',
 	'auth.error_username_short': 'Benutzername muss mindestens 3 Zeichen lang sein',
+	'auth.error_username_format': 'Benutzername darf nur Kleinbuchstaben, Zahlen und Unterstriche enthalten.',
 
 	// Companion
 	'companion.greeting': 'Hallo {name}',
