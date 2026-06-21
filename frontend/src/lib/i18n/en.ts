@@ -2143,6 +2143,8 @@ export default {
 	'migrate.not_found_body': 'This page is only reachable via a migration link.',
 	'migrate.welcome_title': 'Welcome to ciphra',
 	'migrate.welcome_body': 'ciphra is a separate service — not epilepc. Your epilepc login will not work here; please create a new, encrypted ciphra account. Your data from {source} will then be encrypted and copied into your new account before epilepc is retired.',
+	'migrate.existing_title': 'You already have an account',
+	'migrate.existing_body': 'This account already exists — you most likely started the migration earlier. Log in with your password and the transfer resumes from where you left off.',
 	'migrate.signup_continue': 'Create account',
 	'migrate.fetch_bundle': 'Load data from source',
 	'migrate.phase_building_vault': 'Building your encrypted vault…',

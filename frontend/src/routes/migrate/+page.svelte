@@ -27,6 +27,7 @@
 	import { documents } from '$lib/stores/documents';
 	import { migrationClientKey } from '$lib/migrationKey';
 	import SignupFlow from '$lib/components/SignupFlow.svelte';
+	import LoginForm from '$lib/components/LoginForm.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import { blueprint } from '$lib/blueprint/store';
 	import {
@@ -42,6 +43,7 @@
 		| 'init'
 		| 'no-fragment'
 		| 'signup'
+		| 'login-existing'
 		| 'confirm-origin'
 		| 'fetching'
 		| 'fetch-error'
@@ -70,6 +72,8 @@
 
 	let bundle: EpilepcBundle | null = null;
 	let mapped: MappedDocs | null = null;
+	// CIPH 3.6 — username carried over from a 409 signup into the resume-login.
+	let existingUsername = '';
 
 	let progressDone = 0;
 	let progressTotal = 0;
@@ -179,6 +183,20 @@
 		// SignupFlow has already created the vault and populated the auth store.
 		// Recovery acknowledgment gate has passed — now require origin confirmation
 		// before any bytes are pulled from the epilepc source (CIPH-721).
+		phase = 'confirm-origin';
+	}
+
+	// CIPH 3.6 — the account already exists (the user reloaded after a prior
+	// signup that did create it server-side, but the session was lost). Offer to
+	// log in and continue, in-place, so the URL-fragment migrate token survives.
+	function handleUsernameExists(e: CustomEvent<{ username: string }>) {
+		existingUsername = e.detail.username;
+		phase = 'login-existing';
+	}
+	function handleLoginComplete() {
+		// Vault unlocked (master_key in the auth store) → resume exactly where a
+		// fresh signup would: origin confirmation, then fetch + import. The
+		// localStorage checkpoint means already-saved docs are skipped.
 		phase = 'confirm-origin';
 	}
 
@@ -451,7 +469,22 @@
 						<p class="text-sm mb-6" style="color: var(--text-secondary)">
 							{$t('migrate.welcome_body', { source })}
 						</p>
-						<SignupFlow source="migrate" on:signup-complete={handleSignupComplete} />
+						<SignupFlow
+							source="migrate"
+							on:signup-complete={handleSignupComplete}
+							on:username-exists={handleUsernameExists}
+						/>
+					{:else if phase === 'login-existing'}
+						<!-- CIPH 3.6 — account already exists (reload after a prior
+						     signup). Log in in-place; the URL-fragment migrate token
+						     is preserved, and the import resumes from the checkpoint. -->
+						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
+							{$t('migrate.existing_title')}
+						</h1>
+						<p class="text-sm mb-6" style="color: var(--text-secondary)">
+							{$t('migrate.existing_body')}
+						</p>
+						<LoginForm initialUsername={existingUsername} on:login-complete={handleLoginComplete} />
 					{:else if phase === 'confirm-origin'}
 						<!-- Design review 2026-06-11 — from→to reading order (source
 						     above target), machine origin-check with hard-stop on

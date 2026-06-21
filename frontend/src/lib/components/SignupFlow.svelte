@@ -28,7 +28,7 @@
 		generateRecoveryPdf(username.trim().toLowerCase(), recoveryCode, $t, $locale);
 	}
 
-	const dispatch = createEventDispatcher<{ 'signup-complete': void }>();
+	const dispatch = createEventDispatcher<{ 'signup-complete': void; 'username-exists': { username: string } }>();
 
 	// Metadata-only tag passed to /api/register. The migrate route sets this
 	// to 'migrate' so /admin can count epilepc migrations vs organic signups.
@@ -119,6 +119,15 @@
 			const bundle = await createVault(uname, password, true);
 			const reg = await api.register(bundle, source);
 			if (!reg.ok) {
+				// CIPH 3.6 — during a migration, a 409 almost always means the user
+				// reloaded after their account was already created on a prior attempt
+				// (Track-2 gotcha #7). Hand the parent (/migrate) the username so it
+				// can offer "log in and continue" instead of a dead-end error. The
+				// register tab passes no source → falls through to the error below.
+				if (source === 'migrate' && reg.status === 409) {
+					dispatch('username-exists', { username: username.trim().toLowerCase() });
+					return;
+				}
 				// Status-aware copy. Server is enumeration-resistant (409 also covers
 				// bundle-bad), so 409 still maps to "username taken" — that's the
 				// most useful message for the dominant case. Other statuses must NOT

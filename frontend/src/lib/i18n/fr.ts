@@ -2122,6 +2122,8 @@ export default {
 	'migrate.not_found_body': 'Cette page est uniquement accessible via un lien de migration.',
 	'migrate.welcome_title': 'Bienvenue sur ciphra',
 	'migrate.welcome_body': 'ciphra est un service distinct — ce n\'est pas epilepc. Votre identifiant epilepc ne fonctionne pas ici ; créez un nouveau compte ciphra chiffré. Vos données depuis {source} seront ensuite chiffrées et copiées dans votre nouveau compte, avant que epilepc ne soit mis hors service.',
+	'migrate.existing_title': 'Vous avez déjà un compte',
+	'migrate.existing_body': 'Ce compte existe déjà — vous avez probablement déjà commencé la migration. Connectez-vous avec votre mot de passe et le transfert reprend là où vous vous étiez arrêté.',
 	'migrate.signup_continue': 'Créer le compte',
 	'migrate.fetch_bundle': 'Charger les données depuis la source',
 	'migrate.phase_building_vault': 'Création du coffre chiffré…',
