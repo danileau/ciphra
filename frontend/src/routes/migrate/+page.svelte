@@ -25,6 +25,7 @@
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import { get } from 'svelte/store';
 	import { documents } from '$lib/stores/documents';
+	import { migrationClientKey } from '$lib/migrationKey';
 	import SignupFlow from '$lib/components/SignupFlow.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import { blueprint } from '$lib/blueprint/store';
@@ -261,22 +262,53 @@
 				medications: mergeMedications(current.medications || [], mapped.medications),
 			};
 			await blueprint.save(next);
-			// Save each doc (skip already-checkpointed)
-			const saveOne = async (doc: Record<string, unknown>) => {
-				const sid = doc.source_id as string;
-				if (done.has(sid)) {
-					progressDone += 1;
-					return;
+			// Track-3 3.4 — bulk import. One request per BATCH_SIZE docs instead
+			// of one per doc (233 docs → 3 requests). Idempotent server-side via
+			// an opaque client_key = "v1:" + base64url(sha256(username:source_id)),
+			// so a resumed/retried batch returns `skipped`, never a duplicate —
+			// this is the durable guarantee; the localStorage `done` checkpoint is
+			// now just a fast-path skip. created+skipped both count as success.
+			const uname = get(auth).username || '';
+			const allDocs = [...mapped.entries, ...mapped.events, ...mapped.diaries];
+			// Already-checkpointed docs count toward progress without re-sending.
+			const pending = allDocs.filter((d) => {
+				const sid = d.source_id as string;
+				if (done.has(sid)) { progressDone += 1; return false; }
+				return true;
+			});
+
+			const BATCH_SIZE = 100;
+			for (let i = 0; i < pending.length; i += BATCH_SIZE) {
+				const chunk = pending.slice(i, i + BATCH_SIZE);
+				const items = await Promise.all(
+					chunk.map(async (d) => ({ data: d, clientKey: await migrationClientKey(uname, d.source_id as string) })),
+				);
+				const { ok, results } = await documents.saveBatch(items);
+				// Fall back to per-doc save if the batch endpoint is unavailable
+				// (older server / network): same end state, just slower.
+				if (!ok) {
+					for (const d of chunk) {
+						const sid = d.source_id as string;
+						const saved = await documents.save(d);
+						if (!saved) throw new Error(`save_failed:${sid}`);
+						done.add(sid);
+						saveCheckpoint(done);
+						progressDone += 1;
+					}
+					continue;
 				}
-				const ok = await documents.save(doc);
-				if (!ok) throw new Error(`save_failed:${sid}`);
-				done.add(sid);
+				for (let j = 0; j < chunk.length; j++) {
+					const sid = chunk[j].source_id as string;
+					const status = results[j]?.status;
+					if (status === 'created' || status === 'skipped') {
+						done.add(sid);
+						progressDone += 1;
+					} else {
+						throw new Error(`save_failed:${sid}:${results[j]?.error || status || 'unknown'}`);
+					}
+				}
 				saveCheckpoint(done);
-				progressDone += 1;
-			};
-			for (const d of mapped.entries) await saveOne(d);
-			for (const d of mapped.events) await saveOne(d);
-			for (const d of mapped.diaries) await saveOne(d);
+			}
 
 			clearCheckpoint();
 			// Slice 3b — signal the source (epilepc) that the import succeeded.

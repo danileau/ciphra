@@ -262,6 +262,21 @@ def init_db():
                 EXCEPTION WHEN duplicate_column THEN NULL;
                 END $$
             """)
+            # Track-3 3.4 — bulk-import idempotency. `client_key` is an OPAQUE,
+            # server-blind token the client supplies (sha256(username:source_id))
+            # so a retried migration batch is a no-op instead of duplicating docs.
+            # Nullable + a PARTIAL unique index → existing rows and all normal
+            # single-doc saves (which never set it) stay NULL and never collide.
+            cur.execute("""
+                DO $$ BEGIN
+                    ALTER TABLE encrypted_documents ADD COLUMN client_key TEXT;
+                EXCEPTION WHEN duplicate_column THEN NULL;
+                END $$
+            """)
+            cur.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_docs_user_clientkey
+                ON encrypted_documents (user_id, client_key) WHERE client_key IS NOT NULL
+            """)
     logger.info("Database initialized")
 
 
@@ -688,6 +703,82 @@ def store_document():
     except Exception:
         logger.exception("Store document failed")
         return jsonify({'error': 'Failed to store document'}), 500
+
+
+# Track-3 3.4 — bulk import. One round-trip stores up to BATCH_MAX_DOCS encrypted
+# docs (vs one request per doc, the reason for the migration rate-limit bump).
+# Partial-success: each blob gets its own status; one bad blob never fails the
+# batch. Idempotent via the opaque client_key (ON CONFLICT DO NOTHING), so a
+# retried/resumed migration re-sends the same batch and gets `skipped`, not
+# duplicates. Additive — the single POST /api/documents above is unchanged.
+BATCH_MAX_DOCS = int(os.environ.get('BATCH_MAX_DOCS', 100))
+
+
+@app.route('/api/documents/batch', methods=['POST'])
+@limiter.limit("30 per minute")
+@token_required
+def store_documents_batch():
+    data = request.get_json() or {}
+    docs = data.get('documents')
+    if not isinstance(docs, list) or len(docs) == 0:
+        return jsonify({'error': 'documents must be a non-empty array'}), 400
+    if len(docs) > BATCH_MAX_DOCS:
+        return jsonify({'error': 'batch_too_large', 'max': BATCH_MAX_DOCS}), 400
+
+    results = []
+    created = skipped = errored = 0
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) AS n FROM encrypted_documents WHERE user_id = %s",
+                    (request.user_id,),
+                )
+                count = cur.fetchone()['n']
+                for d in docs:
+                    ck = d.get('client_key') if isinstance(d, dict) else None
+                    enc = d.get('encrypted_data') if isinstance(d, dict) else None
+                    if not enc:
+                        results.append({'client_key': ck, 'status': 'error', 'error': 'missing encrypted_data'})
+                        errored += 1
+                        continue
+                    if count >= DOCUMENT_QUOTA_PER_USER:
+                        results.append({'client_key': ck, 'status': 'error', 'error': 'quota_exceeded'})
+                        errored += 1
+                        continue
+                    if ck:
+                        cur.execute("""
+                            INSERT INTO encrypted_documents (user_id, encrypted_data, client_key)
+                            VALUES (%s, %s, %s)
+                            ON CONFLICT (user_id, client_key) DO NOTHING
+                            RETURNING id
+                        """, (request.user_id, enc, ck))
+                    else:
+                        cur.execute("""
+                            INSERT INTO encrypted_documents (user_id, encrypted_data)
+                            VALUES (%s, %s) RETURNING id
+                        """, (request.user_id, enc))
+                    row = cur.fetchone()
+                    if row:
+                        results.append({'client_key': ck, 'status': 'created', 'id': row['id']})
+                        created += 1
+                        count += 1
+                    else:
+                        # ON CONFLICT did nothing → this client_key already exists
+                        # for this user (idempotent replay).
+                        results.append({'client_key': ck, 'status': 'skipped'})
+                        skipped += 1
+                if created:
+                    audit(conn, request.user_id, 'DOC_BATCH_CREATED')
+        return jsonify({
+            'results': results,
+            'created': created,
+            'skipped': skipped,
+            'errored': errored,
+        }), 200
+    except Exception:
+        logger.exception("Batch store failed")
+        return jsonify({'error': 'Failed to store documents'}), 500
 
 
 @app.route('/api/documents', methods=['GET'])

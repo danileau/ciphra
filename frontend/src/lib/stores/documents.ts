@@ -432,6 +432,44 @@ function createDocStore() {
 				return false;
 			}
 		},
+		// Track-3 3.4 — bulk create for the migration import. SELF-VAULT ONLY
+		// (migration imports into your own new account; no family batch path).
+		// Encrypts each item with the master key, posts one batch, and returns
+		// the server's per-item results (status created|skipped|error) aligned to
+		// the input order. NOT offline-queued — migration is an online,
+		// resumable-via-client_key flow, and queueing partial batches would
+		// muddy the idempotency story. Falls back to per-doc save() at the call
+		// site if this returns ok:false.
+		async saveBatch(
+			items: { data: any; clientKey?: string }[]
+		): Promise<{ ok: boolean; results: Array<{ client_key?: string; status: string; id?: number; error?: string }> }> {
+			const ctx = resolveVault();
+			if (!ctx.masterKey || ctx.sourceUserId) return { ok: false, results: [] };
+			const payload: { client_key?: string; encrypted_data: string }[] = [];
+			try {
+				for (const it of items) {
+					const enc = await encryptDocument(it.data, ctx.masterKey);
+					payload.push(it.clientKey ? { client_key: it.clientKey, encrypted_data: enc } : { encrypted_data: enc });
+				}
+			} catch {
+				documentsError.set('Failed to save document');
+				return { ok: false, results: [] };
+			}
+			try {
+				const res = await api.storeDocumentsBatch(payload);
+				if (res.ok) {
+					documentsError.set(null);
+					if (browser) { try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch { /* ignore */ } }
+					await reloadAfterWrite();
+					return { ok: true, results: (res.data.results as any[]) || [] };
+				}
+				documentsError.set('Failed to save document');
+				return { ok: false, results: [] };
+			} catch {
+				documentsError.set('Failed to save document');
+				return { ok: false, results: [] };
+			}
+		},
 		async updateDoc(id: number, data: any): Promise<boolean> {
 			const ctx = resolveVault();
 			if (!ctx.masterKey) return false;
