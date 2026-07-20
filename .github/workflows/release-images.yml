@@ -66,6 +66,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           provenance: true
+          # SHA cache-bust: forces the OS-upgrade / npm-strip layer to re-run
+          # each release so :latest can't drift behind fixed-upstream CVEs
+          # while the gha cache replays a stale layer (see the Dockerfiles).
+          build-args: |
+            CACHEBUST=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - uses: sigstore/cosign-installer@v3
@@ -97,6 +102,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           provenance: true
+          # SHA cache-bust — re-run apt upgrade each release (see api/Dockerfile).
+          build-args: |
+            CACHEBUST=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - uses: sigstore/cosign-installer@v3
@@ -129,6 +137,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           provenance: true
+          # SHA cache-bust — re-run apk upgrade each release (see nginx/Dockerfile.prod).
+          build-args: |
+            CACHEBUST=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - uses: sigstore/cosign-installer@v3
