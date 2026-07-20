@@ -15,7 +15,12 @@
 
 	const dispatch = createEventDispatcher<{ 'login-complete': void }>();
 
-	let loginUser = '';
+	// Optional pre-fill (e.g. the migrate "you already have an account" resume,
+	// which knows the username from the failed signup). Defaults to empty so the
+	// normal /login form is unchanged.
+	export let initialUsername = '';
+
+	let loginUser = initialUsername;
 	let loginPass = '';
 	let loading = false;
 	// Separate phase label so users see progress during the ~1–7s Argon2id

@@ -16,7 +16,7 @@
 	arrived from.
 -->
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n';
@@ -27,6 +27,7 @@
 	import { documents } from '$lib/stores/documents';
 	import { migrationClientKey } from '$lib/migrationKey';
 	import SignupFlow from '$lib/components/SignupFlow.svelte';
+	import LoginForm from '$lib/components/LoginForm.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import { blueprint } from '$lib/blueprint/store';
 	import {
@@ -42,6 +43,7 @@
 		| 'init'
 		| 'no-fragment'
 		| 'signup'
+		| 'login-existing'
 		| 'confirm-origin'
 		| 'fetching'
 		| 'fetch-error'
@@ -70,9 +72,26 @@
 
 	let bundle: EpilepcBundle | null = null;
 	let mapped: MappedDocs | null = null;
+	// CIPH 3.6 — username carried over from a 409 signup into the resume-login.
+	let existingUsername = '';
 
 	let progressDone = 0;
 	let progressTotal = 0;
+
+	// CIPH 3.5 — elapsed-time counter. The fetch of a large bundle can take a
+	// couple of minutes; a bare spinner reads as "hung". One timer spans fetch
+	// + import so the user always sees it's still working.
+	let elapsedSec = 0;
+	let elapsedTimer: ReturnType<typeof setInterval> | null = null;
+	function startElapsed() {
+		if (!browser || elapsedTimer) return;
+		elapsedSec = 0;
+		elapsedTimer = setInterval(() => { elapsedSec += 1; }, 1000);
+	}
+	function stopElapsed() {
+		if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+	}
+	onDestroy(stopElapsed);
 
 	// CIPH-760 — preview date range across all imported collections.
 	let dateRangeStart = '';
@@ -167,6 +186,20 @@
 		phase = 'confirm-origin';
 	}
 
+	// CIPH 3.6 — the account already exists (the user reloaded after a prior
+	// signup that did create it server-side, but the session was lost). Offer to
+	// log in and continue, in-place, so the URL-fragment migrate token survives.
+	function handleUsernameExists(e: CustomEvent<{ username: string }>) {
+		existingUsername = e.detail.username;
+		phase = 'login-existing';
+	}
+	function handleLoginComplete() {
+		// Vault unlocked (master_key in the auth store) → resume exactly where a
+		// fresh signup would: origin confirmation, then fetch + import. The
+		// localStorage checkpoint means already-saved docs are skipped.
+		phase = 'confirm-origin';
+	}
+
 	function confirmOriginAndFetch() {
 		if (!originConfirmed) return;
 		fetchBundle();
@@ -177,6 +210,7 @@
 		busy = true;
 		phase = 'fetching';
 		busyLabel = $t('migrate.phase_fetching');
+		startElapsed();
 		try {
 			// Token + source are URL-fragment values, not server-known.
 			// Fetch goes directly to the epilepc host.
@@ -242,6 +276,8 @@
 		} finally {
 			busy = false;
 			busyLabel = '';
+			// Stop counting while the user reads the preview / error.
+			stopElapsed();
 		}
 	}
 
@@ -249,6 +285,7 @@
 		if (!mapped) return;
 		phase = 'importing';
 		busy = true;
+		startElapsed();
 		const done = loadCheckpoint();
 		try {
 			// Load existing docs first so blueprint.loadFromDocuments has data
@@ -335,6 +372,7 @@
 			phase = 'preview';
 		} finally {
 			busy = false;
+			stopElapsed();
 		}
 	}
 
@@ -431,7 +469,22 @@
 						<p class="text-sm mb-6" style="color: var(--text-secondary)">
 							{$t('migrate.welcome_body', { source })}
 						</p>
-						<SignupFlow source="migrate" on:signup-complete={handleSignupComplete} />
+						<SignupFlow
+							source="migrate"
+							on:signup-complete={handleSignupComplete}
+							on:username-exists={handleUsernameExists}
+						/>
+					{:else if phase === 'login-existing'}
+						<!-- CIPH 3.6 — account already exists (reload after a prior
+						     signup). Log in in-place; the URL-fragment migrate token
+						     is preserved, and the import resumes from the checkpoint. -->
+						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
+							{$t('migrate.existing_title')}
+						</h1>
+						<p class="text-sm mb-6" style="color: var(--text-secondary)">
+							{$t('migrate.existing_body')}
+						</p>
+						<LoginForm initialUsername={existingUsername} on:login-complete={handleLoginComplete} />
 					{:else if phase === 'confirm-origin'}
 						<!-- Design review 2026-06-11 — from→to reading order (source
 						     above target), machine origin-check with hard-stop on
@@ -540,7 +593,14 @@
 						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
 							{$t('migrate.phase_fetching')}
 						</h1>
-						<p class="text-sm" style="color: var(--text-secondary)">{busyLabel}</p>
+						<!-- Indeterminate bar: the source doesn't stream a length, so
+							 we can't show a real %. The animation + elapsed counter make
+							 clear it's working, not frozen (CIPH 3.5). -->
+						<div class="w-full rounded-full h-2 mb-2 migrate-indeterminate" style="background: var(--surface-inset)">
+							<div class="h-2 rounded-full migrate-indeterminate-bar" style="background: var(--brand)"></div>
+						</div>
+						<p class="text-sm" style="color: var(--text-secondary)">{$t('migrate.fetching_hint')}</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted)">{$t('migrate.elapsed', { sec: elapsedSec })}</p>
 					{:else if phase === 'fetch-error'}
 						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
 							{$t('migrate.error_title')}
@@ -604,7 +664,7 @@
 							{$t('migrate.importing_title')}
 						</h1>
 						<p class="text-sm mb-3" style="color: var(--text-secondary)">
-							{progressDone} / {progressTotal}
+							{progressDone} / {progressTotal}{progressTotal > 0 ? ` · ${Math.round((progressDone / progressTotal) * 100)}%` : ''}
 						</p>
 						<div class="w-full rounded-full h-2 mb-2" style="background: var(--surface-inset)">
 							<div
@@ -617,10 +677,14 @@
 						<p class="text-xs" style="color: var(--text-muted)">
 							{$t('migrate.importing_status', { done: progressDone, total: progressTotal })}
 						</p>
+						<p class="text-xs mt-1" style="color: var(--text-muted)">{$t('migrate.elapsed', { sec: elapsedSec })}</p>
 					{:else if phase === 'done'}
 						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
 							{$t('migrate.done_title')}
 						</h1>
+						{#if progressTotal > 0}
+							<p class="text-sm mb-1" style="color: var(--text-primary)">{$t('migrate.done_count', { count: progressTotal })}</p>
+						{/if}
 						<p class="text-sm" style="color: var(--text-secondary)">{$t('migrate.done_body')}</p>
 					{/if}
 				</div>
@@ -632,3 +696,22 @@
 		</p>
 	</div>
 </main>
+
+<style>
+	/* CIPH 3.5 — indeterminate progress bar for the fetch phase (no known
+	   length to show a real %). A segment sweeps left to right to signal work. */
+	.migrate-indeterminate {
+		overflow: hidden;
+	}
+	.migrate-indeterminate-bar {
+		width: 40%;
+		animation: migrate-sweep 1.4s ease-in-out infinite;
+	}
+	@keyframes migrate-sweep {
+		0% { margin-left: -40%; }
+		100% { margin-left: 100%; }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.migrate-indeterminate-bar { animation: none; width: 100%; opacity: 0.5; }
+	}
+</style>
