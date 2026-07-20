@@ -34,6 +34,7 @@ export interface InsightDoc {
 		vitals?: Record<string, unknown>;
 		episodeTimes?: Record<string, string>;
 		episodeDurations?: Record<string, string>;
+		episodeInstances?: Record<string, Array<{ time?: string; duration?: string; note?: string }>>;
 		[k: string]: unknown;
 	};
 }
@@ -390,13 +391,25 @@ export function computeCircadian(
 	for (const e of entries) {
 		const times = e.data?.episodeTimes || {};
 		const epMap = episodeMap(e);
+		const inst = e.data?.episodeInstances || {};
 		for (const id of timedIds) {
+			const rows = inst[id];
+			if (Array.isArray(rows) && rows.length > 0) {
+				// Per-occurrence times: bucket each episode by its own timestamp.
+				for (const r of rows) {
+					const hour = Number(String(r?.time || '').slice(0, 2));
+					if (!Number.isFinite(hour) || hour < 0 || hour > 23) continue;
+					counts[daypartOf(hour)] += 1;
+					total += 1;
+				}
+				continue;
+			}
+			// Legacy: one logged time per type/day; weight by that day's count.
 			const t = times[id];
 			const n = Number(epMap[id] || 0) || 0;
 			if (!t || n <= 0) continue;
 			const hour = Number(String(t).slice(0, 2));
 			if (!Number.isFinite(hour) || hour < 0 || hour > 23) continue;
-			// One logged time per type/day; weight by that day's count for that type.
 			counts[daypartOf(hour)] += n;
 			total += n;
 		}
@@ -491,8 +504,21 @@ export function computeDurationSignal(
 	let overFive = 0;
 	for (const e of entries) {
 		const durs = e.data?.episodeDurations || {};
+		const inst = e.data?.episodeInstances || {};
 		const m = episodeMap(e);
 		for (const id of durIds) {
+			const rows = inst[id];
+			if (Array.isArray(rows) && rows.length > 0) {
+				// Per-occurrence durations: each episode counted by its own value.
+				for (const r of rows) {
+					const d = r?.duration;
+					if (d === '<1min') under1 += 1;
+					else if (d === '1-5min') oneToFive += 1;
+					else if (d === '>5min') overFive += 1;
+				}
+				continue;
+			}
+			// Legacy: single duration per type/day applied to the day's count.
 			const n = Number(m[id] || 0) || 0;
 			const d = durs[id];
 			if (n <= 0 || !d) continue;

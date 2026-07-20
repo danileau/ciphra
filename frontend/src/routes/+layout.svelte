@@ -410,9 +410,23 @@
 				const appendedNote = note
 					? (prevNote ? `${prevNote}\n${nowTime}: ${note}` : `${nowTime}: ${note}`)
 					: prevNote || undefined;
+				// Per-occurrence rows: keep existing instances, or synthesize them
+				// from the legacy count for a pre-feature entry so none of its
+				// occurrences are lost, then append this one with its own time.
+				// Length stays in lockstep with prevCount + 1 so /log/[date]
+				// round-trips it (see synthesizeEpisodeInstances in EntryComposer).
+				const epId: string = quickAddSelectedEpisode;
+				const prevInstances = Array.isArray(cur.episodeInstances?.[epId])
+					? cur.episodeInstances[epId]
+					: Array.from({ length: prevCount }, (_, i) =>
+						i === 0
+							? { time: cur.episodeTimes?.[epId] || '', note: cur.episodeNotes?.[epId] || '' }
+							: {});
+				const nextInstances = [...prevInstances, { time: nowTime, ...(note ? { note } : {}) }];
 				await documents.updateDoc(existing.id, {
 					...cur,
 					episodes: { ...(cur.episodes || {}), [quickAddSelectedEpisode]: prevCount + 1 },
+					episodeInstances: { ...(cur.episodeInstances || {}), [quickAddSelectedEpisode]: nextInstances },
 					episodeTimes: {
 						...(cur.episodeTimes || {}),
 						[quickAddSelectedEpisode]: cur.episodeTimes?.[quickAddSelectedEpisode] || nowTime,
@@ -429,6 +443,7 @@
 					episodeType: quickAddSelectedEpisode,
 					time: nowTime,
 					episodes: { [quickAddSelectedEpisode]: 1 },
+					episodeInstances: { [quickAddSelectedEpisode]: [{ time: nowTime, ...(note ? { note } : {}) }] },
 					episodeTimes: { [quickAddSelectedEpisode]: nowTime },
 					episodeNotes: note ? { [quickAddSelectedEpisode]: `${nowTime}: ${note}` } : undefined,
 					private: quickAddPrivate || undefined,

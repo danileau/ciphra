@@ -12,6 +12,15 @@
 <script context="module" lang="ts">
 	import type { Phase as CyclePhase } from '$lib/cycleState';
 
+	// One logged occurrence of a counted episode type. Each of the N episodes
+	// a user records in a day gets its OWN time/duration/note — the old model
+	// carried a single time/duration/note per type, so "3 seizures today" all
+	// collapsed onto one timestamp. `episodes[id]` (the count) is kept in sync
+	// with `episodeInstances[id].length` and the legacy single-value maps are
+	// mirrored on save so every downstream reader keeps working. multiDay
+	// (phase) episodes are toggles, not counts, and have no instances.
+	export type EpisodeInstance = { time?: string; duration?: string; note?: string };
+
 	export type EntryData = {
 		type: 'entry';
 		date: string;
@@ -20,6 +29,10 @@
 		episodeTimes: Record<string, string>;
 		episodeDurations: Record<string, string>;
 		episodeNotes: Record<string, string>;
+		// Per-occurrence detail (see EpisodeInstance). Absent on entries saved
+		// before this feature; those are synthesised from the count + legacy
+		// single time/duration on load.
+		episodeInstances?: Record<string, EpisodeInstance[]>;
 		triggers: Record<string, boolean>;
 		vitals: Record<string, string>;
 		medications: Record<string, boolean>;
@@ -204,6 +217,65 @@
 	let episodeTimes: Record<string, string> = {};
 	let episodeDurations: Record<string, string> = {};
 	let episodeNotes: Record<string, string> = {};
+	// Per-occurrence detail for counted episodes (see EpisodeInstance). The
+	// counter is now the length of this array; +/- add/remove instance rows.
+	let episodeInstances: Record<string, EpisodeInstance[]> = {};
+
+	function nowHHMM(): string {
+		return new Date().toTimeString().slice(0, 5);
+	}
+
+	function addEpisodeInstance(epId: string) {
+		const ep = bp.episodeTypes.find((e) => e.id === epId);
+		const list = episodeInstances[epId] ? [...episodeInstances[epId]] : [];
+		// Default the time to "now" when logging on today — the common case is
+		// recording something that just happened. Past days start blank.
+		const defaultTime = ep?.trackTimeOfDay && isToday ? nowHHMM() : '';
+		list.push({ time: defaultTime, duration: '', note: '' });
+		episodeInstances = { ...episodeInstances, [epId]: list };
+		episodes[epId] = list.length;
+		markChanged();
+	}
+
+	function removeEpisodeInstance(epId: string, index: number) {
+		const list = (episodeInstances[epId] || []).filter((_, i) => i !== index);
+		episodeInstances = { ...episodeInstances, [epId]: list };
+		episodes[epId] = list.length;
+		markChanged();
+	}
+
+	// Rebuild `episodeInstances` from a loaded doc. Prefers the stored
+	// per-occurrence array; falls back to synthesising `count` instances from
+	// the legacy single time/duration/note (first instance carries them) so
+	// entries saved before this feature round-trip losslessly.
+	function synthesizeEpisodeInstances(d: any): Record<string, EpisodeInstance[]> {
+		const result: Record<string, EpisodeInstance[]> = {};
+		const counts = (d?.episodes || d?.seizures || {}) as Record<string, number>;
+		for (const ep of bp.episodeTypes) {
+			if (ep.multiDay) continue; // phases are toggles, not counted occurrences
+			const id = ep.id;
+			const stored = d?.episodeInstances?.[id];
+			if (Array.isArray(stored) && stored.length > 0) {
+				result[id] = stored.map((x: EpisodeInstance) => ({
+					time: x.time || '',
+					duration: x.duration || '',
+					note: x.note || '',
+				}));
+				continue;
+			}
+			const count = Number(counts[id] || 0) || 0;
+			if (count <= 0) continue;
+			const legacyTime = (d?.episodeTimes || {})[id] || '';
+			const legacyDur = (d?.episodeDurations || {})[id] || '';
+			const legacyNote = (d?.episodeNotes || {})[id] || '';
+			result[id] = Array.from({ length: count }, (_, i) =>
+				i === 0
+					? { time: legacyTime, duration: legacyDur, note: legacyNote }
+					: { time: '', duration: '', note: '' },
+			);
+		}
+		return result;
+	}
 	let triggers: Record<string, boolean> = {};
 	let vitals: Record<string, string> = {};
 	let medications: Record<string, boolean> = {};
@@ -448,6 +520,9 @@
 		if (d.episodeTimes) episodeTimes = { ...episodeTimes, ...d.episodeTimes };
 		if (d.episodeDurations) episodeDurations = { ...episodeDurations, ...d.episodeDurations };
 		if (d.episodeNotes) episodeNotes = { ...episodeNotes, ...d.episodeNotes };
+		// Rebuild per-occurrence rows (stored array, or synthesised from the
+		// legacy count + single time for pre-feature entries).
+		episodeInstances = synthesizeEpisodeInstances(d);
 		if (d.notes) notes = d.notes;
 		isPrivate = d.private === true;
 		// CIPH-886 — hydrate phase override if present (cycle cohort only).
@@ -461,14 +536,40 @@
 
 	async function saveEntry() {
 		saving = true;
+		// Reconcile the counted episodes' state from `episodeInstances`, then
+		// mirror the derived count + first-occurrence time/duration and joined
+		// notes back onto the legacy maps. This keeps every existing reader
+		// (PDF, insights, calendar, epilepc export, entry preview) working while
+		// the richer per-occurrence data ships alongside in `episodeInstances`.
+		const outEpisodes: Record<string, number> = { ...episodes };
+		const outTimes: Record<string, string> = { ...episodeTimes };
+		const outDurations: Record<string, string> = { ...episodeDurations };
+		const outNotes: Record<string, string> = { ...episodeNotes };
+		const outInstances: Record<string, EpisodeInstance[]> = {};
+		for (const ep of bp.episodeTypes) {
+			if (ep.multiDay) continue; // toggle count stays as-is
+			const list = (episodeInstances[ep.id] || []).map((x) => {
+				const inst: EpisodeInstance = {};
+				if (x.time) inst.time = x.time;
+				if (x.duration) inst.duration = x.duration;
+				if (x.note) inst.note = x.note;
+				return inst;
+			});
+			outEpisodes[ep.id] = list.length;
+			if (list.length > 0) outInstances[ep.id] = list;
+			outTimes[ep.id] = list[0]?.time || '';
+			outDurations[ep.id] = list[0]?.duration || '';
+			outNotes[ep.id] = list.map((x) => x.note).filter(Boolean).join(' · ');
+		}
 		const data: EntryData = {
 			type: 'entry',
 			date,
 			symptoms,
-			episodes,
-			episodeTimes,
-			episodeDurations,
-			episodeNotes,
+			episodes: outEpisodes,
+			episodeTimes: outTimes,
+			episodeDurations: outDurations,
+			episodeNotes: outNotes,
+			episodeInstances: Object.keys(outInstances).length > 0 ? outInstances : undefined,
 			triggers,
 			vitals,
 			medications,
@@ -855,26 +956,26 @@
 									</button>
 								</div>
 							{:else}
-								<div class="log-counter">
-									<button
-										on:click={() => { if (episodes[ep.id] > 0) { episodes[ep.id]--; markChanged(); } }}
-										class="log-counter-btn"
-										aria-label="{$t('common.decrease')} {epLabel}"
-									>
-										<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/></svg>
-									</button>
-									<span class="log-counter-num {episodes[ep.id] > 0 ? 'log-counter-num--active' : ''}">{episodes[ep.id] || 0}</span>
-									<button
-										on:click={() => { episodes[ep.id] = (episodes[ep.id] || 0) + 1; markChanged(); }}
-										class="log-counter-btn"
-										aria-label="{$t('common.increase')} {epLabel}"
-									>
-										<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/></svg>
-									</button>
-								</div>
+								<!-- Counted episodes: "+ Add" appends one occurrence
+									 row (default time = now on today). The count is the
+									 number of rows below — see addEpisodeInstance. -->
+								<button
+									type="button"
+									class="log-episode-add"
+									on:click={() => addEpisodeInstance(ep.id)}
+									aria-label="{$t('common.increase')} {epLabel}"
+								>
+									<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/></svg>
+									<span>{$t('protocol.add_episode')}</span>
+									{#if (episodeInstances[ep.id]?.length ?? 0) > 0}
+										<span class="log-episode-add-count">{episodeInstances[ep.id].length}</span>
+									{/if}
+								</button>
 							{/if}
 						</div>
-						{#if episodes[ep.id] > 0 && (ep.trackDuration || ep.trackTimeOfDay)}
+						<!-- multiDay (phase) episodes stay a single occurrence: one
+							 time / duration / note for the ongoing phase. -->
+						{#if ep.multiDay && episodes[ep.id] > 0 && (ep.trackDuration || ep.trackTimeOfDay)}
 							<div class="log-episode-detail">
 								{#if ep.trackTimeOfDay}
 									<div class="log-episode-detail-field">
@@ -882,6 +983,7 @@
 										<TimePicker
 											id="ep-time-{ep.id}"
 											bind:value={episodeTimes[ep.id]}
+											on:change={markChanged}
 											ariaLabel={$t('protocol.time_of_day')}
 											compact
 										/>
@@ -902,11 +1004,9 @@
 								{/if}
 							</div>
 						{/if}
-						{#if episodes[ep.id] > 0}
+						{#if ep.multiDay && episodes[ep.id] > 0}
 							<!-- CIPH-904 — episode-notes input gets a real <label>
-								 instead of placeholder-only. Placeholder disappears
-								 on focus; mobile users tapping into a 4-character
-								 input then lost context. -->
+								 instead of placeholder-only. -->
 							<div class="log-episode-detail" style="margin-top: 4px">
 								<div class="log-episode-detail-field" style="flex: 1">
 									<label class="log-detail-label" for="ep-notes-{ep.id}">{$t('protocol.episode_notes')}</label>
@@ -918,6 +1018,66 @@
 										on:input={markChanged}
 									/>
 								</div>
+							</div>
+						{/if}
+						{#if !ep.multiDay && (episodeInstances[ep.id]?.length ?? 0) > 0}
+							<div class="log-episode-instances">
+								{#each episodeInstances[ep.id] as inst, i (i)}
+									<div class="log-episode-instance">
+										<div class="log-episode-instance-head">
+											<span class="log-episode-instance-num">{$t('protocol.episode_n', { n: i + 1 })}</span>
+											<button
+												type="button"
+												class="log-episode-remove"
+												on:click={() => removeEpisodeInstance(ep.id, i)}
+												aria-label="{$t('protocol.remove_episode')} {i + 1}"
+											>
+												<svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+											</button>
+										</div>
+										{#if ep.trackTimeOfDay || ep.trackDuration}
+											<div class="log-episode-detail">
+												{#if ep.trackTimeOfDay}
+													<div class="log-episode-detail-field">
+														<label class="log-detail-label" for="ep-time-{ep.id}-{i}">{$t('protocol.time_of_day')}</label>
+														<TimePicker
+															id="ep-time-{ep.id}-{i}"
+															bind:value={inst.time}
+															on:change={markChanged}
+															ariaLabel={$t('protocol.time_of_day')}
+															compact
+														/>
+													</div>
+												{/if}
+												{#if ep.trackDuration}
+													<div class="log-episode-detail-field">
+														<label class="log-detail-label" for="ep-dur-{ep.id}-{i}">{$t('protocol.duration')}</label>
+														<select id="ep-dur-{ep.id}-{i}" class="log-detail-input"
+															bind:value={inst.duration}
+															on:change={markChanged}
+														>
+															{#each durationOptions as opt}
+																<option value={opt.value}>{$t(opt.labelKey)}</option>
+															{/each}
+														</select>
+													</div>
+												{/if}
+											</div>
+										{/if}
+										<div class="log-episode-detail" style="margin-top: 4px">
+											<div class="log-episode-detail-field" style="flex: 1">
+												<label class="log-detail-label" for="ep-notes-{ep.id}-{i}">{$t('protocol.episode_notes')}</label>
+												<input
+													id="ep-notes-{ep.id}-{i}"
+													type="text"
+													class="log-detail-input"
+													bind:value={inst.note}
+													on:input={markChanged}
+												/>
+											</div>
+										</div>
+									</div>
+								{/each}
 							</div>
 						{/if}
 					{/each}
@@ -1542,7 +1702,7 @@
 	}
 
 	.log-chip:focus-visible,
-	.log-counter-btn:focus-visible,
+	.log-episode-add:focus-visible,
 	.log-nav-btn:focus-visible {
 		outline: 3px solid var(--accent);
 		outline-offset: 2px;
@@ -1611,43 +1771,88 @@
 		border-radius: 50%;
 		flex-shrink: 0;
 	}
-	.log-counter {
-		display: flex;
+	/* "+ Add" trigger for a counted episode. Mirrors the multi-entry vitals
+	   affordance: one tap appends an occurrence row below. */
+	.log-episode-add {
+		display: inline-flex;
 		align-items: center;
-		gap: 12px;
-	}
-	.log-counter-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 48px;
-		height: 48px;
-		border-radius: 12px;
-		background: var(--surface-muted);
+		gap: 6px;
+		padding: 6px 12px;
+		min-height: 36px;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: var(--surface-card);
 		color: var(--text-secondary);
-		border: 1px solid var(--border-subtle);
+		font-size: 13px;
+		font-weight: 500;
 		cursor: pointer;
-		transition: all 0.15s ease-out;
+		transition: border-color 0.15s ease-out, background 0.15s ease-out;
 	}
-	.log-counter-btn:hover {
+	.log-episode-add:hover {
+		border-color: var(--text-muted);
 		background: var(--surface-inset);
 	}
-	.log-counter-btn:active {
-		transform: scale(0.97);
-	}
-	.log-counter-num {
-		display: flex;
+	.log-episode-add:active { transform: scale(0.98); }
+	.log-episode-add-count {
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 40px;
-		font-size: 18px;
+		min-width: 20px;
+		height: 20px;
+		padding: 0 6px;
+		border-radius: 999px;
+		background: var(--ochre);
+		color: var(--on-brand, #fff);
+		font-size: 12px;
 		font-weight: 700;
 		font-variant-numeric: tabular-nums;
-		color: var(--text-muted);
-		text-align: center;
 	}
-	.log-counter-num--active {
-		color: var(--ochre);
+
+	.log-episode-instances {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-top: 6px;
+	}
+	.log-episode-instance {
+		padding: 8px 10px 10px;
+		border: 1px solid var(--border-subtle);
+		border-radius: 10px;
+		background: var(--surface-muted);
+	}
+	.log-episode-instance-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+	}
+	.log-episode-instance-num {
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+	.log-episode-remove {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 30px;
+		border-radius: 8px;
+		border: 1px solid transparent;
+		background: transparent;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: color 0.15s ease-out, background 0.15s ease-out;
+	}
+	.log-episode-remove:hover {
+		color: var(--danger, #c0392b);
+		background: var(--surface-inset);
+	}
+	.log-episode-remove:focus-visible {
+		outline: none;
+		border-color: var(--accent);
 	}
 
 	.log-episode-detail {

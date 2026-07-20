@@ -198,6 +198,118 @@ describe('CIPH-850 EntryComposer contract', () => {
 		expect(parsed).toEqual([{ time: '08:00', value: '140' }]);
 	});
 
+	// ── Per-episode timestamps (each of N episodes carries its own detail) ──
+
+	it('creates one occurrence row per "+ Add" tap; N taps → N instances', async () => {
+		const props = baseProps();
+		const { container } = render(EntryComposer, { props });
+		const addBtn = (await waitFor(() =>
+			container.querySelector('.log-episode-add'),
+		)) as HTMLButtonElement;
+		await fireEvent.click(addBtn);
+		await fireEvent.click(addBtn);
+		await waitFor(() =>
+			expect(container.querySelectorAll('.log-episode-instance')).toHaveLength(2),
+		);
+		const saveBtn = container.querySelector('.log-btn-save') as HTMLButtonElement;
+		await fireEvent.click(saveBtn);
+		await waitFor(() => expect(props.onSave).toHaveBeenCalled());
+		const payload = props.onSave.mock.calls[0][0];
+		expect(payload.episodes.attack).toBe(2);
+		expect(payload.episodeInstances.attack).toHaveLength(2);
+	});
+
+	it('removing an occurrence row decrements the count and drops that instance', async () => {
+		const props = baseProps();
+		const { container } = render(EntryComposer, { props });
+		const addBtn = (await waitFor(() =>
+			container.querySelector('.log-episode-add'),
+		)) as HTMLButtonElement;
+		await fireEvent.click(addBtn);
+		await fireEvent.click(addBtn);
+		await waitFor(() =>
+			expect(container.querySelectorAll('.log-episode-instance')).toHaveLength(2),
+		);
+		await fireEvent.click(container.querySelector('.log-episode-remove') as HTMLButtonElement);
+		await waitFor(() =>
+			expect(container.querySelectorAll('.log-episode-instance')).toHaveLength(1),
+		);
+		const saveBtn = container.querySelector('.log-btn-save') as HTMLButtonElement;
+		await fireEvent.click(saveBtn);
+		await waitFor(() => expect(props.onSave).toHaveBeenCalled());
+		expect(props.onSave.mock.calls[0][0].episodes.attack).toBe(1);
+	});
+
+	// The critical backward-compat guarantee the user asked for: an entry
+	// saved BEFORE per-episode timestamps (a count + one shared time) must not
+	// lose any occurrence when it is opened, edited elsewhere, and re-saved.
+	it('backward-compat: a legacy count+single-time entry keeps every occurrence on re-save', async () => {
+		const props = {
+			...baseProps(),
+			existingDoc: makeDoc({
+				type: 'entry',
+				date: '2026-04-27',
+				episodes: { attack: 3 },
+				episodeTimes: { attack: '08:15' },
+				episodeDurations: { attack: '1-5min' },
+				episodeNotes: { attack: 'aura first' },
+			}),
+		};
+		const { container } = render(EntryComposer, { props });
+		// The legacy count renders as 3 occurrence rows...
+		await waitFor(() =>
+			expect(container.querySelectorAll('.log-episode-instance')).toHaveLength(3),
+		);
+		// ...make an unrelated edit so the Save button enables, then save.
+		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
+		await fireEvent.input(ta, { target: { value: 'updated note' } });
+		await fireEvent.click(container.querySelector('.log-btn-save') as HTMLButtonElement);
+		await waitFor(() => expect(props.onSave).toHaveBeenCalled());
+		const payload = props.onSave.mock.calls[0][0];
+		// Count preserved; 3 instances synthesized, the first carrying the old
+		// single time/duration/note so nothing is dropped.
+		expect(payload.episodes.attack).toBe(3);
+		expect(payload.episodeInstances.attack).toHaveLength(3);
+		expect(payload.episodeInstances.attack[0]).toMatchObject({
+			time: '08:15',
+			duration: '1-5min',
+			note: 'aura first',
+		});
+		// Legacy single-value maps stay mirrored for older readers.
+		expect(payload.episodeTimes.attack).toBe('08:15');
+	});
+
+	it('backward-compat: an explicit episodeInstances array round-trips unchanged', async () => {
+		const props = {
+			...baseProps(),
+			existingDoc: makeDoc({
+				type: 'entry',
+				date: '2026-04-27',
+				episodes: { attack: 2 },
+				episodeInstances: {
+					attack: [
+						{ time: '07:00', duration: '<1min', note: 'morning' },
+						{ time: '19:30', duration: '>5min', note: 'evening' },
+					],
+				},
+			}),
+		};
+		const { container } = render(EntryComposer, { props });
+		await waitFor(() =>
+			expect(container.querySelectorAll('.log-episode-instance')).toHaveLength(2),
+		);
+		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
+		await fireEvent.input(ta, { target: { value: 'x' } });
+		await fireEvent.click(container.querySelector('.log-btn-save') as HTMLButtonElement);
+		await waitFor(() => expect(props.onSave).toHaveBeenCalled());
+		const payload = props.onSave.mock.calls[0][0];
+		expect(payload.episodeInstances.attack).toEqual([
+			{ time: '07:00', duration: '<1min', note: 'morning' },
+			{ time: '19:30', duration: '>5min', note: 'evening' },
+		]);
+		expect(payload.episodes.attack).toBe(2);
+	});
+
 	it('private toggle adds `private: true` then drops it back to undefined', async () => {
 		vi.useFakeTimers({ shouldAdvanceTime: true });
 		const props = baseProps();
