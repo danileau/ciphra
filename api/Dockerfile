@@ -11,7 +11,16 @@ FROM python:3.11-slim AS base
 
 # `apt-get upgrade` patches the Debian base packages (the slim base lags the
 # security repo); install build/runtime extras; then drop the apt lists.
-RUN apt-get update \
+#
+# CACHEBUST is set to the commit SHA by CI (release-images.yml). It forces this
+# layer to re-run on every release so the upgrade hits the CURRENT Debian
+# security repo. Without it BuildKit's gha cache replays a stale upgrade layer
+# and the published :latest silently drifts behind fixed-upstream CVEs — which
+# is exactly how curl/libssh2 (deb13u4/deb13u1) turned the daily scan red in
+# 2026-07 while this Dockerfile already "did the right thing".
+ARG CACHEBUST=none
+RUN echo "cachebust: ${CACHEBUST}" \
+ && apt-get update \
  && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends gcc curl \
  && rm -rf /var/lib/apt/lists/*

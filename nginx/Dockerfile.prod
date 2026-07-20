@@ -16,7 +16,13 @@ FROM nginx:1.27-alpine
 # reverse-proxy role (no PNG/XML/expat parsing; zlib untgz unused; the 32-bit
 # X.509 overflow needs a 32-bit host) — but openssl (TLS) / musl / nghttp2 are
 # in the request path, so we patch the whole base regardless.
-RUN apk upgrade --no-cache
+#
+# CACHEBUST (commit SHA, set by release-images.yml) forces this layer to re-run
+# every release so `apk upgrade` hits the current Alpine security repo. Without
+# it the gha build cache replays a stale layer and :latest drifts behind
+# fixed-upstream CVEs (e.g. c-ares/libexpat flagged the daily scan in 2026-07).
+ARG CACHEBUST=none
+RUN echo "cachebust: ${CACHEBUST}" && apk upgrade --no-cache
 
 COPY ciphra.conf       /etc/nginx/conf.d/default.conf
 COPY proxy_params.conf /etc/nginx/proxy_params.conf

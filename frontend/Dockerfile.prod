@@ -32,9 +32,19 @@ RUN npm run build && npm prune --omit=dev
 FROM node:24-alpine AS runtime
 WORKDIR /app
 
-# Drop privileges. Node-alpine ships a `node` user uid 1000.
-RUN apk add --no-cache wget && \
-    chown -R node:node /app
+# Drop privileges + shrink the supply-chain surface. node-alpine ships a `node`
+# user uid 1000 and a global npm at /usr/local/lib/node_modules/npm that vendors
+# sigstore/undici — those pick up their own HIGH CVEs (CVE-2026-48815,
+# CVE-2026-12151 in 2026-07) yet npm is never used at runtime (the app runs
+# `node build/index.js`). Remove it so the scanner has nothing to flag. The apk
+# upgrade + CACHEBUST (commit SHA from release-images.yml) keep the Alpine base
+# fresh on every release the same way the api/nginx images do.
+ARG CACHEBUST=none
+RUN echo "cachebust: ${CACHEBUST}" \
+ && apk upgrade --no-cache \
+ && apk add --no-cache wget \
+ && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
+ && chown -R node:node /app
 USER node
 
 COPY --from=builder --chown=node:node /app/build         ./build
