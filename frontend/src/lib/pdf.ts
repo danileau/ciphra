@@ -3227,11 +3227,24 @@ export function generateDoctorPdf(
 		for (const d of last12mDocs) {
 			const eps = (d.data?.episodes || d.data?.seizures || {}) as Record<string, number>;
 			const durs = (d.data?.episodeDurations || {}) as Record<string, string>;
+			const inst = (d.data?.episodeInstances || {}) as Record<string, Array<{ duration?: string }>>;
 			for (const ep of durEps) {
+				const b = durBuckets[ep.id];
+				const rows = inst[ep.id];
+				if (Array.isArray(rows) && rows.length > 0) {
+					// Per-occurrence durations: bucket each episode by its own value.
+					for (const r of rows) {
+						b.total += 1;
+						if (r?.duration === '<1min') b.lt1 += 1;
+						else if (r?.duration === '1-5min') b.m15 += 1;
+						else if (r?.duration === '>5min') b.gt5 += 1;
+						else b.unk += 1;
+					}
+					continue;
+				}
 				const cnt = eps[ep.id] || 0;
 				if (cnt <= 0) continue;
 				const dur = durs[ep.id] || '';
-				const b = durBuckets[ep.id];
 				b.total += cnt;
 				if (dur === '<1min') b.lt1 += cnt;
 				else if (dur === '1-5min') b.m15 += cnt;
@@ -3939,7 +3952,18 @@ export function exportCsv(
 			row.push(String(count));
 		}
 		for (const col of episodeDetailCols) {
-			if (col.type === 'time') {
+			// Per-occurrence detail: list every episode's own time/duration for
+			// the day (e.g. "08:15, 14:40"). Falls back to the legacy single
+			// value for entries saved before per-episode timestamps.
+			const rows = (dayDoc?.data?.episodeInstances as
+				| Record<string, Array<{ time?: string; duration?: string }>>
+				| undefined)?.[col.id];
+			if (Array.isArray(rows) && rows.length > 0) {
+				const vals = rows
+					.map((r) => (col.type === 'time' ? r?.time : r?.duration) || '')
+					.filter(Boolean);
+				row.push(vals.join(', '));
+			} else if (col.type === 'time') {
 				row.push(dayDoc?.data?.episodeTimes?.[col.id] || '');
 			} else {
 				row.push(dayDoc?.data?.episodeDurations?.[col.id] || '');

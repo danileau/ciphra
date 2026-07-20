@@ -20,11 +20,23 @@ describe('FAB quick-add merge (CIPH-875)', () => {
 	});
 
 	it('calls updateDoc when an existing entry is found', () => {
-		expect(LAYOUT).toMatch(/if \(existing\)[\s\S]{0,400}documents\.updateDoc\(existing\.id/);
+		// Non-greedy across the branch body (which now also rebuilds the
+		// per-occurrence episodeInstances array) — there is exactly one
+		// updateDoc, so this still pins it to the existing path.
+		expect(LAYOUT).toMatch(/if \(existing\)[\s\S]*?documents\.updateDoc\(existing\.id/);
 	});
 
 	it('increments the episode count rather than overwriting it', () => {
 		expect(LAYOUT).toMatch(/prevCount \+ 1/);
+	});
+
+	it('appends a per-occurrence instance with its own timestamp on both paths', () => {
+		// Merge path: keep prior instances (or synthesize from the count) and
+		// append one carrying nowTime.
+		expect(LAYOUT).toMatch(/episodeInstances:\s*\{ \.\.\.\(cur\.episodeInstances \|\| \{\}\), \[quickAddSelectedEpisode\]: nextInstances \}/);
+		expect(LAYOUT).toMatch(/nextInstances = \[\.\.\.prevInstances, \{ time: nowTime/);
+		// Fresh-entry path: seed the instances array with the first occurrence.
+		expect(LAYOUT).toMatch(/episodeInstances:\s*\{ \[quickAddSelectedEpisode\]: \[\{ time: nowTime/);
 	});
 
 	it('preserves the first-seen episode time on merge', () => {

@@ -115,6 +115,30 @@ describe('computeCircadian', () => {
 		const docs = [entry(dayBefore(1), { episodes: { focal: 1 }, episodeTimes: { focal: '03:30' } })];
 		expect(computeCircadian(docs, noTime, NOW)).toBeNull();
 	});
+
+	it('buckets each occurrence by its OWN time when episodeInstances is present', () => {
+		// One day, three focal episodes at distinct times — two at night, one
+		// in the afternoon. The per-occurrence path must count all three by
+		// their own timestamp, not collapse onto a single day-level time.
+		const docs: InsightDoc[] = [
+			entry(dayBefore(1), {
+				episodes: { focal: 3 },
+				episodeInstances: {
+					focal: [{ time: '02:00' }, { time: '03:30' }, { time: '15:00' }],
+				},
+			}),
+			entry(dayBefore(2), {
+				episodes: { focal: 3 },
+				episodeInstances: {
+					focal: [{ time: '01:00' }, { time: '04:00' }, { time: '23:30' }],
+				},
+			}),
+		];
+		const res = computeCircadian(docs, epilepsy, NOW);
+		expect(res).not.toBeNull();
+		expect(res!.total).toBe(6);
+		expect(res!.topKey).toBe('night');
+	});
 });
 
 describe('computeTypeMix', () => {
@@ -147,6 +171,23 @@ describe('computeDurationSignal', () => {
 		expect(res).not.toBeNull();
 		expect(res!.hasProlonged).toBe(true);
 		expect(res!.total).toBe(3);
+	});
+
+	it('counts each occurrence duration when episodeInstances is present', () => {
+		const docs: InsightDoc[] = [
+			entry(dayBefore(1), {
+				episodes: { focal: 3 },
+				episodeInstances: {
+					focal: [{ duration: '>5min' }, { duration: '<1min' }, { duration: '1-5min' }],
+				},
+			}),
+		];
+		const res = computeDurationSignal(docs, epilepsy, NOW);
+		expect(res).not.toBeNull();
+		expect(res!.total).toBe(3);
+		expect(res!.under1).toBe(1);
+		expect(res!.oneToFive).toBe(1);
+		expect(res!.overFive).toBe(1);
 	});
 });
 

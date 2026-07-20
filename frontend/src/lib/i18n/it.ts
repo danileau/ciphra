@@ -333,7 +333,6 @@ export default {
 	'common.next_month': 'Mese successivo',
 	'common.previous_year': 'Anno precedente',
 	'common.next_year': 'Anno successivo',
-	'common.decrease': 'Diminuire',
 	'common.increase': 'Aumentare',
 	'protocol.time_of_day': 'Ora',
 	'protocol.duration': 'Durata',
@@ -369,6 +368,9 @@ export default {
 	'protocol.phase_start_hint': 'Tocca per segnare la fase come in corso',
 	'vital.pair_iop': 'Pressione intraoculare',
 	'protocol.episode_notes': 'Nota su questo episodio',
+	'protocol.add_episode': 'Aggiungi episodio',
+	'protocol.episode_n': 'Episodio {n}',
+	'protocol.remove_episode': 'Rimuovi episodio',
 	'protocol.no_meds': 'Nessun farmaco configurato.',
 	'protocol.add_in_settings': 'Aggiungi nelle impostazioni',
 

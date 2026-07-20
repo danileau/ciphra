@@ -340,7 +340,6 @@ export default {
 	'common.next_month': 'Nächster Monat',
 	'common.previous_year': 'Vorheriges Jahr',
 	'common.next_year': 'Nächstes Jahr',
-	'common.decrease': 'Verringern',
 	'common.increase': 'Erhöhen',
 	'protocol.time_of_day': 'Uhrzeit',
 	'protocol.duration': 'Dauer',
@@ -376,6 +375,9 @@ export default {
 	'protocol.phase_start_hint': 'Tippen, um die Phase als laufend zu markieren',
 	'vital.pair_iop': 'Augeninnendruck',
 	'protocol.episode_notes': 'Notiz zu dieser Episode',
+	'protocol.add_episode': 'Episode hinzufügen',
+	'protocol.episode_n': 'Episode {n}',
+	'protocol.remove_episode': 'Episode entfernen',
 	'protocol.no_meds': 'Keine Medikamente konfiguriert.',
 	'protocol.add_in_settings': 'In den Einstellungen hinzufügen',
 

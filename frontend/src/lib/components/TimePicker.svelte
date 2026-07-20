@@ -12,8 +12,14 @@
 	PI v17 — same brand-consistency + locale fix as DatePicker.svelte.
 -->
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
 	import { t } from '$lib/i18n';
+
+	// Fires whenever the user changes the value (pick hour/minute or clear).
+	// bind:value already propagates the string; this lets callers run a
+	// side-effect (e.g. mark the entry dirty) since a bound value alone gives
+	// no change hook.
+	const dispatch = createEventDispatcher<{ change: string }>();
 
 	export let value: string = '';
 	export let id: string = '';
@@ -63,16 +69,19 @@
 	function selectHour(h: number) {
 		const m = parsed.m >= 0 ? parsed.m : 0;
 		value = `${pad(h)}:${pad(m)}`;
+		dispatch('change', value);
 	}
 	function selectMinute(m: number) {
 		const h = parsed.h >= 0 ? parsed.h : 0;
 		value = `${pad(h)}:${pad(m)}`;
+		dispatch('change', value);
 	}
 
 	function clearValue() {
 		value = '';
 		open = false;
 		triggerEl?.focus();
+		dispatch('change', value);
 	}
 
 	function applyAndClose() {
