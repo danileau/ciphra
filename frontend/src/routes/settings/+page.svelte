@@ -4,7 +4,7 @@
 	import { auth, isAuthenticated } from '$lib/stores/auth';
 	import { documents } from '$lib/stores/documents';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
-	import { blueprint, hasBlueprint, presets, resolvedBlueprint, isCustomItem } from '$lib/blueprint';
+	import { blueprint, hasBlueprint, presets, resolvedBlueprint, isCustomItem, conditionDisplayLabel } from '$lib/blueprint';
 	import {
 		applyDateFormatChoice,
 		type DateFormatChoice,
@@ -270,6 +270,45 @@
 		}
 		await blueprint.save(next);
 		closeCustomModal();
+		// Confirm the save — the modal used to just close, leaving no signal the
+		// item was created (Loránd feedback: defining an episode type gave no
+		// feedback). The list below also re-renders reactively; the toast is the
+		// explicit "done" the user was missing.
+		if (typeof window !== 'undefined') {
+			const label = (item as { label?: string }).label || '';
+			window.dispatchEvent(
+				new CustomEvent('ciphra:toast', {
+					detail: { message: $t('customization.item_saved', { label }) },
+				}),
+			);
+		}
+	}
+
+	// Rename the profile — writes a custom `displayLabel` over the preset's
+	// translated name. The conditionId badge stays fixed (encryption/cohort key).
+	let editingName = false;
+	let nameDraft = '';
+	function startEditName() {
+		if (!bp) return;
+		nameDraft = conditionDisplayLabel(bp, $t);
+		editingName = true;
+	}
+	async function saveName() {
+		if (!bp) return;
+		const next: Blueprint = JSON.parse(JSON.stringify(bp));
+		const cz = next.customizations || (next.customizations = {});
+		const trimmed = nameDraft.trim();
+		// Empty, or equal to the preset label → clear the override (revert to default).
+		const presetLabel = bp.conditionLabel ? $t(bp.conditionLabel) : bp.conditionId;
+		if (!trimmed || trimmed === presetLabel) delete cz.displayLabel;
+		else cz.displayLabel = trimmed;
+		await blueprint.save(next);
+		editingName = false;
+		if (typeof window !== 'undefined') {
+			window.dispatchEvent(
+				new CustomEvent('ciphra:toast', { detail: { message: $t('settings.name_saved') } }),
+			);
+		}
 	}
 
 	async function toggleCustomHidden(kind: CustomKind, id: string) {
@@ -723,10 +762,34 @@
 		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.current_profile')}</h3>
 		<div class="flex items-center justify-between">
 			<div>
-				<div class="flex items-center gap-2">
-					<p class="text-lg font-semibold" style="color: var(--text-primary)">{bp.conditionLabel ? $t(bp.conditionLabel) : bp.conditionId}</p>
-					<span class="badge badge-olive">{bp.conditionId}</span>
-				</div>
+				{#if editingName}
+					<div class="flex items-center gap-2 flex-wrap">
+						<input
+							class="input text-lg font-semibold"
+							style="max-width: 14rem"
+							bind:value={nameDraft}
+							maxlength="40"
+							aria-label={$t('settings.profile_name')}
+							on:keydown={(e) => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') editingName = false; }}
+						/>
+						<button on:click={saveName} class="btn-primary text-sm min-h-[40px] px-3 rounded-lg">{$t('common.save')}</button>
+						<button on:click={() => { editingName = false; }} class="btn-secondary text-sm min-h-[40px] px-3 rounded-lg">{$t('common.cancel')}</button>
+					</div>
+				{:else}
+					<div class="flex items-center gap-2">
+						<p class="text-lg font-semibold" style="color: var(--text-primary)">{conditionDisplayLabel(bp, $t)}</p>
+						<span class="badge badge-olive">{bp.conditionId}</span>
+						<button
+							on:click={startEditName}
+							class="p-1 rounded-md"
+							style="color: var(--text-muted)"
+							aria-label={$t('settings.rename_profile')}
+							title={$t('settings.rename_profile')}
+						>
+							<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+						</button>
+					</div>
+				{/if}
 				<p class="text-sm mt-0.5" style="color: var(--text-secondary)">
 					{$t('settings.symptoms_count', { count: String((bpResolved ?? bp).symptomGroups.reduce((n, g) => n + g.items.length, 0)) })} ·
 					{$t('settings.episode_types_count', { count: String((bpResolved ?? bp).episodeTypes.length) })} ·

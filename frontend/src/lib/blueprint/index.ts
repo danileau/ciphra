@@ -17,6 +17,7 @@ export {
 	generateCustomId,
 	resolveBlueprint,
 	validateCustomItem,
+	conditionDisplayLabel,
 	CUSTOM_GROUP_ID,
 	CUSTOM_GROUP_LABEL_KEY,
 } from './customizations';

@@ -3,7 +3,7 @@
 	import { todayISO } from '$lib/date';
 	import { auth } from '$lib/stores/auth';
 	import { documents, documentsError, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, hasBedarfMeds } from '$lib/blueprint';
+	import { resolvedBlueprint, hasBedarfMeds, conditionDisplayLabel } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Asterisk from '$lib/components/Asterisk.svelte';
@@ -636,7 +636,7 @@
 					<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('companion.greeting', { name: $auth.username || '' })}</h1>
 					<p class="text-sm mt-0.5" style="color: var(--text-secondary)">{new Date().toLocaleDateString($locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
 				</div>
-				{#if bp}<span class="badge shrink-0" style="background: {conditionColor}1a; color: {conditionColor}; border: 1px solid {conditionColor}33;">{$t(bp.conditionLabel)}</span>{/if}
+				{#if bp}<span class="badge shrink-0" style="background: {conditionColor}1a; color: {conditionColor}; border: 1px solid {conditionColor}33;">{conditionDisplayLabel(bp, $t)}</span>{/if}
 			</div>
 
 			{#if todayLog}

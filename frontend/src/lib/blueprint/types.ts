@@ -201,6 +201,11 @@ export interface Blueprint {
 	 *  means "no customizations".
 	 */
 	customizations?: {
+		/** User-chosen display name for the profile, overriding the preset's
+		 *  translated conditionLabel wherever the profile name is shown. The
+		 *  conditionId (the "tag"/badge) stays fixed — it's an encryption + cohort
+		 *  key, not a display string. Empty/absent = use the preset label. */
+		displayLabel?: string;
 		hiddenSymptoms?: string[];   // BlueprintItem.id from any symptomGroup or customSymptoms
 		hiddenTriggers?: string[];   // BlueprintItem.id from triggers[] or customTriggers
 		hiddenVitals?: string[];     // VitalField.id from vitals[] or customVitals
