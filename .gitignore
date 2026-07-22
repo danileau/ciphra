@@ -5,7 +5,16 @@ node_modules/
 build/
 .env
 *.log
-.claude/
+# .claude/ is ignored by default (personal state), but the SHARED team setup
+# — the guardrail hook, checked-in settings, skills, and subagents — is tracked
+# so every clone + CI + future session inherits the same rules. Personal,
+# machine-specific config stays local via settings.local.json.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/skills/
+!.claude/agents/
+.claude/settings.local.json
 api/seed_*.py
 # CIPH-pi20-LB-5 — explicit un-ignore: the production guardrail must be
 # tracked + reviewable + testable in fresh clones, even though the seed
