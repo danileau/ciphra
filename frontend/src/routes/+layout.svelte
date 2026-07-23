@@ -147,6 +147,12 @@
 	let queuedToastKey = 0;
 	let revokedToastShow = false;
 	let revokedToastKey = 0;
+	// Generic confirmation toast — any screen can fire a `ciphra:toast` window
+	// event with `detail.message` to confirm an action (e.g. saving a custom
+	// episode type in Settings, which previously closed with no feedback).
+	let genericToastShow = false;
+	let genericToastKey = 0;
+	let genericToastMsg = '';
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let deferredInstallPrompt: any = null;
 	let pwaInstallVisible = false;
@@ -234,6 +240,17 @@
 		};
 		window.addEventListener('ciphra:family-revoked', onFamilyRevoked);
 
+		// Generic confirmation toast (see the state decl above).
+		const onToast = (e: Event) => {
+			const msg = (e as CustomEvent<{ message?: string }>).detail?.message;
+			if (!msg) return;
+			genericToastMsg = msg;
+			genericToastKey += 1;
+			genericToastShow = true;
+			setTimeout(() => { genericToastShow = false; }, 2200);
+		};
+		window.addEventListener('ciphra:toast', onToast as EventListener);
+
 		const onOnline = () => { documents.flushOutbox(); };
 		window.addEventListener('online', onOnline);
 		const onVisible = () => {
@@ -272,6 +289,7 @@
 			window.removeEventListener('ciphra:unauthorized', onUnauthorizedEvt);
 			window.removeEventListener('storage', onStorage);
 			window.removeEventListener('ciphra:family-revoked', onFamilyRevoked);
+			window.removeEventListener('ciphra:toast', onToast as EventListener);
 			window.removeEventListener('online', onOnline);
 			document.removeEventListener('visibilitychange', onVisible);
 			window.removeEventListener('beforeinstallprompt', onBeforeInstall as EventListener);
@@ -1230,6 +1248,11 @@
 	<!-- A linked vault was revoked while viewing it — snapped back to own vault. -->
 	{#key revokedToastKey}
 		<Toast message={revokedToastShow ? $t('family.access_removed') : ''} duration={3000} show={revokedToastShow} />
+	{/key}
+
+	<!-- Generic confirmation toast (ciphra:toast event, e.g. custom-item save). -->
+	{#key genericToastKey}
+		<Toast message={genericToastShow ? genericToastMsg : ''} duration={2200} show={genericToastShow} />
 	{/key}
 
 	{#if $isAuthenticated && $pendingCount > 0}

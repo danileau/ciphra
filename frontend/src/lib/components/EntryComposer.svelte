@@ -53,6 +53,7 @@
 	import { t, locale, translateUnit } from '$lib/i18n';
 	import type { Blueprint, CustomKind, MedicationSlot } from '$lib/blueprint';
 	import { isCustomItem, blueprint } from '$lib/blueprint';
+	import { groupIconPath } from '$lib/groupIcons';
 	import { get } from 'svelte/store';
 	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
 	import Modal from '$lib/components/Modal.svelte';
@@ -784,7 +785,10 @@
 				</button>
 				{#if !collapsed['symptoms']}
 				{#each visibleSymptomGroups as group}
-					<p class="log-group-label">{$t(group.label)}</p>
+					<p class="log-group-label">
+						<svg class="log-group-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={groupIconPath(group.label)} /></svg>
+						<span>{$t(group.label)}</span>
+					</p>
 					<div class="log-chip-wrap">
 						{#each group.items as item}
 							<button
@@ -1603,12 +1607,19 @@
 
 	/* ─── Group label ─── */
 	.log-group-label {
+		display: flex;
+		align-items: center;
+		gap: 6px;
 		font-size: 13px;
 		font-weight: 500;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		color: var(--text-muted);
 		margin: 14px 0 8px;
+	}
+	.log-group-icon {
+		flex-shrink: 0;
+		color: var(--olive);
 	}
 	.log-group-label:first-of-type {
 		margin-top: 0;

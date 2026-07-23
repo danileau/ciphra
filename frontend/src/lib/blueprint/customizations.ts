@@ -88,6 +88,16 @@ export const CUSTOM_GROUP_ID = 'custom';
  *  render time like any other preset group label. */
 export const CUSTOM_GROUP_LABEL_KEY = 'symptom_group.custom';
 
+/** The name shown for a profile: the user's custom `displayLabel` if set,
+ *  otherwise the preset's translated conditionLabel (or the raw conditionId as
+ *  a last resort). `t` is the i18n translate fn — conditionLabel is a key.
+ *  Use this everywhere the profile name is rendered so a rename shows uniformly. */
+export function conditionDisplayLabel(bp: Blueprint, t: (k: string) => string): string {
+	const custom = bp.customizations?.displayLabel?.trim();
+	if (custom) return custom;
+	return bp.conditionLabel ? t(bp.conditionLabel) : bp.conditionId;
+}
+
 /** Merge `customizations.custom*` into the blueprint's primary collections.
  *  Pure function; returns the same reference when no customs are present.
  *  Idempotent: `resolve(resolve(bp))` is structurally equal to `resolve(bp)`. */

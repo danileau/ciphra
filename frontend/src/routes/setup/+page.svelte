@@ -29,54 +29,9 @@
 	import { get } from 'svelte/store';
 	import { slide } from 'svelte/transition';
 	import { iconPath } from '$lib/conditionIcons';
-
-	/** CIPH-740 — map symptom_group.* label keys to icons from the shared
-	 *  iconPaths registry. Falls back to a generic "donut" (category) icon. */
-	const GROUP_ICON: Record<string, string> = {
-		'symptom_group.behavior': 'brain',
-		'symptom_group.physical': 'activity',
-		'symptom_group.sleep': 'battery-low',
-		'symptom_group.focus': 'focus',
-		'symptom_group.impulse': 'zap',
-		'symptom_group.emotion': 'heart',
-		'symptom_group.energy': 'battery-low',
-		'symptom_group.hypo_signs': 'droplet',
-		'symptom_group.hyper_signs': 'droplet',
-		'symptom_group.general': 'donut',
-		'symptom_group.mental': 'brain',
-		'symptom_group.social': 'shield',
-		'symptom_group.prodrome': 'waves',
-		'symptom_group.aura': 'waves',
-		'symptom_group.attack': 'zap',
-		'symptom_group.postdrome': 'battery-low',
-		'symptom_group.pain_quality': 'flame',
-		'symptom_group.cognitive_emotional': 'brain',
-		'symptom_group.motor': 'activity',
-		'symptom_group.sensory': 'waves',
-		'symptom_group.vision': 'eye',
-		'symptom_group.cognitive': 'brain',
-		'symptom_group.fatigue_bladder': 'battery-low',
-		'symptom_group.mood_affect': 'heart',
-		'symptom_group.anxiety_fear': 'cloud-lightning',
-		'symptom_group.abdominal': 'activity',
-		'symptom_group.bowel': 'activity',
-		'symptom_group.respiratory': 'wind',
-		'symptom_group.activity': 'activity',
-		'symptom_group.pelvic_pain': 'flower',
-		'symptom_group.gi_symptoms': 'activity',
-		'symptom_group.gi': 'activity',
-		'symptom_group.fatigue': 'battery-low',
-		'symptom_group.neuro': 'brain',
-		'symptom_group.pain': 'flame',
-		'symptom_group.emotional': 'heart',
-		'symptom_group.skin_symptoms': 'flower',
-		'symptom_group.quality_of_life': 'shield-plus',
-		'symptom_group.executive': 'focus',
-		'symptom_group.masking': 'shield',
-		'symptom_group.regulation': 'heart-pulse',
-		'symptom_group.cardiac': 'heart-pulse',
-		'symptom_group.circulation': 'heart-pulse',
-	};
+	// CIPH-740 — symptom-group icons now live in a shared module so the daily
+	// entry screen renders the same icons (see groupIcons.ts).
+	import { GROUP_ICON } from '$lib/groupIcons';
 
 	// step 0 is the caregiver-vs-own intro added for fresh registrants
 	// (no existing blueprint, not arrived via ?customize=1). Returning
