@@ -8,7 +8,7 @@
  * top-level fields. Unknown seizure type_name maps to 'unknown'.
  */
 
-import type { Blueprint, MedicationSlot } from '$lib/blueprint/types';
+import type { Blueprint, EpisodeType, MedicationSlot } from '$lib/blueprint/types';
 import { epilepsy as epilepsyPreset } from '$lib/blueprint/presets';
 
 export const SUPPORTED_SCHEMA_VERSION = '1.1';
@@ -235,6 +235,34 @@ export function mergeMedications(existing: MedicationSlot[], incoming: Medicatio
 		if (!ids.has(m.id)) merged.push(m);
 	}
 	return merged;
+}
+
+/**
+ * INC-001 — make sure the blueprint can actually render what we just imported.
+ *
+ * `mapSeizureType` files every migrated seizure under one of five episode keys
+ * (focal / generalized / absence / myoclonic / unknown). If the account's
+ * blueprint has no matching `episodeTypes` entry, those entries import fine and
+ * then render as nothing — the user sees an empty app and concludes the
+ * migration failed. That is reachable today: a migrant whose first attempt died
+ * gets bounced into `/setup` (the dashboard requires a blueprint), picks some
+ * condition, and on the retry their wizard blueprint wins.
+ *
+ * Additive by design. Existing types keep their id, label, colour and tracking
+ * flags untouched — only genuinely missing ones are appended. Wholesale
+ * blueprint replacement is what caused the 2026-06-20 medication data-loss
+ * incident; never do that here.
+ */
+export function ensureEpisodeTypes(bp: Blueprint, required: EpisodeType[]): Blueprint {
+	const have = new Set((bp.episodeTypes || []).map((e) => e.id));
+	const missing = required.filter((e) => !have.has(e.id));
+	if (missing.length === 0) return bp;
+	return { ...bp, episodeTypes: [...(bp.episodeTypes || []), ...missing] };
+}
+
+/** The five episode types every epilepc import needs. */
+export function epilepcEpisodeTypes(): EpisodeType[] {
+	return defaultEpilepsyBlueprint().episodeTypes;
 }
 
 /** Build a default-ish blueprint when the new ciphra account has none yet.
