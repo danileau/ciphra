@@ -34,6 +34,8 @@
 		validateBundle,
 		mapBundle,
 		mergeMedications,
+		ensureEpisodeTypes,
+		epilepcEpisodeTypes,
 		defaultEpilepsyBlueprint,
 		type EpilepcBundle,
 		type MappedDocs,
@@ -72,6 +74,10 @@
 
 	let bundle: EpilepcBundle | null = null;
 	let mapped: MappedDocs | null = null;
+	// INC-001 — the base URL the bundle actually came from. May differ from
+	// `source` when the www-fallback kicked in; the completion signal has to
+	// go to the same place, or it silently misses.
+	let resolvedBase = '';
 	// CIPH 3.6 — username carried over from a 409 signup into the resume-login.
 	let existingUsername = '';
 
@@ -214,22 +220,45 @@
 		try {
 			// Token + source are URL-fragment values, not server-known.
 			// Fetch goes directly to the epilepc host.
-			const url = `https://${source}/api/ciphra-export/${encodeURIComponent(token)}`;
-			let res: Response;
-			try {
-				res = await fetch(url, { method: 'GET', mode: 'cors', credentials: 'omit' });
-			} catch (netErr) {
-				// dev mock runs on http://, retry once with http for localhost-style sources
-				if (source.startsWith('localhost') || source.startsWith('127.0.0.1')) {
-					res = await fetch(`http://${source}/api/ciphra-export/${encodeURIComponent(token)}`, {
+			//
+			// INC-001 — try more than one base. If `source` names a host that
+			// only redirects (an apex canonicalising to www, say), the browser
+			// refuses to follow the 301 because a redirect in a `mode: 'cors'`
+			// request must carry CORS headers of its own, and mod_rewrite /
+			// CDN redirects do not. The fetch then fails with a bare
+			// `TypeError: Failed to fetch` and the user is stranded — with the
+			// source none the wiser, because the request never reached it.
+			//
+			// Retrying the `www.` variant recovers that automatically. It is
+			// not a licence to wander: the alternates stay on the host the user
+			// already confirmed, differing only by the conventional prefix.
+			const path = `/api/ciphra-export/${encodeURIComponent(token)}`;
+			const isLoopback = source.startsWith('localhost') || source.startsWith('127.0.0.1');
+			const bases = isLoopback
+				? [`https://${source}`, `http://${source}`] // dev mock serves plain http
+				: source.startsWith('www.')
+					? [`https://${source}`]
+					: [`https://${source}`, `https://www.${source}`];
+
+			let res: Response | null = null;
+			let lastNetErr: unknown = null;
+			for (const base of bases) {
+				try {
+					res = await fetch(`${base}${path}`, {
 						method: 'GET',
 						mode: 'cors',
 						credentials: 'omit',
 					});
-				} else {
-					throw netErr;
+					resolvedBase = base;
+					break;
+				} catch (netErr) {
+					// Only network-level failures fall through to the next base.
+					// Any real HTTP response (401/410/404/5xx) is handled below —
+					// we must not retry those and mask a token error.
+					lastNetErr = netErr;
 				}
 			}
+			if (!res) throw lastNetErr;
 			if (res.status === 401) {
 				setError('migrate.error_token_expired');
 				phase = 'fetch-error';
@@ -294,11 +323,21 @@
 			// Append migrated medications to it (if any).
 			blueprint.loadFromDocuments();
 			const current = (await import('svelte/store')).get(blueprint) || defaultEpilepsyBlueprint();
+			// INC-001 — a user who already has a NON-epilepsy blueprint (very
+			// likely after a failed first attempt: the dashboard requires a
+			// blueprint, so it pushes them through /setup) keeps it, but must
+			// still gain the episode types the imported seizures are filed
+			// under. Additive: their existing configuration is never replaced.
+			const withEpisodes = ensureEpisodeTypes(current, epilepcEpisodeTypes());
 			const next = {
-				...current,
-				medications: mergeMedications(current.medications || [], mapped.medications),
+				...withEpisodes,
+				medications: mergeMedications(withEpisodes.medications || [], mapped.medications),
 			};
-			await blueprint.save(next);
+			// A silently-failed blueprint save used to leave the documents
+			// imported but unrenderable — the same invisible-data outcome.
+			if (!(await blueprint.save(next))) {
+				throw new Error('blueprint_save_failed');
+			}
 			// Track-3 3.4 — bulk import. One request per BATCH_SIZE docs instead
 			// of one per doc (233 docs → 3 requests). Idempotent server-side via
 			// an opaque client_key = "v1:" + base64url(sha256(username:source_id)),
@@ -377,24 +416,19 @@
 	}
 
 	async function signalMigrationComplete() {
-		// Best-effort: try https first, fall back to http for localhost-style
-		// dev sources (mirrors the fetchBundle logic).
+		// INC-001 — address the base the bundle actually came from. Rebuilding
+		// this from `source` would re-run the redirect that the fetch had to
+		// work around, so the signal would never land and epilepc would never
+		// move the user to read-only. Falls back to `source` only if we somehow
+		// got here without a resolved base.
 		const path = `/api/migration-complete/${encodeURIComponent(token)}`;
-		const tryOnce = async (scheme: 'https' | 'http') => {
-			const url = `${scheme}://${source}${path}`;
-			return fetch(url, { method: 'POST', mode: 'cors', credentials: 'omit' });
-		};
+		const base = resolvedBase || `https://${source}`;
 		try {
-			let res: Response;
-			try {
-				res = await tryOnce('https');
-			} catch (netErr) {
-				if (source.startsWith('localhost') || source.startsWith('127.0.0.1')) {
-					res = await tryOnce('http');
-				} else {
-					throw netErr;
-				}
-			}
+			const res = await fetch(`${base}${path}`, {
+				method: 'POST',
+				mode: 'cors',
+				credentials: 'omit',
+			});
 			if (!res.ok) {
 				console.warn('[migrate] lockdown signal returned non-OK', res.status);
 			}

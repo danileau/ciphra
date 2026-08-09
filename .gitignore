@@ -21,3 +21,7 @@ golive/
 
 # design-review scratch (static mockups)
 tmp/
+
+# INC-001 deploy-gate reports (scripts/verify-migration-prod.sh) — local
+# evidence with machine-specific timestamps, regenerated on demand
+.inc001/

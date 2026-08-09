@@ -21,6 +21,8 @@ import {
     mergeMedications,
     allSourceIds,
     defaultEpilepsyBlueprint,
+    ensureEpisodeTypes,
+    epilepcEpisodeTypes,
     parseEpilepcMedName,
     type EpilepcBundle,
 } from './epilepcMapping';
@@ -480,5 +482,60 @@ describe('defaultEpilepsyBlueprint', () => {
     it('has conditionId set to epilepsy', () => {
         const bp = defaultEpilepsyBlueprint();
         expect(bp.conditionId).toBe('epilepsy');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// ensureEpisodeTypes (INC-001)
+// ---------------------------------------------------------------------------
+
+describe('ensureEpisodeTypes', () => {
+    const required = epilepcEpisodeTypes();
+
+    it('covers every key mapSeizureType can emit', () => {
+        // If these drift apart, migrated seizures import but render as nothing.
+        const emitted = [
+            mapSeizureType('Fokaler Anfall'),
+            mapSeizureType('Generalisierter tonisch-klonischer Anfall'),
+            mapSeizureType('Absence'),
+            mapSeizureType('Myoklonischer Anfall'),
+            mapSeizureType('something we have never seen'),
+        ];
+        const ids = new Set(required.map((e) => e.id));
+        for (const key of emitted) expect(ids.has(key)).toBe(true);
+    });
+
+    it('adds the missing epilepsy types to a foreign blueprint', () => {
+        const migraine = { ...defaultEpilepsyBlueprint(), episodeTypes: [] };
+        const out = ensureEpisodeTypes(migraine, required);
+        expect(out.episodeTypes.map((e) => e.id).sort()).toEqual(
+            required.map((e) => e.id).sort(),
+        );
+    });
+
+    it('never replaces or reorders what the user already has', () => {
+        const custom = {
+            ...defaultEpilepsyBlueprint(),
+            episodeTypes: [
+                { id: 'focal', label: 'MY OWN LABEL', color: '#123456', trackDuration: false, trackTimeOfDay: false },
+            ],
+        };
+        const out = ensureEpisodeTypes(custom, required);
+        // The user's customisation of `focal` survives untouched...
+        expect(out.episodeTypes[0]).toEqual(custom.episodeTypes[0]);
+        // ...and the four it lacked were appended.
+        expect(out.episodeTypes).toHaveLength(required.length);
+    });
+
+    it('is a no-op (same reference) when nothing is missing', () => {
+        const bp = defaultEpilepsyBlueprint();
+        expect(ensureEpisodeTypes(bp, required)).toBe(bp);
+    });
+
+    it('tolerates a blueprint with no episodeTypes at all', () => {
+        const bp = { ...defaultEpilepsyBlueprint() } as Record<string, unknown>;
+        delete bp.episodeTypes;
+        const out = ensureEpisodeTypes(bp as never, required);
+        expect(out.episodeTypes).toHaveLength(required.length);
     });
 });
