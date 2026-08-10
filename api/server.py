@@ -747,10 +747,19 @@ def store_documents_batch():
                         errored += 1
                         continue
                     if ck:
+                        # `WHERE client_key IS NOT NULL` is REQUIRED, not decorative.
+                        # uq_docs_user_clientkey is a PARTIAL unique index, and
+                        # Postgres will only infer a partial index for ON CONFLICT
+                        # if the statement repeats its predicate. Without it every
+                        # call raised InvalidColumnReference ("no unique or
+                        # exclusion constraint matching the ON CONFLICT
+                        # specification") -> 500 -> the client fell back to one
+                        # request per document. See docs/incidents/INC-001.md.
                         cur.execute("""
                             INSERT INTO encrypted_documents (user_id, encrypted_data, client_key)
                             VALUES (%s, %s, %s)
-                            ON CONFLICT (user_id, client_key) DO NOTHING
+                            ON CONFLICT (user_id, client_key) WHERE client_key IS NOT NULL
+                            DO NOTHING
                             RETURNING id
                         """, (request.user_id, enc, ck))
                     else:

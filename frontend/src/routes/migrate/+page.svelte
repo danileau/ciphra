@@ -113,6 +113,12 @@
 		return { start: all[0], end: all[all.length - 1] };
 	}
 
+	/** Statuses worth waiting out rather than failing on (mirrors documents.ts). */
+	function isRetryableStatus(status: number): boolean {
+		return status === 0 || status === 408 || status === 429 || status >= 500;
+	}
+	const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 	const CHECKPOINT_KEY_PREFIX = 'ciphra_migrate_done:';
 
 	function checkpointKey() {
@@ -359,18 +365,38 @@
 				const items = await Promise.all(
 					chunk.map(async (d) => ({ data: d, clientKey: await migrationClientKey(uname, d.source_id as string) })),
 				);
-				const { ok, results } = await documents.saveBatch(items);
-				// Fall back to per-doc save if the batch endpoint is unavailable
-				// (older server / network): same end state, just slower.
+				// INC-001 rehearsal — when a batch fails because the server is
+				// momentarily overloaded, retry the BATCH. Dropping straight to
+				// one-request-per-document is the worst possible reaction: it
+				// turns 1 request into 2N and guarantees the rate limit bites.
+				// That is what made a real rehearsal need four clicks and show
+				// three red errors before the data was fully in.
+				let res = await documents.saveBatch(items);
+				for (let attempt = 1; attempt <= 4 && !res.ok && isRetryableStatus(res.status); attempt++) {
+					busyLabel = $t('migrate.retrying', { sec: attempt * 2 });
+					await sleep(attempt * 2000); // 2s, 4s, 6s, 8s
+					res = await documents.saveBatch(items);
+				}
+				const { ok, results } = res;
+
+				// Genuinely unavailable (an old server without the endpoint):
+				// fall back to per-document saves. Same end state, just slower.
+				// `skipReload` matters — reloading after each write doubled the
+				// request count for no benefit; one reload at the end is enough.
 				if (!ok) {
 					for (const d of chunk) {
 						const sid = d.source_id as string;
-						const saved = await documents.save(d);
+						let saved = await documents.save(d, { skipReload: true });
+						for (let attempt = 1; attempt <= 3 && !saved; attempt++) {
+							await sleep(attempt * 1000);
+							saved = await documents.save(d, { skipReload: true });
+						}
 						if (!saved) throw new Error(`save_failed:${sid}`);
 						done.add(sid);
-						saveCheckpoint(done);
 						progressDone += 1;
 					}
+					saveCheckpoint(done);
+					await documents.load();
 					continue;
 				}
 				for (let j = 0; j < chunk.length; j++) {
@@ -406,7 +432,10 @@
 				phase = 'tour';
 			}
 		} catch (e) {
-			setError('migrate.error_import', e instanceof Error ? e.message : String(e));
+			// An overload deserves "wait a moment", not a raw save_failed id the
+			// user cannot act on. The checkpoint means a retry resumes, so say so.
+			const msg = e instanceof Error ? e.message : String(e);
+			setError(/save_failed|Failed to save/i.test(msg) ? 'migrate.error_overloaded' : 'migrate.error_import', msg);
 			// stay on importing/preview so user can retry — checkpoint preserved
 			phase = 'preview';
 		} finally {

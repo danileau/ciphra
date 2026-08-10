@@ -2151,6 +2151,8 @@ export default {
 	'migrate.error_signup': 'Impossibile creare l\'account.',
 	'migrate.error_token_expired': 'Link scaduto. Richiedine uno nuovo sulla sorgente.',
 	'migrate.error_token_used': 'Link già utilizzato. Richiedine uno nuovo sulla sorgente.',
+	'migrate.retrying': 'Server occupato — nuovo tentativo tra {sec}s …',
+	'migrate.error_overloaded': 'Il server era momentaneamente occupato. Riprova tra un minuto — le voci già trasferite vengono saltate.',
 	'migrate.error_fetch': 'Impossibile raggiungere la sorgente.',
 	'migrate.error_bundle_format': 'Formato del bundle non riconosciuto.',
 	'migrate.error_import': 'Importazione fallita. Puoi riprovare — gli elementi già importati saranno saltati.',
