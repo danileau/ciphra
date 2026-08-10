@@ -44,14 +44,46 @@ export async function registerNewUser(
  */
 export async function selectCohort(page: Page, cohortMatch: RegExp): Promise<void> {
 	await page.goto('/setup');
-	await page.getByText(cohortMatch).first().click();
-	for (let i = 0; i < 4; i++) {
-		const next = page.getByTestId('wizard-next');
-		if (await next.count()) {
-			await next.first().click();
-			await page.waitForTimeout(150);
-		}
+	// The wizard gained a step 0 ("How will you use ciphra?") after this helper
+	// was written, so the condition list is one click further in than it used
+	// to be. Without this the helper silently timed out on every caller.
+	const ownHealth = page.getByRole('button', {
+		name: /Track my own health|Meine eigene Gesundheit/i,
+	});
+	const presetStep = page.getByRole('heading', {
+		name: /What would you like to track|Was möchtest du/i,
+	});
+
+	// NEVER gate on count() straight after goto(): it resolves before Svelte
+	// has rendered, reports 0, and the step is silently skipped — which is
+	// exactly how this helper failed. Wait for whichever step is showing.
+	await Promise.race([
+		ownHealth.first().waitFor({ timeout: 30_000 }),
+		presetStep.waitFor({ timeout: 30_000 }),
+	]).catch(() => { /* the assertion below reports the real problem */ });
+
+	if (await ownHealth.first().isVisible().catch(() => false)) {
+		await ownHealth.first().click();
 	}
+	await presetStep.waitFor({ timeout: 30_000 });
+	// Match the button by its inner text. `getByRole(name:)` is unreliable
+	// here: the card's accessible name is the flattened label + description,
+	// and the preset heading sits in a nested <h3>.
+	await page.locator('button').filter({ hasText: cohortMatch }).first().click();
+	// Walk to the end. The wizard grew steps over time, so loop until the
+	// finish button appears rather than assuming a fixed count — and then
+	// wait for it to actually leave /setup, because a helper that returns
+	// while the blueprint has not been saved makes its caller assert against
+	// a state that never existed.
 	const finish = page.getByTestId('wizard-finish');
-	if (await finish.count()) await finish.first().click();
+	for (let i = 0; i < 10 && !(await finish.isVisible().catch(() => false)); i++) {
+		const next = page.getByTestId('wizard-next');
+		if (!(await next.first().isVisible().catch(() => false))) break;
+		await next.first().click();
+		await page.waitForTimeout(200);
+	}
+	if (await finish.isVisible().catch(() => false)) {
+		await finish.click();
+		await page.waitForURL((u) => !u.pathname.startsWith('/setup'), { timeout: 60_000 });
+	}
 }
