@@ -361,13 +361,37 @@ VPS holds no GitHub credentials.
 The VPS watches the repo for `deploy-<7sha>` tags
 (`ciphra-deploy.timer`, every 3 min → `golive/deploy/ciphra-autodeploy`,
 root: it must restart systemd units — the documented second root task).
-To deploy a merged commit, from the laptop:
+
+**Deploy with the wizard** (`scripts/deploy-wizard.sh`, since 2026-07-25) —
+the single entry point from the laptop:
+
+```bash
+./scripts/deploy-wizard.sh
+```
+
+It checks your GitHub permission (repo **write** = operator; read-only
+collaborators get a view-only run), lists the deployable commits on
+`origin/main` annotated with their `release-images` signing status / whether
+they're already deployed / which is **LIVE**, recommends the newest signed
+commit not yet shipped (or says "up to date"), and on confirm does the
+tag → push → health-poll itself. It only offers commits that are on
+`origin/main` **and** have a green, signed `release-images` build. Choose
+`r` for rollback / redeploy. `-n <N>` widens the candidate window.
+
+Under the hood it's still just a tag push, so the manual path also works:
 
 ```bash
 git fetch origin main
-git tag deploy-<sha> <sha>
+git tag -m "deploy <sha>" deploy-<sha> <sha>   # -m ⇒ ANNOTATED (see below)
 git push origin deploy-<sha>
 ```
+
+> **Deploy tags must be annotated.** The VPS selects the live deploy with
+> `git tag --sort=-creatordate`. For a *lightweight* tag, `creatordate` is
+> the tagged **commit's** date — so a rollback tag on an older commit sorts
+> *below* the current one and the VPS never picks it (rollback silently
+> no-ops). An **annotated** tag (`git tag -m …`) carries its own tagger
+> date → newest-pushed always wins. The wizard does this for you.
 
 Within ~3 minutes the VPS: pulls all three images → **digest-pinned
 cosign verification** (unsigned/foreign images are refused — a tag
@@ -376,8 +400,10 @@ restart → health check. ntfy reports start / OK / BLOCKED / FAILED.
 **On a failed health check it rolls back automatically** to the
 previous registry+tag and says so.
 
-Rollback by hand = push a deploy tag for the previous SHA. Watch a
-deploy live: `journalctl -u ciphra-deploy -f`.
+Rollback by hand = `r` in the wizard, or push a fresh **annotated** deploy
+tag for the previous SHA (delete the existing `deploy-<sha>` first so it can
+be recreated with a new timestamp). Watch a deploy live:
+`journalctl -u ciphra-deploy -f`.
 
 ### CDN caching — `/sw.js` must not be edge-cached
 
