@@ -2172,6 +2172,8 @@ export default {
 	'migrate.error_signup': 'Could not create your account.',
 	'migrate.error_token_expired': 'Link expired. Please request a new one on the source.',
 	'migrate.error_token_used': 'Link already used. Please request a new one on the source.',
+	'migrate.retrying': 'Server busy — retrying in {sec}s …',
+	'migrate.error_overloaded': 'The server was briefly busy. Please try again in a minute — anything already transferred is skipped.',
 	'migrate.error_fetch': 'Could not reach the source.',
 	'migrate.error_bundle_format': 'Bundle format not recognised.',
 	'migrate.error_import': 'Import failed. You can retry — items already imported will be skipped.',
