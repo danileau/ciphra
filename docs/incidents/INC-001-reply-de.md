@@ -1,31 +1,32 @@
 # INC-001 — Antwortvorlage (DE)
 
-Template for replying to a migrant stranded by INC-001. Placeholders in
-`{{ }}`. Deliberately contains no personal data — fill it in when sending, do
-not commit a filled-in copy.
+Für den von INC-001 betroffenen Migranten. Platzhalter in `{{ }}`; keine
+personenbezogenen Daten committen.
 
-Generate `{{RECOVERY_LINK}}` with:
+Link erzeugen mit:
 
 ```bash
 scripts/unblock-migrant.sh <token> www.epilepc.ch
 ```
 
-Voice: `du`, Swiss German (`ss`, never `ß`), no blame-shifting and no
-over-apologising. State what broke, what it means for their data, what to do
-next.
+Ton: `du`, Schweizer Rechtschreibung (`ss`, nie `ß`). Sagen, was kaputt war,
+was das für seine Daten heisst, was er jetzt tut. Keine Schuldverschiebung,
+kein Übermass an Entschuldigung.
+
+**Voraussetzung:** ciphra #125 (Login-Tab auf `/migrate`) muss deployt sein.
+Vorher fehlt ihm die Anmelde-Option und der Text stimmt nicht.
 
 ---
 
-**Betreff:** Re: Migration von epilepc zu ciphra — behoben, dein Link funktioniert wieder
+**Betreff:** Re: Migration von epilepc zu ciphra — behoben
 
 Guten Tag
 
 danke für die Meldung, und entschuldige den Ärger.
 
-Der Fehler lag bei uns. Dein Migrationslink zeigte auf `epilepc.ch`, und dieser
-Host leitet nur auf `www.epilepc.ch` weiter. Bei einer Datenübertragung zwischen
-zwei Websites bricht der Browser eine solche Weiterleitung aus
-Sicherheitsgründen ab. Darum die Fehlermeldung — und darum ist bei epilepc gar
+Der Fehler lag bei uns. Dein Migrationslink zeigte auf einen Server, der die
+Anfrage nur weitergeleitet statt beantwortet hat — der Browser bricht das aus
+Sicherheitsgründen ab. Darum die Fehlermeldung, und darum ist bei epilepc gar
 keine Anfrage angekommen.
 
 Zwei gute Nachrichten:
@@ -37,31 +38,36 @@ Hier ist der korrigierte Link:
 
 {{RECOVERY_LINK}}
 
-So gehst du vor:
+Du hast auf ciphra bereits ein Konto ({{CIPHRA_USERNAME}}). Wähle beim Öffnen
+des Links den Reiter **Anmelden** statt Registrieren — danach läuft die
+Übertragung durch.
 
-1. Melde dich bei ciphra mit deinem bestehenden Konto an ({{CIPHRA_USERNAME}}).
-2. **Starte nicht den Einrichtungs-Assistenten**, auch wenn ciphra ihn dir
-   anbietet. Öffne direkt den Link oben.
-3. Der Import läuft dann durch, und du siehst vorher eine Übersicht, was
-   übertragen wird.
-
-Der Link ist bis {{EXPIRES_AT}} gültig. Falls etwas nicht klappt, melde dich
-einfach nochmals — mit Screenshot der Fehlermeldung, falls möglich.
+Der Link ist bis {{EXPIRES_AT}} gültig. Falls etwas klemmt, melde dich
+nochmals, am besten mit Screenshot.
 
 Zur Einordnung: du bist auf einen echten Fehler von uns gestossen, nicht auf
-einen Bedienfehler. Die Ursache ist gefunden und behoben, und wir haben einen
-automatischen Test ergänzt, der genau diesen Fall künftig abfängt. Danke, dass
-du dir die Zeit für die Meldung genommen hast.
+einen Bedienfehler. Die Ursache ist behoben, und wir haben Tests ergänzt, die
+genau diesen Fall künftig abfangen. Danke, dass du dir die Zeit genommen hast.
 
 Freundliche Grüsse
 {{SIGNATURE}}
 
 ---
 
-## Falls sie sich auf epilepc nicht einloggen können
+## Was hier bewusst NICHT mehr steht
 
-Separate Ursache (Session-Speicher, siehe INC-001 §Ops). Ergänze dann:
+- **„Starte den Einrichtungs-Assistenten nicht zuerst."** War nötig, solange ein
+  nicht-epilepsie-Blueprint dazu führte, dass importierte Anfälle unsichtbar
+  blieben. `ensureEpisodeTypes` (#117, deployt) ergänzt die fehlenden
+  Anfallstypen jetzt automatisch — die Warnung wäre nur noch Ballast.
+- **Die Anleitung um die Schein-Registrierung herum.** Mit dem Login-Tab (#125)
+  ist die Anmeldung sichtbar, statt sich hinter einem provozierten Fehler zu
+  verstecken.
+- **Technische Details zu CORS und Weiterleitungen.** Für ihn ohne Wert; die
+  Rekonstruktion steht in `INC-001.md`.
 
-> Falls du dich auf epilepc momentan nicht einloggen kannst: das ist ein
-> separates Problem auf unserer Seite, an dem wir arbeiten. Für die Migration
-> brauchst du kein epilepc-Login — der Link oben genügt.
+## Falls er sich auf epilepc nicht einloggen kann
+
+Sollte behoben sein (Session-Speicher, epilepc#70). Falls doch:
+
+> Für die Migration brauchst du kein epilepc-Login — der Link oben genügt.
