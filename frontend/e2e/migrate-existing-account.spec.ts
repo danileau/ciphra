@@ -175,3 +175,52 @@ test('an existing account resumes via login and imports correctly', async ({ pag
 		).toContain(required);
 	}
 });
+
+test('the login tab avoids the fake-registration detour entirely', async ({ page }) => {
+	// Same starting position as the test above — an account that already
+	// exists — but taking the route a user would actually want: pick "log in",
+	// instead of filling in a registration whose only purpose is to be
+	// rejected. That detour is what the reporter would otherwise have faced.
+	resetMigrationState();
+	await allowConnectOrigins(page, bothSchemes(EPILEPC_HOST));
+
+	const username = await registerStandalone(page);
+	await page.getByRole('button', { name: /Log out|Abmelden/i }).click();
+	await expect(page.getByRole('button', { name: /Log out|Abmelden/i })).toHaveCount(0, {
+		timeout: 30_000,
+	});
+
+	const link = await mintMigrationLink(page);
+	const { token } = parseMigrationLink(link);
+	await page.goto(withSource(link, token, EPILEPC_HOST));
+
+	// Register stays the default — most migrants really are new.
+	await expect(page.locator('#signup-user')).toBeVisible({ timeout: 30_000 });
+
+	// One click to the login form: no username invented, no password typed
+	// twice, no deliberate 409.
+	await page.getByTestId('migrate-tab-login').click();
+	await expect(page.locator('#login-user')).toBeVisible();
+	await expect(page.locator('#signup-pass2')).toHaveCount(0);
+
+	await page.locator('#login-user').fill(username);
+	await page.locator('#login-pass').fill(TEST_PASSWORD);
+	await page.getByTestId('login-submit').click();
+
+	// Straight into the transfer, fragment token intact.
+	const confirm = page.getByTestId('migrate-confirm-origin');
+	await confirm.waitFor({ timeout: 60_000 });
+	await page.locator('input[type="checkbox"]').check();
+	await confirm.click();
+
+	const importBtn = page.getByTestId('migrate-confirm-import');
+	await importBtn.waitFor({ timeout: 180_000 });
+	await importBtn.click();
+
+	await page
+		.getByRole('button', { name: /Got it, go to home|Verstanden, zur Startseite/i })
+		.waitFor({ timeout: 180_000 });
+
+	expect(readTokenRow(token)!.usedAt, 'export ran').not.toBeNull();
+});
+
