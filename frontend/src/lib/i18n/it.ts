@@ -2129,6 +2129,7 @@ export default {
 	'migrate.welcome_title': 'Benvenuto su ciphra',
 	'migrate.welcome_body': 'ciphra è un servizio distinto — non è epilepc. Il tuo login epilepc non funziona qui; crea un nuovo account ciphra cifrato. I tuoi dati da {source} verranno poi cifrati e copiati nel tuo nuovo account, prima che epilepc venga dismesso.',
 	'migrate.existing_title': 'Hai già un account',
+	'migrate.login_body': 'Accedi con il tuo account ciphra esistente — il trasferimento prosegue subito dopo.',
 	'migrate.existing_body': 'Questo account esiste già — probabilmente hai già iniziato la migrazione. Accedi con la tua password e il trasferimento riprende da dove eri rimasto.',
 	'migrate.signup_continue': 'Crea account',
 	'migrate.fetch_bundle': 'Carica i dati dalla sorgente',
