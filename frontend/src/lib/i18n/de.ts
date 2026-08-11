@@ -2179,6 +2179,8 @@ export default {
 	'migrate.error_signup': 'Konto konnte nicht angelegt werden.',
 	'migrate.error_token_expired': 'Link abgelaufen. Bitte auf der Quelle einen neuen erzeugen.',
 	'migrate.error_token_used': 'Link wurde bereits verwendet. Bitte auf der Quelle einen neuen erzeugen.',
+	'migrate.retrying': 'Server ausgelastet — neuer Versuch in {sec}s …',
+	'migrate.error_overloaded': 'Der Server war kurz ausgelastet. Bitte in einer Minute erneut versuchen — bereits übertragene Einträge werden übersprungen.',
 	'migrate.error_fetch': 'Verbindung zur Quelle fehlgeschlagen.',
 	'migrate.error_bundle_format': 'Bundle-Format nicht erkannt.',
 	'migrate.error_import': 'Import fehlgeschlagen. Du kannst es erneut versuchen — bereits importierte Einträge werden übersprungen.',

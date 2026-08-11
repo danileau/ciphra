@@ -345,10 +345,14 @@ test.describe('INC-001 — fixed edge behaviours', () => {
 		await registerInMigrateFlow(page);
 		await confirmOriginAndFetch(page);
 
-		// The user still gets nothing...
+		// The user still gets nothing — but note WHEN. The redirect is followed,
+		// so the server performs the ENTIRE export first, and only then does the
+		// browser discard the response. The wait here must therefore cover a full
+		// export, not just a round-trip. That wasted work is a further argument
+		// against this option: maximum cost, zero delivery, token spent.
 		await expect(
 			page.getByText(/Could not reach the source|Verbindung zur Quelle fehlgeschlagen/i),
-		).toBeVisible({ timeout: 60_000 });
+		).toBeVisible({ timeout: 180_000 });
 
 		// ...but unlike the plain redirect, the server DID serve the bundle, so
 		// the single-use link is now spent. This is the whole argument against

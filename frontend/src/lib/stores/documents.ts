@@ -398,7 +398,17 @@ function createDocStore() {
 				inFlightKey = null;
 			}
 		},
-		async save(data: any): Promise<boolean> {
+		/**
+		 * `opts.skipReload` suppresses the post-write reload. Only for callers
+		 * that save many documents in a row and reload once at the end.
+		 *
+		 * INC-001 rehearsal: the migration's per-document fallback path saved
+		 * 37 documents and reloaded after every single one — 74 requests where
+		 * 37 would do, against an nginx `burst=20`. Half of them 503'd, the
+		 * import aborted, and the user had to click "import" four times to get
+		 * their data in.
+		 */
+		async save(data: any, opts?: { skipReload?: boolean }): Promise<boolean> {
 			const ctx = resolveVault();
 			if (!ctx.masterKey) return false;
 			let encrypted: string;
@@ -420,7 +430,7 @@ function createDocStore() {
 					if (browser) {
 						try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch {}
 					}
-					await reloadAfterWrite();
+					if (!opts?.skipReload) await reloadAfterWrite();
 					return true;
 				}
 				if (isOfflineStatus(res.status)) return queueCreate(encrypted, data, ctx);
@@ -440,11 +450,18 @@ function createDocStore() {
 		// resumable-via-client_key flow, and queueing partial batches would
 		// muddy the idempotency story. Falls back to per-doc save() at the call
 		// site if this returns ok:false.
+		/**
+		 * INC-001 rehearsal: the caller needs to know WHY a batch failed.
+		 * "Overloaded, try again shortly" and "this payload is bad" demand
+		 * opposite responses, and treating the first like the second is what
+		 * made a single 503 escalate into 37 individual retries.
+		 * `status` is 0 when the request never produced a response.
+		 */
 		async saveBatch(
 			items: { data: any; clientKey?: string }[]
-		): Promise<{ ok: boolean; results: Array<{ client_key?: string; status: string; id?: number; error?: string }> }> {
+		): Promise<{ ok: boolean; status: number; results: Array<{ client_key?: string; status: string; id?: number; error?: string }> }> {
 			const ctx = resolveVault();
-			if (!ctx.masterKey || ctx.sourceUserId) return { ok: false, results: [] };
+			if (!ctx.masterKey || ctx.sourceUserId) return { ok: false, status: 0, results: [] };
 			const payload: { client_key?: string; encrypted_data: string }[] = [];
 			try {
 				for (const it of items) {
@@ -453,7 +470,7 @@ function createDocStore() {
 				}
 			} catch {
 				documentsError.set('Failed to save document');
-				return { ok: false, results: [] };
+				return { ok: false, status: 0, results: [] };
 			}
 			try {
 				const res = await api.storeDocumentsBatch(payload);
@@ -461,13 +478,15 @@ function createDocStore() {
 					documentsError.set(null);
 					if (browser) { try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch { /* ignore */ } }
 					await reloadAfterWrite();
-					return { ok: true, results: (res.data.results as any[]) || [] };
+					return { ok: true, status: res.status, results: (res.data.results as any[]) || [] };
 				}
-				documentsError.set('Failed to save document');
-				return { ok: false, results: [] };
+				// Don't shout "failed to save" at the user for a retryable
+				// overload — the caller decides, and it will simply wait.
+				if (!isRetryableStatus(res.status)) documentsError.set('Failed to save document');
+				return { ok: false, status: res.status, results: [] };
 			} catch {
 				documentsError.set('Failed to save document');
-				return { ok: false, results: [] };
+				return { ok: false, status: 0, results: [] };
 			}
 		},
 		async updateDoc(id: number, data: any): Promise<boolean> {

@@ -76,7 +76,10 @@ mkdir -p "$OUT_DIR"
 
 echo
 echo "report written: $OUT"
-if [ -f "$OUT_DIR/before.txt" ] && [ -f "$OUT_DIR/after.txt" ]; then
+# Suggest a diff against the baseline using the label actually passed, not a
+# hardcoded "after". A run labelled e.g. `after2` used to be pointed at a file
+# it never wrote, which reads like the run itself failed.
+if [ -f "$OUT_DIR/before.txt" ] && [ "$LABEL" != "before" ]; then
 	echo
-	echo "compare with:  diff $OUT_DIR/before.txt $OUT_DIR/after.txt"
+	echo "compare with:  diff $OUT_DIR/before.txt $OUT"
 fi
