@@ -80,6 +80,10 @@
 	let resolvedBase = '';
 	// CIPH 3.6 — username carried over from a 409 signup into the resume-login.
 	let existingUsername = '';
+	// INC-001 follow-up — which auth form the signup phase is showing.
+	// Defaults to register: most migrants are genuinely new. Anyone whose
+	// first attempt failed already has an account and needs the other tab.
+	let authTab: 'register' | 'login' = 'register';
 
 	let progressDone = 0;
 	let progressTotal = 0;
@@ -529,14 +533,45 @@
 						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
 							{$t('migrate.welcome_title')}
 						</h1>
-						<p class="text-sm mb-6" style="color: var(--text-secondary)">
+						<p class="text-sm mb-4" style="color: var(--text-secondary)">
 							{$t('migrate.welcome_body', { source })}
 						</p>
-						<SignupFlow
-							source="migrate"
-							on:signup-complete={handleSignupComplete}
-							on:username-exists={handleUsernameExists}
-						/>
+
+						<!-- INC-001 follow-up: a migrant who ALREADY has a ciphra
+						     account had to fake a registration — fill in a username
+						     and type a password twice — purely to trigger the 409
+						     that offers login. That is exactly the position anyone
+						     whose first attempt failed is in. Same tab pattern as
+						     /login, so the choice is where users expect it. -->
+						<div class="flex mb-6" style="border-bottom: 1px solid var(--border)">
+							<button
+								type="button"
+								data-testid="migrate-tab-register"
+								class="flex-1 py-3 text-sm font-medium transition-colors min-h-[48px]"
+								style="{authTab === 'register' ? 'color: var(--brand); border-bottom: 2px solid var(--brand)' : 'color: var(--text-muted)'}"
+								on:click={() => (authTab = 'register')}
+							>{$t('auth.register')}</button>
+							<button
+								type="button"
+								data-testid="migrate-tab-login"
+								class="flex-1 py-3 text-sm font-medium transition-colors min-h-[48px]"
+								style="{authTab === 'login' ? 'color: var(--brand); border-bottom: 2px solid var(--brand)' : 'color: var(--text-muted)'}"
+								on:click={() => (authTab = 'login')}
+							>{$t('auth.login')}</button>
+						</div>
+
+						{#if authTab === 'register'}
+							<SignupFlow
+								source="migrate"
+								on:signup-complete={handleSignupComplete}
+								on:username-exists={handleUsernameExists}
+							/>
+						{:else}
+							<p class="text-sm mb-4" style="color: var(--text-secondary)">
+								{$t('migrate.login_body')}
+							</p>
+							<LoginForm on:login-complete={handleLoginComplete} />
+						{/if}
 					{:else if phase === 'login-existing'}
 						<!-- CIPH 3.6 — account already exists (reload after a prior
 						     signup). Log in in-place; the URL-fragment migrate token
