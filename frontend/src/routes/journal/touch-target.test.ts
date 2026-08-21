@@ -4,7 +4,9 @@
  * WCAG 2.5.5 says interactive targets should be ≥44×44 CSS pixels. PI v22's
  * J1 audit caught 4 failures on this surface (search-toggle 40×40, search-
  * clear ~22×22, filter chip 36px, moment-modal Yes-delete + Delete plain
- * buttons). This test pins the fixes against the source so a future "reduce
+ * buttons). It has since caught a fifth: the v2 rewrite shipped 32px chips
+ * and a 32px clear button before this test failed the build. This pins the
+ * fixes against the source so a future "reduce
  * filter chip height" or "tighten search button padding" refactor has to
  * break a test to ship.
  *
@@ -28,31 +30,32 @@ const JOURNAL = readFileSync(
 );
 
 describe('CIPH-pi22-JC-1 /journal touch-target floor (44pt WCAG 2.5.5)', () => {
-	it('search-toggle button is min-w-[44px] min-h-[44px]', () => {
-		// Locked against the previous 40×40 regression. The shrink-0 +
-		// p-2 + flex anchor disambiguates this button from other 44×44
-		// controls in the file (search-clear keeps an absolute position).
-		expect(JOURNAL).toMatch(
-			/openSearch[\s\S]{0,400}shrink-0[^"]*min-w-\[44px\][^"]*min-h-\[44px\]/,
-		);
+	// The search TOGGLE is gone (journal v2): search is a permanent field
+	// rather than an icon that expands into one, because finding and
+	// re-reading is the page's whole job. Its 44×44 assertion retires with
+	// it; the field itself takes the floor instead.
+	it('the search field itself is at least 44px tall', () => {
+		expect(JOURNAL).toMatch(/\.jr-search-input\s*\{[^}]*min-height:\s*44px/);
 	});
 
-	it('search-clear button is min-w-[44px] min-h-[44px]', () => {
-		// Anchor: `searchQuery = ''; searchOpen = false;` is unique to
-		// the clear handler. The class string immediately after must
-		// carry the 44pt floor.
-		expect(JOURNAL).toMatch(
-			/searchQuery\s*=\s*''[\s\S]{0,400}min-w-\[44px\][^"]*min-h-\[44px\]/,
-		);
+	it('search-clear button is at least 44×44', () => {
+		expect(JOURNAL).toMatch(/\.jr-search-clear\s*\{[^}]*min-width:\s*44px/);
+		expect(JOURNAL).toMatch(/\.jr-search-clear\s*\{[^}]*min-height:\s*44px/);
 	});
 
 	it('filter chip CSS sets min-height: 44px', () => {
-		// Locked against the previous 36px regression. The `.journal-filter-chip`
-		// rule in the <style> block is the source of truth for filter-tab
-		// height; Tailwind utility classes don't override.
-		expect(JOURNAL).toMatch(
-			/\.journal-filter-chip\s*\{[^}]*min-height:\s*44px/,
-		);
+		// Locked against the previous 36px regression — and against the 32px
+		// one introduced by the v2 rewrite, which this test caught. Chips have
+		// no equivalent path elsewhere, so the grid-cell "Equivalent"
+		// exception WCAG 2.5.5 allows does not apply to them.
+		expect(JOURNAL).toMatch(/\.jr-chip\s*\{[\s\S]{0,220}min-height:\s*44px/);
+	});
+
+	it('every text row in the feed is reachable as its own control', () => {
+		// The rows are buttons, not nested links inside a link — the previous
+		// layout had a "Show details" link inside a card that was itself a
+		// link, on some cards but not others.
+		expect(JOURNAL).toMatch(/class="jr-text jr-text--\{txt\.kind\}"/);
 	});
 
 	it('moment-modal "Yes delete" button is min-h-[44px]', () => {

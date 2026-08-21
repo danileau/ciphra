@@ -30,15 +30,42 @@
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
-	import { onMount, tick } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { fade } from 'svelte/transition';
 	import EntryPreview from '$lib/components/EntryPreview.svelte';
 	import JournalEmpty from '$lib/components/JournalEmpty.svelte';
+	import { buildNarrative, groupByMonth, type JournalDay, type JournalText } from '$lib/journal/narrative';
 	import Modal from '$lib/components/Modal.svelte';
 
-	let filter = 'all';
+	// ── Filters ──────────────────────────────────────────────────────────
+	// The old bar was three tabs — All / Entries / Note markers — two of
+	// which selected nearly the same thing, plus a search icon that expanded
+	// into a field. Search is the reason to be on this page, so it is the
+	// page now, and the narrowing controls sit beside it.
+	let filter: 'all' | 'diary' | 'note' | 'marker' = 'all';
+	let withEpisodeOnly = false;
+	let rangeMonths: 0 | 3 | 12 = 0;   // 0 = everything
 	let searchQuery = '';
+
+	const KIND_CHIPS: Array<{ id: 'all' | 'diary' | 'note' | 'marker'; key: string }> = [
+		{ id: 'all', key: 'stream.filter_all' },
+		{ id: 'note', key: 'stream.filter_notes' },
+		{ id: 'diary', key: 'stream.filter_diary' },
+		{ id: 'marker', key: 'stream.filter_markers' },
+	];
+	const RANGE_CHIPS: Array<{ months: 0 | 3 | 12; key: string }> = [
+		{ months: 0, key: 'stream.range_all' },
+		{ months: 12, key: 'stream.range_12m' },
+		{ months: 3, key: 'stream.range_3m' },
+	];
+
+	$: rangeFromISO = (() => {
+		if (!rangeMonths) return undefined;
+		const d = new Date();
+		d.setMonth(d.getMonth() - rangeMonths);
+		return d.toISOString().slice(0, 10);
+	})();
 	let searchOpen = false;
 	let searchInputEl: HTMLInputElement | null = null;
 
@@ -71,6 +98,21 @@
 	let momentPrivate = false;
 	let momentSaving = false;
 	let momentConfirmDelete = false;
+
+	// A note lives on its entry, so it routes into the form where the rest of
+	// that day is editable. Diaries and markers are standalone and open the
+	// moment view. The card is the only affordance — the old layout had a
+	// "Show details" link inside a card that was itself a link, on some cards
+	// but not others.
+	function openText(txt: JournalText) {
+		const doc = $documents.find((d) => d.id === txt.id);
+		if (!doc) return;
+		if (txt.docType === 'entry') {
+			goto(`/log/${txt.dateISO}`);
+			return;
+		}
+		openMoment(doc);
+	}
 
 	function openMoment(doc: CiphraDocument) {
 		momentDoc = doc;
@@ -130,212 +172,55 @@
 
 	$: bp = $resolvedBlueprint;
 
-	$: filteredDocs = $documents
-		.filter(d => {
-			if (d.data?.type === 'blueprint') return false;
-			if (filter !== 'all' && d.data.type !== filter) return false;
-			if (searchQuery) {
-				// CIPH-767d — narrative-text-only search.
-				const haystack = [d.data.notes, d.data.title, d.data.text]
-					.filter(Boolean)
-					.join(' ')
-					.toLowerCase();
-				if (!haystack.includes(searchQuery.toLowerCase())) return false;
-			}
-			return true;
-		})
-		.sort((a, b) => {
-			const da = String(a.data.date || a.serverCreatedAt);
-			const db = String(b.data.date || b.serverCreatedAt);
-			return db.localeCompare(da);
-		});
+	// ── The narrative feed ──────────────────────────────────────────────
+	// Days that hold WRITING, newest first. The metric cards this replaced
+	// rendered one ~110px block per logged day — 631 of them for a two-year
+	// persona, 69,000px of page — each holding one grey line of numbers, so
+	// the day with an attack looked exactly like the day with 7h of sleep.
+	// Measured values live in /reports; the calendar answers "what happened
+	// on day X". What no other surface holds is what the person wrote.
+	$: narrative = buildNarrative($documents, bp, {
+		query: searchQuery,
+		kind: filter as any,
+		withEpisodeOnly,
+		fromISO: rangeFromISO,
+	});
 
-	// CIPH-902 — Group docs by month → day for the timeline rendering.
-	type DayGroup = { dayKey: string; docs: CiphraDocument[] };
-	type MonthGroup = { monthKey: string; days: DayGroup[] };
-
-	$: groupedDocs = (() => {
-		const monthMap = new Map<string, Map<string, CiphraDocument[]>>();
-		for (const doc of filteredDocs) {
-			const dateStr = String(doc.data.date || doc.serverCreatedAt);
-			const day = dateStr.slice(0, 10);
-			const month = dateStr.slice(0, 7);
-			if (!monthMap.has(month)) monthMap.set(month, new Map());
-			const days = monthMap.get(month)!;
-			if (!days.has(day)) days.set(day, []);
-			days.get(day)!.push(doc);
-		}
-		const out: MonthGroup[] = [];
-		for (const [monthKey, days] of monthMap) {
-			const dayList: DayGroup[] = [];
-			for (const [dayKey, docs] of days) {
-				// Within a day, sort by time desc when present, else stable.
-				const sorted = [...docs].sort((a, b) => {
-					const ta = String(a.data.time || '');
-					const tb = String(b.data.time || '');
-					if (ta && tb) return tb.localeCompare(ta);
-					return 0;
-				});
-				dayList.push({ dayKey, docs: sorted });
-			}
-			out.push({ monthKey, days: dayList });
-		}
-		return out;
-	})();
-
-	// CIPH-907b — Per-day phase tags. For day-groups containing an
-	// entry doc with active multiDay episodes, surface them as chips on
-	// the day-header so the user can scan a column and see "manic /
-	// flare / depressive" days at a glance, even before reading the
-	// cards. Mirrors the calendar bottom-sheet pattern (CIPH-880).
-	type PhaseTag = { id: string; color: string; label: string };
-	type ClosedStreak = {
-		epId: string;
-		color: string;
-		label: string;
-		startDate: string; // chronologically first
-		endDate: string;   // chronologically last
-		dayCount: number;
-	};
-	type RenderItem =
-		| { kind: 'day'; day: DayGroup }
-		| { kind: 'streak'; days: DayGroup[]; streak: ClosedStreak };
-	function phasesActiveOn(docs: CiphraDocument[]): PhaseTag[] {
-		if (!bp?.episodeTypes) return [];
-		const out: PhaseTag[] = [];
-		for (const ep of bp.episodeTypes) {
-			if (!ep.multiDay) continue;
-			const active = docs.some(
-				(d) =>
-					d.data.type === 'entry' &&
-					Number(
-						(d.data.episodes || d.data.seizures || {})[ep.id] || 0,
-					) > 0,
-			);
-			if (active) {
-				out.push({
-					id: ep.id,
-					color: ep.color,
-					label: ep.label,
-				});
-			}
-		}
-		return out;
+	// ── Windowing ────────────────────────────────────────────────────────
+	// Every matching day used to mount at once. A sentinel below the list
+	// extends the window as it scrolls into view, so a five-year account
+	// costs the same first paint as a five-day one.
+	const PAGE = 40;
+	let windowSize = PAGE;
+	// Any filter change resets the window — otherwise a narrowing filter
+	// leaves the user scrolled past the end of the new result set.
+	$: {
+		void searchQuery; void filter; void withEpisodeOnly; void rangeFromISO;
+		windowSize = PAGE;
 	}
+	$: visibleDays = narrative.slice(0, windowSize);
+	$: hasMore = narrative.length > visibleDays.length;
+	$: groupedMonths = groupByMonth(visibleDays);
 
-	// CIPH-911 — Closed-phase brackets. Group consecutive calendar days
-	// in the journal that share an active multiDay episode AND whose
-	// most-recent day is in the past (closed in real time). Render the
-	// run inside a wrapper with a vertical rail + label on the right
-	// ("Manie · 4 Tage" with a `{`-style bracket). Open phases (still
-	// active today) keep using the per-day phase tag — no bracket, since
-	// the streak hasn't ended.
-	const TODAY_DATE = todayISO();
-	function computeRenderGroups(monthDays: DayGroup[]): RenderItem[] {
-		const out: RenderItem[] = [];
-		let i = 0;
-		while (i < monthDays.length) {
-			// monthDays sorted desc; index i = most-recent unprocessed day.
-			const day = monthDays[i];
-			const dayPhases = phasesActiveOn(day.docs);
-			if (dayPhases.length === 0) {
-				out.push({ kind: 'day', day });
-				i++;
-				continue;
-			}
-			// Find the longest run of calendar-consecutive days from i forward
-			// that share at least one active multiDay episode.
-			let bestRun = 1;
-			let bestPhase: PhaseTag | null = null;
-			for (const ph of dayPhases) {
-				let run = 1;
-				let cursor = i;
-				while (cursor + 1 < monthDays.length) {
-					const prevDay = monthDays[cursor + 1];
-					// Calendar adjacency: prevDay's date = monthDays[cursor]'s date - 1.
-					const expectedPrev = new Date(monthDays[cursor].dayKey + 'T12:00:00');
-					expectedPrev.setDate(expectedPrev.getDate() - 1);
-					const expectedKey = expectedPrev.toISOString().slice(0, 10);
-					if (prevDay.dayKey !== expectedKey) break;
-					const prevPhases = phasesActiveOn(prevDay.docs);
-					if (!prevPhases.some((p) => p.id === ph.id)) break;
-					run++;
-					cursor++;
-				}
-				if (run > bestRun) {
-					bestRun = run;
-					bestPhase = ph;
-				}
-			}
-			if (bestRun >= 2 && bestPhase) {
-				const streakDays = monthDays.slice(i, i + bestRun);
-				const latestDate = streakDays[0].dayKey; // chronologically last
-				const earliestDate = streakDays[bestRun - 1].dayKey;
-				// Closed when the streak's most-recent day is before today.
-				const isClosed = latestDate < TODAY_DATE;
-				if (isClosed) {
-					out.push({
-						kind: 'streak',
-						days: streakDays,
-						streak: {
-							epId: bestPhase.id,
-							color: bestPhase.color,
-							label: bestPhase.label,
-							startDate: earliestDate,
-							endDate: latestDate,
-							dayCount: bestRun,
-						},
-					});
-					i += bestRun;
-					continue;
-				}
-			}
-			out.push({ kind: 'day', day });
-			i++;
-		}
-		return out;
+	let sentinel: HTMLDivElement | null = null;
+	$: if (sentinel && typeof IntersectionObserver !== 'undefined') {
+		const el = sentinel;
+		const io = new IntersectionObserver((entries) => {
+			if (entries.some((e) => e.isIntersecting)) windowSize += PAGE;
+		}, { rootMargin: '600px' });
+		io.observe(el);
+		observers.forEach((o) => o.disconnect());
+		observers = [io];
 	}
-
-	// PI v16 LB-24 — memoize the render groups keyed by month. Without this
-	// the each-expression re-invokes computeRenderGroups on every reactive
-	// tick (search-box keystroke, locale change, etc.) — O(days × phases ×
-	// days) inside, ~65K iterations across 18 months on a typed character.
-	$: renderGroupsByMonth = new Map(
-		groupedDocs.map((m) => [m.monthKey, computeRenderGroups(m.days)]),
-	);
-
-	// CIPH-907 — Journal cards take their rail color from the LOGGED DATA,
-	// not just the doc type. An entry day with an active multiDay episode
-	// (flare, manic, MS relapse, IBD flare, endo flare...) gets that
-	// episode's color. An entry day with a counter episode logged gets
-	// that episode's color. Empty entry days fall back to olive. Events
-	// stay ochre, diaries stay brand — those types are intrinsic, not
-	// data-driven. Result: scrolling the journal visually surfaces phase
-	// patterns at a glance instead of reading every chip.
-	function railColor(doc: CiphraDocument): string {
-		const t = doc.data.type;
-		if (t === 'diary') return 'var(--brand)';
-		if (t === 'event') return 'var(--ochre)';
-		if (t === 'entry' && bp) {
-			const eps = (doc.data.episodes || doc.data.seizures || {}) as Record<string, number>;
-			// Prefer multiDay-active episodes (a flare day IS a flare day).
-			for (const ep of bp.episodeTypes) {
-				if (ep.multiDay && Number(eps[ep.id] || 0) > 0) return ep.color;
-			}
-			// Else first counter-bearing episode color.
-			for (const ep of bp.episodeTypes) {
-				if (Number(eps[ep.id] || 0) > 0) return ep.color;
-			}
-		}
-		return 'var(--olive)';
-	}
+	let observers: IntersectionObserver[] = [];
+	onDestroy(() => observers.forEach((o) => o.disconnect()));
 
 	function formatMonthHeader(monthKey: string): string {
 		const d = new Date(monthKey + '-01T12:00:00');
 		return d.toLocaleDateString($locale, { month: 'long', year: 'numeric' });
 	}
 
-	function formatDayHeader(dayKey: string): { label: string; weekday: string } {
+	function formatDayHeader(dayKey: string): { label: string; meta: string } {
 		const d = new Date(dayKey + 'T12:00:00');
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
@@ -347,17 +232,21 @@
 		const dayMs = 86400000;
 		const diff = (today.getTime() - target.getTime()) / dayMs;
 
-		if (diff === 0) return { label: $t('common.today'), weekday: '' };
-		if (diff === 1) return { label: $t('common.yesterday'), weekday: '' };
-		if (diff > 0 && diff < 7) {
-			return {
-				label: d.toLocaleDateString($locale, { weekday: 'long' }),
-				weekday: d.toLocaleDateString($locale, { day: 'numeric', month: 'short' }),
-			};
-		}
+		// ONE shape for every row. It used to swap at day 7 — "Wednesday ·
+		// Aug 19" above, "August 8 · Sat" below — so primary and secondary
+		// traded places in the middle of the same list. Both branches also
+		// wrote the date into a field called `weekday`, which is how the swap
+		// slipped in unnoticed.
+		//
+		// Today / Yesterday keep their names because those are how people
+		// refer to them, and they carry the date alongside rather than
+		// instead of it.
+		const date = d.toLocaleDateString($locale, { day: 'numeric', month: 'short' });
+		if (diff === 0) return { label: $t('common.today'), meta: date };
+		if (diff === 1) return { label: $t('common.yesterday'), meta: date };
 		return {
-			label: d.toLocaleDateString($locale, { day: 'numeric', month: 'long' }),
-			weekday: d.toLocaleDateString($locale, { weekday: 'short' }),
+			label: d.toLocaleDateString($locale, { weekday: 'long' }),
+			meta: date,
 		};
 	}
 
@@ -388,190 +277,118 @@
 		</button>
 	</div>
 
-	<!-- Search + filter row (CIPH-424) — filter chips are now cohort-aware
-		 via --accent; the previous hardcoded olive bled brand-discrete color
-		 onto cycle / phase / narrative cohorts. -->
-	<div class="flex items-center gap-2 mb-4">
-		{#if !searchOpen}
-			<button
-				type="button"
-				on:click={openSearch}
-				aria-label={$t('journal.search_aria')}
-				class="shrink-0 p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
-				style="background: var(--surface-muted); color: var(--text-secondary)"
-			>
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke-width="2"/></svg>
-			</button>
-		{:else}
-			<div class="relative flex-1 min-w-0 journal-search-anim">
-				<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style="color: var(--text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke-width="2"/></svg>
-				<input
-					bind:this={searchInputEl}
-					type="text"
-					bind:value={searchQuery}
-					on:keydown={handleSearchKeydown}
-					on:blur={handleSearchBlur}
-					placeholder={$t('stream.search')}
-					aria-label={$t('journal.search_aria')}
-					class="input pl-10 pr-10"
-				/>
+	<!-- ── Search + narrowing ──────────────────────────────────────────
+		 Search is the page, not an icon on it: finding and re-reading is the
+		 only job no other surface covers. The narrowing controls sit under
+		 it rather than as tabs, because "diary" and "note marker" are kinds
+		 of writing, not separate feeds. -->
+	<div class="jr-controls">
+		<div class="jr-search">
+			<svg class="jr-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+				<circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="21" y2="21" stroke-linecap="round" />
+			</svg>
+			<input
+				type="search"
+				bind:value={searchQuery}
+				placeholder={$t('stream.search_placeholder')}
+				aria-label={$t('stream.search_placeholder')}
+				class="jr-search-input"
+				data-testid="journal-search"
+			/>
+			{#if searchQuery}
+				<button type="button" class="jr-search-clear" on:click={() => (searchQuery = '')}
+					aria-label={$t('common.cancel')}>×</button>
+			{/if}
+		</div>
+
+		<div class="jr-chips" role="group" aria-label={$t('stream.title')}>
+			{#each KIND_CHIPS as c (c.id)}
 				<button
 					type="button"
-					on:click={() => { searchQuery = ''; searchOpen = false; }}
-					aria-label={$t('journal.search_close_aria')}
-					class="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded"
-					style="color: var(--text-muted)"
-				>
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke-width="2"/><line x1="6" y1="6" x2="18" y2="18" stroke-width="2"/></svg>
-				</button>
-			</div>
-		{/if}
+					class="jr-chip"
+					class:active={filter === c.id}
+					aria-pressed={filter === c.id}
+					data-testid="journal-filter-{c.id}"
+					on:click={() => (filter = c.id)}
+				>{$t(c.key)}</button>
+			{/each}
+			<span class="jr-chip-sep" aria-hidden="true"></span>
+			{#each RANGE_CHIPS as r (r.months)}
+				<button
+					type="button"
+					class="jr-chip"
+					class:active={rangeMonths === r.months}
+					aria-pressed={rangeMonths === r.months}
+					on:click={() => (rangeMonths = r.months)}
+				>{$t(r.key)}</button>
+			{/each}
+			{#if (bp?.episodeTypes?.length ?? 0) > 0}
+				<span class="jr-chip-sep" aria-hidden="true"></span>
+				<button
+					type="button"
+					class="jr-chip"
+					class:active={withEpisodeOnly}
+					aria-pressed={withEpisodeOnly}
+					data-testid="journal-filter-episode"
+					on:click={() => (withEpisodeOnly = !withEpisodeOnly)}
+				>{$t('stream.filter_with_episode')}</button>
+			{/if}
+		</div>
 
-		{#if bp}
-			<div
-				class="flex gap-2 overflow-x-auto pb-1 flex-1 min-w-0 transition-opacity"
-				style="opacity: {searchQuery ? 0.5 : 1}"
-			>
-				{#each bp.streamFilters as tab}
-					<button
-						on:click={() => { filter = tab.key; }}
-						data-testid="filter-tab-{tab.key}"
-						class="journal-filter-chip {filter === tab.key ? 'journal-filter-chip--active' : ''}"
-					>
-						{$t(tab.label)}
-					</button>
-				{/each}
-			</div>
-		{/if}
+		<p class="jr-count" aria-live="polite">
+			{plural($t, $locale, 'stream.result_count', narrative.length)}
+		</p>
 	</div>
 
-	<!-- CIPH-711 — Tagebuch first-view soft clarification -->
 	{#if showDiaryHint}
-		<div
-			class="mb-4 p-3 rounded-lg flex items-start gap-2 text-sm md:text-base"
-			style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border)"
-			role="status"
-		>
-			<svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-				<rect x="4" y="11" width="16" height="10" rx="2" />
-				<path d="M8 11V7a4 4 0 1 1 8 0v4" />
-			</svg>
-			<span class="flex-1">{$t('journal.diary_hint')}</span>
-		</div>
+		<p class="jr-hint">{$t('journal.diary_hint')}</p>
 	{/if}
 
-	<!-- Stream -->
-	{#if filteredDocs.length === 0}
-		<JournalEmpty
-			variant={filter === 'diary' ? 'diary' : 'all'}
-			hideCta={filter === 'diary' || !!searchQuery}
-			onLogToday={() => goto('/log/today')}
-		/>
+	{#if narrative.length === 0}
+		{#if searchQuery || filter !== 'all' || withEpisodeOnly || rangeMonths}
+			<p class="jr-none" data-testid="journal-no-results">{$t('stream.no_results')}</p>
+		{:else}
+			<JournalEmpty on:add={() => quickAddOpen.set(true)} />
+		{/if}
 	{:else}
-		<!-- CIPH-763b — aria-live announces new additions. -->
-		<div aria-live="polite" aria-relevant="additions" aria-atomic="false">
-			{#each groupedDocs as month (month.monthKey)}
-				<section class="journal-month">
-					<h2 class="journal-month-header">{formatMonthHeader(month.monthKey)}</h2>
-					<!-- PI v16 LB-24 — was inline computeRenderGroups(month.days)
-					     in the each-expression, which Svelte re-runs on every
-					     reactive tick (search-box keystroke, locale change, …).
-					     Memoized into renderGroupsByMonth above. -->
-					{#each renderGroupsByMonth.get(month.monthKey) || [] as item, itemIdx (itemIdx)}
-						{#if item.kind === 'streak'}
-							<!-- CIPH-911 — closed-phase streak group. Rail + label
-								 on the right brackets the consecutive days. Per-day
-								 phase tags are suppressed inside the group (the rail
-								 label carries the phase identity). -->
-							<div class="journal-streak-group" style="--streak-color: {item.streak.color}">
-								<!-- Header banner above the grouped days. Carries the
-									 phase identity + day count once for the whole run.
-									 The vertical rail to the LEFT of the days is decoration
-									 (aria-hidden); semantic header lives in this <p>. -->
-								<p class="journal-streak-header">
-									<span class="journal-streak-name">{isCustomItem(item.streak.epId) ? item.streak.label : $t(item.streak.label)}</span>
-									<span class="journal-streak-meta">· {plural($t, $locale, 'reports.glance_n_days', item.streak.dayCount)}</span>
-								</p>
-								<aside class="journal-streak-rail" aria-hidden="true"></aside>
-								<div class="journal-streak-days">
-									{#each item.days as day (day.dayKey)}
-										{@const dh = formatDayHeader(day.dayKey)}
-										<div class="journal-day">
-											<p class="journal-day-header">
-												<span class="journal-day-label">{dh.label}</span>
-												{#if dh.weekday}<span class="journal-day-meta">· {dh.weekday}</span>{/if}
-											</p>
-											<div class="journal-day-stack">
-												{#each day.docs as doc (doc.id)}
-													{@const href = cardHref(doc)}
-													{@const railHex = railColor(doc)}
-													{#if href}
-														<a href={href} class="journal-card" style="border-left-color: {railHex}">
-															{#if doc.data.time}<span class="journal-card-time">{doc.data.time}</span>{/if}
-															<EntryPreview entry={doc} {bp} showDate={false} hideType={true} inStreak={true} recentDocs={$documents} />
-														</a>
-													{:else}
-														<button type="button" on:click={() => openMoment(doc)} class="journal-card journal-card--button" style="border-left-color: {railHex}">
-															{#if doc.data.time}<span class="journal-card-time">{doc.data.time}</span>{/if}
-															<EntryPreview entry={doc} {bp} showDate={false} hideType={true} inStreak={true} recentDocs={$documents} />
-														</button>
-													{/if}
-												{/each}
-											</div>
-										</div>
-									{/each}
-								</div>
-							</div>
-						{:else}
-							{@const day = item.day}
-							{@const dh = formatDayHeader(day.dayKey)}
-							{@const phases = phasesActiveOn(day.docs)}
-							<div class="journal-day">
-								<p class="journal-day-header">
-									<span class="journal-day-label">{dh.label}</span>
-									{#if dh.weekday}<span class="journal-day-meta">· {dh.weekday}</span>{/if}
-									{#each phases as p}
-										<span
-											class="journal-phase-tag"
-											style="background: {p.color}1f; color: {p.color}; border-color: {p.color}66"
-										>{isCustomItem(p.id) ? p.label : $t(p.label)}</span>
-									{/each}
-								</p>
-								<div class="journal-day-stack">
-									{#each day.docs as doc (doc.id)}
-										{@const href = cardHref(doc)}
-										{@const railHex = railColor(doc)}
-										{#if href}
-											<a
-												href={href}
-												class="journal-card"
-												style="border-left-color: {railHex}"
-											>
-												{#if doc.data.time}
-													<span class="journal-card-time">{doc.data.time}</span>
-												{/if}
-												<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
-											</a>
-										{:else}
-											<button
-												type="button"
-												on:click={() => openMoment(doc)}
-												class="journal-card journal-card--button"
-												style="border-left-color: {railHex}"
-											>
-												{#if doc.data.time}
-													<span class="journal-card-time">{doc.data.time}</span>
-												{/if}
-												<EntryPreview entry={doc} {bp} showDate={false} hideType={true} recentDocs={$documents} />
-											</button>
-										{/if}
-									{/each}
-								</div>
-							</div>
-						{/if}
+		<div class="jr-feed" data-testid="journal-feed">
+			{#each groupedMonths as month (month.monthKey)}
+				<section class="jr-month">
+					<h2 class="jr-month-header">{formatMonthHeader(month.monthKey)}</h2>
+					{#each month.days as day (day.dayKey)}
+						{@const dh = formatDayHeader(day.dayKey)}
+						<article class="jr-day" data-testid="journal-day">
+							<header class="jr-day-head">
+								<span class="jr-day-label">{dh.label}</span>
+								<span class="jr-day-meta">{dh.meta}</span>
+								{#if day.episodes.length > 0}
+									<span class="jr-eps">
+										{#each day.episodes as ep (ep.id)}
+											<span class="jr-ep" data-testid="journal-episode">
+												{ep.count > 1 ? `${ep.count}× ` : ''}{ep.isCustom ? ep.label : $t(ep.label)}
+											</span>
+										{/each}
+									</span>
+								{/if}
+							</header>
+							{#each day.texts as txt (txt.id)}
+								<button
+									type="button"
+									class="jr-text jr-text--{txt.kind}"
+									data-testid="journal-text"
+									on:click={() => openText(txt)}
+								>
+									{#if txt.time}<span class="jr-time">{txt.time}</span>{/if}
+									<span class="jr-body">{txt.text}</span>
+								</button>
+							{/each}
+						</article>
 					{/each}
 				</section>
 			{/each}
+			{#if hasMore}
+				<div bind:this={sentinel} class="jr-sentinel" aria-hidden="true"></div>
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -678,231 +495,213 @@
 {/if}
 
 <style>
-	@keyframes journalSearchSlide {
-		from { transform: translateX(-8px); opacity: 0; }
-		to { transform: translateX(0); opacity: 1; }
-	}
-	.journal-search-anim {
-		animation: journalSearchSlide 180ms ease-out;
-	}
+	/* ── Journal v2 ────────────────────────────────────────────────────────
+	   The old card was chrome around nothing: a 1100px-wide bordered box with
+	   a rail and padding, holding one short grey line. Here the WRITING is
+	   the object — it sets the type size and the vertical rhythm — and the
+	   frame is a rule, not a box. */
 
-	/* CIPH-902 — filter-chip cohort-awareness. Active state uses
-	   --accent (cohort primary) instead of hardcoded olive. */
-	.journal-filter-chip {
-		/* CIPH-pi22-JC-1 — 44pt min-height per WCAG 2.5.5. Vertical padding
-		   pushed from 6 → 11 to land at 44 with the 13px font + line-height. */
-		padding: 11px 14px;
-		font-size: 13px;
-		font-weight: 500;
-		border-radius: 9999px;
-		white-space: nowrap;
-		min-height: 44px;
-		display: inline-flex;
-		align-items: center;
-		background: var(--surface-muted);
-		color: var(--text-secondary);
-		border: 1px solid transparent;
-		transition: background 0.15s, color 0.15s, border-color 0.15s;
-	}
-	.journal-filter-chip:hover {
-		color: var(--text-primary);
-	}
-	.journal-filter-chip--active {
-		background: var(--surface-card);
-		color: var(--accent);
-		border-color: var(--accent);
-	}
+	.jr-controls { margin-bottom: 1.25rem; }
 
-	/* CIPH-911 — Closed-phase streak bracket.
-	   - Header banner above the run: "{phase name} · 4 Tage" in phase color.
-	   - Left vertical rail in the phase color with top + bottom corner
-	     ticks pointing right (toward the days), forming the `{`-style
-	     bracket silhouette.
-	   - Days flow to the right of the rail.
-	   Mobile (<480px): rail collapses to a thin top hairline; the header
-	   already carries the phase identity. */
-	.journal-streak-group {
-		display: grid;
-		grid-template-columns: auto 1fr;
-		gap: 0 12px;
-		margin-bottom: 16px;
-	}
-	.journal-streak-header {
-		grid-column: 1 / -1;
-		font-size: 11px;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		/* PI v16: was var(--streak-color); cycle slot 1 (#b6306a) sat at
-		   ~4.45:1 against the cream surface — borderline AA. Pinning chrome
-		   text to text-primary so phase identity stays legible regardless of
-		   the cohort palette. The colored rail (line 727) carries the phase
-		   signal as decoration. */
-		color: var(--text-primary);
-		margin: 0 0 6px;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 6px;
-		align-items: baseline;
-	}
-	.journal-streak-header::before {
-		content: '';
-		width: 5px;
-		height: 5px;
-		border-radius: 50%;
-		background: var(--streak-color);
-		flex-shrink: 0;
-		align-self: center;
-	}
-	.journal-streak-name {
-		font-weight: 600;
-	}
-	.journal-streak-meta {
-		font-weight: 400;
-		color: var(--text-muted);
-		text-transform: none;
-		letter-spacing: normal;
-	}
-	/* Soft-corner bracket: border-left + border-top + border-bottom on
-	   the rail itself, with rounded LEFT corners and no right border.
-	   The border arms ARE the bracket (no pseudo-element ticks). Result
-	   is a `[`-style silhouette with rounded corners that "contains" the
-	   day-cards on its right and matches the rest of the app's rounded-
-	   corner design language. */
-	.journal-streak-rail {
-		grid-column: 1;
-		grid-row: 2;
-		width: 12px;
-		border: 2px solid var(--streak-color);
-		border-right: none;
-		border-radius: 10px 0 0 10px;
-	}
-	.journal-streak-days {
-		grid-column: 2;
-		grid-row: 2;
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-	}
-	.journal-streak-days > .journal-day {
-		margin-bottom: 12px;
-	}
-	.journal-streak-days > .journal-day:last-child {
-		margin-bottom: 0;
-	}
-	/* Mobile: shrink the bracket so the cards keep their breathing
-	   room on a 375px viewport. The soft-corner silhouette stays. */
-	@media (max-width: 479px) {
-		.journal-streak-group {
-			gap: 0 8px;
-		}
-		.journal-streak-rail {
-			width: 8px;
-			border-radius: 8px 0 0 8px;
-		}
-	}
-
-	/* CIPH-902 — Threema-style timeline. Month header sticks at the top;
-	   day header is muted small text; cards stack with a 2px type-color
-	   left rail. Card height grows with content (no chip truncation). */
-	.journal-month {
-		margin-top: 8px;
-	}
-	.journal-month-header {
-		position: sticky;
-		/* Authed top header is h-14 (56px). Sticky below it. */
-		top: 56px;
-		z-index: 10;
-		margin: 0 -16px 12px;
-		padding: 8px 16px;
-		background: var(--surface);
-		border-bottom: 1px solid var(--border-subtle, var(--border));
-		font-size: 12px;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--text-muted);
-		backdrop-filter: blur(6px);
-	}
-
-	.journal-day {
-		margin-bottom: 16px;
-	}
-	.journal-day-header {
-		font-size: 12px;
-		color: var(--text-secondary);
-		margin: 0 0 8px;
-		display: flex;
-		align-items: baseline;
-		gap: 6px;
-	}
-	.journal-day-label {
-		font-weight: 600;
-		color: var(--text-primary);
-	}
-	.journal-day-meta {
-		color: var(--text-muted);
-	}
-	/* CIPH-907b — per-day phase tags. Small inline chip per active
-	   multiDay episode on the day, tinted with the episode's color so
-	   the user can scan a column and see "manic / flare / depressive"
-	   patterns without reading every card. */
-	.journal-phase-tag {
-		display: inline-flex;
-		align-items: center;
-		font-size: 10px;
-		font-weight: 600;
-		padding: 1px 8px;
-		border-radius: 9999px;
-		border: 1px solid;
-		letter-spacing: 0.02em;
-		margin-left: 4px;
-	}
-
-	.journal-day-stack {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-
-	.journal-card {
-		display: block;
+	.jr-search {
 		position: relative;
-		padding: 12px 16px;
-		border-radius: 8px;
+		display: flex;
+		align-items: center;
+	}
+	.jr-search-icon {
+		position: absolute;
+		left: 0.7rem;
+		width: 15px;
+		height: 15px;
+		color: var(--text-muted);
+		pointer-events: none;
+	}
+	.jr-search-input {
+		width: 100%;
+		min-height: 44px;
+		padding: 0 2.2rem 0 2.1rem;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
 		background: var(--surface-card);
 		border: 1px solid var(--border);
-		border-left: 3px solid var(--border);
-		text-decoration: none;
-		color: inherit;
-		text-align: left;
-		width: 100%;
-		font: inherit;
-		cursor: pointer;
-		transition: border-color 0.15s ease-out, transform 0.15s ease-out, box-shadow 0.15s ease-out;
+		border-radius: 10px;
 	}
-	.journal-card--button {
-		font-family: inherit;
-		font-size: inherit;
-	}
-	.journal-card:hover,
-	.journal-card:focus-visible {
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+	.jr-search-input::-webkit-search-cancel-button { display: none; }
+	.jr-search-input:focus-visible {
 		outline: none;
+		border-color: var(--accent, var(--brand));
+		box-shadow: 0 0 0 3px rgba(var(--accent-rgb, 178 60 44), 0.12);
 	}
-	.journal-card:focus-visible {
-		box-shadow: 0 0 0 2px var(--accent), 0 1px 3px rgba(0, 0, 0, 0.05);
-	}
-	.journal-card:active {
-		transform: scale(0.998);
-	}
-	.journal-card-time {
+	.jr-search-clear {
 		position: absolute;
-		top: 12px;
-		right: 16px;
-		font-size: 11px;
+		right: 0.2rem;
+		min-width: 44px;
+		min-height: 44px;
+		font-size: 1.15rem;
+		line-height: 1;
 		color: var(--text-muted);
-		font-variant-numeric: tabular-nums;
+		background: none;
+		border: none;
+		cursor: pointer;
 	}
 
+	.jr-chips {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.35rem;
+		margin-top: 0.6rem;
+	}
+	.jr-chip {
+		/* 44px WCAG 2.5.5 floor — the /journal touch-target contract
+		   (CIPH-pi22-JC-1). These have no equivalent path elsewhere, so the
+		   grid-cell exception does not apply. */
+		min-height: 44px;
+		padding: 0 0.7rem;
+		font-size: 0.75rem;
+		color: var(--text-secondary);
+		background: var(--surface-muted);
+		border: 1px solid transparent;
+		border-radius: 9999px;
+		cursor: pointer;
+		transition: background 0.12s ease-out, color 0.12s ease-out;
+	}
+	.jr-chip:hover { color: var(--text-primary); }
+	.jr-chip.active {
+		color: var(--accent, var(--brand));
+		background: var(--surface-card);
+		border-color: var(--accent, var(--brand));
+		font-weight: 600;
+	}
+	.jr-chip:focus-visible {
+		outline: 2px solid var(--accent, var(--brand));
+		outline-offset: 1px;
+	}
+	.jr-chip-sep {
+		width: 1px;
+		height: 18px;
+		margin: 0 0.25rem;
+		background: var(--border);
+	}
+
+	.jr-count {
+		margin: 0.55rem 0 0;
+		font-size: 0.6875rem;
+		color: var(--text-muted);
+	}
+	.jr-hint, .jr-none {
+		margin: 0 0 1rem;
+		font-size: 0.8125rem;
+		color: var(--text-muted);
+	}
+
+	.jr-month + .jr-month { margin-top: 1.75rem; }
+	.jr-month-header {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		margin: 0 0 0.6rem;
+		padding: 0.4rem 0;
+		font-size: 0.6875rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		background: var(--surface-page, var(--surface-muted));
+	}
+
+	.jr-day {
+		padding: 0.7rem 0 0.85rem;
+		border-top: 1px solid var(--border-subtle, var(--border));
+	}
+	.jr-day-head {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		margin-bottom: 0.3rem;
+	}
+	.jr-day-label {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+	.jr-day-meta {
+		font-size: 0.6875rem;
+		color: var(--text-muted);
+	}
+
+	/* Episodes are CONTEXT for the writing beside them — a note about aura
+	   means something different next to "1× Migraine with aura". They never
+	   put a day in this list; see lib/journal/narrative.ts. */
+	.jr-eps { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; }
+	.jr-ep {
+		padding: 1px 0.45rem;
+		font-size: 0.625rem;
+		font-weight: 600;
+		color: var(--accent, var(--brand));
+		background: var(--surface-card);
+		border: 1px solid var(--accent, var(--brand));
+		border-radius: 9999px;
+	}
+
+	.jr-text {
+		display: block;
+		width: 100%;
+		padding: 0.3rem 0 0.3rem 0.7rem;
+		text-align: left;
+		background: none;
+		border: none;
+		border-left: 2px solid var(--border);
+		cursor: pointer;
+		font: inherit;
+	}
+	.jr-text:hover { border-left-color: var(--text-muted); }
+	.jr-text:focus-visible {
+		outline: 2px solid var(--accent, var(--brand));
+		outline-offset: 2px;
+	}
+	/* The rail is the only type signal — no badge, no icon, matching the
+	   convention the previous design established. */
+	.jr-text--diary { border-left-color: var(--brand); }
+	.jr-text--marker { border-left-color: var(--ochre, #9f630b); }
+	.jr-text--note { border-left-color: var(--olive, #7f821b); }
+
+	.jr-time {
+		display: inline-block;
+		margin-right: 0.4rem;
+		font-size: 0.6875rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--text-muted);
+	}
+	.jr-body {
+		font-size: 0.9375rem;
+		line-height: 1.5;
+		color: var(--text-primary);
+		overflow-wrap: anywhere;
+	}
+	.jr-text--diary .jr-body { font-style: italic; }
+
+	/* On a phone the eight chips wrap to three rows — ~156px of controls
+	   before any content on an 844px screen. One scrollable row instead:
+	   every option stays reachable (nothing is hidden behind a disclosure,
+	   which is the mistake the old search icon made), and the separators
+	   keep the groups legible while scrolling. */
+	@media (max-width: 640px) {
+		.jr-chips {
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			scrollbar-width: none;
+			-webkit-overflow-scrolling: touch;
+			padding-bottom: 0.2rem;
+		}
+		.jr-chips::-webkit-scrollbar { display: none; }
+		.jr-chip { flex: 0 0 auto; }
+	}
+
+	.jr-sentinel { height: 1px; }
+
+	@media (prefers-reduced-motion: reduce) {
+		.jr-chip, .jr-text { transition: none; }
+	}
 </style>
