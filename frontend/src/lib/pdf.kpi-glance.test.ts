@@ -135,8 +135,23 @@ describe('CIPH-pi19-3 rescueMedDays aggregation', () => {
 		expect(PDF).toMatch(/rescueMedDays\s*=\s*\(\(\)\s*=>\s*\{[\s\S]{0,400}new Set<string>\(\)/);
 	});
 
-	it('only counts events whose date starts with the focus-month prefix', () => {
-		expect(PDF).toMatch(/focusPrefixForKpi[\s\S]{0,600}ds\.startsWith\(focusPrefixForKpi\)/);
+	// RETIRED (period-picker pass). This used to assert
+	//   focusPrefixForKpi … ds.startsWith(focusPrefixForKpi)
+	// i.e. the tile counted the ANCHOR MONTH. That was written at pi v19,
+	// when the export was always the current month or a trailing window from
+	// now — "focus month" and "the report period" were the same thing, so the
+	// assertion characterised the implementation rather than deciding
+	// anything clinically (it carried no rationale, unlike its sibling
+	// above).
+	//
+	// The /reports period picker decoupled them. On a calendar-year report
+	// the tile then showed December beside "days logged: 180/365", unlabelled.
+	// The tile follows the report window now; see
+	// pdf.window-scoped-data.test.ts.
+	it('counts events across the report window, not the anchor month', () => {
+		const block = PDF.slice(PDF.indexOf('const rescueMedDays'));
+		const body = block.slice(0, block.indexOf('return days.size'));
+		expect(body).toMatch(/ds\s*<\s*scopeStartISO\s*\|\|\s*ds\s*>\s*scopeEndISO/);
 	});
 });
 
