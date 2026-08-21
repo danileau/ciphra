@@ -32,6 +32,12 @@ import { PHASE_COLORS, type Phase } from '$lib/cycleState';
 import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
 import { isExportable } from '$lib/utils/exportable';
+import {
+	reportWindow,
+	formatWindowRange,
+	scopeFileTag,
+	type ReportScope,
+} from '$lib/reports/reportWindow';
 
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 
@@ -703,7 +709,21 @@ function drawHeaderBand(
  * Standard footer: brand line + page number + thin top border.
  * Applied to all pages of the document.
  */
-function drawFooter(doc: jsPDF, t: TranslateFn, footerKey = 'pdf.footer'): void {
+/**
+ * `windowLabel` repeats the report period on EVERY page.
+ *
+ * PDF_DESIGN_SPEC §16 asks the footer to carry "diary date range or enough
+ * continuation context", and §1.10 that every page be readable
+ * independently. A year export is 13 pages and a 2-year export 25; until
+ * now exactly one of them said which period it covered. This is the fix for
+ * the page that arrives filed, faxed or photocopied without page 1.
+ */
+function drawFooter(
+	doc: jsPDF,
+	t: TranslateFn,
+	footerKey = 'pdf.footer',
+	windowLabel?: string,
+): void {
 	const pageCount = doc.getNumberOfPages();
 
 	for (let i = 1; i <= pageCount; i++) {
@@ -718,7 +738,9 @@ function drawFooter(doc: jsPDF, t: TranslateFn, footerKey = 'pdf.footer'): void 
 		// The footer text wraps — the doctor PDF carries the full medical-
 		// device disclaimer here (moved off page 1). The page-number column
 		// is reserved on the right so the disclaimer never runs under it.
-		const pageLabel = t('pdf.page', { current: i, total: pageCount });
+		const pageLabel = windowLabel
+			? `${windowLabel} · ${t('pdf.page', { current: i, total: pageCount })}`
+			: t('pdf.page', { current: i, total: pageCount });
 		const pageLabelW = doc.getTextWidth(pageLabel);
 		const lines = doc.splitTextToSize(t(footerKey), pageW - 28 - pageLabelW - 6) as string[];
 		const lineH = 3.2;
@@ -1634,26 +1656,11 @@ function drawGridSection(
  * they need; we give them everything we have.
  * ──────────────────────────────────────────────────────────────── */
 
-export type ReportScope = 'month' | 'year' | '2years';
-
-/**
- * Filename tag for an export window.
- *
- * The /reports period picker anchors calendar periods at December (a
- * calendar year IS a trailing-12 window ending in December — see
- * lib/reports/exportPeriods.ts), so a December anchor can be named as the
- * calendar period it is: `year-2023` rather than `year-2023-12`, and
- * `2years-2022-2023` rather than `2years-2023-12`. Any other anchor keeps
- * the end-month form, which is what it actually means.
- */
-export function scopeFileTag(scope: ReportScope, year: number, month: number): string {
-	const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-	if (scope === 'month') return monthPrefix;
-	if (month === 11) {
-		return scope === 'year' ? `year-${year}` : `2years-${year - 1}-${year}`;
-	}
-	return `${scope}-${monthPrefix}`;
-}
+// The window, its label and its filename tag are one rule and live in one
+// place — lib/reports/reportWindow.ts. Re-exported so existing importers of
+// `$lib/pdf` keep working.
+export type { ReportScope };
+export { scopeFileTag };
 
 export function generateDoctorPdf(
 	blueprintIn: Blueprint,
@@ -1696,7 +1703,11 @@ export function generateDoctorPdf(
 		year: 'numeric',
 	});
 
-	// Scope window — drives header + stat cards + grid loop.
+	// Scope window — drives header + stat cards + grid loop. `win` is the
+	// same window as an object, and is what every reader-facing label is
+	// derived from (see lib/reports/reportWindow.ts).
+	const win = reportWindow(scope, year, month);
+	const windowLabel = formatWindowRange(win, locale);
 	const scopeMonths = scope === 'month' ? 1 : scope === 'year' ? 12 : 24;
 	// Noon anchor: `.toISOString()` is UTC, so a local-midnight date in any
 	// positive-offset tz (CET/CEST) slips to the previous day — shifting the
@@ -1723,7 +1734,11 @@ export function generateDoctorPdf(
 		daysInMonth = Math.round(
 			(scopeEndDate.getTime() - scopeStartDate.getTime()) / 86400000
 		) + 1;
-		monthName = t(scope === 'year' ? 'pdf.scope_year' : 'pdf.scope_2years');
+		// The window states itself. A relative phrase here contradicted the
+		// "Exportiert: <date>" two corners away — and since the picker anchors
+		// every year at December, it was wrong in the normal case, not the
+		// edge case. PDF_DESIGN_SPEC §15: the date range must appear on page 1.
+		monthName = formatWindowRange(win, locale);
 	}
 
 	// Comparison window: for 'month' scope = previous month; for 'year' =
@@ -2325,7 +2340,7 @@ export function generateDoctorPdf(
 	doc.setFont('helvetica', 'bold');
 	doc.setFontSize(TYPE.head);
 	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(t(scope === 'year' ? 'pdf.episode_trend_12m' : 'pdf.episode_trend'), 14, cursorY);
+	doc.text(t('pdf.episode_trend_range', { range: windowLabel }), 14, cursorY);
 
 	// Chart horizon matches scope so the visual matches what the bullets
 	// describe. Month-scope keeps 24 for context (a 1-month line chart is
@@ -2960,7 +2975,7 @@ export function generateDoctorPdf(
 		doc.setFont('helvetica', 'bold');
 		doc.setFontSize(TYPE.head);
 		doc.setTextColor(...BRAND.textPrimary);
-		doc.text(t(scope === 'year' ? 'pdf.vital_trends_title_12m' : 'pdf.vital_trends_title'), 14, cursorY);
+		doc.text(t('pdf.vital_trends_title_range', { range: windowLabel }), 14, cursorY);
 		cursorY += 7;
 
 		const cx = 22;
@@ -2975,7 +2990,7 @@ export function generateDoctorPdf(
 				doc.setFont('helvetica', 'bold');
 				doc.setFontSize(TYPE.head);
 				doc.setTextColor(...BRAND.textPrimary);
-				doc.text(t(scope === 'year' ? 'pdf.vital_trends_title_12m' : 'pdf.vital_trends_title'), 14, PAGE_TOP_AFTER_BREAK);
+				doc.text(t('pdf.vital_trends_title_range', { range: windowLabel }), 14, PAGE_TOP_AFTER_BREAK);
 				return PAGE_TOP_AFTER_BREAK + 7;
 			});
 			// Title + inline legend
@@ -3277,7 +3292,17 @@ export function generateDoctorPdf(
 			doc.setFont('helvetica', 'bold');
 			doc.setFontSize(TYPE.head);
 			doc.setTextColor(...BRAND.textPrimary);
-			doc.text(t('pdf.episode_duration_title'), 14, cursorY);
+			// This section's data window is a trailing 12 months from the
+			// anchor regardless of `scope` (see dur12Start above), so on a
+			// 24-month report it covers only half of it. Label it with the
+			// window it actually covers, not the report's.
+			doc.text(
+				t('pdf.episode_duration_title_range', {
+					range: formatWindowRange(reportWindow('year', year, month), locale),
+				}),
+				14,
+				cursorY,
+			);
 			cursorY += 2;
 
 			const durRows = durEps
@@ -3527,7 +3552,7 @@ export function generateDoctorPdf(
 	// on the next call, producing the overlapping "Seite 1/3 Seite 1/4" artifact.
 	// The doctor PDF carries the full medical-device disclaimer in the footer
 	// (moved off page 1 — it was eating ~12mm of prime real estate).
-	drawFooter(doc, t, 'pdf.disclaimer_medical_long');
+	drawFooter(doc, t, 'pdf.disclaimer_medical_long', windowLabel);
 
 	const userTag = username ? `${username}-` : '';
 	const scopeTag = scopeFileTag(scope, year, month);

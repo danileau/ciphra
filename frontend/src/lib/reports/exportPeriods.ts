@@ -37,24 +37,23 @@
  * PDF — the drift `isExportable` exists to prevent.
  */
 import type { CiphraDocument } from '$lib/stores/documents';
-// Type-only: `$lib/pdf` pulls jsPDF + autoTable (~152KB gzip) and the
-// reports page defers it behind `loadPdfLib()`. `import type` is erased at
-// build time, so this cannot resurrect the eager import.
-import type { ReportScope } from '$lib/pdf';
+// `ReportScope` and the window maths live in reportWindow.ts, not in
+// `$lib/pdf` — that module pulls jsPDF + autoTable (~152KB gzip) and the
+// reports page defers it behind `loadPdfLib()`. Importing the type from its
+// own small module removes the dependency entirely rather than relying on
+// `import type` erasure to hide it.
+import { SCOPE_MONTHS, type ReportScope } from './reportWindow';
 import { isExportable } from '$lib/utils/exportable';
+
+// Re-exported so existing importers keep a single entry point.
+export { SCOPE_MONTHS };
+export type { ReportScope };
 
 /** `YYYY-MM`. Lexicographic order is chronological order — relied on below. */
 export type MonthKey = string;
 
 /** Month → number of distinct days that hold at least one exportable entry. */
 export type MonthIndex = Map<MonthKey, number>;
-
-/** Window length per scope, mirroring `scopeMonths` in pdf.ts. */
-export const SCOPE_MONTHS: Record<ReportScope, number> = {
-	month: 1,
-	year: 12,
-	'2years': 24,
-};
 
 export interface PeriodOption {
 	scope: ReportScope;
@@ -190,7 +189,7 @@ export function formatPeriodLabel(option: PeriodOption, locale: string): string 
 		});
 	}
 	if (option.scope === 'year') return String(option.anchorYear);
-	// En dash, matching the range separator already used by scopeRangeLabel.
+	// En dash, matching `formatWindowRange` in reportWindow.ts.
 	return `${option.anchorYear - 1}–${option.anchorYear}`;
 }
 
