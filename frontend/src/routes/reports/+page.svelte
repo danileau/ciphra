@@ -31,6 +31,14 @@
 	}
 	import { isEpisodeBearing } from '$lib/utils/episodeCounts';
 	import { isExportable } from '$lib/utils/exportable';
+	import ExportPeriodPopover from '$lib/components/ExportPeriodPopover.svelte';
+	import {
+		buildMonthIndex,
+		availablePeriods,
+		formatPeriodLabel,
+		defaultPeriodIndex,
+		type PeriodOption,
+	} from '$lib/reports/exportPeriods';
 	import { weekdayLabels } from '$lib/i18n/dates';
 
 	// Design review 2026-06-11 — month context travels from /calendar
@@ -40,72 +48,86 @@
 		return m ? `${m}-01` : new Date().toISOString().slice(0, 10);
 	})();
 	let pdfScope: ReportScope = 'month';
+	// Anchor of the period the user last chose, so the secondary CSV action
+	// follows the same window instead of silently reverting to the month on
+	// screen.
+	let selectedPeriod: PeriodOption | null = null;
 
-	// Doctor-export scope picker — a clicked card sets the scope and
-	// exports in one step (no intermediate menu state).
-	function pickExport(scope: ReportScope) {
-		pdfScope = scope;
-		exportForDoctor();
+	// Doctor-export period picker.
+	//
+	// The card used to set the scope and export in one step. That made the
+	// month currently open in /reports the ONLY exportable anchor: getting a
+	// 2023 report meant paging the whole view back into 2023 first, and the
+	// card's range line silently rewrote itself as you paged.
+	//
+	// A card now offers the periods that actually hold data. A calendar year
+	// is just a trailing-12 window anchored at December, so this needs no
+	// change in pdf.ts — see lib/reports/exportPeriods.ts.
+	//
+	// The one-step spirit survives where it still applies: a scope with
+	// exactly one available period exports straight away, so a user with a
+	// single month of data never sees the extra click.
+	let openScope: ReportScope | null = null;
+	let cardEls: Partial<Record<ReportScope, HTMLButtonElement>> = {};
+
+	$: monthIndex = buildMonthIndex(exportableDocs);
+	$: periodsByScope = {
+		month: availablePeriods(monthIndex, 'month'),
+		year: availablePeriods(monthIndex, 'year'),
+		'2years': availablePeriods(monthIndex, '2years'),
+	} as Record<ReportScope, PeriodOption[]>;
+	$: viewedMonth = currentDate.slice(0, 7);
+
+	function onCardClick(scope: ReportScope) {
+		const options = periodsByScope[scope];
+		if (options.length === 0) return;
+		if (options.length === 1) {
+			runExport(options[0]);
+			return;
+		}
+		openScope = openScope === scope ? null : scope;
 	}
 
-	/** Human date span a scope covers, ending at the report month. */
-	function scopeRangeLabel(scope: ReportScope, locale: string, refISO: string): string {
-		const d = new Date(refISO + 'T12:00:00');
-		const end = new Date(d.getFullYear(), d.getMonth(), 1);
-		const fmt = (x: Date) => x.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
-		if (scope === 'month') return fmt(end);
-		const back = scope === 'year' ? 11 : 23;
-		const start = new Date(end.getFullYear(), end.getMonth() - back, 1);
-		return `${fmt(start)} – ${fmt(end)}`;
+	function runExport(option: PeriodOption) {
+		selectedPeriod = option;
+		pdfScope = option.scope;
+		openScope = null;
+		exportForDoctor(option);
 	}
 
-	// Available scope set depends on data span: no point offering "2 years"
-	// when the user only has 2 months of logs. Thresholds are intentionally
-	// generous — even a partial year is more useful than re-running the
-	// monthly export 12 times.
-	$: dataSpanDays = (() => {
-		const dates = exportableDocs
-			.filter(d => d.data?.type === 'entry')
-			.map(d => String(d.data.date || ''))
-			.filter(s => s.length === 10);
-		if (dates.length === 0) return 0;
-		const oldest = dates.reduce((a, b) => (a < b ? a : b));
-		const ms = Date.now() - new Date(oldest + 'T12:00:00').getTime();
-		return Math.floor(ms / 86400000);
-	})();
-	$: scopeYearAvailable = dataSpanDays >= 60;
-	$: scopeTwoYearsAvailable = dataSpanDays >= 365;
-	// If the user picks a scope and then their data set shrinks (caregiver
-	// switches accounts), fall back to the most useful available option.
-	$: if (pdfScope === '2years' && !scopeTwoYearsAvailable) {
-		pdfScope = scopeYearAvailable ? 'year' : 'month';
-	} else if (pdfScope === 'year' && !scopeYearAvailable) {
-		pdfScope = 'month';
+	function closePicker() {
+		const el = openScope ? cardEls[openScope] : null;
+		openScope = null;
+		// Focus returns to the card that opened the picker (the panel does not
+		// own the trigger, so it cannot do this itself).
+		el?.focus();
 	}
 
-	// Export scope cards (replaces the dropdown): each is a clickable
-	// mini-document; paper-stack depth cues the span, the body line says
-	// which visit it suits, and a locked card explains its own threshold.
-	$: scopeCards = [
-		{
-			scope: 'month' as ReportScope, depth: 1, available: true,
-			titleKey: 'pdf.scope_month_label', useKey: 'reports.scope_month_use',
-			range: scopeRangeLabel('month', $locale, currentDate),
-			recommended: false, lockMonths: 0,
-		},
-		{
-			scope: 'year' as ReportScope, depth: 2, available: scopeYearAvailable,
-			titleKey: 'pdf.scope_year_label', useKey: 'reports.scope_year_use',
-			range: scopeRangeLabel('year', $locale, currentDate),
-			recommended: scopeYearAvailable, lockMonths: 2,
-		},
-		{
-			scope: '2years' as ReportScope, depth: 3, available: scopeTwoYearsAvailable,
-			titleKey: 'pdf.scope_2years_label', useKey: 'reports.scope_2years_use',
-			range: scopeRangeLabel('2years', $locale, currentDate),
-			recommended: false, lockMonths: 12,
-		},
-	];
+	// Export scope cards: each is a clickable mini-document; paper-stack depth
+	// cues the span, the body line says which visit it suits, and a card with
+	// no data says why instead of greying out silently.
+	$: scopeCards = ([
+		{ scope: 'month' as ReportScope, depth: 1, titleKey: 'pdf.scope_month_label',
+		  useKey: 'reports.scope_month_use', emptyKey: 'reports.scope_no_data' },
+		{ scope: 'year' as ReportScope, depth: 2, titleKey: 'pdf.scope_year_label',
+		  useKey: 'reports.scope_year_use', emptyKey: 'reports.scope_no_data' },
+		{ scope: '2years' as ReportScope, depth: 3, titleKey: 'pdf.scope_2years_label',
+		  useKey: 'reports.scope_2years_use', emptyKey: 'reports.scope_needs_two_years' },
+	]).map((c) => {
+		const options = periodsByScope[c.scope];
+		const defaultIndex = defaultPeriodIndex(options, viewedMonth);
+		const preview = defaultIndex >= 0 ? options[defaultIndex] : null;
+		return {
+			...c,
+			options,
+			defaultIndex,
+			available: options.length > 0,
+			range: preview ? formatPeriodLabel(preview, $locale) : '',
+			// "Recommended" used to mean "the year card is unlocked", which would
+			// now star a year that is 90% empty. Tie it to real coverage.
+			recommended: c.scope === 'year' && !!preview && preview.monthsWithData >= 6,
+		};
+	});
 	let viewMode: 'month' | 'year' = 'month';
 	let currentYear = new Date().getFullYear();
 	// Track loading explicitly so the empty / loading / ready states don't
@@ -367,18 +389,26 @@
 		return d.toLocaleDateString($locale, { month: 'long', year: 'numeric' });
 	}
 
-	async function exportForDoctor() {
+	// `option` carries the anchor the user picked. Without one (the deep-link
+	// path) we keep the old behaviour: the month currently on screen.
+	async function exportForDoctor(option?: PeriodOption) {
 		if (!bp) return;
-		const d = new Date(currentDate + 'T12:00:00');
+		const onScreen = new Date(currentDate + 'T12:00:00');
+		const year = option ? option.anchorYear : onScreen.getFullYear();
+		const month = option ? option.anchorMonth : onScreen.getMonth();
+		const scope = option ? option.scope : pdfScope;
 		const { generateDoctorPdf } = await loadPdfLib();
-		generateDoctorPdf(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, $auth.username || '', pdfScope);
+		generateDoctorPdf(bp, exportableDocs, year, month, $t, $locale, $auth.username || '', scope);
 	}
 
 	async function exportCsvFile() {
 		if (!bp) return;
-		const d = new Date(currentDate + 'T12:00:00');
+		const onScreen = new Date(currentDate + 'T12:00:00');
+		const year = selectedPeriod ? selectedPeriod.anchorYear : onScreen.getFullYear();
+		const month = selectedPeriod ? selectedPeriod.anchorMonth : onScreen.getMonth();
+		const scope = selectedPeriod ? selectedPeriod.scope : pdfScope;
 		const { exportCsv } = await loadPdfLib();
-		exportCsv(bp, exportableDocs, d.getFullYear(), d.getMonth(), $t, $locale, pdfScope);
+		exportCsv(bp, exportableDocs, year, month, $t, $locale, scope);
 	}
 
 	// Stats
@@ -1322,35 +1352,58 @@
 		</h2>
 		<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 			{#each scopeCards as card (card.scope)}
-				<button
-					type="button"
-					class="report-card"
-					class:report-card--recommended={card.recommended}
-					disabled={!card.available}
-					on:click={() => pickExport(card.scope)}
-				>
-					<span class="report-doc" aria-hidden="true">
-						{#if card.depth >= 3}<span class="report-sheet report-sheet--b2"></span>{/if}
-						{#if card.depth >= 2}<span class="report-sheet report-sheet--b1"></span>{/if}
-						<span class="report-sheet report-sheet--front">
-							<span class="report-line"></span>
-							<span class="report-line"></span>
-							<span class="report-line report-line--short"></span>
+				<!-- Relative slot so the anchored picker can position against
+				     the card without breaking the 3-up grid. -->
+				<div class="report-card-slot">
+					<button
+						bind:this={cardEls[card.scope]}
+						type="button"
+						data-testid="export-card-{card.scope}"
+						class="report-card"
+						class:report-card--recommended={card.recommended}
+						disabled={!card.available}
+						aria-haspopup={card.options.length > 1 ? 'listbox' : undefined}
+						aria-expanded={card.options.length > 1 ? openScope === card.scope : undefined}
+						on:click={() => onCardClick(card.scope)}
+					>
+						<span class="report-doc" aria-hidden="true">
+							{#if card.depth >= 3}<span class="report-sheet report-sheet--b2"></span>{/if}
+							{#if card.depth >= 2}<span class="report-sheet report-sheet--b1"></span>{/if}
+							<span class="report-sheet report-sheet--front">
+								<span class="report-line"></span>
+								<span class="report-line"></span>
+								<span class="report-line report-line--short"></span>
+							</span>
 						</span>
-					</span>
-					<span class="report-card__title">
-						{$t(card.titleKey)}
-						{#if card.recommended}
-							<span class="report-card__badge">★ {$t('reports.scope_recommended')}</span>
+						<span class="report-card__title">
+							{$t(card.titleKey)}
+							{#if card.recommended}
+								<span class="report-card__badge">★ {$t('reports.scope_recommended')}</span>
+							{/if}
+						</span>
+						<span class="report-card__range">{card.range}</span>
+						<span class="report-card__use">
+							{card.available ? $t(card.useKey) : $t(card.emptyKey)}
+						</span>
+						{#if card.options.length > 1}
+							<span class="report-card__choices">
+								{$t('reports.period_choose', { count: card.options.length })}
+							</span>
 						{/if}
-					</span>
-					<span class="report-card__range">{card.range}</span>
-					<span class="report-card__use">
-						{card.available
-							? $t(card.useKey)
-							: $t('reports.scope_locked', { months: card.lockMonths })}
-					</span>
-				</button>
+					</button>
+
+					{#if openScope === card.scope}
+						<ExportPeriodPopover
+							open={true}
+							options={card.options}
+							selectedIndex={card.defaultIndex}
+							heading={$t(card.titleKey)}
+							anchor={cardEls[card.scope] ?? null}
+							on:pick={(e) => runExport(e.detail)}
+							on:close={closePicker}
+						/>
+					{/if}
+				</div>
 			{/each}
 		</div>
 
@@ -2063,6 +2116,15 @@
 	   centered "+" button instead of a muted "-" placeholder. */
 
 	/* ── Doctor-export scope cards ── */
+	/* Positioning context for the anchored period picker. The card itself is
+	   a <button> and cannot contain the panel, so the slot wraps both. */
+	.report-card-slot {
+		position: relative;
+		display: flex;
+	}
+	.report-card-slot > .report-card {
+		flex: 1;
+	}
 	.report-card {
 		display: flex;
 		flex-direction: column;
@@ -2114,6 +2176,15 @@
 		font-size: 0.72rem;
 		line-height: 1.4;
 		color: var(--text-secondary);
+	}
+	/* Only rendered when the card actually opens a picker, so the card never
+	   promises a choice it won't give. */
+	.report-card__choices {
+		margin-top: auto;
+		padding-top: 0.35rem;
+		font-size: 0.68rem;
+		font-weight: 600;
+		color: var(--brand);
 	}
 	/* Mini-document: the front sheet plus offset sheets behind it. The
 	   stack depth (1 / 2 / 3 sheets) is the visual cue for the time span. */
