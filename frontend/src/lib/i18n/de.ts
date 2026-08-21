@@ -1174,7 +1174,8 @@ export default {
 	'quickadd.mode_heading': 'Welche Art von Eintrag?',
 	'quickadd.mode_entry': 'Eintrag',
 	'quickadd.mode_event': 'Notiz-Markierung',
-	'quickadd.mode_event_hint': 'Erstellt eine senkrechte Linie im Verlauf-Diagramm.',
+	'quickadd.mode_event_hint': 'Erscheint im Verlauf und im Export für die Ärztin.',
+	'quickadd.mode_event_hint_private': 'Bleibt in deinem Tagebuch — nicht im Verlauf, nicht im Export.',
 	// CIPH-710 / CIPH-713
 	'quickadd.mode_diary': 'Tagebuch',
 	'quickadd.diary_hint': 'Privat — wird nie exportiert oder geteilt.',
@@ -1186,12 +1187,13 @@ export default {
 	'private.toggle_to_private': 'Standard — klicken, um privat zu machen (Schloss offen)',
 	'private.toggle_to_public': 'Privat — klicken, um auf Standard zu setzen (Schloss geschlossen)',
 	'private.state_public': 'Standard',
+	'private.state_public_hint': 'Erscheint im Export für die Ärztin.',
 	'private.state_private': 'Privat',
 	'common.date': 'Datum',
 	'common.time': 'Uhrzeit',
 	'common.optional': 'optional',
 	'reports.recent_events_title': 'Letzte Notiz-Markierungen',
-	'reports.no_events_yet': 'Noch keine Notiz-Markierungen. Erstelle eine über den Schnelleintrag — sie erscheint als senkrechte Linie im Verlauf-Diagramm.',
+	'reports.no_events_yet': 'Noch keine Notiz-Markierungen. Erstelle eine über den Schnelleintrag — sie erscheint im Verlauf und im Export für die Ärztin.',
 
 	// PDF
 	'pdf.recovery_title': 'Wiederherstellungscode',
