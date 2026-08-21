@@ -1247,6 +1247,7 @@ export default {
 	'pdf.episodes_change': '{change} episodi',
 	'pdf.days_change': '{change} giorni registrati',
 	'pdf.grid_title': 'Protocollo mensile',
+	'pdf.grid_coverage_note': 'Griglie mensili: {withData} mesi su {total} contengono voci. I mesi senza voci non vengono stampati.',
 	'pdf.export_date': 'Esportato',
 	'pdf.quote_attribution_label': 'CITAZIONE PAZIENTE',
 	'pdf.cycle_anchor_last': 'Ultimo ciclo registrato: {date}',

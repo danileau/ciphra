@@ -1717,6 +1717,72 @@ export function generateDoctorPdf(
 	const scopeStartISO = scopeStartDate.toISOString().slice(0, 10);
 	const scopeEndISO = scopeEndDate.toISOString().slice(0, 10);
 
+	/**
+	 * Does this month hold any exportable ENTRY?
+	 *
+	 * The monthly grid renders entries only — `drawGridSection` filters on
+	 * `type === 'entry'`, so note markers and medication events never appear
+	 * on those pages. A month without entries therefore has nothing to draw,
+	 * and printing it anyway produced a full landscape page of blank rows
+	 * under a green totals bar reading 0 · 0 · 0 and "0% of days".
+	 *
+	 * That is a coverage judgement — the thing components/README.md's
+	 * no-gaslight card is forbidden from showing — printed once per empty
+	 * month and handed to a doctor. One logged day in a year produced eleven
+	 * of them.
+	 */
+	function monthHasEntries(y: number, m: number): boolean {
+		const prefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+		return documents.some(
+			(d) => d.data?.type === 'entry' && String(d.data.date || '').startsWith(prefix),
+		);
+	}
+
+	// ── Append day-by-day grid(s). 'month' scope = one grid for the focus
+	// month. 'year' / '2years' scope = one grid per month in the window, so
+	// the doctor can spot-check any specific month without extra exports.
+	//
+	// pi24 P-PDF-9 — Cohort-aware grid culling. Per PDF_TEMPLATE.md
+	// Section 14 (Cohort-specific appendix), the daily symptom grid is
+	// appendix material and only belongs when daily binary symptom-
+	// tracking is the cohort's logging convention. Vital-pinned cohorts
+	// (Hashimoto, hypertension, cardiovascular, diabetes, parkinson)
+	// log labs / vitals on irregular schedules, not daily symptom
+	// checkboxes — their data is already on the vital chart. Cancer
+	// (narrative-treatment) is journal-primary and irregular. Custom
+	// cohorts have no convention to fall back on.
+	//
+	// Before pi24-P-PDF-9: every cohort got 12-24 pages of monthly
+	// grids regardless of clinical convention. Helena (Hashimoto) on
+	// year-scope produced a 24-page PDF mostly of empty grid cells.
+	// After P-PDF-9: those cohorts skip the grid entirely; their PDFs
+	// shrink to the 3-page summary + vital chart pages.
+	const COHORTS_WITHOUT_GRID = new Set<string>([
+		'hashimoto',
+		'cancer_treatment',
+		'hypertension',
+		'cardiovascular',
+		'diabetes',
+		'parkinson',
+	]);
+	const skipGrids =
+		cohortOf(blueprint) === 'custom' || COHORTS_WITHOUT_GRID.has(blueprint.conditionId);
+	const gridMonths: Array<{ y: number; m: number }> = [];
+	if (!skipGrids) {
+		if (scope === 'month') {
+			gridMonths.push({ y: year, m: month });
+		} else {
+			// Iterate from oldest to newest so the appendix reads
+			// chronologically.
+			for (let i = scopeMonths - 1; i >= 0; i--) {
+				const d = new Date(year, month - i, 1);
+				gridMonths.push({ y: d.getFullYear(), m: d.getMonth() });
+			}
+		}
+	}
+	// gridMonthsWithData / gridMonthsTotal are computed near the top of this
+	// function so page 1 can disclose the omission — see `omittedGridMonths`.
+
 	// monthDocs / daysInMonth / monthName / monthPrefix are the scope-aware
 	// variables used by the rest of the function. For 'month' scope they
 	// equal the focus month; for 'year' / '2years' they expand.
@@ -1826,6 +1892,30 @@ export function generateDoctorPdf(
 	doc.setFontSize(TYPE.compact);
 	doc.setTextColor(...BRAND.textPrimary);
 	doc.text(t('pdf.disclaimer_medical'), 14, 26);
+
+	// ── Coverage note ──
+	// Omitting the empty monthly grids is only honest if the omission is
+	// declared, and declared HERE. A reader who finds Feb and Apr but no Mar
+	// otherwise concludes a page was lost in the fax — silence turns a
+	// deliberate omission into apparent missing data, which is worse than
+	// the blank pages it replaced.
+	//
+	// Rendered only when something IS omitted: with nothing to declare, the
+	// line would be noise on the page that has the least room for it.
+	{
+		const gridTotal = gridMonths.length;
+		const gridWithData = gridMonths.filter((gm) => monthHasEntries(gm.y, gm.m)).length;
+		if (gridTotal > 0 && gridWithData < gridTotal) {
+			doc.setFont('helvetica', 'normal');
+			doc.setFontSize(TYPE.compact);
+			doc.setTextColor(...BRAND.textSecondary);
+			doc.text(
+				t('pdf.grid_coverage_note', { withData: gridWithData, total: gridTotal }),
+				14,
+				30,
+			);
+		}
+	}
 
 	// ── Patient top-line quote ──
 	// Grafted from the retired CLINICAL_HANDOFF.md §4 / §14.8: the
@@ -3567,49 +3657,8 @@ export function generateDoctorPdf(
 		});
 	}
 
-	// ── Append day-by-day grid(s). 'month' scope = one grid for the focus
-	// month. 'year' / '2years' scope = one grid per month in the window, so
-	// the doctor can spot-check any specific month without extra exports.
-	//
-	// pi24 P-PDF-9 — Cohort-aware grid culling. Per PDF_TEMPLATE.md
-	// Section 14 (Cohort-specific appendix), the daily symptom grid is
-	// appendix material and only belongs when daily binary symptom-
-	// tracking is the cohort's logging convention. Vital-pinned cohorts
-	// (Hashimoto, hypertension, cardiovascular, diabetes, parkinson)
-	// log labs / vitals on irregular schedules, not daily symptom
-	// checkboxes — their data is already on the vital chart. Cancer
-	// (narrative-treatment) is journal-primary and irregular. Custom
-	// cohorts have no convention to fall back on.
-	//
-	// Before pi24-P-PDF-9: every cohort got 12-24 pages of monthly
-	// grids regardless of clinical convention. Helena (Hashimoto) on
-	// year-scope produced a 24-page PDF mostly of empty grid cells.
-	// After P-PDF-9: those cohorts skip the grid entirely; their PDFs
-	// shrink to the 3-page summary + vital chart pages.
-	const COHORTS_WITHOUT_GRID = new Set<string>([
-		'hashimoto',
-		'cancer_treatment',
-		'hypertension',
-		'cardiovascular',
-		'diabetes',
-		'parkinson',
-	]);
-	const skipGrids =
-		cohortOf(blueprint) === 'custom' || COHORTS_WITHOUT_GRID.has(blueprint.conditionId);
-	const gridMonths: Array<{ y: number; m: number }> = [];
-	if (!skipGrids) {
-		if (scope === 'month') {
-			gridMonths.push({ y: year, m: month });
-		} else {
-			// Iterate from oldest to newest so the appendix reads
-			// chronologically.
-			for (let i = scopeMonths - 1; i >= 0; i--) {
-				const d = new Date(year, month - i, 1);
-				gridMonths.push({ y: d.getFullYear(), m: d.getMonth() });
-			}
-		}
-	}
 	for (const gm of gridMonths) {
+		if (!monthHasEntries(gm.y, gm.m)) continue;
 		// Landscape: the per-day grid is wide (Day + N symptom/episode
 		// columns + Notes). Portrait A4 could not hold wide blueprints.
 		doc.addPage('a4', 'landscape');

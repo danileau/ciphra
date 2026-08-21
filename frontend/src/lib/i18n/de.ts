@@ -1269,6 +1269,7 @@ export default {
 	'pdf.episodes_change': '{change} Episoden',
 	'pdf.days_change': '{change} Tage erfasst',
 	'pdf.grid_title': 'Monatsprotokoll',
+	'pdf.grid_coverage_note': 'Monatsraster: {withData} von {total} Monaten mit Einträgen. Monate ohne Einträge sind nicht abgedruckt.',
 	'pdf.export_date': 'Exportiert',
 	'pdf.quote_attribution_label': 'ZITAT PATIENT:IN',
 	'pdf.cycle_anchor_last': 'Letzte erfasste Periode: {date}',
