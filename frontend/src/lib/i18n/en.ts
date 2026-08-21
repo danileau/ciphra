@@ -1207,6 +1207,7 @@ export default {
 	'pdf.legend_symptoms': 'Symptoms',
 	'pdf.legend_symptom_days': 'Symptom days',
 	'pdf.legend_event_count': 'Note markers (count per month)',
+	'pdf.legend_note_marker_day': 'Day with a note marker',
 	'pdf.event_notes_title': 'Note markers',
 	'pdf.event_notes_provenance': 'RECORDED BY THE PATIENT — their own words, reproduced unchanged.',
 	'pdf.event_notes_col': 'Note',

@@ -31,7 +31,7 @@ import { PHASE_COLORS, type Phase } from '$lib/cycleState';
 import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
 import { isExportable } from '$lib/utils/exportable';
-import { noteMarkerText } from '$lib/reports/noteMarkers';
+import { noteMarkerText, noteMarkersInWindow } from '$lib/reports/noteMarkers';
 import { formatDateChoice, formatISODateChoice, type DateFormatChoice } from '$lib/blueprint/preferences';
 import {
 	reportWindow,
@@ -1216,9 +1216,35 @@ function drawDailyMonthChart(
 	// (common for a well-controlled epilepsy patient) still has a chart
 	// worth showing: the episode line at zero plus the symptom-day row.
 	// Before this, the episode-only total wrongly read as "no entries".
+	// ── Per-day note markers ──
+	//
+	// This is the surface where a per-event mark earns its weight, and the
+	// one place it was never drawn. `feedback_chart_event_markers` bans them
+	// on aggregate axes because "the axis compresses them past the point of
+	// legibility" — and explicitly permits them where "the day IS the unit".
+	// Here a month spans 176mm, so a day is 5.7–6.3mm and a 2.4mm diamond
+	// cannot collide with its neighbour.
+	//
+	// One mark per DAY, not per event: two notes on the same day are one
+	// thing that happened that day. Text stays in the Notizmarker list —
+	// nothing here is wide enough for a sentence, which is what produced the
+	// 255mm-on-a-174mm-axis pile-up on the trajectory.
+	const dayMarks = new Set<number>();
+	{
+		const startISO = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+		const endISO = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+		for (const n of noteMarkersInWindow(documents, startISO, endISO)) {
+			dayMarks.add(Number(n.dateISO.slice(8, 10)));
+		}
+	}
+
 	const episodeTotal = dailyTotals.reduce((a, b) => a + b, 0);
 	const symptomTotal = dailySymptomDays.reduce((a, b) => a + b, 0);
-	if (episodeTotal === 0 && symptomTotal === 0) {
+	// `dayMarks.size` joins the condition: a month with note markers but no
+	// episodes or symptoms is not empty, and printing "Keine Einträge diesen
+	// Monat" above a row of marks would contradict the page. Same class of
+	// error the comment above records fixing for episode-only months.
+	if (episodeTotal === 0 && symptomTotal === 0 && dayMarks.size === 0) {
 		doc.setFont('helvetica', 'italic');
 		doc.setFontSize(TYPE.body);
 		doc.setTextColor(...BRAND.textMuted);
@@ -1315,9 +1341,20 @@ function drawDailyMonthChart(
 		doc.text(String(day), x, cursorY + chartH + 3, { align: 'center' });
 	}
 
+	const markRowY = cursorY + chartH + 6.2;
+	if (dayMarks.size > 0) {
+		doc.setDrawColor(...BRAND.ochre);
+		doc.setLineWidth(0.4);
+		for (const day of dayMarks) {
+			const x = chartX + ((day - 1) / Math.max(1, daysInMonth - 1)) * chartW;
+			// Diamond — shape-encoded, so it survives grayscale and fax.
+			doc.lines([[1.1, 1.1], [-1.1, 1.1], [-1.1, -1.1], [1.1, -1.1]], x, markRowY - 1.1);
+		}
+	}
+
 	// Legend — episode line + symptom-day dot.
 	{
-		const lgY = cursorY + chartH + 8;
+		const lgY = cursorY + chartH + (dayMarks.size > 0 ? 11.5 : 8);
 		doc.setFont('helvetica', 'normal');
 		doc.setFontSize(TYPE.chartAxis);
 		doc.setTextColor(...BRAND.textMuted);
@@ -1333,12 +1370,21 @@ function drawDailyMonthChart(
 			doc.setLineDashPattern([1.2, 1.2], 0);
 			doc.line(lx, lgY - 0.8, lx + 5, lgY - 0.8);
 			doc.setLineDashPattern([], 0);
-			doc.text(t('pdf.legend_symptoms'), lx + 7, lgY);
+			const symLabel = t('pdf.legend_symptoms');
+			doc.text(symLabel, lx + 7, lgY);
+			lx += 7 + doc.getTextWidth(symLabel) + 8;
+		}
+		// PDF_DESIGN_SPEC §14 — every symbol explained.
+		if (dayMarks.size > 0) {
+			doc.setDrawColor(...BRAND.ochre);
+			doc.setLineWidth(0.4);
+			doc.lines([[1.1, 1.1], [-1.1, 1.1], [-1.1, -1.1], [1.1, -1.1]], lx + 1.1, lgY - 1.9);
+			doc.text(t('pdf.legend_note_marker_day'), lx + 4.2, lgY);
 		}
 		doc.setLineWidth(0.2);
 	}
 
-	return cursorY + chartH + 12;
+	return cursorY + chartH + (dayMarks.size > 0 ? 15.5 : 12);
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -1523,8 +1569,32 @@ function drawGridSection(
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(TYPE.body);
 	doc.setTextColor(...BRAND.textPrimary);
+	// Days carrying a note marker. The grid is a day-per-row surface, so this
+	// is the other place a per-event mark is legitimate — the row IS the day.
+	// One mark per day: two notes on one day are one thing that happened.
+	// Text stays in the Notizmarker list; the 46mm Notes column already
+	// truncates the entry's own note at 40 characters.
+	const markedDays = new Set<number>();
+	{
+		const last = String(daysInMonth).padStart(2, '0');
+		for (const n of noteMarkersInWindow(documents, `${monthPrefix}-01`, `${monthPrefix}-${last}`)) {
+			markedDays.add(Number(n.dateISO.slice(8, 10)));
+		}
+	}
+
 	const summary = `${daysLogged} ${t('pdf.days_logged_short')}  ·  ${totalEpisodes} ${t('pdf.total_episodes_short')}  ·  ${symptomEntries} ${t('pdf.symptom_entries')}`;
 	doc.text(summary, 14, 30);
+	// PDF_DESIGN_SPEC §14 — the diamond in the day column, explained where a
+	// reader meets it. Only rendered when the month actually has one.
+	if (markedDays.size > 0) {
+		const sumW = doc.getTextWidth(summary);
+		doc.setDrawColor(...BRAND.ochre);
+		doc.setLineWidth(0.4);
+		doc.lines([[1.1, 1.1], [-1.1, 1.1], [-1.1, -1.1], [1.1, -1.1]], 14 + sumW + 7, 28.9);
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(t('pdf.legend_note_marker_day'), 14 + sumW + 11, 30);
+		doc.setTextColor(...BRAND.textMuted);
+	}
 
 	// Thin divider
 	doc.setDrawColor(...BRAND.border);
@@ -1642,7 +1712,19 @@ function drawGridSection(
 				}
 			}
 		},
-		didDrawCell: continuationLabelHook(t('pdf.table_continued')),
+		didDrawCell: (data: any) => {
+			continuationLabelHook(t('pdf.table_continued'))(data);
+			// Day column, body rows only — the totals and percent rows are
+			// not days.
+			if (data.section !== 'body' || data.column.index !== 0) return;
+			const day = data.row.index + 1;
+			if (day > daysInMonth || !markedDays.has(day)) return;
+			const cx = data.cell.x + data.cell.width - 2.2;
+			const cy = data.cell.y + data.cell.height / 2;
+			doc.setDrawColor(...BRAND.ochre);
+			doc.setLineWidth(0.35);
+			doc.lines([[0.9, 0.9], [-0.9, 0.9], [-0.9, -0.9], [0.9, -0.9]], cx, cy - 0.9);
+		},
 	});
 
 }

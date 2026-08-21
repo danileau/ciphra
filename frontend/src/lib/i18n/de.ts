@@ -1229,6 +1229,7 @@ export default {
 	'pdf.legend_symptoms': 'Symptome',
 	'pdf.legend_symptom_days': 'Symptom-Tage',
 	'pdf.legend_event_count': 'Notizmarker (Anzahl im Monat)',
+	'pdf.legend_note_marker_day': 'Tag mit Notizmarker',
 	'pdf.event_notes_title': 'Notizmarker',
 	'pdf.event_notes_provenance': 'VON PATIENT:IN ERFASST — eigene Worte, unverändert übernommen.',
 	'pdf.event_notes_col': 'Notiz',
