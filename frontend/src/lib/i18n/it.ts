@@ -1207,6 +1207,7 @@ export default {
 	'pdf.legend_symptoms': 'Sintomi',
 	'pdf.legend_symptom_days': 'Giorni con sintomi',
 	'pdf.legend_event_count': 'Segnalibri (numero al mese)',
+	'pdf.legend_note_marker_day': 'Giorno con segnalibro',
 	'pdf.event_notes_title': 'Segnalibri',
 	'pdf.event_notes_provenance': 'REGISTRATO DAL PAZIENTE — parole proprie, riportate senza modifiche.',
 	'pdf.event_notes_col': 'Nota',

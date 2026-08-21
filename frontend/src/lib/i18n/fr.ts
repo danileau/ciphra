@@ -1207,6 +1207,7 @@ export default {
 	'pdf.legend_symptoms': 'Symptômes',
 	'pdf.legend_symptom_days': 'Jours avec symptômes',
 	'pdf.legend_event_count': 'Repères (nombre par mois)',
+	'pdf.legend_note_marker_day': 'Jour avec un repère de note',
 	'pdf.event_notes_title': 'Repères de notes',
 	'pdf.event_notes_provenance': "SAISI PAR LE PATIENT — ses propres mots, repris tels quels.",
 	'pdf.event_notes_col': 'Note',
