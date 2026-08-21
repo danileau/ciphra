@@ -88,6 +88,30 @@ describe('the PDF makes no directional assessment', () => {
 		expect(PDF).not.toMatch(/roundedRect\([^)]*labelW/);
 	});
 
+	it('no delta is graded good or bad', () => {
+		// Second front of the same rule, closed 2026-08-21. The KPI tile delta
+		// painted "three fewer episodes" olive and "three more" brick — the
+		// trajectory verdict again, in colour rather than words, two
+		// centimetres from where the label used to sit.
+		//
+		// The vital tiles had already refused to do this, with the reasoning
+		// that generalises: "TSH falling on a hypothyroid patient is good, on
+		// a hyperthyroid patient is bad. The tile shows direction; doctor
+		// interprets."
+		expect(PDF).not.toMatch(/semantic:\s*'(good|bad)'/);
+		expect(PDF).not.toMatch(/semantic:\s*episodeChange/);
+		expect(PDF, 'the graded-delta field is back').not.toMatch(
+			/interface StatCardDelta\s*\{[\s\S]{0,400}semantic/,
+		);
+	});
+
+	it('the direction itself still reaches the reader', () => {
+		// Guards the over-correction: removing the GRADE must not remove the
+		// CHANGE. The sign and the magnitude are recorded fact.
+		expect(PDF).toMatch(/sign:\s*episodeChange\s*>\s*0\s*\?\s*'\+'\s*:\s*'-'/);
+		expect(PDF).toMatch(/interface StatCardDelta\s*\{[\s\S]{0,400}value:\s*string/);
+	});
+
 	it('measured facts are untouched — this guard is not a blanket ban', () => {
 		// Guards against over-correcting: the report must still state what
 		// was recorded.

@@ -783,11 +783,25 @@ function drawWatermarkPattern(doc: jsPDF): void {
 	}
 }
 
-/** Optional delta sub-line for drawStatCard (CIPH-pi19-3). */
+/**
+ * Optional delta sub-line for drawStatCard (CIPH-pi19-3).
+ *
+ * No `semantic`. The delta used to carry 'good' | 'bad' | 'neutral', painted
+ * olive or brick — so "three fewer episodes" printed green and "three more"
+ * printed brick. That is a verdict on the person's course, and ciphra is a
+ * documentation platform: it records what happened, it does not grade it.
+ * Same ruling that removed the trajectory label (2026-08-21).
+ *
+ * The vital tiles had already reached this conclusion on their own — their
+ * delta was hard-coded to 'neutral' with the comment "no good/bad" — leaving
+ * episodes as the only judged figure on the page.
+ *
+ * The reader still sees the direction: the sign is right there, and the
+ * monthly numbers are on the chart below.
+ */
 interface StatCardDelta {
 	sign: '+' | '-' | '=';
 	value: string;
-	semantic: 'good' | 'bad' | 'neutral';
 }
 
 /** A StatCard-style block: label above, value below, accent stripe left. */
@@ -867,17 +881,11 @@ function drawStatCard(
 	doc.text(displayValue, x + valPadLeft, valBaseline);
 
 	if (delta) {
-		// Color from semantic — olive=good, brick=bad, textMuted=neutral.
-		// Same vocabulary as the legacy comparison-deltas block we replace.
-		const dColor: RGB =
-			delta.semantic === 'good'
-				? BRAND.olive
-				: delta.semantic === 'bad'
-					? BRAND.brick
-					: BRAND.textMuted;
+		// One colour for every delta. Directional colour is an assessment;
+		// the number and its sign are the fact.
 		doc.setFont('helvetica', 'normal');
 		doc.setFontSize(TYPE.compact);
-		doc.setTextColor(...dColor);
+		doc.setTextColor(...BRAND.textMuted);
 		const text = delta.sign === '=' ? delta.value : `${delta.sign}${delta.value}`;
 		doc.text(text, x + valPadLeft, y + h - 4);
 	}
@@ -2093,7 +2101,6 @@ export function generateDoctorPdf(
 				? {
 					sign: episodeChange > 0 ? '+' : '-',
 					value: String(Math.abs(episodeChange)),
-					semantic: episodeChange > 0 ? 'bad' : 'good',
 				}
 				: undefined,
 		};
@@ -2281,14 +2288,15 @@ export function generateDoctorPdf(
 		let delta: StatCardDelta | undefined;
 		if (prev !== null && Math.abs(last - prev) >= 0.05) {
 			const d = last - prev;
+			// The reasoning that used to justify a 'neutral' semantic HERE now
+			// governs every delta on the page: direction interpretation
+			// depends on biology and on the person — TSH falling on a
+			// hypothyroid patient is good, on a hyperthyroid patient is bad.
+			// The tile shows direction; the doctor interprets. Episodes were
+			// the last figure that still claimed to know which way was better.
 			delta = {
 				sign: d > 0 ? '+' : '-',
 				value: fmt(Math.abs(d)),
-				// Vital cohorts: neutral semantic (no good/bad). Direction
-				// interpretation depends on biology — TSH falling on a
-				// hypothyroid patient is good, on a hyperthyroid patient is
-				// bad. The tile shows direction; doctor interprets.
-				semantic: 'neutral',
 			};
 		}
 		return { label: tileLabel, value, accent: acc.primary, delta };
