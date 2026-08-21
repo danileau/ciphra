@@ -9,7 +9,7 @@
 	<title>{doc ? doc.meta.title : 'Documentation'} — ciphra</title>
 </svelte:head>
 
-<main id="main-content" class="max-w-3xl mx-auto px-4 py-8 space-y-5">
+<main id="main-content" class="layout-reading py-8 space-y-5">
 	<a class="doc-back" href="/docs">← Documentation</a>
 
 	{#if doc}

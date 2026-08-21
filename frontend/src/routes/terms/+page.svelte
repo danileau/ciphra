@@ -7,7 +7,7 @@
 	<meta name="description" content={$t('terms.meta')} />
 </svelte:head>
 
-<main id="main-content" class="max-w-3xl mx-auto px-4 py-8 space-y-6">
+<main id="main-content" class="layout-reading py-8 space-y-6">
 	<header class="space-y-1">
 		<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('terms.title')}</h1>
 		<p class="text-sm" style="color: var(--text-muted)">{$t('privacy.last_updated')}: 2026-06-07</p>

@@ -445,7 +445,7 @@
 			<!-- CIPH-908 — "Back to settings" only when reached via the
 				 ?customize=1 deep-link (not the initial post-signup setup,
 				 where there's no settings yet to go back to). -->
-			<div class="max-w-2xl mx-auto px-4 pt-4">
+			<div class="layout-reading pt-4">
 				<a
 					href="/settings?tab=tracking"
 					class="inline-flex items-center gap-1.5 text-sm font-medium min-h-[36px]"
@@ -458,7 +458,7 @@
 				</a>
 			</div>
 		{/if}
-		<div class="max-w-2xl mx-auto px-4 py-5 flex items-center justify-between gap-3">
+		<div class="layout-reading py-5 flex items-center justify-between gap-3">
 			<div class="flex-1 min-w-0">
 				<h1 class="text-lg font-bold truncate" style="color: var(--text-primary)">{$t('setup.title')}</h1>
 				{#if step > 0}
@@ -486,7 +486,7 @@
 			{/if}
 		</div>
 		{#if step > 0}
-			<div class="max-w-2xl mx-auto px-4 pb-3 flex gap-2">
+			<div class="layout-reading pb-3 flex gap-2">
 				{#each [1, 2, 3, 4] as s}
 					<div class="h-1 flex-1 rounded-full" style="background: {s <= step ? 'var(--olive)' : 'var(--surface-inset)'}"></div>
 				{/each}
@@ -494,7 +494,7 @@
 		{/if}
 	</div>
 
-	<div class="max-w-2xl mx-auto px-4 py-6">
+	<div class="layout-reading py-6">
 		<!-- ─── SCREEN 0: Caregiver question ─── -->
 		<!-- Shown only to fresh registrants (no existing blueprint) so they
 		     don't land on the caregiver-fallback dashboard page meant for

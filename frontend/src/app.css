@@ -783,12 +783,46 @@ body {
 	   Hard ceiling is 1280px (`layout-data-wide`) so text columns
 	   never exceed ~80ch, and sidebars absorb remaining viewport
 	   width on ultrawides.
+
+	   ADOPTED EVERYWHERE 2026-08-21. These tokens existed since
+	   CIPH-746 but only 4 of 18 routes used them; the other 14 each
+	   hardcoded their own `max-w-*` or nothing at all, which is the
+	   drift they were introduced to prevent. `routes/page-width.test.ts`
+	   now pins the assignment — a new page that hardcodes a width
+	   fails the suite. Add the route to a tier, not a one-off class.
+
+	   The layout itself deliberately imposes NO width: `<main>` is
+	   `flex-1` with no container, so a page that sets nothing renders
+	   edge-to-edge. That is why "no class" was never a safe default.
+
+	   THREE DOCUMENTED EXCEPTIONS — none is a fixed page container:
+
+	   • AUTH CARDS (/login, /migrate, /join/[grantId]). These centre a
+	     448px card in the viewport rather than flowing content down a
+	     column. `layout-narrow` (576) is NOT what they use, despite
+	     what its comment claimed until 2026-08-21. Left alone: forcing
+	     the token would widen every auth card by 128px for tidiness.
+
+	   • MEASURE, not layout. `max-w-xl` on a paragraph caps LINE
+	     LENGTH (~65ch) and is typographically correct. The landing
+	     page uses several. Do not replace those with layout tokens.
+
+	   • RESPONSIVE TWO-STAGE (/log/[date], via EntryComposer's
+	     `.log-page`). 768 rising to 1024 at the ≥1024 breakpoint,
+	     where the form switches to a two-column grid. No tier
+	     expresses "widens at a breakpoint", and pinning it to a fixed
+	     768 would break that grid. Left as CSS on purpose.
 	   ═══════════════════════════════════════════════════════════ */
-	.layout-narrow    { @apply w-full max-w-xl  mx-auto px-4 sm:px-6; } /* 576 — auth/migrate forms */
-	.layout-reading   { @apply w-full max-w-3xl mx-auto px-4 sm:px-6; } /* 768 — prose, dashboard main col */
-	.layout-default   { @apply w-full max-w-4xl mx-auto px-4 sm:px-6; } /* 896 — settings, conditions */
-	.layout-data      { @apply w-full max-w-6xl mx-auto px-4 sm:px-6; } /* 1152 — journal, calendar, admin, dashboard */
-	.layout-data-wide { @apply w-full max-w-7xl mx-auto px-4 sm:px-6; } /* 1280 — reports tables */
+	.layout-narrow    { @apply w-full max-w-xl  mx-auto px-4 sm:px-6; } /* 576  — (unused: see AUTH CARDS below) */
+	.layout-reading   { @apply w-full max-w-3xl mx-auto px-4 sm:px-6; } /* 768  — /docs, /docs/[slug], /privacy, /terms, /setup */
+	.layout-default   { @apply w-full max-w-4xl mx-auto px-4 sm:px-6; } /* 896  — /settings, /conditions/[id] */
+	/* px-6 at every breakpoint, unlike the others: the landing's bands sit on
+	   alternating full-bleed backgrounds where 16px reads as cramped. Keeping
+	   the tier's own padding avoids a 24→16px mobile regression on the one
+	   page most visitors see first. */
+	.layout-landing   { @apply w-full max-w-5xl mx-auto px-6; }        /* 1024 — the landing page's section bands */
+	.layout-data      { @apply w-full max-w-6xl mx-auto px-4 sm:px-6; } /* 1152 — /journal, /calendar, /admin */
+	.layout-data-wide { @apply w-full max-w-7xl mx-auto px-4 sm:px-6; } /* 1280 — /reports */
 }
 
 @layer utilities {
