@@ -13,9 +13,22 @@ import { join } from 'node:path';
 const PDF = readFileSync(join(__dirname, 'pdf.ts'), 'utf8');
 
 describe('CIPH-pi19-3 drawStatCard delta sub-line', () => {
-	it('exposes a StatCardDelta interface with sign / value / semantic', () => {
-		expect(PDF).toMatch(/interface StatCardDelta\s*\{[\s\S]{0,300}sign:\s*'\+'\s*\|\s*'-'\s*\|\s*'='/);
-		expect(PDF).toMatch(/interface StatCardDelta\s*\{[\s\S]{0,300}semantic:\s*'good'\s*\|\s*'bad'\s*\|\s*'neutral'/);
+	// RETIRED 2026-08-21 — the `semantic` field and its olive/brick colouring.
+	// 'good' painted "three fewer episodes" green and 'bad' painted "three
+	// more" brick: a verdict on the person's course, on the same page as the
+	// trajectory label removed for exactly that reason.
+	// "Ciphra ist nur eine Dokumentationsplattform."
+	//
+	// The vital tiles had already reached this conclusion independently —
+	// their delta was hard-coded 'neutral' because "TSH falling on a
+	// hypothyroid patient is good, on a hyperthyroid patient is bad" — which
+	// left episodes as the only judged figure on the page.
+	it('the delta carries the number and its sign, and nothing else', () => {
+		expect(PDF).toMatch(/interface StatCardDelta\s*\{[\s\S]{0,400}sign:\s*'\+'\s*\|\s*'-'\s*\|\s*'='/);
+		expect(PDF).toMatch(/interface StatCardDelta\s*\{[\s\S]{0,400}value:\s*string/);
+		expect(PDF, 'the good/bad field is back').not.toMatch(
+			/interface StatCardDelta\s*\{[\s\S]{0,400}semantic/,
+		);
 	});
 
 	it('drawStatCard accepts optional delta param + lifts value when present', () => {
@@ -24,10 +37,10 @@ describe('CIPH-pi19-3 drawStatCard delta sub-line', () => {
 		expect(PDF).toMatch(/valBaseline\s*=\s*delta\s*\?\s*y\s*\+\s*h\s*-\s*9\s*:\s*y\s*\+\s*h\s*-\s*4\.5/);
 	});
 
-	it('delta semantic maps to olive (good) / brick (bad) / textMuted (neutral)', () => {
-		expect(PDF).toMatch(
-			/semantic\s*===\s*'good'[\s\S]{0,80}BRAND\.olive[\s\S]{0,200}semantic\s*===\s*'bad'[\s\S]{0,80}BRAND\.brick/,
-		);
+	it('every delta renders in one neutral colour', () => {
+		// Directional colour is an assessment; the sign is the fact.
+		expect(PDF).not.toMatch(/semantic\s*===\s*'good'/);
+		expect(PDF).not.toMatch(/semantic\s*===\s*'bad'/);
 	});
 });
 
@@ -116,12 +129,17 @@ describe('CIPH-pi19-3 / pi24 P-PDF-4 per-cohort tile selection', () => {
 		expect(PDF).toMatch(/tileRescueMed\s*=\s*\(\):\s*Tile\s*\|\s*null/);
 	});
 
-	it('episode delta semantic — increase=bad, decrease=good (more events = worse)', () => {
-		// The clinical-direction reading: more episodes = condition is
-		// worsening = bad. Decrease = improving = good.
-		expect(PDF).toMatch(
-			/semantic:\s*episodeChange\s*>\s*0\s*\?\s*'bad'\s*:\s*'good'/,
-		);
+	// RETIRED with the field above. This asserted "more episodes = condition
+	// is worsening = bad" — the clinical reading a documentation platform must
+	// not perform on the patient's behalf, and one that is wrong often enough
+	// to matter: more episodes during a deliberate taper is expected, not
+	// deterioration.
+	it('the episode delta states the change without grading it', () => {
+		const idx = PDF.indexOf("label: t('pdf.total_episodes')");
+		const block = PDF.slice(idx, idx + 500);
+		expect(block).toMatch(/sign:\s*episodeChange\s*>\s*0\s*\?\s*'\+'\s*:\s*'-'/);
+		expect(block).toMatch(/value:\s*String\(Math\.abs\(episodeChange\)\)/);
+		expect(block, 'grading is back').not.toMatch(/semantic/);
 	});
 
 	it('episode delta is suppressed at 2years scope (no comparable prev window)', () => {
