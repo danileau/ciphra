@@ -32,6 +32,9 @@
 	import { isEpisodeBearing } from '$lib/utils/episodeCounts';
 	import { isExportable } from '$lib/utils/exportable';
 	import ExportPeriodPopover from '$lib/components/ExportPeriodPopover.svelte';
+	import ExportNoteReview from '$lib/components/ExportNoteReview.svelte';
+	import { reportWindow, formatWindowRange } from '$lib/reports/reportWindow';
+	import { noteMarkersInWindow, withSelectedNoteMarkers, type NoteMarker } from '$lib/reports/noteMarkers';
 	import {
 		buildMonthIndex,
 		availablePeriods,
@@ -88,11 +91,43 @@
 		openScope = openScope === scope ? null : scope;
 	}
 
+	// Note markers are the only export content the user authored as prose, and
+	// people write prose — a real export carried a third party's name and a
+	// night-time detail. Inclusion is opt-in, decided here rather than at the
+	// moment of writing, so the choice is made while looking at the sentences
+	// that would be printed. Skipped entirely when the window holds none, so
+	// the ordinary export keeps its click count.
+	let reviewOpen = false;
+	let reviewNotes: NoteMarker[] = [];
+	let reviewPeriodLabel = '';
+	let pendingPeriod: PeriodOption | null = null;
+
 	function runExport(option: PeriodOption) {
 		selectedPeriod = option;
 		pdfScope = option.scope;
 		openScope = null;
-		exportForDoctor(option);
+		const win = reportWindow(option.scope, option.anchorYear, option.anchorMonth);
+		const notes = noteMarkersInWindow(exportableDocs, win.startISO, win.endISO);
+		if (notes.length === 0) {
+			exportForDoctor(option);
+			return;
+		}
+		reviewNotes = notes;
+		reviewPeriodLabel = formatWindowRange(win, $locale);
+		pendingPeriod = option;
+		reviewOpen = true;
+	}
+
+	function confirmExport(selectedIds: number[]) {
+		reviewOpen = false;
+		const option = pendingPeriod;
+		pendingPeriod = null;
+		if (option) exportForDoctor(option, new Set(selectedIds));
+	}
+
+	function cancelExport() {
+		reviewOpen = false;
+		pendingPeriod = null;
 	}
 
 	function closePicker() {
@@ -391,14 +426,22 @@
 
 	// `option` carries the anchor the user picked. Without one (the deep-link
 	// path) we keep the old behaviour: the month currently on screen.
-	async function exportForDoctor(option?: PeriodOption) {
+	// `selectedNoteIds` is the opt-in result. Undefined means no review ran
+	// (the window held no note markers, or this is the deep-link path), so
+	// nothing is withheld. Filtering the DOCUMENT SET is what keeps
+	// generateDoctorPdf free of any selection concept — the export simply
+	// never sees a note the user withheld.
+	async function exportForDoctor(option?: PeriodOption, selectedNoteIds?: Set<number>) {
 		if (!bp) return;
 		const onScreen = new Date(currentDate + 'T12:00:00');
 		const year = option ? option.anchorYear : onScreen.getFullYear();
 		const month = option ? option.anchorMonth : onScreen.getMonth();
 		const scope = option ? option.scope : pdfScope;
+		const docs = selectedNoteIds
+			? withSelectedNoteMarkers(exportableDocs, selectedNoteIds)
+			: exportableDocs;
 		const { generateDoctorPdf } = await loadPdfLib();
-		generateDoctorPdf(bp, exportableDocs, year, month, $t, $locale, $auth.username || '', scope);
+		generateDoctorPdf(bp, docs, year, month, $t, $locale, $auth.username || '', scope);
 	}
 
 	async function exportCsvFile() {
@@ -1406,6 +1449,14 @@
 				</div>
 			{/each}
 		</div>
+
+		<ExportNoteReview
+			open={reviewOpen}
+			notes={reviewNotes}
+			periodLabel={reviewPeriodLabel}
+			on:confirm={(e) => confirmExport(e.detail)}
+			on:cancel={cancelExport}
+		/>
 
 		<!-- Privacy note: the exported PDF is plaintext on disk. ciphra's
 		     zero-knowledge encryption only covers data inside the app, so
