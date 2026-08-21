@@ -1636,6 +1636,25 @@ function drawGridSection(
 
 export type ReportScope = 'month' | 'year' | '2years';
 
+/**
+ * Filename tag for an export window.
+ *
+ * The /reports period picker anchors calendar periods at December (a
+ * calendar year IS a trailing-12 window ending in December — see
+ * lib/reports/exportPeriods.ts), so a December anchor can be named as the
+ * calendar period it is: `year-2023` rather than `year-2023-12`, and
+ * `2years-2022-2023` rather than `2years-2023-12`. Any other anchor keeps
+ * the end-month form, which is what it actually means.
+ */
+export function scopeFileTag(scope: ReportScope, year: number, month: number): string {
+	const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+	if (scope === 'month') return monthPrefix;
+	if (month === 11) {
+		return scope === 'year' ? `year-${year}` : `2years-${year - 1}-${year}`;
+	}
+	return `${scope}-${monthPrefix}`;
+}
+
 export function generateDoctorPdf(
 	blueprintIn: Blueprint,
 	documents: CiphraDocument[],
@@ -3511,7 +3530,7 @@ export function generateDoctorPdf(
 	drawFooter(doc, t, 'pdf.disclaimer_medical_long');
 
 	const userTag = username ? `${username}-` : '';
-	const scopeTag = scope === 'month' ? focusMonthPrefix : `${scope}-${focusMonthPrefix}`;
+	const scopeTag = scopeFileTag(scope, year, month);
 	doc.save(`ciphra-${userTag}bericht-${blueprint.conditionId}-${scopeTag}.pdf`);
 }
 
@@ -3863,9 +3882,7 @@ export function exportCsv(
 	const startDate = new Date(year, month + 1 - scopeMonths, 1, 12);
 	const startISO = startDate.toISOString().slice(0, 10);
 	const endISO = endDate.toISOString().slice(0, 10);
-	const filePrefix = scope === 'month'
-		? `${year}-${String(month + 1).padStart(2, '0')}`
-		: `${scope}-${year}-${String(month + 1).padStart(2, '0')}`;
+	const filePrefix = scopeFileTag(scope, year, month);
 	// CIPH-710 / CIPH-713 — hard-exclude diary + private docs from CSV.
 	const scopeDocs = documents.filter((d) => {
 		if (!isExportable(d)) return false;
