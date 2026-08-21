@@ -1966,13 +1966,16 @@ export function generateDoctorPdf(
 
 	// Pre-aggregations the tiles need.
 	const episodeChange = totalEpisodes - prevTotalEpisodes;
-	const focusPrefixForKpi = `${year}-${String(month + 1).padStart(2, '0')}`;
+	// Window-scoped, like every other tile in this row. It used to count the
+	// ANCHOR MONTH on every scope, so a calendar-year report showed December's
+	// rescue-med days in a tile sitting next to "days logged: 180/365" — with
+	// nothing saying the two covered different periods.
 	const rescueMedDays = (() => {
 		const days = new Set<string>();
 		for (const d of documents) {
 			if (d.data.type !== 'event' || (d.data as Record<string, unknown>).kind !== 'medication') continue;
 			const ds = String(d.data.date || '');
-			if (!ds.startsWith(focusPrefixForKpi)) continue;
+			if (ds < scopeStartISO || ds > scopeEndISO) continue;
 			days.add(ds);
 		}
 		return days.size;
@@ -2038,14 +2041,19 @@ export function generateDoctorPdf(
 	// Reizbarkeit (8)" for bipolar — clinically uninteresting) with the top-N
 	// multiDay episode types' day-coverage. Generic across all phase cohorts:
 	// bipolar surfaces manic+depressive; MS surfaces flares; chronic_pain
-	// surfaces flare days; etc. Picks the top-2 by day-coverage in the focus
-	// month so silent episode types don't burn tile slots.
+	// surfaces flare days; etc. Picks the top-2 by day-coverage so silent
+	// episode types don't burn tile slots.
+	//
+	// Scoped to the report window, not the anchor month (was: focus month).
+	// The "don't burn slots" rationale is unchanged — selection still takes
+	// the top-2 — but on a year report the DISPLAYED day count now covers the
+	// year the header claims, instead of December alone.
 	const phaseTopDayCounts: Array<{ id: string; label: string; days: number }> = (() => {
 		const multiDayEps = blueprint.episodeTypes.filter((ep) => ep.multiDay);
 		if (multiDayEps.length === 0) return [];
 		const dayCount = new Map<string, Set<string>>();
 		for (const ep of multiDayEps) dayCount.set(ep.id, new Set());
-		for (const d of focusMonthDocs) {
+		for (const d of monthDocs) {
 			if (d?.data?.type !== 'entry') continue;
 			const ds = String(d.data.date || '');
 			if (!ds) continue;
@@ -2083,7 +2091,7 @@ export function generateDoctorPdf(
 		// Only count duration-bucketed events; "keine Dauer erfasst" doesn't
 		// contribute to the dominant-duration question.
 		let bucketed = 0;
-		for (const d of focusMonthDocs) {
+		for (const d of monthDocs) {
 			if (d?.data?.type !== 'entry') continue;
 			const eps = (d.data.episodes || d.data.seizures || {}) as Record<string, number>;
 			const durs = (d.data.episodeDurations || {}) as Record<string, string>;
@@ -2125,11 +2133,24 @@ export function generateDoctorPdf(
 		if (!vital) return null;
 		// Collect (date, numeric) pairs from entries with that vital
 		// present; pick the two most-recent for last + previous delta.
+		//
+		// CLAMPED TO THE REPORT WINDOW. This used to scan every document the
+		// vault holds and take the newest reading overall, so a calendar-2023
+		// report could show a 2026 lab value on page 1, in the doctor-glance
+		// row, with no date on it. `extractLatestNote` two hundred lines below
+		// already clamps to the same window — the patient quote was correct
+		// while the tile beside it was not.
+		//
+		// Consequence, deliberately: when the window holds no reading the tile
+		// returns null and the cohort selector falls through to a populated
+		// alternative. A report that covers a period should not present a
+		// number from outside it — "a wrong pill is worse than no pill".
 		const readings: { date: string; v: number }[] = [];
 		for (const d of documents) {
 			if (d.data?.type !== 'entry') continue;
 			const ds = String(d.data.date || '');
 			if (!ds) continue;
+			if (ds < scopeStartISO || ds > scopeEndISO) continue;
 			const raw = (d.data.vitals || {})[vitalId] as unknown;
 			if (raw === '' || raw === null || raw === undefined) continue;
 			const values: number[] = [];
@@ -3233,24 +3254,21 @@ export function generateDoctorPdf(
 	}
 
 	// For episode types with `trackDuration: true` (epilepsy, migraine,
-	// glaucoma episodes), aggregate the duration buckets across the last 12
-	// months. A 5-minute focal vs a 30-second focal mean different things —
+	// glaucoma episodes), aggregate the duration buckets across the report
+	// window. A 5-minute focal vs a 30-second focal mean different things —
 	// doctors triage by duration, not just count.
 	const durEps = blueprint.episodeTypes.filter((e) => e.trackDuration);
 	if (durEps.length > 0) {
-		// Local 12-month window (yearDocs is computed later in the bullets block)
-		const dur12End = new Date(year, month + 1, 0);
-		const dur12Start = new Date(dur12End);
-		dur12Start.setFullYear(dur12Start.getFullYear() - 1);
-		dur12Start.setDate(dur12Start.getDate() + 1);
-		const dur12StartISO = dur12Start.toISOString().slice(0, 10);
-		const dur12EndISO = dur12End.toISOString().slice(0, 10);
-		const last12mDocs = documents.filter((d) => {
+		// Was a local trailing-12 window derived from the anchor, independent
+		// of `scope`: on a 24-month report this table silently covered only
+		// the second half of it. It follows the report window now, so the
+		// heading can name the same period as the rest of the document.
+		const windowDurDocs = documents.filter((d) => {
 			// Standalone `episode` docs also carry `episodes` and
 			// `episodeDurations`, so include them in duration buckets.
 			if (d.data?.type !== 'entry') return false;
 			const ds = String(d.data.date || '');
-			return ds >= dur12StartISO && ds <= dur12EndISO;
+			return ds >= scopeStartISO && ds <= scopeEndISO;
 		});
 
 		// duration counts per episode type
@@ -3258,7 +3276,7 @@ export function generateDoctorPdf(
 		for (const ep of durEps) {
 			durBuckets[ep.id] = { lt1: 0, m15: 0, gt5: 0, unk: 0, total: 0 };
 		}
-		for (const d of last12mDocs) {
+		for (const d of windowDurDocs) {
 			const eps = (d.data?.episodes || d.data?.seizures || {}) as Record<string, number>;
 			const durs = (d.data?.episodeDurations || {}) as Record<string, string>;
 			const inst = (d.data?.episodeInstances || {}) as Record<string, Array<{ duration?: string }>>;
@@ -3292,17 +3310,7 @@ export function generateDoctorPdf(
 			doc.setFont('helvetica', 'bold');
 			doc.setFontSize(TYPE.head);
 			doc.setTextColor(...BRAND.textPrimary);
-			// This section's data window is a trailing 12 months from the
-			// anchor regardless of `scope` (see dur12Start above), so on a
-			// 24-month report it covers only half of it. Label it with the
-			// window it actually covers, not the report's.
-			doc.text(
-				t('pdf.episode_duration_title_range', {
-					range: formatWindowRange(reportWindow('year', year, month), locale),
-				}),
-				14,
-				cursorY,
-			);
+			doc.text(t('pdf.episode_duration_title_range', { range: windowLabel }), 14, cursorY);
 			cursorY += 2;
 
 			const durRows = durEps
