@@ -12,7 +12,11 @@
 #               runs the suite against the checkout (conftest mocks
 #               psycopg2 — no database service needed). 48 tests green
 #               since the 2026-06-12 repair (stale admin-stats mock +
-#               rate-limiter bleed-through).
+#               rate-limiter bleed-through). Then builds the PROD target
+#               and scans that image, because prod is what ghcr publishes
+#               and nothing here used to look at it (2026-08-21: pip's
+#               vendored msgpack shipped through that gap — an `fs` scan
+#               of the repo cannot see a package the base image installs).
 #   trivy     — fs scan, HIGH/CRITICAL fail the run (SAST discipline:
 #               feedback_sast_scanning).
 #
@@ -62,6 +66,45 @@ jobs:
           -e SECRET_KEY=ci-0123456789abcdef0123456789abcdef
           -v "$PWD/api:/app"
           ciphra-api:ci pytest -q
+
+      # ── the published surface ───────────────────────────────────────
+      # `prod` is the last stage, so this is byte-for-byte what
+      # release-images.yml pushes to ghcr. No gha cache here, so the
+      # `apt-get upgrade` layer really re-runs and a base-layer CVE fixed
+      # upstream shows up green rather than as a stale replay.
+      - name: Build prod image (what release-images.yml publishes)
+        run: docker build --target prod -t ciphra-api:ci-prod api
+
+      # Regression pin for the 2026-08-21 finding. pip is not a runtime
+      # dependency; it is a vendored tree (msgpack + a bom.cdx.json that
+      # Trivy reads as installed packages). If someone adds a `pip install`
+      # to the prod stage, both HIGHs come back — fail here, loudly,
+      # instead of on the next daily ghcr scan.
+      - name: Prod image ships no pip
+        run: |
+          if docker run --rm --entrypoint sh ciphra-api:ci-prod \
+               -c 'command -v pip >/dev/null || python -c "import pip"' 2>/dev/null; then
+            echo "::error file=api/Dockerfile::pip is back in the prod image — it re-adds pip/_vendor/msgpack and the stale vendored SBOM"
+            exit 1
+          fi
+
+      # The app must still start without pip — catches a runtime import
+      # that only resolves because pip's vendored tree happened to be there.
+      - name: Prod image still imports the app
+        run: >-
+          docker run --rm
+          -e SECRET_KEY=ci-0123456789abcdef0123456789abcdef
+          --entrypoint python
+          ciphra-api:ci-prod -c "import server; print('server imports OK')"
+
+      - name: Trivy scan of the prod image (HIGH/CRITICAL fail)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ciphra-api:ci-prod
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
 
   trivy:
     runs-on: ubuntu-latest
