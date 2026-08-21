@@ -28,6 +28,15 @@ updates:
       # no urgency; hold the v24 line until a deliberate upgrade.
       - dependency-name: jsdom
         update-types: [version-update:semver-major]
+      # @types/node majors TRACK THE NODE RUNTIME MAJOR — 24.x describes
+      # Node 24, 26.x describes Node 26. This app runs Node 24 (Dockerfile.prod
+      # builder + runtime, CI node-version: 24), so the types must stay on 24.
+      # They had drifted to 25 and dependabot was proposing 26: types two majors
+      # ahead of the runtime describe APIs that do not exist here, which
+      # typecheck clean and then throw in prod. Bump this only together with the
+      # Node version in Dockerfile.prod and ci.yml.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: pip
     directory: /api
