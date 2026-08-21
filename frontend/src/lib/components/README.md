@@ -340,6 +340,18 @@ route kind.
   "listbox"` popover with keyboard nav (Up/Down/Home/End/Esc) and
   outside-click dismissal. Form-context selects (settings, EntryComposer)
   keep the native control on purpose.
+- **ExportPeriodPopover.svelte** — period picker for the `/reports`
+  doctor export. Renders the panel only; the trigger is the export
+  card in `routes/reports/+page.svelte`, which owns `aria-haspopup` /
+  `aria-expanded` and takes focus back on close (pass the card in as
+  `anchor` so outside-click can tell "clicked the trigger again" from
+  "clicked away"). Two presentations, one behaviour: an anchored
+  `role="listbox"` with Up/Down/Home/End/Esc at ≥640px (same reasoning
+  as `LocaleSelect.svelte`), a `BottomSheet` below that — touch has no
+  hover and a panel under the third card in a 3-up grid clips at the
+  viewport edge. Options come from `lib/reports/exportPeriods.ts`;
+  every row states its real coverage and sparse windows are labelled
+  rather than hidden.
 - **WelcomeCard.svelte** (post-pi24, go-live) — first-moment
   explainer that mounts at the top of the dashboard. Two variants
   branched on `auth.registrationSource`: `'web'` shows the new-user
