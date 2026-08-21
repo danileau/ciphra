@@ -1152,7 +1152,8 @@ export default {
 	'quickadd.mode_heading': 'Quel type d\'entrée?',
 	'quickadd.mode_entry': 'Entrée',
 	'quickadd.mode_event': 'Repère de note',
-	'quickadd.mode_event_hint': 'Crée une ligne verticale sur le graphique de tendance.',
+	'quickadd.mode_event_hint': "Apparaît dans l'évolution et dans l'export pour le médecin.",
+	'quickadd.mode_event_hint_private': "Reste dans ton journal — ni dans l'évolution, ni dans l'export.",
 	// CIPH-710 / CIPH-713
 	'quickadd.mode_diary': 'Journal intime',
 	'quickadd.diary_hint': 'Privé — jamais exporté ni partagé.',
@@ -1164,12 +1165,13 @@ export default {
 	'private.toggle_to_private': 'Standard — cliquez pour rendre privée (cadenas ouvert)',
 	'private.toggle_to_public': 'Privée — cliquez pour rendre standard (cadenas fermé)',
 	'private.state_public': 'Standard',
+	'private.state_public_hint': "Apparaît dans l'export pour le médecin.",
 	'private.state_private': 'Privée',
 	'common.date': 'Date',
 	'common.time': 'Heure',
 	'common.optional': 'facultatif',
 	'reports.recent_events_title': 'Repères de notes récents',
-	'reports.no_events_yet': 'Aucun repère de note pour le moment. Créez-en un depuis la saisie rapide — il apparaît comme une ligne verticale sur le graphique de tendance.',
+	'reports.no_events_yet': "Aucun repère de note pour le moment. Créez-en un depuis la saisie rapide — il apparaît dans l'évolution et dans l'export pour le médecin.",
 
 	// PDF
 	'pdf.recovery_title': 'Code de récupération',

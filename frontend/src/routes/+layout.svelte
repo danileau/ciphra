@@ -1175,7 +1175,7 @@
 							 "note marker" event when no episode chip is selected. -->
 						<div class="mb-5">
 							<p class="text-xs font-medium uppercase tracking-wider mb-1" style="color: var(--text-muted)">2. {$t('quickadd.mode_event')} / {$t('quickadd.note')}</p>
-							<p class="text-[11px] mb-2" style="color: var(--text-muted)">{$t('quickadd.mode_event_hint')}</p>
+							<p class="text-[11px] mb-2" style="color: var(--text-muted)">{quickAddPrivate ? $t('quickadd.mode_event_hint_private') : $t('quickadd.mode_event_hint')}</p>
 							<input
 								type="text"
 								bind:value={quickAddNote}
@@ -1203,7 +1203,13 @@
 								</svg>
 							{/if}
 							{quickAddPrivate ? $t('private.state_private') : $t('private.state_public')}
-							<span style="color: var(--text-muted)">— {$t('private.tooltip')}</span>
+							<!-- The hint must follow the STATE. `private.tooltip` says
+							     "never exported or shared"; rendering it unconditionally
+							     meant the default (exportable) row read "Standard —
+							     Privater Eintrag — wird nie exportiert oder geteilt",
+							     directly under the note field, while the note was in
+							     fact printed verbatim on the doctor PDF. -->
+							<span style="color: var(--text-muted)">— {quickAddPrivate ? $t('private.tooltip') : $t('private.state_public_hint')}</span>
 						</label>
 
 						<!-- Save button -->

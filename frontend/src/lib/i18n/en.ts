@@ -1152,7 +1152,8 @@ export default {
 	'quickadd.mode_heading': 'What kind of entry?',
 	'quickadd.mode_entry': 'Entry',
 	'quickadd.mode_event': 'Note marker',
-	'quickadd.mode_event_hint': 'Creates a vertical line on the trend chart.',
+	'quickadd.mode_event_hint': 'Appears in the trend and in the doctor export.',
+	'quickadd.mode_event_hint_private': 'Stays in your journal — not in the trend, not in the export.',
 	// CIPH-710 / CIPH-713
 	'quickadd.mode_diary': 'Diary',
 	'quickadd.diary_hint': 'Private — never exported or shared.',
@@ -1164,12 +1165,13 @@ export default {
 	'private.toggle_to_private': 'Standard — click to make private (lock open)',
 	'private.toggle_to_public': 'Private — click to make standard (lock closed)',
 	'private.state_public': 'Standard',
+	'private.state_public_hint': 'Appears in the doctor export.',
 	'private.state_private': 'Private',
 	'common.date': 'Date',
 	'common.time': 'Time',
 	'common.optional': 'optional',
 	'reports.recent_events_title': 'Recent note markers',
-	'reports.no_events_yet': 'No note markers yet. Create one from the quick-add sheet — it appears as a vertical line on the trend chart.',
+	'reports.no_events_yet': 'No note markers yet. Create one from the quick-add sheet — it appears in the trend and in the doctor export.',
 
 	// PDF
 	'pdf.recovery_title': 'Recovery Code',

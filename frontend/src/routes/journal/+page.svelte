@@ -633,7 +633,8 @@
 					</svg>
 				{/if}
 				{momentPrivate ? $t('private.state_private') : $t('private.state_public')}
-				<span style="color: var(--text-muted)">— {$t('private.tooltip')}</span>
+				<!-- Same bug as the quick-add sheet: the hint must follow the state. -->
+				<span style="color: var(--text-muted)">— {momentPrivate ? $t('private.tooltip') : $t('private.state_public_hint')}</span>
 			</label>
 
 			<div class="flex flex-wrap gap-2 justify-end pt-2" style="border-top: 1px solid var(--border)">

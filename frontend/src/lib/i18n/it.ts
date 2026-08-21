@@ -1152,7 +1152,8 @@ export default {
 	'quickadd.mode_heading': 'Che tipo di voce?',
 	'quickadd.mode_entry': 'Voce',
 	'quickadd.mode_event': 'Segnalibro di nota',
-	'quickadd.mode_event_hint': 'Crea una linea verticale sul grafico di tendenza.',
+	'quickadd.mode_event_hint': "Compare nell'andamento e nell'esportazione per il medico.",
+	'quickadd.mode_event_hint_private': "Resta nel tuo diario — non nell'andamento, né nell'esportazione.",
 	// CIPH-710 / CIPH-713
 	'quickadd.mode_diary': 'Diario',
 	'quickadd.diary_hint': 'Privato — mai esportato né condiviso.',
@@ -1164,12 +1165,13 @@ export default {
 	'private.toggle_to_private': 'Standard — clicca per rendere privata (lucchetto aperto)',
 	'private.toggle_to_public': 'Privata — clicca per rendere standard (lucchetto chiuso)',
 	'private.state_public': 'Standard',
+	'private.state_public_hint': "Compare nell'esportazione per il medico.",
 	'private.state_private': 'Privata',
 	'common.date': 'Data',
 	'common.time': 'Ora',
 	'common.optional': 'opzionale',
 	'reports.recent_events_title': 'Segnalibri recenti',
-	'reports.no_events_yet': 'Nessun segnalibro ancora. Creane uno dall\'inserimento rapido — apparirà come una linea verticale sul grafico di tendenza.',
+	'reports.no_events_yet': "Nessun segnalibro ancora. Creane uno dall'inserimento rapido — compare nell'andamento e nell'esportazione per il medico.",
 
 	// PDF
 	'pdf.recovery_title': 'Codice di recupero',
