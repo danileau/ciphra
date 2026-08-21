@@ -1272,7 +1272,6 @@ export default {
 	'pdf.grid_title': 'Monatsprotokoll',
 	'pdf.grid_coverage_note': 'Monatsraster: {withData} von {total} Monaten mit Einträgen. Monate ohne Einträge sind nicht abgedruckt.',
 	'pdf.export_date': 'Exportiert',
-	'pdf.quote_attribution_label': 'ZITAT PATIENT:IN',
 	'pdf.cycle_anchor_last': 'Letzte erfasste Periode: {date}',
 	'pdf.cycle_anchor_stale': 'Letzte erfasste Periode: {date} — Phasen werden nicht eingefärbt, da der Anker älter als 60 Tage ist.',
 	'pdf.account': 'Konto',

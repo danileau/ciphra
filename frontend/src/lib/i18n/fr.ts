@@ -1250,7 +1250,6 @@ export default {
 	'pdf.grid_title': 'Protocole mensuel',
 	'pdf.grid_coverage_note': "Grilles mensuelles : {withData} mois sur {total} contiennent des saisies. Les mois sans saisie ne sont pas imprimés.",
 	'pdf.export_date': 'Exporté',
-	'pdf.quote_attribution_label': 'CITATION PATIENT·E',
 	'pdf.cycle_anchor_last': 'Dernière période enregistrée : {date}',
 	'pdf.cycle_anchor_stale': "Dernière période enregistrée : {date} — coloration des phases supprimée (ancrage de plus de 60 jours).",
 	'pdf.account': 'Compte',
