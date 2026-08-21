@@ -86,11 +86,16 @@ describe('vital mini-charts carry no annotations at all', () => {
 });
 
 describe('the note text lives in a list, in full', () => {
-	it('buildEventList prefers `title` over `notes`', () => {
-		// The epilepc migration keeps the short human title in `title` and the
-		// long prose in `notes`. Reading `notes` is why the reported labels
-		// were sentences; EntryPreview already preferred `title`.
-		expect(PDF).toMatch(/\.title\s*\|\|\s*d\.data\.notes/);
+	it('resolves note text through the shared module, not its own copy', () => {
+		// `noteMarkerText` prefers `title` over `notes` — the epilepc migration
+		// puts the short human title in `title` and the long prose in `notes`,
+		// which is why the reported labels were sentences. Behaviour is pinned
+		// in reports/noteMarkers.test.ts; what matters HERE is that the PDF and
+		// the pre-export review resolve it identically, so the user cannot tick
+		// one set of sentences and hand over another.
+		expect(PDF).toContain("from '$lib/reports/noteMarkers'");
+		expect(PDF).toMatch(/text = noteMarkerText\(d\);/);
+		expect(PDF, 'a second, drifting copy').not.toMatch(/\.title\s*\|\|\s*d\.data\.notes/);
 	});
 
 	it('events are ordered oldest first — the arc, not a feed', () => {

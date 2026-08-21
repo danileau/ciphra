@@ -31,6 +31,7 @@ import { PHASE_COLORS, type Phase } from '$lib/cycleState';
 import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
 import { isExportable } from '$lib/utils/exportable';
+import { noteMarkerText } from '$lib/reports/noteMarkers';
 import {
 	reportWindow,
 	formatWindowRange,
@@ -2359,12 +2360,10 @@ export function generateDoctorPdf(
 				const dose = (d.data as any).dose;
 				text = dose ? `${label} ${dose}${unit ? ` ${unit}` : ''}` : label;
 			} else {
-				// PREFER `title`. The epilepc migration keeps the short human
-				// title in `title` and the long prose in `notes`
-				// (migration/epilepcMapping.ts); reading `notes` is why the
-				// reported labels were sentences. EntryPreview already prefers
-				// `title` — the PDF was the odd one out.
-				text = String((d.data as any).title || d.data.notes || '').replace(/\s+/g, ' ').trim();
+				// Shared with the pre-export review, so the set of sentences the
+				// user ticks is exactly the set printed here, resolved from the
+				// same field. See lib/reports/noteMarkers.ts.
+				text = noteMarkerText(d);
 			}
 			if (!text) continue;
 			out.push({ dateISO: ds, isMed, text });

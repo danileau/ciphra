@@ -340,6 +340,19 @@ route kind.
   "listbox"` popover with keyboard nav (Up/Down/Home/End/Esc) and
   outside-click dismissal. Form-context selects (settings, EntryComposer)
   keep the native control on purpose.
+- **ExportNoteReview.svelte** — pre-export opt-in for note markers.
+  Freeform note markers are the only export content authored as prose,
+  and people write prose: a real export carried a third party's name,
+  a night-time detail and a second physician's opinion. Inclusion is
+  therefore **opt-in, decided at report generation** rather than at the
+  moment of writing — nothing is preselected, and the selection resets on
+  every open (a decision about which sentences a doctor may read is not a
+  preference to carry over). Skipped entirely when the window holds no
+  note markers, so the ordinary export keeps its click count. Recorded
+  data is never negotiable here: entries, episodes, vitals and rescue
+  medication are the report. Options come from
+  `lib/reports/noteMarkers.ts`, shared with `pdf.ts` so the set the user
+  ticks is exactly the set printed.
 - **ExportPeriodPopover.svelte** — period picker for the `/reports`
   doctor export. Renders the panel only; the trigger is the export
   card in `routes/reports/+page.svelte`, which owns `aria-haspopup` /
