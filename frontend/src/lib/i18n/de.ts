@@ -403,14 +403,7 @@ export default {
 	'stream.result_count_one': '{count} Tag',
 	'stream.result_count_other': '{count} Tage',
 	'stream.no_results': 'Nichts gefunden. Andere Suche oder weniger Filter.',
-	'stream.all': 'Alle',
-	'stream.seizures': 'Anfälle',
-	'stream.medication': 'Medikamente',
-	'stream.diary': 'Tagebuch',
 	'stream.events': 'Notiz',
-	'stream.search': 'Suchen...',
-	'stream.no_entries': 'Keine Einträge gefunden',
-	'stream.quick_add': 'Schnelleintrag',
 
 	// Symptoms
 	'symptom.tired': 'Müde',
@@ -858,10 +851,6 @@ export default {
 	'quick_action.write_diary': 'Tagebuch',
 
 	// Stream filters
-	'stream_filter.all': 'Alle',
-	'stream_filter.entry': 'Einträge',
-	'stream_filter.event': 'Notiz-Markierungen',
-	'stream_filter.diary': 'Tagebuch',
 	'journal.diary_hint': 'Privat — wird nie exportiert oder geteilt.',
 	// CIPH-893 — JournalEmpty primitive (replaces the old `journal.diary_empty` key)
 	'journal.empty_aria': 'Tagebuch leer',

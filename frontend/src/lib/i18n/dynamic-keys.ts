@@ -98,7 +98,6 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 	// Reports / stream dynamic labels.
 	'reports.',
 	'stream.',
-	'stream_filter.',
 
 	// Protocol (log page) dynamic labels (group labels, duration labels,
 	// etc.) — many come from blueprint preset definitions.

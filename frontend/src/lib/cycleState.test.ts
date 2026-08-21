@@ -40,7 +40,6 @@ const endoBp: Blueprint = {
 	medications: [],
 	gridSymptomColumns: [],
 	gridEpisodeColumns: [],
-	streamFilters: [],
 	reportPreference: 'both',
 };
 

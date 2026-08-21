@@ -50,7 +50,6 @@ function makeBp(over: Partial<Blueprint> = {}): Blueprint {
 		medications: [],
 		gridSymptomColumns: ['tired'],
 		gridEpisodeColumns: ['seizure'],
-		streamFilters: [],
 		reportPreference: 'analytics',
 	};
 	return { ...base, ...over };
