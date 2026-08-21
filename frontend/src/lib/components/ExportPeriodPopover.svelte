@@ -14,9 +14,16 @@
 	          the third card in a 3-up grid gets clipped at the viewport
 	          edge. BottomSheet also brings its own focus trap.
 
-	Every row states its real coverage. Sparse windows are offered rather
-	than hidden — a 2-year pair straddling an empty year is a legitimate
-	thing to hand a doctor — but they are labelled, not flattered.
+	Every row states how much data the window holds, as a plain fact about
+	the export. Windows with little data are offered like any other — a
+	2-year pair straddling an empty year is a legitimate thing to hand a
+	doctor.
+
+	No row is ever labelled sparse/incomplete/patchy. A coverage figure
+	describes the PDF; a judgment word describes the user, and implies a
+	logging target they failed to hit. See feedback_no_gaslight_good_days:
+	a no-log day is valid, and sparse data is normal in chronic illness.
+	Pinned by reports/no-coverage-judgment.test.ts.
 -->
 <script lang="ts">
 	import { createEventDispatcher, onMount, tick } from 'svelte';
@@ -41,9 +48,6 @@
 	// genuinely no room. The export cards sit low on /reports, so on short
 	// windows the panel would otherwise open off-screen.
 	let placement: 'below' | 'above' = 'below';
-
-	/** Sparse enough that the user should see it before handing it to a doctor. */
-	const SPARSE_RATIO = 0.5;
 
 	function focusRow(i: number) {
 		listbox?.querySelector<HTMLButtonElement>(`[data-i="${i}"]`)?.focus();
@@ -128,9 +132,6 @@
 			total: option.monthsInWindow,
 		})}`;
 	}
-
-	const isSparse = (o: PeriodOption) =>
-		o.monthsInWindow > 1 && o.monthsWithData / o.monthsInWindow < SPARSE_RATIO;
 </script>
 
 <svelte:window on:keydown={onKey} />
@@ -155,9 +156,6 @@
 						<span class="period-option__label">{formatPeriodLabel(option, $locale)}</span>
 						<span class="period-option__meta">
 							{coverageOf(option)}
-							{#if isSparse(option)}
-								<span class="period-option__sparse">{$t('reports.period_sparse')}</span>
-							{/if}
 						</span>
 					</button>
 				</li>
@@ -188,9 +186,6 @@
 					<span class="period-option__label">{formatPeriodLabel(option, $locale)}</span>
 					<span class="period-option__meta">
 						{coverageOf(option)}
-						{#if isSparse(option)}
-							<span class="period-option__sparse">{$t('reports.period_sparse')}</span>
-						{/if}
 					</span>
 				</button>
 			</li>
@@ -269,15 +264,6 @@
 		gap: 0.375rem;
 		font-size: 0.6875rem;
 		color: var(--text-muted);
-	}
-
-	.period-option__sparse {
-		padding: 1px 6px;
-		font-size: 0.625rem;
-		border-radius: 9999px;
-		background: var(--surface-muted);
-		color: var(--text-secondary);
-		border: 1px solid var(--border);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

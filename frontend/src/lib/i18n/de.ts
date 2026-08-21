@@ -1153,7 +1153,6 @@ export default {
 	'reports.period_days_one': '{count} Tag erfasst',
 	'reports.period_days_other': '{count} Tage erfasst',
 	'reports.period_months_covered': '{covered} von {total} Monaten',
-	'reports.period_sparse': 'Lückenhaft',
 	'reports.export_privacy_note': 'Die fertige PDF ist nicht verschlüsselt — wer die Datei hat, kann sie lesen. Die Verschlüsselung schützt deine Daten nur innerhalb von ciphra.',
 	'reports.month_view': 'Monat',
 	'reports.year_view': 'Jahr',
