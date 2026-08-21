@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
+	import { formatDateChoice } from '$lib/blueprint/preferences';
 	import { rememberFocusMonth, recallFocusMonth } from '$lib/stores/focusMonth';
 	import { anyPhaseDayCount } from '$lib/monthAggregates';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
@@ -854,18 +855,6 @@
 		}
 		return dates;
 	})();
-	function formatDateChoice(d: Date, choice: Blueprint['dateFormat'] | undefined): string {
-		const dd = String(d.getDate()).padStart(2, '0');
-		const mm = String(d.getMonth() + 1).padStart(2, '0');
-		const yyyy = d.getFullYear();
-		switch (choice) {
-			case 'iso': return `${yyyy}-${mm}-${dd}`;
-			case 'us': return `${mm}/${dd}/${yyyy}`;
-			case 'dd/mm/yyyy': return `${dd}/${mm}/${yyyy}`;
-			case 'dd.mm.yyyy':
-			default: return `${dd}.${mm}.${yyyy}`;
-		}
-	}
 
 	// pi24 dogfood: tick-row visualization removed. The trigger-day count
 	// per chart bin (day in month-view, month in year-view) surfaces via

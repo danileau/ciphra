@@ -16,6 +16,38 @@ export type PrimarySurfaceChoice = 'auto' | NonNullable<Blueprint['primaryBrowse
 
 const DATE_FORMAT_DEFAULT: DateFormatChoice = 'dd.mm.yyyy';
 
+/**
+ * Render a day-precision date in the user's chosen format.
+ *
+ * Canonical implementation. It existed three times — VitalTrendReportsCard,
+ * routes/reports, and a `sampleDate` in settings that showed the user a
+ * preview of a format the rest of the app then applied separately — and the
+ * doctor PDF implemented none of them, formatting every date through
+ * `toLocaleDateString` and so silently overriding an explicit setting on the
+ * one artefact that leaves the device.
+ *
+ * Day precision only. `dateFormat` has no month-precision variant, so
+ * month-and-year labels (chart axes, the report window, monthly grid titles)
+ * keep locale formatting — there is no user choice to honour there.
+ */
+export function formatDateChoice(d: Date, choice: DateFormatChoice | undefined): string {
+	const dd = String(d.getDate()).padStart(2, '0');
+	const mm = String(d.getMonth() + 1).padStart(2, '0');
+	const yyyy = d.getFullYear();
+	switch (choice) {
+		case 'iso': return `${yyyy}-${mm}-${dd}`;
+		case 'us': return `${mm}/${dd}/${yyyy}`;
+		case 'dd/mm/yyyy': return `${dd}/${mm}/${yyyy}`;
+		case 'dd.mm.yyyy':
+		default: return `${dd}.${mm}.${yyyy}`;
+	}
+}
+
+/** Same, from a `YYYY-MM-DD` string. Noon anchor avoids timezone slippage. */
+export function formatISODateChoice(iso: string, choice: DateFormatChoice | undefined): string {
+	return formatDateChoice(new Date(iso + 'T12:00:00'), choice);
+}
+
 export function applyDateFormatChoice(bp: Blueprint, value: DateFormatChoice): Blueprint {
 	const next: Blueprint = JSON.parse(JSON.stringify(bp));
 	if (value === DATE_FORMAT_DEFAULT) {

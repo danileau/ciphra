@@ -108,13 +108,20 @@ describe('the note text lives in a list, in full', () => {
 		expect(body).toMatch(/ds < scopeStartISO \|\| ds > scopeEndISO/);
 	});
 
-	it('the date column names the month and the year', () => {
-		// A 2-year report spans two years, so a bare day/month is ambiguous,
-		// and a numeric day/month flips meaning between locales.
+	it("the date column honours the user's date format", () => {
+		// SUPERSEDED reasoning, worth keeping. This first asserted a month
+		// NAME ("21. Aug. 2026") because a numeric day/month flips meaning
+		// between locales — a workaround adopted specifically because the PDF
+		// ignored `Blueprint.dateFormat` at the time. Now that it honours the
+		// setting, the workaround would override an explicit user choice on
+		// the one artefact that leaves the device.
+		//
+		// Ambiguity is handled instead by consistency: every day-precision
+		// date in the document uses the same chosen format, and all four
+		// choices carry the year.
 		const idx = PDF.indexOf("t('pdf.event_notes_col')");
-		const block = PDF.slice(idx, idx + 700);
-		expect(block).toMatch(/month:\s*'short'/);
-		expect(block).toMatch(/year:\s*'numeric'/);
+		const block = PDF.slice(idx, idx + 400);
+		expect(block).toMatch(/formatISODateChoice\(e\.dateISO, blueprint\.dateFormat\)/);
 	});
 
 	it('carries a provenance header, per the P0-2 quote precedent', () => {
