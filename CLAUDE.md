@@ -52,15 +52,27 @@ TypeScript (`frontend/`). **API**: Flask + Python (`api/`). **Edge**: nginx
 
 1. Operator merges the PR(s) → `Release images` CI rebuilds + signs the three
    `:latest` + `<sha>` images.
-2. Confirm the images built green for the new `main` SHA.
-3. Hand over: `git tag deploy-<sha> <sha> && git push origin deploy-<sha>`.
+2. Summarise what would ship (commits since the live tag) and confirm the SHA.
+3. Hand over **`scripts/deploy-wizard.sh`** — the operator runs it themselves
+   via `! scripts/deploy-wizard.sh`. It is the single entry point: it lists the
+   deployable commits with their signing status and which one is live, checks
+   the operator's repo permission, pushes an **annotated** tag, and polls
+   health afterwards. Every push needs an explicit y/N inside the wizard.
 4. VPS `ciphra-deploy.timer` pulls within ~3 min (cosign-verify → `.env`
-   `CIPHRA_TAG` bump → restart).
+   `CIPHRA_TAG` bump → restart → health check, with auto-rollback + ntfy).
 5. Post-deploy smoke (public reads, fine to run here):
    `curl -sI https://ciphra.ch/sw.js` (expect `cache-control: no-cache` + a
    fresh `last-modified`), root 200 + security headers, key routes 200.
 
-Rollback = push the previous SHA's deploy tag. Full runbook: `docs/OPERATIONS.md`.
+Do NOT hand over `git tag deploy-<sha> && git push` — that raw flow is what the
+wizard replaced on 2026-08-10. It produced a **lightweight** tag, and the VPS
+selects by `--sort=-creatordate`, so rolling back to an older commit sorted
+*older* than the tag already live and the rollback silently did nothing. The
+wizard's tag is annotated, which carries its own tagger date and makes
+newest-pushed win.
+
+Rollback = run the wizard again and pick the earlier commit. Full runbook:
+`docs/OPERATIONS.md`.
 
 ## Tooling reference
 
@@ -74,5 +86,5 @@ Rollback = push the previous SHA's deploy tag. Full runbook: `docs/OPERATIONS.md
 ## Skills & agents in this repo
 
 - `/green-gate` — run the full pre-push gate (svelte-check + vitest + build + pytest).
-- `/deploy-prep` — assemble the merge→build→deploy-tag→smoke commands for the operator.
+- `/deploy-prep` — assemble the merge→build→hand-off→smoke context for the operator.
 - `security-reviewer` subagent — zero-knowledge-aware security review.
