@@ -553,10 +553,30 @@ def register():
         return jsonify({'error': 'Registration failed'}), 500
 
 
+def _encode_vault_params(params: dict) -> str:
+    """Serialize Argon2 params EXACTLY as the client's encodeVaultParams does:
+    `btoa(JSON.stringify(obj))`.
+
+    The separators matter and are the whole point of this helper. A real
+    user's blob is produced by JSON.stringify, which is COMPACT — no space
+    after ',' or ':'. Python's json.dumps defaults to `', '` / `': '`, so a
+    server-generated blob was 192 base64 chars where a real one is ~156. That
+    single formatting gap turned the anti-enumeration fake params into an
+    account-existence oracle: one unauthenticated /api/login/init told you
+    whether a username was registered. Anything that emits vault params for an
+    unknown user MUST go through here so fake and real stay byte-for-byte
+    indistinguishable in shape.
+    """
+    return base64.b64encode(
+        json.dumps(params, separators=(',', ':')).encode()
+    ).decode('ascii')
+
+
 def _fake_auth_params(username: str) -> str:
     """Deterministic fake params for unknown users, to thwart enumeration.
     Uses HMAC(SECRET_KEY, username) as the salt so timing + response shape
-    match a real user. Params must match what the client expects."""
+    match a real user. Params must match what the client expects — including
+    the compact JSON serialization (see _encode_vault_params)."""
     fake_salt = hmac.new(SECRET_KEY.encode(), username.encode(), hashlib.sha256).digest()
     params = {
         'memory_cost': 65536,
@@ -566,7 +586,7 @@ def _fake_auth_params(username: str) -> str:
         'type': 'ID',
         'salt': base64.b64encode(fake_salt).decode('ascii'),
     }
-    return base64.b64encode(json.dumps(params).encode()).decode('ascii')
+    return _encode_vault_params(params)
 
 
 @app.route('/api/login/init', methods=['POST'])
@@ -870,7 +890,7 @@ def _fake_recovery_params(username: str) -> str:
         'hash_len': 32, 'type': 'ID',
         'salt': base64.b64encode(fake_salt).decode('ascii'),
     }
-    return base64.b64encode(json.dumps(params).encode()).decode('ascii')
+    return _encode_vault_params(params)
 
 
 def _fake_recovery_vault(username: str) -> str:
