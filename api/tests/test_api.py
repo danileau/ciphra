@@ -704,3 +704,70 @@ class TestValidateRecovery:
 
     def test_validate_invalid_code(self):
         pass
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Non-object JSON bodies must be 400, not 500
+#
+# Every route read `data = request.get_json() or {}`. A body that is valid
+# JSON but not an object — a top-level array or scalar — is truthy, survives
+# the `or {}`, and crashes the first `data.get(...)` with AttributeError. That
+# fires above the route's try/except, so it fell through as an unhandled 500
+# (Flask's raw HTML page) on endpoints reachable BEFORE auth. `_json_object`
+# turns "valid JSON, wrong type" into the JSON-shaped 400 the F5 contract
+# already promises for every other bad request. Found by a black-box scan,
+# 2026-08-21.
+# ═══════════════════════════════════════════════════════════════════
+
+class TestNonObjectJsonBody:
+    # Pre-auth endpoints — the ones an unauthenticated attacker can reach.
+    @pytest.mark.parametrize('path', [
+        '/api/register',
+        '/api/login',
+        '/api/login/init',
+        '/api/recover/init',
+        '/api/recover',
+    ])
+    @pytest.mark.parametrize('body', ['[1,2,3]', '123', '"a string"', 'true'])
+    def test_scalar_or_array_body_is_400_not_500(self, client, mock_db, path, body):
+        resp = client.post(path, data=body, content_type='application/json')
+        assert resp.status_code == 400, (
+            f"{path} with body {body} returned {resp.status_code}, expected 400"
+        )
+        # And in the JSON shape, never Flask's HTML error page.
+        assert resp.is_json, f"{path} returned a non-JSON body for {body}"
+
+    def test_object_body_still_reaches_validation(self, client, mock_db):
+        # The guard must not swallow well-formed objects: a proper object with
+        # a bad field still gets the route's own 400/401, proving the request
+        # passed _json_object and entered the handler.
+        resp = client.post('/api/login',
+            json={'username': 'x', 'auth_key': 'not-b64'},
+        )
+        assert resp.status_code in (400, 401)
+        assert resp.is_json
+
+    def test_empty_body_still_treated_as_empty_object(self, client, mock_db):
+        # `request.get_json() or {}` behaviour is preserved for an absent body.
+        resp = client.post('/api/login/init', data='', content_type='application/json')
+        # Empty → {} → "Invalid username" 400, not a crash.
+        assert resp.status_code == 400
+        assert resp.is_json
+
+
+class TestInternalErrorShape:
+    def test_500_returns_json_not_html(self, client, mock_db):
+        # Defense in depth: even a genuinely unhandled exception must stay in
+        # the JSON shape. Under TESTING, exceptions propagate, so disable that
+        # for this one case and force a handler to raise something the route
+        # does NOT catch (KeyError, not the TypeError/ValueError it guards).
+        import server
+        server.app.config['PROPAGATE_EXCEPTIONS'] = False
+        try:
+            with patch('server._json_object', side_effect=KeyError('boom')):
+                resp = client.post('/api/login', json={'username': 'x'})
+            assert resp.status_code == 500
+            assert resp.is_json
+            assert resp.get_json() == {'error': 'internal_error'}
+        finally:
+            server.app.config['PROPAGATE_EXCEPTIONS'] = None
