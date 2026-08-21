@@ -29,6 +29,14 @@ name: Release images
 on:
   push:
     branches: [main]
+  # Base-layer CVEs land with no commit to trigger on. On 2026-08-21 the
+  # published api image was 10 days old and carried 36 HIGHs from
+  # util-linux 2.41-5, fixed upstream as 2.41.5-0+deb13u1 — the Dockerfile
+  # already ran `apt-get upgrade`, there had simply been no build since.
+  # Push-only meant the sole way to republish was a dummy commit. This is
+  # a rebuild button: same main, fresh apt/apk upgrade. It publishes; it
+  # does not deploy (the operator still pulls — see OPERATIONS.md).
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -66,11 +74,13 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           provenance: true
-          # SHA cache-bust: forces the OS-upgrade / npm-strip layer to re-run
-          # each release so :latest can't drift behind fixed-upstream CVEs
+          # Run-scoped cache-bust: forces the OS-upgrade / npm-strip layer to
+          # re-run each build so :latest can't drift behind fixed-upstream CVEs
           # while the gha cache replays a stale layer (see the Dockerfiles).
+          # NOT github.sha — a workflow_dispatch rebuild of an unchanged main
+          # repeats the SHA and the stale layer comes straight back.
           build-args: |
-            CACHEBUST=${{ github.sha }}
+            CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - uses: sigstore/cosign-installer@v3
@@ -102,9 +112,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           provenance: true
-          # SHA cache-bust — re-run apt upgrade each release (see api/Dockerfile).
+          # Run-scoped cache-bust — re-run apt upgrade each build. NOT github.sha:
+          # a workflow_dispatch rebuild of an unchanged main repeats the SHA and
+          # would replay the cached (stale) layer. See api/Dockerfile.
           build-args: |
-            CACHEBUST=${{ github.sha }}
+            CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - uses: sigstore/cosign-installer@v3
@@ -137,9 +149,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           provenance: true
-          # SHA cache-bust — re-run apk upgrade each release (see nginx/Dockerfile.prod).
+          # Run-scoped cache-bust — re-run apk upgrade each build. NOT github.sha:
+          # a workflow_dispatch rebuild of an unchanged main repeats the SHA and
+          # would replay the cached (stale) layer. See nginx/Dockerfile.prod.
           build-args: |
-            CACHEBUST=${{ github.sha }}
+            CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - uses: sigstore/cosign-installer@v3
