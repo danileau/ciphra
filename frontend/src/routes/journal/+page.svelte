@@ -595,20 +595,44 @@
 		color: var(--text-muted);
 	}
 
-	.jr-month + .jr-month { margin-top: 1.75rem; }
+	.jr-month + .jr-month { margin-top: 2rem; }
+
+	/* NOT sticky.
+	   It was `position: sticky; top: 0`, which failed twice over. The app
+	   header is itself `sticky top-0 z-40` and 57px tall, so this pinned
+	   underneath it and vanished rather than docking below. And a sticky
+	   header needs an opaque background to mask the rows sliding under it —
+	   that background was `var(--surface-page, …)`, a token that does not
+	   exist, so the fallback painted `--surface-muted` (#f3f0ed) across a
+	   `--surface` (#faf8f6) page. The visible grey band was that fallback.
+	   Both measured, not guessed.
+	   Stickiness also earns nothing at this density: the narrative feed holds
+	   written days only, so a month is a handful of rows and the label would
+	   barely engage. It is a divider now — no background to get wrong, no
+	   stacking context to lose. */
 	.jr-month-header {
-		position: sticky;
-		top: 0;
-		z-index: 1;
-		margin: 0 0 0.6rem;
-		padding: 0.4rem 0;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin: 0 0 0.35rem;
 		font-size: 0.6875rem;
 		font-weight: 700;
-		letter-spacing: 0.08em;
+		letter-spacing: 0.09em;
 		text-transform: uppercase;
 		color: var(--text-muted);
-		background: var(--surface-page, var(--surface-muted));
 	}
+	/* The rule runs from the label to the right edge, so the month reads as
+	   the start of a section rather than as a filled bar. */
+	.jr-month-header::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: var(--border);
+	}
+
+	/* The first day of a month sits under the month rule already — its own
+	   top border would double it. */
+	.jr-month-header + .jr-day { border-top: none; }
 
 	.jr-day {
 		padding: 0.7rem 0 0.85rem;
