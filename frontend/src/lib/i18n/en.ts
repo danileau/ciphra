@@ -1251,7 +1251,6 @@ export default {
 	'pdf.grid_title': 'Monthly Protocol',
 	'pdf.grid_coverage_note': 'Monthly grids: {withData} of {total} months contain entries. Months without entries are not printed.',
 	'pdf.export_date': 'Exported',
-	'pdf.quote_attribution_label': 'PATIENT QUOTE',
 	'pdf.cycle_anchor_last': 'Last recorded period: {date}',
 	'pdf.cycle_anchor_stale': 'Last recorded period: {date} — phase tinting suppressed (anchor older than 60 days).',
 	'pdf.account': 'Account',

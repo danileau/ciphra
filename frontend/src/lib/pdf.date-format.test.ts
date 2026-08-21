@@ -32,7 +32,11 @@ describe('day-precision dates follow the setting', () => {
 
 	const SITES: Array<[string, RegExp]> = [
 		['page-1 and grid export date', /const exportDate = formatDateChoice\(new Date\(\), blueprint\.dateFormat\)/],
-		['patient quote', /const dateLabel = formatISODateChoice\(note\.dateISO, dateChoice\)/],
+		// The patient top-line quote was removed 2026-08-21 (it reproduced one
+		// arbitrary sentence at the top of a clinical document, chosen by the
+		// generator rather than by the patient), so its date site is gone with
+		// it. Recorded rather than silently dropped: if the quote ever returns,
+		// it needs this line back.
 		['cycle anchor', /const dateLabel = formatISODateChoice\(anchorDate, blueprint\.dateFormat\)/],
 		['note-marker list', /formatISODateChoice\(e\.dateISO, blueprint\.dateFormat\)/],
 		['CSV date column', /const dateFormatted = formatDateChoice\(cur, blueprint\.dateFormat\)/],

@@ -471,106 +471,6 @@ function capitalizeName(raw: string): string {
 		.join(' ');
 }
 
-/**
- * The patient's most-recent note within `recencyDays` of the period end
- * — source of the page-1 top-line quote (CLINICAL_HANDOFF.md §4). The
- * recency window keeps a stale note from anchoring the page: a January
- * line on a May export reads as the patient's current voice when it is
- * not. A note older than the window → returns null and the caller
- * collapses the block rather than printing a placeholder (§14.1 —
- * software does not narrate absence). The window is anchored to the
- * period end, not to today, so a back-dated month report quotes a note
- * from that month.
- */
-const TOP_LINE_RECENCY_DAYS = 30;
-function extractLatestNote(
-	documents: CiphraDocument[],
-	startISO: string,
-	endISO: string,
-	recencyDays: number = TOP_LINE_RECENCY_DAYS
-): { text: string; dateISO: string } | null {
-	const cutoff = new Date(endISO + 'T12:00:00');
-	cutoff.setDate(cutoff.getDate() - recencyDays);
-	const cutoffISO = cutoff.toISOString().slice(0, 10);
-	const lowerISO = cutoffISO > startISO ? cutoffISO : startISO;
-
-	let best: { text: string; dateISO: string } | null = null;
-	for (const d of documents) {
-		if (d.data?.type !== 'entry') continue;
-		const dateISO = String(d.data?.date || '');
-		if (!dateISO || dateISO < lowerISO || dateISO > endISO) continue;
-		const note = String(d.data?.notes || '').replace(/\s+/g, ' ').trim();
-		if (!note) continue;
-		if (!best || dateISO > best.dateISO) best = { text: note, dateISO };
-	}
-	return best;
-}
-
-/**
- * Patient top-line quote block — the page-1 human anchor. A 3pt olive
- * left rule (brand chrome, never value-encoded), a tiny uppercase
- * "ZITAT PATIENT:IN" tag (provenance — disambiguates patient self-
- * report from system-authored copy per 2026-06-07 clinician review
- * P0-2), the note in italic, a muted attribution line. Returns the
- * block's bottom Y. When `note` is null the block collapses: returns
- * `y` unchanged, no placeholder.
- */
-function drawTopLineQuote(
-	doc: jsPDF,
-	note: { text: string; dateISO: string } | null,
-	name: string,
-	locale: string,
-	dateChoice: DateFormatChoice | undefined,
-	x: number,
-	y: number,
-	w: number,
-	t: TranslateFn,
-): number {
-	if (!note) return y;
-
-	const textX = x + 4;
-	const textW = w - 4;
-	const lineH = 4.0;
-	// Provenance tag: small uppercase, sits above the italic body to
-	// label the block unambiguously as patient self-report rather than
-	// system-authored copy.
-	const tagH = 3.2;
-	const tagToBody = 1.6;
-
-	doc.setFont('helvetica', 'italic');
-	doc.setFontSize(TYPE.body);
-	const wrapped = doc.splitTextToSize(`"${note.text.slice(0, 200)}"`, textW) as string[];
-	const shown = wrapped.slice(0, 2);
-
-	const dateLabel = formatISODateChoice(note.dateISO, dateChoice);
-	const bodyTop = y + tagH + tagToBody;
-	const attribY = bodyTop + shown.length * lineH + 3.0;
-	const blockH = attribY - y + 1;
-
-	// 3pt olive left rule (3pt ≈ 1.06mm).
-	doc.setDrawColor(...BRAND.olive);
-	doc.setLineWidth(1.06);
-	doc.line(x, y, x, y + blockH);
-	doc.setLineWidth(0.2);
-
-	// Provenance tag — uppercase, muted, small.
-	doc.setFont('helvetica', 'bold');
-	doc.setFontSize(TYPE.chartAxisMicro);
-	doc.setTextColor(...BRAND.textMuted);
-	doc.text(t('pdf.quote_attribution_label'), textX, y + 2.6);
-
-	doc.setFont('helvetica', 'italic');
-	doc.setFontSize(TYPE.body);
-	doc.setTextColor(...BRAND.textPrimary);
-	doc.text(shown, textX, bodyTop + 3.4);
-
-	doc.setFont('helvetica', 'normal');
-	doc.setFontSize(TYPE.compact);
-	doc.setTextColor(...BRAND.textMuted);
-	doc.text(name ? `— ${name}, ${dateLabel}` : `— ${dateLabel}`, textX, attribY);
-
-	return y + blockH;
-}
 
 /**
  * DSPEC-6 — Declared component-break contracts per PDF_DESIGN_SPEC.md
@@ -1200,7 +1100,11 @@ function drawDailyMonthChart(
 
 	// Y-axis scale.
 	const dataMax = Math.max(1, ...dailyTotals);
-	const yMax = Math.max(1, Math.ceil(dataMax));
+	// +1 headroom. A flat series (1-1-1…) put every point exactly on the top
+	// edge, where the stroke is clipped by the plot rect and the line reads as
+	// a border rather than data. One extra row of space costs nothing and the
+	// axis label stays an integer.
+	const yMax = Math.max(1, Math.ceil(dataMax)) + 1;
 	doc.setFont('helvetica', 'normal');
 	doc.setFontSize(TYPE.chartAxis);
 	doc.setTextColor(...BRAND.textMuted);
@@ -1446,14 +1350,27 @@ function drawGridSection(
 	const HEADER_FS = 7;
 	const HEADER_CELL_PAD = 1.5;
 	const GRID_DAY_COL_W = 14; // wide enough that the "Totals" label fits
-	const GRID_NOTES_COL_W = pageW > 250 ? 46 : 32;
 	// Column widths must be known before we can fit labels — compute the
 	// data-column width here (also reused verbatim by `columnStyles`).
+	//
+	// The table used to stop at roughly 58% of a landscape page. Two causes,
+	// both fixed here:
+	//   1. the budget still subtracted 46mm for a Notes column that no longer
+	//      exists, so that width was reserved and then never used;
+	//   2. each data column was capped at 18mm, which for a typical 8-column
+	//      blueprint left ~110mm of the page blank on the right.
+	// The cap stays — without one, a 3-column blueprint would get 85mm cells
+	// for a "0"/"1" — but at a width that actually uses the page. Whatever is
+	// still left over centres the table rather than pinning it left, so a
+	// narrow blueprint reads as a deliberate block instead of a truncation.
+	const GRID_DATA_COL_MAX = 30;
 	const gridDataColCount = symptomCols.length + episodeCols.length;
-	const gridDataBudget = pageW - 28 - GRID_DAY_COL_W - GRID_NOTES_COL_W;
+	const gridDataBudget = pageW - 28 - GRID_DAY_COL_W;
 	const gridDataColW = gridDataColCount > 0
-		? Math.max(10, Math.min(18, gridDataBudget / gridDataColCount))
+		? Math.max(10, Math.min(GRID_DATA_COL_MAX, gridDataBudget / gridDataColCount))
 		: 14;
+	const gridTableW = GRID_DAY_COL_W + gridDataColW * gridDataColCount;
+	const gridSideMargin = Math.max(14, (pageW - gridTableW) / 2);
 	const fitHeader = (s: string): string => {
 		const maxW = gridDataColW - HEADER_CELL_PAD * 2;
 		doc.setFont('helvetica', 'bold');
@@ -1482,7 +1399,14 @@ function drawGridSection(
 		return ep ? fitHeader(labelOf(t, ep)) : id;
 	});
 
-	const allHeaders = [t('pdf.day'), ...symptomLabels, ...episodeLabels, t('pdf.notes')];
+	// No Notes column. It carried `entry.notes` truncated at 40 characters —
+	// a fragment that kept the identifying half of a sentence and dropped the
+	// meaning, exactly the failure the chart labels had. It was also the one
+	// place free text reached the doctor with NO opt-in: the export review
+	// governs note-marker events (type 'event'), while this read the entry's
+	// own notes field (type 'entry'), a separate stream that never had a
+	// consent gate. Note markers are listed, in full, in their own section.
+	const allHeaders = [t('pdf.day'), ...symptomLabels, ...episodeLabels];
 
 	const rows: string[][] = [];
 	const symptomSums = new Array(symptomCols.length).fill(0);
@@ -1517,7 +1441,6 @@ function drawGridSection(
 			totalEpisodes += count;
 		});
 
-		row.push(String(dayDoc?.data?.notes || '').slice(0, 40));
 		rows.push(row);
 	}
 
@@ -1532,7 +1455,6 @@ function drawGridSection(
 	const pctRow: string[] = [t('pdf.percent_of_days')];
 	symptomSums.forEach((s) => pctRow.push(`${Math.round((s / daysInMonth) * 100)}%`));
 	episodeSums.forEach(() => pctRow.push(''));
-	pctRow.push('');
 	rows.push(pctRow);
 
 	const daysLogged = monthDocs.length;
@@ -1607,6 +1529,8 @@ function drawGridSection(
 
 	autoTable(doc, {
 		startY: 34,
+		// Centre whatever the columns did not consume (see gridSideMargin).
+		margin: { left: gridSideMargin, right: gridSideMargin },
 		head: [allHeaders],
 		body: rows,
 		theme: 'plain',
@@ -1634,7 +1558,7 @@ function drawGridSection(
 		alternateRowStyles: {
 			fillColor: [252, 250, 248] as any,
 		},
-		// Per-column explicit widths. Day + Notes are fixed; `gridDataColW`
+		// Per-column explicit widths. Day is fixed; `gridDataColW`
 		// (computed above against the landscape page width, so headers were
 		// fitted to the same width) distributes the remainder.
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1642,8 +1566,6 @@ function drawGridSection(
 			const styles: Record<number, any> = {
 				0: { cellWidth: GRID_DAY_COL_W, fontStyle: 'bold', halign: 'center' },
 			};
-			const notesColIdx = 1 + symptomCols.length + episodeCols.length;
-			styles[notesColIdx] = { cellWidth: GRID_NOTES_COL_W };
 			for (let i = 1; i <= gridDataColCount; i++) {
 				styles[i] = { cellWidth: gridDataColW, halign: 'center' };
 			}
@@ -1978,6 +1900,11 @@ export function generateDoctorPdf(
 	//
 	// Rendered only when something IS omitted: with nothing to declare, the
 	// line would be noise on the page that has the least room for it.
+	// `headerBottom` FLOWS. The divider below used to be drawn at a hard y=30,
+	// which is exactly this note's baseline — so the rule struck through the
+	// text whenever the note rendered. Constants that have to agree across two
+	// hundred lines do not stay agreeing.
+	let headerBottom = 26;
 	{
 		const gridTotal = gridMonths.length;
 		const gridWithData = gridMonths.filter((gm) => monthHasEntries(gm.y, gm.m)).length;
@@ -1988,29 +1915,11 @@ export function generateDoctorPdf(
 			doc.text(
 				t('pdf.grid_coverage_note', { withData: gridWithData, total: gridTotal }),
 				14,
-				30,
+				headerBottom + 4,
 			);
+			headerBottom += 4;
 		}
 	}
-
-	// ── Patient top-line quote ──
-	// Grafted from the retired CLINICAL_HANDOFF.md §4 / §14.8: the
-	// patient's own most-recent in-scope note, given a 3pt olive left
-	// rule, is the page's human anchor. No export-wizard prompt yet — the
-	// latest note is the honest available source. Collapses entirely when
-	// the patient logged no notes (§14.1 — no placeholder text).
-	const latestNote = extractLatestNote(documents, scopeStartISO, scopeEndISO);
-	const quoteBottomY = drawTopLineQuote(
-		doc,
-		latestNote,
-		username ? capitalizeName(username) : '',
-		locale,
-		blueprint.dateFormat,
-		14,
-		30,
-		pageW - 28,
-		t,
-	);
 
 	// The medical-device disclaimer moved to the page footer (drawFooter).
 	// As a page-1 block it reclaimed ~12mm of the most valuable real estate
@@ -2092,7 +2001,11 @@ export function generateDoctorPdf(
 
 	// Page-1 content starts just below the top-line quote block (or the
 	// header meta line when the patient logged no recent note).
-	let cursorY = (latestNote ? quoteBottomY : 24) + 6;
+	// The patient top-line quote was removed 2026-08-21 on test feedback. It
+	// reproduced one arbitrary sentence at the top of a clinical document with
+	// no way to choose it — the export opt-in governs the note LIST, but the
+	// quote picked its own. Layout starts straight after the header band now.
+	let cursorY = headerBottom + 5;
 	doc.setDrawColor(...BRAND.border);
 	doc.setLineWidth(0.2);
 	doc.line(14, cursorY, pageW - 14, cursorY);
@@ -2303,9 +2216,8 @@ export function generateDoctorPdf(
 		// CLAMPED TO THE REPORT WINDOW. This used to scan every document the
 		// vault holds and take the newest reading overall, so a calendar-2023
 		// report could show a 2026 lab value on page 1, in the doctor-glance
-		// row, with no date on it. `extractLatestNote` two hundred lines below
-		// already clamps to the same window — the patient quote was correct
-		// while the tile beside it was not.
+		// row, with no date on it. Everything else on the page clamps to the
+		// report window; this tile did not.
 		//
 		// Consequence, deliberately: when the window holds no reading the tile
 		// returns null and the cohort selector falls through to a populated
@@ -2632,7 +2544,11 @@ export function generateDoctorPdf(
 	// on a secondary scale so a 90-symptom-days / 3-episode month doesn't
 	// flatten the seizure line to the x-axis. Dr. Nguyen explicitly asked
 	// for this: clinicians read the two series as separate clinical signals.
-	const yMax = Math.max(...monthlyTotals, 1);
+	// +1 headroom. A flat series (1-1-1…) put every point exactly on the top
+	// edge, where the stroke is clipped by the plot rect and the line reads as
+	// a border rather than data. One extra row of space costs nothing and the
+	// axis label stays an integer.
+	const yMax = Math.max(...monthlyTotals, 1) + 1;
 	const symptomMax = Math.max(...monthlySymptomDays, 1);
 
 	// Event markers — user-authored `event` docs falling inside the chart
@@ -3292,7 +3208,8 @@ export function generateDoctorPdf(
 				...chart.series.flatMap((s) => s.values.filter((v): v is number => v !== null)),
 				...refVals,
 			];
-			const yMax = Math.max(...allVals, 1);
+			// +1 headroom — see the trajectory chart.
+			const yMax = Math.max(...allVals, 1) + 1;
 			const yMin = Math.min(...allVals, 0);
 			const ySpan = Math.max(0.1, yMax - yMin);
 
@@ -3512,8 +3429,12 @@ export function generateDoctorPdf(
 					fontSize: TYPE.table,
 				},
 				alternateRowStyles: { fillColor: [252, 250, 248] as any },
+				// Full content width — one table geometry for the whole document.
+				// autoTable's default margin is 40mm, not 14, which is how three
+				// tables ended up three different widths on the same page.
+				margin: { left: 14, right: 14 },
 				columnStyles: {
-					0: { cellWidth: 60 },
+					0: { cellWidth: 84 },
 					1: { cellWidth: 22, halign: 'center' },
 					2: { cellWidth: 22, halign: 'center' },
 					3: { cellWidth: 22, halign: 'center' },
@@ -3541,7 +3462,7 @@ export function generateDoctorPdf(
 	// showed annotations nowhere at all, because the daily chart never drew
 	// markers.
 	//
-	// The provenance header is the P0-2 pattern from `drawTopLineQuote`: the
+	// The provenance header is the P0-2 pattern the removed patient quote used:
 	// clinician learns who authored the words before reading them, so a
 	// patient's sentence cannot be scanned as a clinical assertion.
 	if (noteEvents.length > 0) {
@@ -3604,7 +3525,10 @@ export function generateDoctorPdf(
 	// Centered on the page (2026-05-22 review): the 3-column table is
 	// 146mm — left-aligned it left a 34mm band of dead white space. Title
 	// centers with it.
-	doc.text(t('pdf.symptom_frequency'), pageW / 2, cursorY, { align: 'center' });
+	// Left-aligned at the content margin like every other section heading.
+	// It was centred while the table under it is full-width, so the heading
+	// and its own table did not share an edge.
+	doc.text(t('pdf.symptom_frequency'), 14, cursorY);
 	cursorY += 2;
 
 	const symptomRows = symptomFreq.map((s) => [
@@ -3614,10 +3538,12 @@ export function generateDoctorPdf(
 	]);
 
 	if (symptomRows.length > 0) {
-		const symFreqTableW = 90 + 28 + 28;
+		// Full content width, like every other table in the document. It used to
+		// be a centred 146mm block, which read as a different kind of object
+		// sitting on the same page.
 		autoTable(doc, {
 			startY: cursorY,
-			margin: { left: (pageW - symFreqTableW) / 2, right: (pageW - symFreqTableW) / 2 },
+			margin: { left: 14, right: 14 },
 			head: [[t('pdf.symptom'), t('pdf.days_active'), t('pdf.frequency')]],
 			body: symptomRows,
 			theme: 'plain',
@@ -3638,7 +3564,7 @@ export function generateDoctorPdf(
 				fillColor: [252, 250, 248] as any,
 			},
 			columnStyles: {
-				0: { cellWidth: 90 },
+				0: { cellWidth: 126 },
 				1: { cellWidth: 28, halign: 'center' },
 				2: { cellWidth: 28, halign: 'center' },
 			},
@@ -3690,6 +3616,8 @@ export function generateDoctorPdf(
 		});
 
 		autoTable(doc, {
+			// Full content width — see the duration table above.
+			margin: { left: 14, right: 14 },
 			startY: cursorY,
 			head: [[t('pdf.medication'), t('pdf.schedule'), t('pdf.taken'), t('pdf.adherence')]],
 			body: medRows,
@@ -3797,7 +3725,7 @@ export function generateRecoveryPdf(
 	const contentW = pageW - 2 * margin;
 	let y = 42;
 
-	// ── Rule-backed security notice. Matches drawTopLineQuote's chrome
+	// ── Rule-backed security notice. Same rule-backed chrome the doctor PDF
 	// (3pt left rule + italic body + small attribution-style label), but
 	// uses BRAND.brick because this is the security/danger semantic — the
 	// patient-quote rule is olive. Lands first so the warning context

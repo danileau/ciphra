@@ -1250,7 +1250,6 @@ export default {
 	'pdf.grid_title': 'Protocollo mensile',
 	'pdf.grid_coverage_note': 'Griglie mensili: {withData} mesi su {total} contengono voci. I mesi senza voci non vengono stampati.',
 	'pdf.export_date': 'Esportato',
-	'pdf.quote_attribution_label': 'CITAZIONE PAZIENTE',
 	'pdf.cycle_anchor_last': 'Ultimo ciclo registrato: {date}',
 	'pdf.cycle_anchor_stale': "Ultimo ciclo registrato: {date} — colorazione delle fasi soppressa (ancoraggio oltre 60 giorni).",
 	'pdf.account': 'Account',
