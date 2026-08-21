@@ -27,7 +27,6 @@ import { sectionsForCohort } from '$lib/cohortSections';
 import { aggregatePhaseDistribution } from '$lib/pdfPhaseDistribution';
 import { aggregateCycleStrip } from '$lib/pdfCycleStrip';
 import { aggregateDailyMonthSeries } from '$lib/pdfDailyMonthChart';
-import { resolveTrajectoryPill } from '$lib/pdfTrajectory';
 import { PHASE_COLORS, type Phase } from '$lib/cycleState';
 import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
@@ -2327,12 +2326,6 @@ export function generateDoctorPdf(
 	// cited it as useful, and the monthly grid appendix already carries the
 	// per-day detail forensically. `drawDayCoverageStrip` is now dead code.
 
-	// Trajectory metadata for the chart below.
-	type TrendDir = 'up' | 'down' | 'flat';
-	let chartContext:
-		| { MONTHS: number; firstAvg: number; lastAvg: number; trendLabel: string; trendDir: TrendDir }
-		| null = null;
-
 	// CIPH-pi21-Track-B-5 — scope-branched chart. Per PDF_REWRITE.md §5,
 	// 'month' scope renders a daily chart for the focus month; year/2years
 	// keep the existing 24/12-month trajectory + vital-trends block.
@@ -2391,61 +2384,27 @@ export function generateDoctorPdf(
 	const monthlyTotals = monthBuckets.map(b => b.total);
 	const monthlySymptomDays = monthBuckets.map(b => b.symptomDays);
 
-	// pi24 P-PDF-2 — Cohort-aware trajectory pill. The pre-pi24 algorithm
-	// computed first-6 vs last-6 average on episode counts and labeled it
-	// improving/stable/worsening for every cohort. The 5-doctor agents
-	// campfire (see `feedback_pdf_clinician_lens.md`) universally flagged
-	// this as the single most-cited concern: STABIL on Helena mid-
-	// titration, VERBESSERUNG on Hans with a recent GTC, VERSCHLECHTERUNG
-	// on Anna's normal-rhythm bipolar quarter, STABIL on Klaus with home
-	// BP above target. Each one a clinical mis-cue with green-pill
-	// confidence. resolveTrajectoryPill returns a typed spec OR null
-	// (omit pill). A wrong pill is worse than no pill.
-	const pillSpec = resolveTrajectoryPill(blueprint, documents, monthBuckets, episodeCols);
-	if (pillSpec) {
-		// DSPEC-2 — Trajectory LABEL, not pill. PDF_DESIGN_SPEC.md §7:
-		// white fill, hairline border, 7pt, neutral text always. The
-		// clinical-assessment implication that lived in the directional
-		// color is gone; the doctor reads the chart numbers for direction.
-		let trendLabel: string;
-		if (pillSpec.kind === 'episode') {
-			trendLabel = t(pillSpec.labelKey);
-			// Episode trajectory keeps the downstream narrative bullet
-			// (still episode-shaped copy); other kinds skip the bullet
-			// until P-PDF-8 lands data-driven vital + polarity copy.
-			chartContext = {
-				MONTHS,
-				firstAvg: pillSpec.firstAvg,
-				lastAvg: pillSpec.lastAvg,
-				trendLabel,
-				trendDir: pillSpec.trendDir,
-			};
-		} else if (pillSpec.kind === 'vital') {
-			trendLabel = t(pillSpec.labelKey, { vital: t(pillSpec.vitalLabel) });
-		} else {
-			trendLabel = t(pillSpec.labelKey);
-		}
-
-		// Trajectory label on the right edge: white fill + hairline border,
-		// neutral text. Reads as a quiet display affordance, not a badge.
-		doc.setFont('helvetica', 'normal');
-		doc.setFontSize(TYPE.compact);
-		const labelPadX = 2.4;
-		const labelPadY = 1.4;
-		const labelW = doc.getTextWidth(trendLabel) + labelPadX * 2;
-		const labelH = 4.6;
-		const labelX = pageW - 14 - labelW;
-		const labelY = cursorY - labelH + labelPadY;
-		doc.setFillColor(...BRAND.card);
-		doc.setDrawColor(...BRAND.borderSubtle);
-		doc.setLineWidth(0.2);
-		doc.roundedRect(labelX, labelY, labelW, labelH, 1.2, 1.2, 'FD');
-		doc.setTextColor(...BRAND.textPrimary);
-		doc.text(trendLabel, labelX + labelW / 2, labelY + labelH - labelPadY, { align: 'center' });
-	}
-	// pillSpec === null → no pill drawn. The explicit safe-omit path
-	// for sparse data + narrative-no-episodes + custom cohort. The
-	// chart still renders below; only the pill is suppressed.
+	// NO TRAJECTORY ASSESSMENT. Removed 2026-08-21 on the operator's ruling:
+	// "Ciphra ist nur eine Dokumentationsplattform."
+	//
+	// The chart used to carry a label reading "Mehr Ereignisse" / "Weniger
+	// Ereignisse" / "Stabil" — a derived directional verdict on the patient's
+	// course. Documenting what was recorded and concluding which way it is
+	// going are different acts, and only the first is this product's job.
+	//
+	// History worth keeping, so this is not re-litigated: the pre-pi24 version
+	// coloured that verdict, and the five-doctor campfire flagged it as the
+	// single most-cited concern — STABIL on Helena mid-titration, VERBESSERUNG
+	// on Hans with a recent GTC, VERSCHLECHTERUNG on Anna's normal-rhythm
+	// bipolar quarter. pi24 answered by making the verdict cohort-aware and
+	// neutral-coloured (DSPEC-2), which removed the colour but kept the claim.
+	// It also read as a control in print: a white rounded rect with a hairline
+	// border and a short label is the visual grammar of a button, and a user
+	// reported it as "a 'Mehr Ereignisse' button that isn't one".
+	//
+	// The direction is still fully available to the reader — it is the line on
+	// the chart directly below, plus the monthly numbers. What is gone is
+	// ciphra asserting which direction that is.
 
 	cursorY += 6;
 
