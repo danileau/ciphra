@@ -2329,6 +2329,57 @@ export function generateDoctorPdf(
 	// CIPH-pi21-Track-B-5 — scope-branched chart. Per PDF_REWRITE.md §5,
 	// 'month' scope renders a daily chart for the focus month; year/2years
 	// keep the existing 24/12-month trajectory + vital-trends block.
+	/**
+	 * User-authored events inside the window, oldest first.
+	 *
+	 * Replaces the per-event chart markers. Those drew one dashed line, one
+	 * triangle and (on the trajectory only) a 22-char label per event at the
+	 * event's x position, with no collision handling. Twelve labels from one
+	 * real export measured 255mm on a 174mm axis; the design has no working
+	 * case above ~5 events and the shipped worst case is ~250.
+	 *
+	 * Same conclusion the web charts reached on 2026-05-12
+	 * (feedback_chart_event_markers): "Aggregate-axis line charts: never draw
+	 * per-event marks." There the answer was a tooltip. Paper has no hover, so
+	 * the content moves to a list and the chart keeps a per-MONTH count —
+	 * whose spacing is the axis spacing, and therefore cannot collide.
+	 */
+	type ReportEvent = { dateISO: string; isMed: boolean; text: string };
+
+	function buildEventList(): ReportEvent[] {
+		const out: ReportEvent[] = [];
+		for (const d of documents) {
+			if (d.data?.type !== 'event') continue;
+			const ds = String(d.data.date || '');
+			if (ds.length < 10 || ds < scopeStartISO || ds > scopeEndISO) continue;
+			const isMed = d.data.kind === 'medication';
+			let text: string;
+			if (isMed) {
+				const { label, unit } = resolveMedDisplay(blueprint, (d.data as any).medicationId, t);
+				const dose = (d.data as any).dose;
+				text = dose ? `${label} ${dose}${unit ? ` ${unit}` : ''}` : label;
+			} else {
+				// PREFER `title`. The epilepc migration keeps the short human
+				// title in `title` and the long prose in `notes`
+				// (migration/epilepcMapping.ts); reading `notes` is why the
+				// reported labels were sentences. EntryPreview already prefers
+				// `title` — the PDF was the odd one out.
+				text = String((d.data as any).title || d.data.notes || '').replace(/\s+/g, ' ').trim();
+			}
+			if (!text) continue;
+			out.push({ dateISO: ds, isMed, text });
+		}
+		return out.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+	}
+
+	const reportEvents = buildEventList();
+	// Note markers only. Rescue-med administrations already appear as a KPI
+	// tile (days with rescue med) and as CSV columns; counting them here would
+	// drown the annotations that have no other home — a PRN taken twice weekly
+	// is 104 of them a year.
+	const noteEvents = reportEvents.filter((e) => !e.isMed);
+
+
 	if (scope === 'month') {
 		cursorY = drawDailyMonthChart(
 			doc,
@@ -2429,75 +2480,35 @@ export function generateDoctorPdf(
 	// 24-month epilepsy chart would misread it as such. Removed entirely
 	// — "when the patient started using the app" is metadata, not clinical
 	// signal.
-	type EventMarker = { x: number; label: string };
-
-	function buildEventMarkers(boxX: number, boxW: number): EventMarker[] {
-		const out: EventMarker[] = [];
-		for (const d of documents) {
-			if (d.data?.type !== 'event') continue;
-			const ds = String(d.data.date || '');
-			if (ds.length < 10) continue;
-			const yyyy = parseInt(ds.slice(0, 4));
-			const mm = parseInt(ds.slice(5, 7)) - 1;
-			const dd = parseInt(ds.slice(8, 10));
-			if (isNaN(yyyy) || isNaN(mm) || isNaN(dd)) continue;
-			const monthIdx = monthBuckets.findIndex((b) => b.y === yyyy && b.m === mm);
-			if (monthIdx < 0) continue;
-			const daysInMo = new Date(yyyy, mm + 1, 0).getDate();
-			const frac = Math.max(0, Math.min(0.999, (dd - 1) / daysInMo));
-			// Use MONTHS as denominator (not MONTHS-1) so events stay inside the
-			// chart bounds. Data points use (i / MONTHS-1) which puts the last
-			// point exactly on the right edge; events use (i+frac)/MONTHS so a
-			// late-month event in the last bucket sits just inside the edge.
-			const xRel = Math.min(0.999, (monthIdx + frac) / MONTHS);
-			const x = boxX + xRel * boxW;
-			// CIPH-881b — medication events label with the rescue-med name +
-			// dose, not the notes field (which is undefined for these). The
-			// kind discriminator keeps freeform note-marker events on a
-			// separate visual track.
-			let raw: string;
-			if (d.data.kind === 'medication') {
-				const { label, unit } = resolveMedDisplay(blueprint, (d.data as any).medicationId, t);
-				const dose = (d.data as any).dose;
-				const unitStr = unit ? ` ${unit}` : '';
-				raw = dose ? `${label} ${dose}${unitStr}` : label;
-			} else {
-				raw = String(d.data.notes || '').replace(/\s+/g, ' ').trim();
-			}
-			out.push({ x, label: raw.length > 22 ? raw.slice(0, 21) + '…' : raw });
+	/**
+	 * One mark per month holding note markers, carrying the count.
+	 *
+	 * Mark pitch == axis pitch, so this is O(1) in event count: 12 events and
+	 * 250 events render identically apart from the numerals.
+	 */
+	function drawEventCountRow(boxX: number, boxW: number, baseY: number) {
+		if (noteEvents.length === 0) return;
+		const per = new Array(monthBuckets.length).fill(0);
+		for (const e of noteEvents) {
+			const yy = Number(e.dateISO.slice(0, 4));
+			const mm = Number(e.dateISO.slice(5, 7)) - 1;
+			const idx = monthBuckets.findIndex((b) => b.y === yy && b.m === mm);
+			if (idx >= 0) per[idx]++;
 		}
-		return out;
-	}
-	function drawEventLines(boxX: number, boxY: number, boxW: number, boxH: number, withLabels: boolean) {
-		const markers = buildEventMarkers(boxX, boxW);
-		if (markers.length === 0) return;
-		// CIPH-pi18-2 Chunk 3 — event markers stay on `BRAND.brick` (NOT
-		// cohort accent) by design. The original choice was contrast-
-		// driven (brick + bolder dash so the marker line was unmissable
-		// on print); ochre + 0.3 line was too faint in tester reports.
-		// A clinical event interruption is also conceptually a "warning"
-		// signal — semantic high-importance, not data-accent. Keeping
-		// brick preserves both the contrast property and the semantic
-		// register across all cohorts.
-		doc.setDrawColor(...BRAND.brick);
-		doc.setLineWidth(0.5);
-		doc.setLineDashPattern([1.2, 1], 0);
-		for (const m of markers) {
-			doc.line(m.x, boxY, m.x, boxY + boxH);
-		}
-		doc.setLineDashPattern([], 0);
-		// small filled triangle marker at top of each line
-		doc.setFillColor(...BRAND.brick);
-		for (const m of markers) {
-			doc.triangle(m.x - 1.4, boxY - 0.3, m.x + 1.4, boxY - 0.3, m.x, boxY + 1.8, 'F');
-		}
-		if (withLabels) {
-			doc.setFont('helvetica', 'normal');
+		for (let i = 0; i < per.length; i++) {
+			if (per[i] === 0) continue;
+			const x = boxX + (i / Math.max(1, monthBuckets.length - 1)) * boxW;
+			doc.setDrawColor(...BRAND.ochre);
+			doc.setLineWidth(0.4);
+			// Diamond — shape-encoded, so it survives grayscale and fax.
+			// PDF_DESIGN_SPEC §10 (event marker: diamond) and §14 (every
+			// symbol explained: see the legend entry below).
+			doc.lines([[1.4, 1.4], [-1.4, 1.4], [-1.4, -1.4], [1.4, -1.4]], x, baseY - 1.4);
+			doc.setFont('helvetica', 'bold');
 			doc.setFontSize(TYPE.chartAxis);
-			doc.setTextColor(...BRAND.brick);
-			for (const m of markers) {
-				doc.text(m.label, m.x + 1, boxY - 1.5);
-			}
+			doc.setTextColor(...BRAND.textPrimary);
+			doc.text(String(per[i]), x, baseY + 5.4, { align: 'center' });
+			doc.setFont('helvetica', 'normal');
 		}
 	}
 
@@ -2624,8 +2635,6 @@ export function generateDoctorPdf(
 		doc.text('0', chartX + chartW + 0.5, cursorY + chartH, { align: 'left' });
 	}
 
-	// Event vertical lines on the trajectory chart (with text labels)
-	drawEventLines(chartX, cursorY, chartW, chartH, true);
 
 	// Slim ochre frame around the trajectory chart's plot area — same color
 	// will frame the vital mini-charts so the doctor sees they share an axis.
@@ -2651,10 +2660,15 @@ export function generateDoctorPdf(
 		doc.text(shortLabel, x, cursorY + chartH + 4, { align: 'center' });
 	}
 
+	// Event count row — one diamond + count per month holding note markers.
+	// Placed under the month labels, inside the slack the `chartH + 18`
+	// advance already carried (labels sit at +4, legend at +9).
+	drawEventCountRow(chartX, chartW, cursorY + chartH + 8.5);
+
 	// Legend (2026-05-22 review): the solid + dashed series were
 	// unlabelled — the reader could not tell episodes from symptom-days.
 	{
-		const legendY = cursorY + chartH + 9;
+		const legendY = cursorY + chartH + (noteEvents.length > 0 ? 18 : 9);
 		doc.setFont('helvetica', 'normal');
 		doc.setFontSize(TYPE.chartAxis);
 		let lx = chartX;
@@ -2678,11 +2692,23 @@ export function generateDoctorPdf(
 			doc.setFillColor(...BRAND.textMuted);
 			drawMarker(doc, lx + 2.5, legendY - 0.8, 0.6, 'square', true);
 			doc.setTextColor(...BRAND.textMuted);
-			doc.text(t('pdf.legend_symptom_days'), lx + 7, legendY);
+			const sdLabel = t('pdf.legend_symptom_days');
+			doc.text(sdLabel, lx + 7, legendY);
+			lx += 7 + doc.getTextWidth(sdLabel) + 8;
+		}
+		// PDF_DESIGN_SPEC §14 — every symbol in a chart must be explained by
+		// direct label, header or legend. The old markers had no entry here,
+		// on any chart.
+		if (noteEvents.length > 0) {
+			doc.setDrawColor(...BRAND.ochre);
+			doc.setLineWidth(0.4);
+			doc.lines([[1.2, 1.2], [-1.2, 1.2], [-1.2, -1.2], [1.2, -1.2]], lx + 1.2, legendY - 2);
+			doc.setTextColor(...BRAND.textMuted);
+			doc.text(t('pdf.legend_event_count'), lx + 4.4, legendY);
 		}
 	}
 
-	cursorY += chartH + 18;
+	cursorY += chartH + (noteEvents.length > 0 ? 27 : 18);
 
 	// ── 24-month trends: vitals + multiDay episode breakdown ──
 	// One mini-chart per significant vital (paired vitals share a chart).
@@ -3059,7 +3085,11 @@ export function generateDoctorPdf(
 				// Shared chart frame + event lines + month labels — same
 				// chrome as the line-rendered charts so this section reads
 				// as one visual group.
-				drawEventLines(cx, cursorY, cw, ch, false);
+				// No event markers here. They rendered with `withLabels: false` —
+				// an unexplained brick dashed line over someone's TSH or BP trend,
+				// with no legend anywhere in the document. That is the defect the
+				// 2026-06-07 review removed as P0-1. Annotations now live in the
+				// count row on the trajectory and in the Notizmarker list.
 				doc.setDrawColor(...BRAND.ochreSoft);
 				doc.setLineWidth(0.4);
 				doc.roundedRect(cx - 0.3, cursorY - 0.3, cw + 0.6, ch + 0.6, 0.8, 0.8, 'S');
@@ -3160,7 +3190,11 @@ export function generateDoctorPdf(
 			// Event markers (no labels — too cramped on mini charts) and the
 			// shared-axis ochre frame so the doctor sees this chart belongs
 			// to the same temporal group as the trajectory chart above.
-			drawEventLines(cx, cursorY, cw, ch, false);
+			// No event markers here. They rendered with `withLabels: false` —
+			// an unexplained brick dashed line over someone's TSH or BP trend,
+			// with no legend anywhere in the document. That is the defect the
+			// 2026-06-07 review removed as P0-1. Annotations now live in the
+			// count row on the trajectory and in the Notizmarker list.
 			doc.setDrawColor(...BRAND.ochreSoft);
 			doc.setLineWidth(0.4);
 			doc.roundedRect(cx - 0.3, cursorY - 0.3, cw + 0.6, ch + 0.6, 0.8, 0.8, 'S');
@@ -3328,6 +3362,76 @@ export function generateDoctorPdf(
 	}
 
 	} // end of `if (scope !== 'month')` — skip trajectory + vital-trends + duration for month scope
+
+	// ── Notizmarker — the annotations, in full, in order ──
+	//
+	// This is where the freeform note text lives now. On the chart it was a
+	// 21-character fragment that kept the identifying half of a sentence and
+	// discarded the meaning; here the column is ~130mm and wraps, so German
+	// and French stop being a layout problem.
+	//
+	// Oldest first, per feedback_pdf_clinician_lens §5: the doctor should read
+	// the arc, not a feed. Renders on EVERY scope — month exports previously
+	// showed annotations nowhere at all, because the daily chart never drew
+	// markers.
+	//
+	// The provenance header is the P0-2 pattern from `drawTopLineQuote`: the
+	// clinician learns who authored the words before reading them, so a
+	// patient's sentence cannot be scanned as a clinical assertion.
+	if (noteEvents.length > 0) {
+		cursorY = reserveSpace(doc, cursorY, BREAK.tableHeader);
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(TYPE.head);
+		doc.setTextColor(...BRAND.textPrimary);
+		doc.text(t('pdf.event_notes_title'), 14, cursorY);
+		cursorY += 4;
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.compact);
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(t('pdf.event_notes_provenance'), 14, cursorY);
+		cursorY += 3;
+
+		// Month NAME and year, not "08/21". A 2-year report spans two years, so
+		// a bare day/month is ambiguous — and a numeric day/month flips meaning
+		// between locales. Same reasoning as the window label in reportWindow.ts.
+		const dateCol = 30;
+		const bodyCol = pageW - 28 - dateCol;
+		autoTable(doc, {
+			startY: cursorY,
+			margin: { left: 14, right: 14 },
+			head: [[t('pdf.date'), t('pdf.event_notes_col')]],
+			body: noteEvents.map((e) => [
+				new Date(e.dateISO + 'T12:00:00').toLocaleDateString(locale, {
+					day: '2-digit',
+					month: 'short',
+					year: 'numeric',
+				}),
+				e.text,
+			]),
+			theme: 'plain',
+			styles: {
+				fontSize: TYPE.table,
+				cellPadding: 1.6,
+				lineColor: BRAND.borderSubtle as any,
+				lineWidth: 0.1,
+				textColor: BRAND.textPrimary as any,
+				overflow: 'linebreak',
+			},
+			headStyles: {
+				fillColor: BRAND.paperInset as any,
+				textColor: BRAND.textPrimary as any,
+				fontStyle: 'bold',
+				fontSize: TYPE.table,
+			},
+			columnStyles: {
+				0: { cellWidth: dateCol, textColor: BRAND.textSecondary as any },
+				1: { cellWidth: bodyCol },
+			},
+			didDrawCell: continuationLabelHook(t('pdf.table_continued')),
+		});
+		cursorY = ((doc as any).lastAutoTable?.finalY ?? cursorY + 10) + 6;
+	}
+
 
 	// ── Symptom frequency table ──
 	cursorY = reserveSpace(doc, cursorY, BREAK.sectionHead + BREAK.tableHeader);
