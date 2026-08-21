@@ -89,7 +89,8 @@ test('2-year card offers sliding pairs, including the one straddling the gap', a
 	// 2024–2025 and 2023–2024: both partly empty, both offered.
 	expect(ids).toEqual(['2years:2025-12', '2years:2024-12']);
 
-	// Coverage is stated on the row rather than the sparse window being hidden.
+	// Coverage is stated as a fact about the export. No judgment label —
+	// see lib/reports/no-coverage-judgment.test.ts.
 	const firstRow = page.getByTestId('period-option').first();
 	await expect(firstRow).toContainText(/1\s*(von|of|sur|su)\s*24/);
 });

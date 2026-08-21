@@ -350,8 +350,12 @@ route kind.
   as `LocaleSelect.svelte`), a `BottomSheet` below that — touch has no
   hover and a panel under the third card in a 3-up grid clips at the
   viewport edge. Options come from `lib/reports/exportPeriods.ts`;
-  every row states its real coverage and sparse windows are labelled
-  rather than hidden.
+  every row states how much data the window holds, as a plain fact about
+  the export. Low-coverage windows are offered like any other and are
+  never labelled sparse/incomplete — a coverage figure describes the PDF,
+  a judgment word describes the user and implies a logging target
+  (`feedback_no_gaslight_good_days.md`; pinned by
+  `lib/reports/no-coverage-judgment.test.ts`).
 - **WelcomeCard.svelte** (post-pi24, go-live) — first-moment
   explainer that mounts at the top of the dashboard. Two variants
   branched on `auth.registrationSource`: `'web'` shows the new-user

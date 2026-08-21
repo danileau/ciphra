@@ -1131,7 +1131,6 @@ export default {
 	'reports.period_days_one': '{count} jour enregistré',
 	'reports.period_days_other': '{count} jours enregistrés',
 	'reports.period_months_covered': '{covered} mois sur {total}',
-	'reports.period_sparse': 'Incomplet',
 	'reports.export_privacy_note': 'Le PDF généré n\'est pas chiffré — toute personne ayant le fichier peut le lire. Le chiffrement protège vos données uniquement dans ciphra.',
 	'reports.month_view': 'Mois',
 	'reports.year_view': 'Année',

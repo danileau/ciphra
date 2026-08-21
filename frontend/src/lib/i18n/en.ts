@@ -1131,7 +1131,6 @@ export default {
 	'reports.period_days_one': '{count} day logged',
 	'reports.period_days_other': '{count} days logged',
 	'reports.period_months_covered': '{covered} of {total} months',
-	'reports.period_sparse': 'Patchy',
 	'reports.export_privacy_note': 'The finished PDF is not encrypted — anyone with the file can read it. Encryption protects your data only inside ciphra.',
 	'reports.month_view': 'Month',
 	'reports.year_view': 'Year',

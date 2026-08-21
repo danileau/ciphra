@@ -1131,7 +1131,6 @@ export default {
 	'reports.period_days_one': '{count} giorno registrato',
 	'reports.period_days_other': '{count} giorni registrati',
 	'reports.period_months_covered': '{covered} mesi su {total}',
-	'reports.period_sparse': 'Incompleto',
 	'reports.export_privacy_note': 'Il PDF generato non è cifrato — chiunque abbia il file può leggerlo. La cifratura protegge i tuoi dati solo all\'interno di ciphra.',
 	'reports.month_view': 'Mese',
 	'reports.year_view': 'Anno',
