@@ -43,6 +43,54 @@ enforced at CI.
 
 ---
 
+## Page width
+
+Source of truth: [`src/app.css`](../../app.css) → `LAYOUT WIDTH TOKENS`.
+Enforced by: [`src/routes/page-width.test.ts`](../../routes/page-width.test.ts).
+
+**The app layout imposes no width.** `<main>` is `flex-1` with no container, so
+a page that declares nothing renders edge-to-edge. "Forgot to choose" and
+"deliberately full-bleed" therefore look identical on screen — which is how the
+tokens sat at 4-of-18 adoption from CIPH-746 until 2026-08-21 while the other
+fourteen routes each grew their own `max-w-*`.
+
+Six tiers. Apply one on the outermost page wrapper; never nest them.
+
+| Token | Width | Pages |
+|---|---|---|
+| `layout-narrow` | 576 | *(currently unused — see auth cards below)* |
+| `layout-reading` | 768 | `/docs`, `/docs/[slug]`, `/privacy`, `/terms`, `/setup` |
+| `layout-default` | 896 | `/settings`, `/conditions/[id]` |
+| `layout-landing` | 1024 | the landing page's section bands |
+| `layout-data` | 1152 | `/journal`, `/calendar`, `/admin` |
+| `layout-data-wide` | 1280 | `/reports` |
+
+All tiers carry `px-4 sm:px-6` except `layout-landing`, which keeps `px-6` at
+every breakpoint: its bands sit on alternating full-bleed backgrounds where
+16px reads as cramped, and the landing is the page most visitors see first.
+
+### Three things that are not tiers
+
+- **Auth cards** (`/login`, `/migrate`, `/join/[grantId]`) centre a 448px card
+  in the viewport rather than flowing content down a column. `layout-narrow`
+  would widen each by 128px for tidiness alone.
+- **Measure.** `max-w-xl` on a paragraph caps line length (~65ch) and is
+  typographically correct. The landing uses eight. Never replace these with a
+  layout token — and note the enforcement test is element-aware precisely
+  because a centred paragraph shares the `max-w-* mx-auto` idiom with a
+  container.
+- **Responsive two-stage** (`/log/[date]`, via `EntryComposer`'s `.log-page`):
+  768 rising to 1024 at the ≥1024 breakpoint where the form goes two-column.
+  No tier expresses "widens at a breakpoint".
+
+### Adding a page
+
+Put it in `TIERS` with its token, or in `EXCEPTIONS` with the reason it cannot
+use one. A `+page.svelte` in neither map fails the suite — that is the point.
+The test also fails on a stale entry for a deleted route, on a page listed in
+both maps, and if the scale ever grows past six tiers, because a tier per page
+is not a system.
+
 ## Spacing
 
 Source of truth: [`lib/spacingTokens.ts`](../spacingTokens.ts).

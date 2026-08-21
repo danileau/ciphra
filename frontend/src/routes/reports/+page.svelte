@@ -1147,7 +1147,7 @@
 
 {#if !bp && !initialLoadDone}
 	<!-- Genuine loading state — we're still fetching/decrypting documents. -->
-	<div class="max-w-6xl mx-auto px-4 py-12 text-center">
+	<div class="layout-data-wide py-12 text-center">
 		<Asterisk size={32} spin color="muted" />
 		<p class="mt-3 text-sm" style="color: var(--text-muted)">{$t('common.loading')}</p>
 	</div>
@@ -1180,7 +1180,7 @@
 		{/if}
 	</div>
 {:else}
-<div class="rpt-page">
+<div class="layout-data-wide rpt-page">
 	<!-- Header -->
 	<div class="rpt-header">
 		<h1 class="rpt-title">{$t('reports.title')}</h1>
@@ -1924,17 +1924,19 @@
 	.rpt-glance-delta--down { color: var(--olive); }
 	.rpt-glance-delta--up { color: var(--danger); }
 	.rpt-glance-delta--flat { color: var(--text-muted); }
+	/* Width, centring and horizontal padding now come from
+	   `layout-data-wide` on the element — this rule reimplemented that token
+	   by hand (1280 + auto margins + 16/24px sides, identical values) and was
+	   invisible to anyone auditing page widths by class name. What is left
+	   here is the vertical rhythm, which is genuinely this page's own: the
+	   128px floor clears the mobile BottomNav. */
 	.rpt-page {
-		/* CIPH-746: widened to 1280 so data tables stop truncating cells
-		   on desktop. Below 640 the percentage-free padding keeps the
-		   mobile edge-to-edge feel unchanged. */
-		max-width: 1280px;
-		margin: 0 auto;
-		padding: 16px 16px 128px;
+		padding-top: 16px;
+		padding-bottom: 128px;
 	}
 	@media (min-width: 640px) {
 		.rpt-page {
-			padding: 20px 24px 128px;
+			padding-top: 20px;
 		}
 	}
 

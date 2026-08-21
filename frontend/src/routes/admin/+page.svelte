@@ -251,7 +251,7 @@
 	$: groupedAudit = groupAudit(auditLog);
 </script>
 
-<div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+<div class="layout-data py-6 space-y-6">
 	<h1 class="text-2xl font-bold" style="color: var(--text-primary);">{$t('admin.title')}</h1>
 
 	{#if loading}

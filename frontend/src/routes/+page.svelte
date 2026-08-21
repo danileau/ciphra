@@ -154,7 +154,7 @@
 
 	<!-- ===== HERO ===== -->
 	<section class="relative overflow-hidden hero-section" style="background: var(--surface);">
-		<div class="relative max-w-5xl mx-auto px-6 py-24 sm:py-32 md:py-40 lg:py-48">
+		<div class="relative layout-landing py-24 sm:py-32 md:py-40 lg:py-48">
 			<div class="max-w-2xl hero-content">
 				<!-- Wordmark — `drawIn` triggers the asterisk-arms draw-in
 				     entrance only here (the landing hero), so chrome
@@ -275,7 +275,7 @@
 	     /conditions/{id}. /conditions itself is now a 308-redirect to the
 	     #conditions anchor on this page. -->
 	<section class="py-20 md:py-28 reveal" use:inview id="conditions" style="background: var(--surface-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
-		<div class="max-w-5xl mx-auto px-6">
+		<div class="layout-landing">
 			<div class="text-center mb-12">
 				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">
 					{$t('landing.templates_title_1')} <span style="color: var(--brand);">{$t('landing.templates_title_2')}</span>
@@ -360,7 +360,7 @@
 	     is the "how does it work?" follow-up. Background flipped to
 	     surface (was surface-card) for the alternation rhythm. -->
 	<section class="py-20 md:py-28 reveal" use:inview id="how" style="background: var(--surface); border-bottom: 1px solid var(--border);">
-		<div class="max-w-5xl mx-auto px-6">
+		<div class="layout-landing">
 			<div class="text-center mb-16">
 				<h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">{$t('landing.how_title')}</h2>
 				<p class="text-lg max-w-xl mx-auto" style="color: var(--text-muted);">{$t('landing.how_subtitle')}</p>
@@ -393,7 +393,7 @@
 
 	<!-- ===== SECURITY ===== -->
 	<section class="py-20 md:py-28 reveal" use:inview id="security" style="background: var(--surface-card); border-bottom: 1px solid var(--border);">
-		<div class="max-w-5xl mx-auto px-6">
+		<div class="layout-landing">
 			<div class="flex items-start gap-5 mb-12">
 				<div class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0" style="background: var(--ochre-light);">
 					<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--ochre);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg>
@@ -430,7 +430,7 @@
 
 	<!-- ===== TECHNICAL DETAILS (expandable) ===== -->
 	<section class="py-20 md:py-28 reveal" use:inview id="technical" style="background: var(--surface); border-bottom: 1px solid var(--border);">
-		<div class="max-w-5xl mx-auto px-6">
+		<div class="layout-landing">
 			<!-- Toggle button -->
 			<div class="text-center">
 				<button
@@ -623,7 +623,7 @@
 
 	<!-- ===== CTA FOOTER ===== -->
 	<section class="py-20 md:py-28 relative overflow-hidden reveal" use:inview style="background: var(--surface-card); border-bottom: 1px solid var(--border);">
-		<div class="relative max-w-5xl mx-auto px-6 text-center">
+		<div class="relative layout-landing text-center">
 			<!-- Watermark asterisk -->
 			<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
 				<Asterisk size={180} muted color="muted" />
