@@ -771,3 +771,81 @@ class TestInternalErrorShape:
             assert resp.get_json() == {'error': 'internal_error'}
         finally:
             server.app.config['PROPAGATE_EXCEPTIONS'] = None
+# Anti-enumeration: fake params must be byte-shape-indistinguishable
+#
+# /api/login/init and /api/recover/init deliberately answer for EVERY
+# username, real or not, so the response cannot reveal whether an account
+# exists. That only holds if the server-generated fake blob is formatted
+# exactly like a real one.
+#
+# It was not. A real blob is the client's `btoa(JSON.stringify(params))` —
+# COMPACT. The server built its fake with `json.dumps(params)`, whose default
+# separators add a space after every ',' and ':'. Result: real ≈156 base64
+# chars, fake =192. One unauthenticated request per username read the
+# difference — a reliable account-existence oracle that defeated the whole
+# control. Found by a dynamic (black-box) scan against the running server,
+# 2026-08-21.
+# ═══════════════════════════════════════════════════════════════════
+
+# The exact serialization the frontend uses in lib/crypto.ts:
+#   encodeVaultParams: btoa(JSON.stringify({ ...ARGON2_PARAMS, salt }))
+# JSON.stringify is compact and preserves key order. This mirrors it so the
+# test asserts against the real client contract, not a guess.
+def _client_vault_blob(salt_b64: str) -> str:
+    params = {
+        'memory_cost': 65536,
+        'time_cost': 3,
+        'parallelism': 4,
+        'hash_len': 32,
+        'type': 'ID',
+        'salt': salt_b64,
+    }
+    compact = json.dumps(params, separators=(',', ':'))
+    return base64.b64encode(compact.encode()).decode('ascii')
+
+
+class TestFakeParamsAntiEnumeration:
+    def test_fake_auth_params_is_compact_json(self):
+        import server
+        decoded = base64.b64decode(server._fake_auth_params('ghost_user')).decode()
+        # A real client blob has neither of these; json.dumps' defaults add both.
+        assert ', ' not in decoded, "fake auth_params must not contain ', ' — it is an enumeration tell"
+        assert ': ' not in decoded, "fake auth_params must not contain ': ' — it is an enumeration tell"
+
+    def test_fake_recovery_params_is_compact_json(self):
+        import server
+        decoded = base64.b64decode(server._fake_recovery_params('ghost_user')).decode()
+        assert ', ' not in decoded
+        assert ': ' not in decoded
+
+    def test_fake_matches_client_serialization_byte_for_byte(self):
+        # Given the SAME salt, the server fake and the client encoder must
+        # produce identical bytes. This is the invariant that closes the
+        # oracle; it fails the instant either side changes separators, key
+        # order, or field set.
+        import server
+        salt_b64 = base64.b64encode(b'\x11' * 32).decode('ascii')
+        server_blob = server._encode_vault_params({
+            'memory_cost': 65536, 'time_cost': 3, 'parallelism': 4,
+            'hash_len': 32, 'type': 'ID', 'salt': salt_b64,
+        })
+        assert server_blob == _client_vault_blob(salt_b64)
+
+    def test_login_init_same_length_for_real_and_unknown_user(self, client, mock_db):
+        # The oracle metric was response length. A real user's stored blob and
+        # an unknown user's fake blob use salts of equal size (32 bytes → 44
+        # b64 chars each), so once the JSON shape matches, the two responses
+        # must be the same length. This is the end-to-end version of the fix.
+        real_salt = base64.b64encode(b'\x22' * 32).decode('ascii')
+        mock_db.queue({'auth_params': _client_vault_blob(real_salt)})
+        real = client.post('/api/login/init', json={'username': 'realuser'})
+
+        mock_db.queue(None)  # no row → _fake_auth_params
+        unknown = client.post('/api/login/init', json={'username': 'ghostuser'})
+
+        assert real.status_code == 200 and unknown.status_code == 200
+        rp = real.get_json()['auth_params']
+        up = unknown.get_json()['auth_params']
+        assert len(rp) == len(up), (
+            f"login_init leaks account existence via length: real={len(rp)} unknown={len(up)}"
+        )
