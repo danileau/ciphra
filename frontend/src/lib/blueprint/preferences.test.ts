@@ -10,11 +10,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { presets } from './presets';
-import {
-	applyDateFormatChoice,
-	applyPrimarySurfaceChoice,
-	applyWelcomeDismissed,
-} from './preferences';
+import { applyDateFormatChoice, applyPrimarySurfaceChoice, applyWelcomeDismissed, formatDateChoice, formatISODateChoice } from './preferences';
 import type { Blueprint } from './types';
 
 const fixtureBlueprint = () => structuredClone(presets[0]);
@@ -82,5 +78,41 @@ describe('applyWelcomeDismissed (2026-06-12 — durable welcome dismissal)', () 
 		next = applyWelcomeDismissed(next, 'migrate');
 		next = applyWelcomeDismissed(next, 'web');
 		expect(next.dismissedWelcome).toEqual(['migrate', 'web']);
+	});
+});
+
+describe('formatDateChoice — the canonical day-precision formatter', () => {
+	const d = new Date(2026, 7, 4, 12); // 4 August 2026
+
+	it('renders each choice', () => {
+		expect(formatDateChoice(d, 'dd.mm.yyyy')).toBe('04.08.2026');
+		expect(formatDateChoice(d, 'dd/mm/yyyy')).toBe('04/08/2026');
+		expect(formatDateChoice(d, 'iso')).toBe('2026-08-04');
+		expect(formatDateChoice(d, 'us')).toBe('08/04/2026');
+	});
+
+	it('falls back to the Swiss default when unset', () => {
+		// `dateFormat` is deleted from the blueprint when the user picks the
+		// default, so `undefined` is the common case, not an error case.
+		expect(formatDateChoice(d, undefined)).toBe('04.08.2026');
+	});
+
+	it('pads single digits so columns align in a printed table', () => {
+		expect(formatDateChoice(new Date(2026, 0, 1, 12), 'dd.mm.yyyy')).toBe('01.01.2026');
+	});
+
+	it('every choice carries the year', () => {
+		// The PDF drops locale month names in favour of this, so the year has
+		// to come from the format itself — a 2-year report spans two.
+		for (const c of ['dd.mm.yyyy', 'dd/mm/yyyy', 'iso', 'us'] as const) {
+			expect(formatDateChoice(d, c)).toContain('2026');
+		}
+	});
+
+	it('formatISODateChoice does not slip a day in a positive-offset zone', () => {
+		// Noon anchor: parsing `YYYY-MM-DD` as UTC midnight lands on the
+		// previous day in CET/CEST.
+		expect(formatISODateChoice('2026-08-04', 'iso')).toBe('2026-08-04');
+		expect(formatISODateChoice('2026-01-01', 'dd.mm.yyyy')).toBe('01.01.2026');
 	});
 });

@@ -32,6 +32,7 @@ import type { CiphraDocument } from '$lib/stores/documents';
 import { translateUnit } from '$lib/i18n';
 import { isExportable } from '$lib/utils/exportable';
 import { noteMarkerText } from '$lib/reports/noteMarkers';
+import { formatDateChoice, formatISODateChoice, type DateFormatChoice } from '$lib/blueprint/preferences';
 import {
 	reportWindow,
 	formatWindowRange,
@@ -519,6 +520,7 @@ function drawTopLineQuote(
 	note: { text: string; dateISO: string } | null,
 	name: string,
 	locale: string,
+	dateChoice: DateFormatChoice | undefined,
 	x: number,
 	y: number,
 	w: number,
@@ -540,11 +542,7 @@ function drawTopLineQuote(
 	const wrapped = doc.splitTextToSize(`"${note.text.slice(0, 200)}"`, textW) as string[];
 	const shown = wrapped.slice(0, 2);
 
-	const dateLabel = new Date(note.dateISO + 'T12:00:00').toLocaleDateString(locale, {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-	});
+	const dateLabel = formatISODateChoice(note.dateISO, dateChoice);
 	const bodyTop = y + tagH + tagToBody;
 	const attribY = bodyTop + shown.length * lineH + 3.0;
 	const blockH = attribY - y + 1;
@@ -1092,11 +1090,7 @@ function drawCycleStrip(
 	// at all" (the footnote distinguishes "no period ever recorded"
 	// from "last period was months ago — phase tints suppressed").
 	if (anchorDate) {
-		const dateLabel = new Date(anchorDate + 'T12:00:00').toLocaleDateString(locale, {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric',
-		});
+		const dateLabel = formatISODateChoice(anchorDate, blueprint.dateFormat);
 		const note = stale
 			? t('pdf.cycle_anchor_stale', { date: dateLabel })
 			: t('pdf.cycle_anchor_last', { date: dateLabel });
@@ -1507,11 +1501,7 @@ function drawGridSection(
 	doc.text(`${conditionLabel} · ${t('pdf.grid_title')}`, pageW - 14, 21, { align: 'right' });
 
 	// Meta row (account, export date)
-	const exportDate = new Date().toLocaleDateString(locale, {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-	});
+	const exportDate = formatDateChoice(new Date(), blueprint.dateFormat);
 	doc.setFontSize(TYPE.table);
 	doc.setTextColor(...BRAND.textMuted);
 	// Brand voice: capitalized name, no "Account:" admin label — matches
@@ -1802,11 +1792,7 @@ export function generateDoctorPdf(
 	// the wordmark already says ciphra, the monthName already says scope.
 	doc.text(conditionLabel, pageW - 14, 21, { align: 'right' });
 
-	const exportDate = new Date().toLocaleDateString(locale, {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-	});
+	const exportDate = formatDateChoice(new Date(), blueprint.dateFormat);
 	doc.setFontSize(TYPE.table);
 	doc.setTextColor(...BRAND.textMuted);
 	// Brand voice: no "Account:" admin label — the capitalized name
@@ -1839,6 +1825,7 @@ export function generateDoctorPdf(
 		latestNote,
 		username ? capitalizeName(username) : '',
 		locale,
+		blueprint.dateFormat,
 		14,
 		30,
 		pageW - 28,
@@ -3400,11 +3387,7 @@ export function generateDoctorPdf(
 			margin: { left: 14, right: 14 },
 			head: [[t('pdf.date'), t('pdf.event_notes_col')]],
 			body: noteEvents.map((e) => [
-				new Date(e.dateISO + 'T12:00:00').toLocaleDateString(locale, {
-					day: '2-digit',
-					month: 'short',
-					year: 'numeric',
-				}),
+				formatISODateChoice(e.dateISO, blueprint.dateFormat),
 				e.text,
 			]),
 			theme: 'plain',
@@ -4045,11 +4028,7 @@ export function exportCsv(
 		const dayStr = cur.toISOString().slice(0, 10);
 		const dayDoc = scopeDocs.find((d) => d.data.date === dayStr);
 		const dayEpDocs = scopeDocs.filter((d) => d.data?.date === dayStr && d !== dayDoc);
-		const dateFormatted = cur.toLocaleDateString(locale, {
-			year: 'numeric',
-			month: '2-digit',
-			day: '2-digit',
-		});
+		const dateFormatted = formatDateChoice(cur, blueprint.dateFormat);
 
 		const row: string[] = [dateFormatted];
 

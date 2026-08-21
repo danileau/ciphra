@@ -27,6 +27,7 @@
 -->
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
+	import { formatDateChoice } from '$lib/blueprint/preferences';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint, VitalField } from '$lib/blueprint/types';
@@ -139,18 +140,6 @@
 	$: activeTrend = aggregate(activeVitalId);
 	$: activeIsDiverging = !!activeVital && typeof activeVital.min === 'number' && activeVital.min < 0;
 
-	function formatDateChoice(d: Date, choice: Blueprint['dateFormat'] | undefined): string {
-		const dd = String(d.getDate()).padStart(2, '0');
-		const mm = String(d.getMonth() + 1).padStart(2, '0');
-		const yyyy = d.getFullYear();
-		switch (choice) {
-			case 'iso': return `${yyyy}-${mm}-${dd}`;
-			case 'us': return `${mm}/${dd}/${yyyy}`;
-			case 'dd/mm/yyyy': return `${dd}/${mm}/${yyyy}`;
-			case 'dd.mm.yyyy':
-			default: return `${dd}.${mm}.${yyyy}`;
-		}
-	}
 
 	$: chartConfig = (() => {
 		if (!activeTrend) return null;
