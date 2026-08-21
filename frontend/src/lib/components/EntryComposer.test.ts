@@ -48,7 +48,6 @@ function makeBp(overrides: Partial<Blueprint> = {}): Blueprint {
 		],
 		gridSymptomColumns: ['tired'],
 		gridEpisodeColumns: ['attack'],
-		streamFilters: [],
 		reportPreference: 'analytics',
 		...overrides,
 	};

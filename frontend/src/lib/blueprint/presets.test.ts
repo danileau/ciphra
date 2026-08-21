@@ -7,17 +7,74 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { presets, epilepsy, adhd, diabetes, burnout, migraine, custom } from './presets';
+import {
+	presets,
+	epilepsy,
+	adhd,
+	diabetes,
+	burnout,
+	migraine,
+	custom,
+	chronic_pain,
+	ms,
+	anxiety_depression,
+	ibs,
+	asthma,
+	endometriosis,
+	cancer_treatment,
+	dermatology,
+	autism,
+	cardiovascular,
+	hypertension,
+	long_covid,
+	menopause,
+	bipolar,
+	glaucoma,
+	parkinson,
+	ibd,
+	pcos,
+	hashimoto,
+	rheumatoid_arthritis,
+} from './presets';
 import type { Blueprint } from './types';
 
-// All exported blueprint objects for iteration
+// EVERY exported blueprint, not a hand-picked sample.
+//
+// This map used to list six of the twenty-six presets while the suite below
+// was titled "all presets have required fields". The twenty that arrived
+// after those six — ms, ibs, bipolar, pcos, hashimoto and the rest — were
+// never shape-checked at all. Found 2026-08-21 while removing `streamFilters`:
+// the removal only registered as six lost tests, which is what exposed the gap.
+//
+// Keep this exhaustive. A preset that is not in here is a preset nothing
+// validates.
 const allBlueprints: Record<string, Blueprint> = {
-    epilepsy,
-    adhd,
-    diabetes,
-    burnout,
-    migraine,
-    custom,
+	epilepsy,
+	adhd,
+	diabetes,
+	burnout,
+	migraine,
+	custom,
+	chronic_pain,
+	ms,
+	anxiety_depression,
+	ibs,
+	asthma,
+	endometriosis,
+	cancer_treatment,
+	dermatology,
+	autism,
+	cardiovascular,
+	hypertension,
+	long_covid,
+	menopause,
+	bipolar,
+	glaucoma,
+	parkinson,
+	ibd,
+	pcos,
+	hashimoto,
+	rheumatoid_arthritis,
 };
 
 // ---------------------------------------------------------------------------
@@ -67,10 +124,6 @@ describe('all presets have required fields', () => {
 
             it('has gridEpisodeColumns array', () => {
                 expect(Array.isArray(bp.gridEpisodeColumns)).toBe(true);
-            });
-
-            it('has streamFilters array', () => {
-                expect(Array.isArray(bp.streamFilters)).toBe(true);
             });
         });
     }
@@ -144,11 +197,16 @@ describe('gridEpisodeColumns reference valid episode type IDs', () => {
 // ---------------------------------------------------------------------------
 
 describe('preset registry', () => {
-    it('contains all exported blueprints', () => {
+    // Three blueprints are defined but deliberately not offered: product
+    // review pulled them, and presets.ts keeps the definitions for a possible
+    // re-enable. Naming them here means dropping a preset from the registry
+    // by accident fails this test instead of passing unnoticed.
+    const SHELVED = ['autism', 'cardiovascular', 'dermatology'];
+
+    it('offers every exported blueprint except the shelved ones', () => {
         const registryIds = new Set(presets.map((p) => p.id));
-        for (const name of Object.keys(allBlueprints)) {
-            expect(registryIds.has(name)).toBe(true);
-        }
+        const missing = Object.keys(allBlueprints).filter((n) => !registryIds.has(n));
+        expect(missing.sort()).toEqual([...SHELVED].sort());
     });
 
     it('every preset has id, labelKey, descriptionKey, icon, color, and blueprint', () => {

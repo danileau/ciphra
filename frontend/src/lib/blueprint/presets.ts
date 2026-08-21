@@ -73,12 +73,6 @@ export const epilepsy: Blueprint = {
 	],
 	gridSymptomColumns: ['tired', 'aggressive', 'restless', 'nausea', 'dizzy', 'headache', 'aura'],
 	gridEpisodeColumns: ['focal', 'generalized'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
 	markerEvent: {
@@ -155,12 +149,6 @@ export const adhd: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['distracted', 'hyperfocus', 'forgetful', 'restless', 'overwhelmed', 'tired'],
 	gridEpisodeColumns: ['meltdown', 'shutdown'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
 };
@@ -226,12 +214,6 @@ export const diabetes: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['shaking', 'sweating', 'dizzy', 'thirsty', 'tired'],
 	gridEpisodeColumns: ['hypoglycemia', 'hyperglycemia'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
 	markerEvent: {
@@ -305,12 +287,6 @@ export const burnout: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['exhausted', 'overwhelmed', 'brain_fog', 'tired', 'insomnia', 'isolated'],
 	gridEpisodeColumns: ['breakdown', 'panic_attack'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 };
@@ -385,12 +361,6 @@ export const migraine: Blueprint = {
 	],
 	gridSymptomColumns: ['headache', 'nausea', 'light_sensitive', 'visual_aura', 'tired'],
 	gridEpisodeColumns: ['migraine_with_aura', 'migraine_without_aura', 'tension_headache'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'journal',
 	markerEvent: {
@@ -415,12 +385,6 @@ export const custom: Blueprint = {
 	medications: [],
 	gridSymptomColumns: [],
 	gridEpisodeColumns: [],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'journal',
 };
@@ -497,12 +461,6 @@ export const chronic_pain: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['burning', 'aching', 'stiffness', 'tired', 'brain_fog', 'insomnia'],
 	gridEpisodeColumns: ['flare', 'breakthrough_pain'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 };
@@ -577,12 +535,6 @@ export const ms: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['ms_fatigue', 'spasticity', 'numbness', 'brain_fog', 'blurred_vision', 'gait_difficulty'],
 	gridEpisodeColumns: ['relapse', 'pseudo_relapse'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 	markerEvent: {
@@ -668,12 +620,6 @@ export const anxiety_depression: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['depressed_mood', 'anhedonia', 'excessive_worry', 'on_edge', 'insomnia', 'avoidance'],
 	gridEpisodeColumns: ['panic_attack', 'depressive_episode'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 };
@@ -740,12 +686,6 @@ export const ibs: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['abdominal_pain', 'bloating', 'diarrhea', 'constipation', 'urgency', 'tired'],
 	gridEpisodeColumns: ['flare', 'urgency_crisis'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 	markerEvent: {
@@ -819,12 +759,6 @@ export const asthma: Blueprint = {
 	],
 	gridSymptomColumns: ['wheezing', 'shortness_of_breath', 'chest_tightness', 'persistent_cough', 'nocturnal_waking', 'tired'],
 	gridEpisodeColumns: ['asthma_attack', 'copd_exacerbation'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
 	markerEvent: {
@@ -898,12 +832,6 @@ export const endometriosis: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['dysmenorrhea', 'chronic_pelvic_pain', 'bloating', 'tired', 'heavy_bleeding', 'painful_bowel'],
 	gridEpisodeColumns: ['flare', 'missed_work_school'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 };
@@ -985,12 +913,6 @@ export const cancer_treatment: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['nausea', 'appetite_loss', 'tired', 'exhausted', 'tingling_hands', 'mouth_sores'],
 	gridEpisodeColumns: ['febrile_neutropenia', 'er_visit', 'dose_reduction'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'journal',
 };
@@ -1057,12 +979,6 @@ export const dermatology: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['itching', 'redness', 'scaling', 'dry_skin', 'sleep_disrupted', 'joint_pain'],
 	gridEpisodeColumns: ['flare', 'skin_infection'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'journal',
 };
@@ -1145,12 +1061,6 @@ export const autism: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['sensory_overload', 'task_paralysis', 'masking_heavy', 'social_exhaustion', 'overwhelmed', 'autistic_fatigue'],
 	gridEpisodeColumns: ['meltdown', 'shutdown', 'sensory_crisis'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'journal',
 };
@@ -1224,12 +1134,6 @@ export const cardiovascular: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['dyspnea', 'palpitations', 'chest_pain', 'leg_swelling', 'tired', 'dizzy'],
 	gridEpisodeColumns: ['afib_episode', 'angina', 'hf_decompensation'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
 };
@@ -1287,12 +1191,6 @@ export const hypertension: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['headache', 'dizzy', 'chest_tightness', 'shortness_of_breath', 'tired'],
 	gridEpisodeColumns: ['hypertensive_crisis', 'orthostatic_drop'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
 };
@@ -1366,12 +1264,6 @@ export const long_covid: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['pem', 'brain_fog', 'muscle_pain', 'palpitations', 'tired'],
 	gridEpisodeColumns: ['crash', 'flare'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 	markerEvent: {
@@ -1451,12 +1343,6 @@ export const menopause: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['hot_flashes', 'night_sweats', 'brain_fog', 'slept_badly', 'irritable'],
 	gridEpisodeColumns: ['hot_flash_severe'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 };
@@ -1532,12 +1418,6 @@ export const bipolar: Blueprint = {
 	],
 	gridSymptomColumns: ['elevated_mood', 'depressed_mood', 'anhedonia', 'insomnia', 'racing_thoughts', 'irritable'],
 	gridEpisodeColumns: ['manic', 'depressive'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 	markerEvent: {
@@ -1598,12 +1478,6 @@ export const glaucoma: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['blurred_vision', 'halos_around_lights', 'eye_pain', 'headache'],
 	gridEpisodeColumns: ['iop_spike'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
 };
@@ -1674,12 +1548,6 @@ export const parkinson: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['resting_tremor', 'bradykinesia', 'dyskinesia', 'freezing_of_gait', 'constipation'],
 	gridEpisodeColumns: ['off_period', 'freezing'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
 };
@@ -1744,12 +1612,6 @@ export const ibd: Blueprint = {
 	],
 	gridSymptomColumns: ['diarrhea', 'bloody_stool', 'abdominal_pain', 'fever', 'tired'],
 	gridEpisodeColumns: ['flare'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 	markerEvent: {
@@ -1828,12 +1690,6 @@ export const pcos: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['irregular_periods', 'hirsutism', 'acne', 'weight_gain', 'tired', 'mood_swings'],
 	gridEpisodeColumns: ['fertility_concern', 'skin_flare'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 };
@@ -1891,12 +1747,6 @@ export const hashimoto: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['tired', 'cold_intolerance', 'weight_gain', 'hair_loss', 'brain_fog', 'constipation'],
 	gridEpisodeColumns: [],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'trend',
 };
@@ -1959,12 +1809,6 @@ export const rheumatoid_arthritis: Blueprint = {
 	medications: [],
 	gridSymptomColumns: ['joint_pain', 'morning_stiffness', 'joint_swelling', 'tired', 'finger_pain'],
 	gridEpisodeColumns: ['flare'],
-	streamFilters: [
-		{ key: 'all', label: 'stream_filter.all' },
-		{ key: 'entry', label: 'stream_filter.entry' },
-		{ key: 'event', label: 'stream_filter.event' },
-		{ key: 'diary', label: 'stream_filter.diary' },
-	],
 	reportPreference: 'both',
 	primaryBrowseSurface: 'calendar',
 	markerEvent: {

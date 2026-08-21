@@ -25,7 +25,6 @@ function bp(conditionId: string, overrides: Partial<Blueprint> = {}): Blueprint 
 		medications: [],
 		gridSymptomColumns: [],
 		gridEpisodeColumns: [],
-		streamFilters: [],
 		reportPreference: 'analytics',
 		...overrides,
 	};

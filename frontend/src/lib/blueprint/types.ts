@@ -142,12 +142,6 @@ export interface Blueprint {
 	/** Which episode columns appear in the monthly grid */
 	gridEpisodeColumns: string[];  // episode type IDs
 
-	/** Stream filter tabs */
-	streamFilters: {
-		key: string;
-		label: string;
-	}[];
-
 	/** Preferred report type */
 	reportPreference: 'analytics' | 'grid' | 'both';
 
