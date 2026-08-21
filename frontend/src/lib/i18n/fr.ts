@@ -1239,6 +1239,7 @@ export default {
 	'pdf.episodes_change': '{change} épisodes',
 	'pdf.days_change': '{change} jours enregistrés',
 	'pdf.grid_title': 'Protocole mensuel',
+	'pdf.grid_coverage_note': "Grilles mensuelles : {withData} mois sur {total} contiennent des saisies. Les mois sans saisie ne sont pas imprimés.",
 	'pdf.export_date': 'Exporté',
 	'pdf.quote_attribution_label': 'CITATION PATIENT·E',
 	'pdf.cycle_anchor_last': 'Dernière période enregistrée : {date}',
