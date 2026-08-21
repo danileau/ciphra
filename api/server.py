@@ -19,6 +19,7 @@ import jwt
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from flask import Flask, request, jsonify
+from werkzeug.exceptions import BadRequest
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -99,6 +100,41 @@ def _not_found(_e):
 @app.errorhandler(405)
 def _method_not_allowed(_e):
     return jsonify({'error': 'method_not_allowed'}), 405
+
+
+@app.errorhandler(500)
+def _internal_error(_e):
+    # The F5 contract above covered 400/404/405/413 but not 500 — so an
+    # unhandled exception still escaped as Flask's raw HTML page, leaking the
+    # framework and breaking res.json() for callers. A black-box scan hit this
+    # by POSTing a non-object JSON body (see _json_object): the crash fired
+    # before the route's try/except and fell through to here as HTML. Flask
+    # still logs the traceback server-side before this runs; we only fix the
+    # response shape.
+    return jsonify({'error': 'internal_error'}), 500
+
+
+def _json_object() -> dict:
+    """Parse the request body as a JSON OBJECT, or 400.
+
+    Every route previously wrote `data = request.get_json() or {}`. That
+    guards an empty/absent body, but a body that is valid JSON yet not an
+    object — a top-level array `[1,2,3]` or scalar `123` — is truthy, survives
+    the `or {}`, and then blows up on the first `data.get(...)` with
+    AttributeError (list/int has no `.get`). Because that happens above each
+    route's try/except, it surfaced as an unhandled 500 on pre-auth endpoints
+    (register, login, login/init) — a malformed-input contract bug reachable
+    by anyone.
+
+    `request.get_json()` (non-silent) keeps the existing behaviour for a
+    genuinely malformed body: it raises BadRequest → the 400 handler. The only
+    new rule is the isinstance check, which turns "valid JSON, wrong type" from
+    a 500 into the same JSON-shaped 400 as every other bad request.
+    """
+    data = request.get_json() or {}
+    if not isinstance(data, dict):
+        raise BadRequest('Request body must be a JSON object')
+    return data
 
 
 @app.after_request
@@ -492,7 +528,7 @@ def health():
 def register():
     """Accepts a pre-built vault bundle from the browser. The server never
     sees the password, master_key, or recovery_code — those stay on device."""
-    data = request.get_json() or {}
+    data = _json_object()
     username = (data.get('username') or '').strip().lower()
     auth_hash = data.get('auth_hash')
     auth_params = data.get('auth_params')
@@ -594,7 +630,7 @@ def _fake_auth_params(username: str) -> str:
 def login_init():
     """Returns the Argon2 params the client needs to derive auth_key.
     Always returns params (fake for unknown users) to prevent enumeration."""
-    data = request.get_json() or {}
+    data = _json_object()
     username = (data.get('username') or '').strip().lower()
     if not username or not USERNAME_RE.match(username):
         return jsonify({'error': 'Invalid username'}), 400
@@ -614,7 +650,7 @@ def login_init():
 @app.route('/api/login', methods=['POST'])
 @limiter.limit("10 per minute")
 def login():
-    data = request.get_json() or {}
+    data = _json_object()
     username = (data.get('username') or '').strip().lower()
     auth_key = data.get('auth_key')
     if not username or not USERNAME_RE.match(username) or not valid_b64(auth_key, 32, 32):
@@ -694,7 +730,7 @@ Backstop against authenticated DoS via mass-insert. Tune via env."""
 @app.route('/api/documents', methods=['POST'])
 @token_required
 def store_document():
-    data = request.get_json() or {}
+    data = _json_object()
     encrypted_data = data.get('encrypted_data')
     if not encrypted_data:
         return jsonify({'error': 'No encrypted data'}), 400
@@ -738,7 +774,7 @@ BATCH_MAX_DOCS = int(os.environ.get('BATCH_MAX_DOCS', 100))
 @limiter.limit("30 per minute")
 @token_required
 def store_documents_batch():
-    data = request.get_json() or {}
+    data = _json_object()
     docs = data.get('documents')
     if not isinstance(docs, list) or len(docs) == 0:
         return jsonify({'error': 'documents must be a non-empty array'}), 400
@@ -839,7 +875,7 @@ def get_documents():
 @app.route('/api/documents/<int:doc_id>', methods=['PUT'])
 @token_required
 def update_document(doc_id):
-    data = request.get_json() or {}
+    data = _json_object()
     encrypted_data = data.get('encrypted_data')
     if not encrypted_data:
         return jsonify({'error': 'No encrypted data'}), 400
@@ -917,7 +953,7 @@ def recover_init():
     blobs for unknown users or users without recovery. Prevents enumeration
     of who has an account and who has recovery enabled. Real attempts fail
     at the subsequent /api/recover step when the recovery_key hash mismatches."""
-    data = request.get_json() or {}
+    data = _json_object()
     username = (data.get('username') or '').strip().lower()
     if not username or not USERNAME_RE.match(username):
         return jsonify({'error': 'Invalid username'}), 400
@@ -953,7 +989,7 @@ def recover():
     """Client has decrypted master_key via recovery code and re-wrapped it with
     a new password. Server verifies SHA-256(recovery_key) against stored
     recovery_auth, then swaps auth/vault (recovery_vault stays untouched)."""
-    data = request.get_json() or {}
+    data = _json_object()
     username = (data.get('username') or '').strip().lower()
     recovery_key = data.get('recovery_key')
     auth_hash = data.get('auth_hash')
@@ -1036,7 +1072,7 @@ def change_password():
     """Client has re-wrapped its master_key under a new password. Server
     verifies current auth_key (to prove knowledge of current password), then
     swaps the stored credentials."""
-    data = request.get_json() or {}
+    data = _json_object()
     current_auth_key = data.get('current_auth_key')
     auth_hash = data.get('auth_hash')
     auth_params = data.get('auth_params')
@@ -1092,7 +1128,7 @@ def change_password():
 @limiter.limit("3 per minute")
 @token_required
 def delete_account():
-    data = request.get_json() or {}
+    data = _json_object()
     auth_key = data.get('auth_key')
     if not valid_b64(auth_key, 32, 32):
         return jsonify({'error': 'Invalid credentials'}), 400
@@ -1514,7 +1550,7 @@ def admin_audit():
 @limiter.limit("20 per hour")
 @token_required
 def family_grant_create():
-    data = request.get_json() or {}
+    data = _json_object()
     label = (data.get('label') or '').strip()
     grant_params = data.get('grant_params')
     grant_auth = data.get('grant_auth')
@@ -1675,7 +1711,7 @@ def family_grant_claim_init():
     for any username (offline brute-force material). Family-code entropy
     (~49 bits + Argon2id) already makes that attack infeasible; gating behind
     a token makes harvesting attributable + rate-limit-bound to an account."""
-    data = request.get_json() or {}
+    data = _json_object()
     source_username = (data.get('source_username') or '').strip().lower()
     if not source_username or not USERNAME_RE.match(source_username):
         return jsonify({'error': 'Invalid username'}), 400
@@ -1707,7 +1743,7 @@ def family_grant_claim_init():
 @limiter.limit("10 per minute")
 @token_required
 def family_grant_claim():
-    data = request.get_json() or {}
+    data = _json_object()
     grant_id = data.get('grant_id')
     proof = data.get('proof')  # base64 family_key — server SHA-256s and compares
     if not isinstance(grant_id, int) or not valid_b64(proof, 32, 32):
@@ -1803,7 +1839,7 @@ def family_documents_list():
 @app.route('/api/family/documents', methods=['POST'])
 @token_required
 def family_documents_create():
-    data = request.get_json() or {}
+    data = _json_object()
     try:
         source_user_id = int(data.get('source_user_id') or 0)
     except (TypeError, ValueError):
@@ -1843,7 +1879,7 @@ def family_documents_create():
 @app.route('/api/family/documents/<int:doc_id>', methods=['PUT'])
 @token_required
 def family_documents_update(doc_id):
-    data = request.get_json() or {}
+    data = _json_object()
     try:
         source_user_id = int(data.get('source_user_id') or 0)
     except (TypeError, ValueError):
