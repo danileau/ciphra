@@ -371,6 +371,12 @@ The workflows:
   `CF_ZONE_ID` secrets — the Cloudflare TLS mode. Red = a control drifted
   on prod; pushes ntfy when `NTFY_TOPIC_URL` is set. Complements Trivy
   (which sees deps/images, not the running edge).
+- `security-digest.yml` — weekly (Mon 06:00 UTC) consolidated posture
+  summary (`scripts/security-digest.sh`): aggregates the latest
+  `security-scan` + `security-monitor` conclusions and the open-Dependabot
+  count into one 🟢/🟡/🔴 ntfy message. A report + **heartbeat**, not a gate
+  — the green weekly push is how you tell "all clear" apart from "a monitor
+  died". The daily jobs stay the blocking red alerts.
 
 Deploys remain an operator action — CI never touches the VPS, and the
 VPS holds no GitHub credentials.
