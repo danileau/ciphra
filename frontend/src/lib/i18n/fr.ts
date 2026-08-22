@@ -1193,7 +1193,6 @@ export default {
 	'pdf.family_link_label': 'Ou ouvrez ce lien :',
 	'pdf.family_warning': 'Toute personne avec ce code peut lire et ajouter des entrées à vos données. Révocable à tout moment dans Paramètres → Partage famille.',
 	'pdf.day': 'Jour',
-	'pdf.notes': 'Notes',
 	'pdf.monthly_report': 'Rapport mensuel',
 	'pdf.footer': 'ciphra — encrypted by design · Généré dans le navigateur · Carnet personnel, pas un dispositif médical',
 	'pdf.page': 'Page {current}/{total}',

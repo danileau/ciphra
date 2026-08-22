@@ -1193,7 +1193,6 @@ export default {
 	'pdf.family_link_label': 'Or open this link:',
 	'pdf.family_warning': 'Anyone with this code can read and add entries to your data. Revoke any time from Settings → Family sharing.',
 	'pdf.day': 'Day',
-	'pdf.notes': 'Notes',
 	'pdf.monthly_report': 'Monthly Report',
 	'pdf.footer': 'ciphra — encrypted by design · Generated in browser · Personal notebook, not a medical device',
 	'pdf.page': 'Page {current}/{total}',
