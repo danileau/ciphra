@@ -84,8 +84,8 @@ Equivalent to (A) plus the ability to bypass any host-level controls.
   access, an attacker would need to inject a new authorized_keys
   entry via single-user-mode reboot — visible in console history and
   triggers a host_metrics.sh alert (unexpected reboot).
-- Account loss-of-control playbook: see `/docs/INCIDENT_RESPONSE.md`
-  (not yet written — see §7 open items).
+- Account loss-of-control playbook: see
+  [`/docs/INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md) → Playbook C.
 
 **Residual risk: MEDIUM** — protected by TOTP + SSH-key, but no
 hardware key on the provider account.
@@ -219,7 +219,7 @@ itself. The master key never leaves the BROWSER layer.
 | Login bruteforce | API /login | E (network) | ✅ Per-account lockout (5/15min) + Cloudflare rate-limit |
 | Recovery bruteforce | API /recover | E | ✅ Per-account lockout (3/15min) |
 | Account enumeration | API /login, /recover, /family/claim | E | ✅ Deterministic fake-params on unknown users |
-| XSS → key theft | Frontend | E + B+C compromise paths | ✅ CSP strict + no inline script + no eval |
+| XSS → key theft | Frontend | E + B+C compromise paths | ✅ CSP strict (SvelteKit hash mode) + no inline script; only `'wasm-unsafe-eval'` for Argon2 WASM, no `unsafe-eval` |
 | CSRF | API mutating endpoints | E | ✅ JWT-bearer auth (not cookie) → no automatic credential attachment |
 | SQL injection | API/Postgres | E | ✅ Parameterized queries (psycopg) |
 | TLS downgrade | Edge | C (CF takeover) | ⚠️ Manual lock; no automated alert |
@@ -285,11 +285,10 @@ tool.
 `pg_dump -Fc` of the full `ciphra` Postgres database → gzip → `age`
 encrypt with `BACKUP_PUBKEY` → rclone:
 1. **Primary (active):** Infomaniak Swiss Backup (Swiss jurisdiction)
-2. **Secondary (architected, NOT yet configured):** Cloudflare R2 free
-   tier — the code path exists (`RCLONE_SECONDARY` in `.env`) but is
-   intentionally unset for Wave 1 (10–15 migrants); single-vendor is
-   the accepted posture until broader rollout. Do not assume offsite
-   redundancy exists today. See OPERATIONS.md §Future work.
+2. **Secondary (active, 2026-08):** cross-vendor offsite via
+   `RCLONE_SECONDARY` in `.env` — the nightly dump lands on both legs, so
+   an Infomaniak outage or account loss no longer takes the only copy.
+   Offsite redundancy now exists.
 
 ### Backup secret-handling
 
@@ -327,12 +326,13 @@ upload time) for tamper-evidence.
 
 | Severity | Item | Owner |
 |---|---|---|
-| P1 | INCIDENT_RESPONSE.md not yet written | next docs sprint |
+| ✅ done | `docs/INCIDENT_RESPONSE.md` written (severity model, detect→learn loop, 5 playbooks, incident-record format) (2026-08-22) | — |
 | P1 | Cloudflare TLS-mode drift alerting (no auto-detect for Full→Flexible) | post-launch monitoring sprint |
 | P2 | Backup tamper-evidence (third hash store) | post-launch ops sprint |
-| P2 | HSTS preload submission (30 days of clean prod) | 2026-07 calendar |
+| P2 | HSTS preload **submission to hstspreload.org** — the header already carries `preload`; the list submission is the remaining manual step (overdue vs the original 2026-07 target) | operator, one-time |
 | ✅ done | Continuous container CVE scan — `.github/workflows/security-scan.yml` runs Trivy daily against the repo + the published ghcr images (fresh DB), fails on HIGH/CRITICAL, emails on red (2026-06-12) | — |
-| P2 | SBOM generation in CI | when build moves to CI from local |
+| ✅ done | Cross-vendor offsite backup secondary — `RCLONE_SECONDARY` active (2026-08) | — |
+| P2 | SBOM generation in CI — the precondition ("build in CI") is met since 2026-06-12; this is now actionable, just not yet done | release hardening |
 | P3 | Hardware-key 2FA for provider accounts (CF + Infomaniak) | when YubiKey arrives |
 | P3 | Reproducible-build pipeline for frontend bundle | structural, no timeline |
 
@@ -352,26 +352,28 @@ upload time) for tamper-evidence.
 
 ---
 
-## 8. Incident-response posture (skeleton)
+## 8. Incident-response posture
 
-A full `docs/INCIDENT_RESPONSE.md` is open (§7, P1). Pending that,
-the working skeleton:
+The full playbook is [`docs/INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md) —
+severity model (SEV1–4), the detect → triage → contain → assess → recover →
+communicate → learn loop, five playbooks (server compromise, tampered image,
+account loss-of-control, data-exposure, key/secret rotation), and the
+incident-record format. In brief:
 
 1. **Detection.** ntfy push from `metrics/security_threshold.sh`,
    `metrics/host_metrics.sh`, `metrics/error_digest.sh`, plus HC.io
-   missed-ping alerts.
+   missed-ping alerts — and a credible user report.
 2. **Containment.** First action on confirmed compromise:
-   `systemctl stop ciphra-app.service` — keeps data plane intact
+   `systemctl stop ciphra-app.service` — keeps the data plane intact
    while serving 503 to all traffic.
 3. **Assessment.** journalctl + audit_log table + nginx access logs.
-4. **User communication.** If patient-data exposure suspected: in-app
-   banner + transparency log entry. **No silent compromise.** This is
-   a published commitment, not an aspiration.
-5. **Recovery.** Either restore-from-backup to a new VPS, or in-place
-   patch + restart. Document the timeline.
-6. **Lessons.** Postmortem within 7 days. Public summary unless it
-   would aid attackers; in that case, public summary + private
-   detailed version for affected users on request.
+4. **User communication.** If patient-data exposure is possible: in-app
+   notice + transparency entry. **No silent compromise** — a published
+   commitment (`SECURITY.md`), not an aspiration.
+5. **Recovery.** Restore-from-backup to a new VPS, or in-place patch +
+   restart. Rotate exposed secrets. Document the timeline.
+6. **Lessons.** Postmortem within 7 days as `docs/incidents/INC-NNN.md`,
+   with the mechanical guard that prevents recurrence.
 
 ---
 

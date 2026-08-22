@@ -150,15 +150,16 @@ VPS), NOT the redis state (ephemeral by design).
 
 ```
 pg_dump → gzip → age (asymmetric encrypt → BACKUP_PUBKEY)
-       → rclone copy → infomaniak-primary:ciphra-backup/
+       → rclone copy → RCLONE_PRIMARY   (infomaniak-primary:ciphra-backup/)
+       → rclone copy → RCLONE_SECONDARY (cross-vendor offsite, active 2026-08)
        → curl HEALTHCHECK_URL (HC.io ping)
 ```
 
 No plaintext touches disk: `pg_dump` streams into a unix pipe.
 
-Retention: 90 days on primary (Sunday sweep). Single-vendor for
-Wave 1 (10-15 migrants); offsite secondary is wired in code but
-intentionally not configured — see [Future work](#future-work).
+Retention: 90 days on primary (Sunday sweep). A cross-vendor offsite
+secondary is **active** (2026-08) via `RCLONE_SECONDARY` — the nightly
+dump lands on both legs, so no single provider holds the only copy.
 
 ### Manual backup (debug / pre-migration sanity)
 
@@ -716,9 +717,9 @@ announcement / Verbände).
 
 - ✅ **CSP migration to SvelteKit hash mode (done 2026-06-20)** — `script-src`
   `'unsafe-inline'` dropped. See the "Track 3 P0 hardening" section above (3.1).
-- **Offsite backup secondary** — currently Infomaniak-only. Add a
-  cross-vendor secondary (Cloudflare R2 or Backblaze B2). Set
-  `RCLONE_SECONDARY` in `.env`; the rest of the code already supports it.
+- ✅ **Offsite backup secondary (done 2026-08)** — cross-vendor secondary
+  active via `RCLONE_SECONDARY` in `.env`; the nightly dump lands on both
+  legs. No longer Infomaniak-only.
 - ✅ **Logrotate (config shipped 2026-06-20)** — `scripts/ciphra.logrotate`;
   operator install steps in the "Track 3 P0 hardening" section above (3.3).
 - **Calendar-driven age key rotation reminder** — currently manual.
