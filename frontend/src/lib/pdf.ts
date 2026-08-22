@@ -4083,7 +4083,12 @@ export function exportCsv(
 		...triggerCols.map((c) => c.label),
 		...vitalCols.map((c) => c.label),
 		...rescueMedCols.map((c) => c.label),
-		t('pdf.notes'),
+		// No Notes column — same reason the doctor PDF dropped it (see
+		// drawGridSection): `entry.notes` is free-text on a separate stream that
+		// never had an export consent gate, so it left the device silently even
+		// when the user picked no notes in the export review. The written stream
+		// lives in /journal, on device. Structured data (symptoms/vitals/
+		// episodes/meds/triggers) still exports here.
 	];
 
 	const rows: string[][] = [];
@@ -4141,7 +4146,8 @@ export function exportCsv(
 			).length;
 			row.push(String(count));
 		}
-		row.push(String(dayDoc?.data?.notes || ''));
+		// (No notes cell — see the header comment; entry.notes is ungated
+		// free text and no longer leaves the device via CSV.)
 
 		rows.push(row);
 	}

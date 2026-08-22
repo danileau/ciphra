@@ -18,6 +18,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PAGE = readFileSync(join(__dirname, '+page.svelte'), 'utf8');
+const PDF = readFileSync(join(__dirname, '..', '..', 'lib', 'pdf.ts'), 'utf8');
 
 describe('the export asks before printing prose', () => {
 	it('runExport opens the review when the window holds note markers', () => {
@@ -64,6 +65,21 @@ describe('withholding is a filter, not a flag', () => {
 		const fn = PAGE.slice(PAGE.indexOf('async function exportCsvFile'));
 		const body = fn.slice(0, fn.indexOf('\n\t}'));
 		expect(body).not.toContain('withSelectedNoteMarkers');
+	});
+
+	it('the CSV never emits ungated entry notes', () => {
+		// entry.notes is free text on a separate stream with no consent gate.
+		// The doctor PDF dropped its Notes column for exactly this reason; the
+		// CSV was the last place it left the device silently. exportCsv must
+		// not push `.notes` into any row, and must not carry the pdf.notes
+		// header. (Regression guard for the 2026-08-22 DAST finding.)
+		const start = PDF.indexOf('export function exportCsv');
+		const after = PDF.indexOf('\nexport ', start + 1);
+		const body = PDF.slice(start, after === -1 ? PDF.length : after);
+		expect(body, 'exportCsv must not push entry .notes into a CSV row')
+			.not.toMatch(/row\.push\([^)]*\.notes/);
+		expect(body, 'exportCsv must not carry a pdf.notes column header')
+			.not.toContain("t('pdf.notes')");
 	});
 });
 

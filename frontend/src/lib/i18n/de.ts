@@ -1215,7 +1215,6 @@ export default {
 	'pdf.family_link_label': 'Oder diesen Link öffnen:',
 	'pdf.family_warning': 'Wer diesen Code hat, kann deine Daten lesen und ergänzen. Widerrufbar jederzeit in den Einstellungen → Familien-Zugriff.',
 	'pdf.day': 'Tag',
-	'pdf.notes': 'Notizen',
 	'pdf.monthly_report': 'Monatsbericht',
 	'pdf.footer': 'ciphra — encrypted by design · Im Browser generiert · Persönliches Notizbuch, kein Medizinprodukt',
 	'pdf.page': 'Seite {current}/{total}',
