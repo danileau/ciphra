@@ -34,7 +34,7 @@ function ciphraDocs(): Plugin {
 
 	const mdFiles = (): string[] => {
 		if (!docRoot) return [];
-		const roots = ['README.md', 'SECURITY.md']
+		const roots = ['README.md', 'SECURITY.md', 'CHANGELOG.md']
 			.map((f: string) => join(docRoot, f))
 			.filter((p: string) => existsSync(p));
 		const docsDir = join(docRoot, 'docs');

@@ -21,7 +21,7 @@ COPY . .
 # which resolves its doc root at /docs-src (vite.config.ts docRoot). The
 # deploy ritual stages repo docs into the build context first:
 #   rm -rf frontend/_docs-src && mkdir frontend/_docs-src
-#   cp -r docs README.md SECURITY.md frontend/_docs-src/
+#   cp -r docs README.md SECURITY.md CHANGELOG.md frontend/_docs-src/
 # This COPY lifts them to the absolute path the plugin checks. Launch
 # (v0.1.0) missed this — prod /docs rendered empty until 2026-06-12.
 COPY _docs-src/ /docs-src/

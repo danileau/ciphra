@@ -53,6 +53,8 @@ without it. Generate one with `python -c 'import secrets; print(secrets.token_he
 | [docs/OPERATIONS.md](docs/OPERATIONS.md)     | Production ops — CI/CD pipeline, pull-based deploy, cron jobs, monitoring, backup + restore, disaster recovery |
 | [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) | Operational threat model — adversary classes, attack-surface inventory, supply-chain + backup integrity, JS-swap problem |
 | [docs/FEATURES.md](docs/FEATURES.md)         | What ciphra does today, feature by feature |
+| [CHANGELOG.md](CHANGELOG.md)                 | What changed in each release — also readable in-app at `/docs → Changelog` |
+| [docs/VERSIONING.md](docs/VERSIONING.md)     | SemVer policy (what's a patch / feature / breaking change) + the release process |
 | [SECURITY.md](SECURITY.md)                   | Security model — the honest description of what is and isn't protected |
 | [frontend/src/lib/components/README.md](frontend/src/lib/components/README.md) | The design-system reference (components, tokens) |
 | [docs/archive/](docs/archive/)               | Retired specs and origin documents, kept for provenance |
