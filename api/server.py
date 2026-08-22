@@ -72,7 +72,13 @@ limiter = Limiter(
     app=app,
     storage_uri=_RATELIMIT_STORAGE,
     default_limits=["5000 per hour"],
-    enabled=os.environ.get('CIPHRA_DEV_MOCKS') != '1',
+    # Enablement is its OWN switch, never a side effect of another flag.
+    # RATELIMIT_ENABLED defaults ON; only an explicit '0' disables it (local
+    # dev that wants no throttling). This used to be tied to CIPHRA_DEV_MOCKS,
+    # so the mock-data toggle silently disabled the entire rate limiter — a
+    # footgun: one env var set in a prod-like deploy killed a whole control
+    # class with no independent signal. Decoupled 2026-08-22.
+    enabled=os.environ.get('RATELIMIT_ENABLED', '1') != '0',
 )
 
 
@@ -671,16 +677,24 @@ def login():
                 if not user:
                     return jsonify({'error': 'Invalid credentials'}), 401
 
+                # Compute the lock state, but DON'T reject on it yet. A correct
+                # password must succeed even during a lock — otherwise an
+                # attacker who only knows the username can lock the account (5
+                # wrong guesses → 15 min) and, with repeated locks, deny the
+                # real user indefinitely. The lock gates FAILED attempts, not a
+                # proven identity. (Guessing stays bounded: wrong attempts are
+                # still rejected, and nginx + flask-limiter cap the rate.)
+                locked_now = False
                 if user['locked_until']:
                     locked = user['locked_until']
                     if locked.tzinfo is None:
                         locked = locked.replace(tzinfo=timezone.utc)
-                    if datetime.now(timezone.utc) < locked:
-                        return jsonify({'error': 'Account temporarily locked'}), 429
+                    locked_now = datetime.now(timezone.utc) < locked
 
                 if verify_auth(auth_key, user['auth_hash']):
+                    # Success clears attempts AND the lock — identity is proven.
                     cur.execute(
-                        "UPDATE users SET login_attempts = 0, last_login = NOW() WHERE id = %s",
+                        "UPDATE users SET login_attempts = 0, locked_until = NULL, last_login = NOW() WHERE id = %s",
                         (user['id'],),
                     )
                     audit(conn, user['id'], 'LOGIN_SUCCESS')
@@ -702,6 +716,11 @@ def login():
                         },
                     }), 200
                 else:
+                    # Wrong password. If already locked, reject without letting
+                    # the attacker make progress (no counter change, no reveal).
+                    if locked_now:
+                        audit(conn, user['id'], 'LOGIN_FAILED')
+                        return jsonify({'error': 'Account temporarily locked'}), 429
                     attempts = user['login_attempts'] + 1
                     if attempts >= 5:
                         locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
@@ -1021,15 +1040,22 @@ def recover():
                 if not user or not user['recovery_auth']:
                     return jsonify({'error': 'Invalid recovery code'}), 401
 
-                # Same lockout gate as login — 3 failed recoveries → 15 min lock
+                # Same lockout gate as login — 3 failed recoveries → 15 min
+                # lock — and the same DoS fix: compute the lock but let a
+                # correct recovery code through, so an attacker who knows a
+                # username can't lock the real user out of recovery. The lock
+                # gates FAILED attempts only.
+                locked_now = False
                 if user['locked_until']:
                     locked = user['locked_until']
                     if locked.tzinfo is None:
                         locked = locked.replace(tzinfo=timezone.utc)
-                    if datetime.now(timezone.utc) < locked:
-                        return jsonify({'error': 'Account temporarily locked'}), 429
+                    locked_now = datetime.now(timezone.utc) < locked
 
                 if not verify_auth(recovery_key, user['recovery_auth']):
+                    if locked_now:
+                        audit(conn, user['id'], 'RECOVERY_FAILED')
+                        return jsonify({'error': 'Account temporarily locked'}), 429
                     attempts = (user['recovery_attempts'] or 0) + 1
                     if attempts >= 3:
                         locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
