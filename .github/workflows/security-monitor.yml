@@ -1,0 +1,35 @@
+# Deterministic security drift monitor (Spur A).
+#
+# Complements the daily Trivy scan (CVEs in deps/images) with the checks Trivy
+# can't do: the LIVE prod edge posture. Asserts a small set of invariants that
+# must always hold on https://ciphra.ch — CSP shape (no unsafe-inline/eval),
+# HSTS+preload, the other security headers, no framework leak, and (when the CF
+# secrets are set) that the Cloudflare TLS mode is Full (strict).
+#
+# A red run = a security control drifted on prod. It is NOT exploratory
+# red-teaming — that stays human-triggered (the DAST workflow). See
+# docs/INCIDENT_RESPONSE.md and scripts/security-monitor.sh.
+name: Security monitor
+
+on:
+  schedule:
+    - cron: '40 4 * * *'   # daily 04:40 UTC — just after the Trivy scan
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  edge-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the live prod edge for security drift
+        env:
+          # All optional. Header/CSP/HSTS checks need none. TLS-mode needs the
+          # CF pair; ntfy needs the topic. Absent secrets → those legs skip or
+          # the job still fails loudly (GitHub emails on a failed scheduled run).
+          NTFY_TOPIC_URL: ${{ secrets.NTFY_TOPIC_URL }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+        run: scripts/security-monitor.sh https://ciphra.ch

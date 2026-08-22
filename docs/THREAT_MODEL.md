@@ -327,7 +327,7 @@ upload time) for tamper-evidence.
 | Severity | Item | Owner |
 |---|---|---|
 | ✅ done | `docs/INCIDENT_RESPONSE.md` written (severity model, detect→learn loop, 5 playbooks, incident-record format) (2026-08-22) | — |
-| P1 | Cloudflare TLS-mode drift alerting (no auto-detect for Full→Flexible) | post-launch monitoring sprint |
+| ⚙️ mechanism shipped | Cloudflare TLS-mode drift alerting — `security-monitor.yml` checks it daily via the CF API; **activate by setting `CF_API_TOKEN` + `CF_ZONE_ID` as GH secrets** (until then that one leg skips-with-notice; the edge-header checks already run) | operator: add secrets |
 | P2 | Backup tamper-evidence (third hash store) | post-launch ops sprint |
 | P2 | HSTS preload **submission to hstspreload.org** — the header already carries `preload`; the list submission is the remaining manual step (overdue vs the original 2026-07 target) | operator, one-time |
 | ✅ done | Continuous container CVE scan — `.github/workflows/security-scan.yml` runs Trivy daily against the repo + the published ghcr images (fresh DB), fails on HIGH/CRITICAL, emails on red (2026-06-12) | — |
