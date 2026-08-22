@@ -4,7 +4,7 @@ ciphra guardrail hook — mechanical enforcement of the hard rules that used to
 live only in a human's head (or an assistant's memory). Wired as a PreToolUse
 hook for Read / Edit / Write / Bash in .claude/settings.json.
 
-Two concerns, one script:
+Three concerns, one script:
 
   1. SECRET FILES — never read a whole age/ssh/gpg key or a live .env into the
      transcript. We leaked ciphra's age private key into context once, which
@@ -16,6 +16,15 @@ Two concerns, one script:
      here are pull-based (the operator pushes a `deploy-<sha>` tag via the
      wizard; the VPS timer pulls), so nothing in this repo legitimately needs
      SSH from the assistant.
+
+  3. FORCED CHANGELOG — a `feat:` or `fix:` commit must update CHANGELOG.md in
+     the same commit (the [Unreleased] section), because those are exactly the
+     changes that earn a version bump (feat→MINOR, fix→PATCH — docs/VERSIONING.md).
+     chore/docs/test/refactor/ci/style/perf are exempt. This is the per-commit
+     companion to CI's `version-guard` (which enforces the release-level rule
+     that VERSION has a changelog section). Escape hatch: put `[skip changelog]`
+     in the message for a genuine exception. Binds the assistant; CI binds
+     everyone else.
 
 Contract: read the tool call as JSON on stdin. Exit 0 = allow. Exit 2 = block
 (the message on stderr is shown to the model so it self-corrects). Any parse
@@ -80,6 +89,69 @@ PROD_RULES = [
      "SSH/SCP to the VPS is blocked — the assistant never touches prod state. "
      "Deploys are pull-based (operator pushes a deploy tag; the VPS pulls)."),
 ]
+
+
+# ── Forced changelog (concern 3) ─────────────────────────────────────────────
+# A `git commit` whose message is a feat/fix (with optional scope and optional
+# `!`) must include CHANGELOG.md in the same commit. Those are the version-bump-
+# worthy types (docs/VERSIONING.md); chore/docs/test/refactor/ci/style/perf use
+# other type words and are exempt.
+IS_GIT_COMMIT = re.compile(r"\bgit\s+commit\b")
+FEATFIX_MSG = re.compile(r"^(feat|fix)(\([^)]*\))?!?:", re.IGNORECASE)
+SKIP_CHANGELOG = re.compile(r"\[skip changelog\]|\bno-changelog\b", re.IGNORECASE)
+
+
+def commit_message(cmd: str) -> str | None:
+    """Best-effort extraction of a commit message from a `git commit` command,
+    read from the RAW command (quotes/heredocs intact — we need the content).
+
+    Handles the two forms the assistant uses: `-m "…"`/`-m '…'` and a heredoc
+    piped to `-F -`/`--file=-`. Returns the first line (the subject), or None
+    when no inline message is present (e.g. `-F somefile`, or editor mode)."""
+    # -m "msg"  /  -m 'msg'  /  --message="msg"
+    m = re.search(r"(?:-m|--message)[=\s]+(['\"])(.*?)\1", cmd, re.DOTALL)
+    if m:
+        return m.group(2).strip().splitlines()[0] if m.group(2).strip() else None
+    # heredoc body (git commit -F - <<'EOF' … EOF)
+    h = HEREDOC.search(cmd)
+    if h and re.search(r"-F\s*-|--file[=\s]+-", cmd):
+        body = h.group(2).strip()
+        return body.splitlines()[0] if body else None
+    return None
+
+
+def check_changelog(cmd: str, staged: "list[str]") -> "str | None":
+    """Return a block reason if this is a feat/fix commit that omits
+    CHANGELOG.md, else None. Pure (takes the staged file list) so the self-test
+    can exercise it without a git repo."""
+    if not IS_GIT_COMMIT.search(cmd):
+        return None
+    msg = commit_message(cmd)
+    if not msg or not FEATFIX_MSG.match(msg):
+        return None
+    if SKIP_CHANGELOG.search(cmd):
+        return None
+    if any(f == "CHANGELOG.md" or f.endswith("/CHANGELOG.md") for f in staged):
+        return None
+    return (
+        f"This is a '{msg.split(':', 1)[0]}' commit but CHANGELOG.md is not in it. "
+        "feat/fix changes earn a version bump (docs/VERSIONING.md), so add a line "
+        "under CHANGELOG.md's [Unreleased] section and stage it in the same commit. "
+        "Genuine exception: put [skip changelog] in the message."
+    )
+
+
+def staged_files() -> "list[str]":
+    """Names staged for commit, or [] if git can't be queried (fail open)."""
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            capture_output=True, text=True, timeout=5,
+        )
+        return [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
+    except Exception:
+        return []
 
 
 # Heredoc bodies are DATA, not code. A commit message, a doc block or a test
@@ -207,6 +279,32 @@ CASES = [
 ]
 
 
+# Changelog cases: (expect_block, command, staged_files). Pure — no git.
+CHANGELOG_CASES = [
+    # feat/fix WITHOUT CHANGELOG.md staged → block
+    (True,  "git commit -m 'feat(reports): period picker'", ["frontend/src/routes/reports/+page.svelte"]),
+    (True,  "git commit -m 'fix(api): batch import'", ["api/server.py"]),
+    (True,  "git commit -m 'feat!: rotate the key hierarchy'", ["frontend/src/lib/crypto.ts"]),
+    (True,  "git commit -m 'fix(nginx): buffer'", ["nginx/proxy_params.conf", "docs/OPERATIONS.md"]),
+    # feat/fix WITH CHANGELOG.md staged → allow
+    (False, "git commit -m 'feat(reports): period picker'", ["frontend/src/routes/reports/+page.svelte", "CHANGELOG.md"]),
+    (False, "git commit -m 'fix(api): batch import'", ["api/server.py", "CHANGELOG.md"]),
+    # non-bump types → exempt regardless of CHANGELOG
+    (False, "git commit -m 'chore(deps): bump vite'", ["frontend/package.json"]),
+    (False, "git commit -m 'docs: refresh operations'", ["docs/OPERATIONS.md"]),
+    (False, "git commit -m 'test(api): cover edge case'", ["api/tests/test_api.py"]),
+    (False, "git commit -m 'refactor(journal): extract narrative'", ["frontend/src/lib/journal/narrative.ts"]),
+    # escape hatch
+    (False, "git commit -m 'fix(api): emergency patch [skip changelog]'", ["api/server.py"]),
+    # heredoc-form feat message, no CHANGELOG → block
+    (True,  "git commit -F - <<'MSG'\nfeat(journal): v2 feed\n\nbody\nMSG", ["frontend/src/routes/journal/+page.svelte"]),
+    # heredoc-form feat message WITH CHANGELOG → allow
+    (False, "git commit -F - <<'MSG'\nfeat(journal): v2 feed\nMSG", ["frontend/src/routes/journal/+page.svelte", "CHANGELOG.md"]),
+    # not a commit at all → n/a
+    (False, "git add -A && echo feat: nope", ["api/server.py"]),
+]
+
+
 def selftest() -> int:
     fails = 0
     for expect_block, kind, payload in CASES:
@@ -217,7 +315,14 @@ def selftest() -> int:
             fails += 1
             want = "BLOCK" if expect_block else "ALLOW"
             print(f"FAIL want={want} got={'BLOCK' if got else 'ALLOW'}  {payload}")
-    total = len(CASES)
+    for expect_block, cmd, staged in CHANGELOG_CASES:
+        got = check_changelog(cmd, staged) is not None
+        ok = got == expect_block
+        if not ok:
+            fails += 1
+            want = "BLOCK" if expect_block else "ALLOW"
+            print(f"FAIL(changelog) want={want} got={'BLOCK' if got else 'ALLOW'}  {cmd!r}")
+    total = len(CASES) + len(CHANGELOG_CASES)
     print(f"{total - fails}/{total} guardrail cases pass")
     return 1 if fails else 0
 
@@ -240,7 +345,13 @@ def main() -> None:
             block(reason)
 
     if tool == "Bash":
-        reason = check_bash(str(ti.get("command", "")))
+        cmd = str(ti.get("command", ""))
+        reason = check_bash(cmd)
+        if reason:
+            block(reason)
+        # Changelog rule needs live git state, so it runs here (not in
+        # check_bash) with the actually-staged files.
+        reason = check_changelog(cmd, staged_files())
         if reason:
             block(reason)
 

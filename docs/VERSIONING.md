@@ -98,6 +98,12 @@ Users read what shipped at **`/docs` → Changelog** (in-app) and in
   `CHANGELOG.md` has no section for the current `VERSION`.
 - **`Release images`**: reads `VERSION`, **fails the build** if it isn't valid
   SemVer, and only then tags/pushes the images. No valid version → no images.
+- **`.claude/hooks/guardrails.py`** (pre-commit, assistant-side): blocks a
+  `feat:`/`fix:` commit that doesn't stage `CHANGELOG.md` in the same commit —
+  the per-commit companion to `version-guard`. chore/docs/test/refactor/ci are
+  exempt; `[skip changelog]` in the message overrides. CI binds everyone; the
+  hook binds the assistant so the entry is written *as the change is made*.
 
-So an image without a standardized `X.Y.Z` tag cannot be produced, and a
-version bump without a changelog entry cannot be merged.
+So an image without a standardized `X.Y.Z` tag cannot be produced, a version
+bump without a changelog entry cannot be merged, and a feature/fix commit
+without a changelog line is caught at commit time.
