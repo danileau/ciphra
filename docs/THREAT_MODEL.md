@@ -84,8 +84,8 @@ Equivalent to (A) plus the ability to bypass any host-level controls.
   access, an attacker would need to inject a new authorized_keys
   entry via single-user-mode reboot — visible in console history and
   triggers a host_metrics.sh alert (unexpected reboot).
-- Account loss-of-control playbook: see `/docs/INCIDENT_RESPONSE.md`
-  (not yet written — see §7 open items).
+- Account loss-of-control playbook: see
+  [`/docs/INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md) → Playbook C.
 
 **Residual risk: MEDIUM** — protected by TOTP + SSH-key, but no
 hardware key on the provider account.
@@ -326,7 +326,7 @@ upload time) for tamper-evidence.
 
 | Severity | Item | Owner |
 |---|---|---|
-| P1 | INCIDENT_RESPONSE.md not yet written | next docs sprint |
+| ✅ done | `docs/INCIDENT_RESPONSE.md` written (severity model, detect→learn loop, 5 playbooks, incident-record format) (2026-08-22) | — |
 | P1 | Cloudflare TLS-mode drift alerting (no auto-detect for Full→Flexible) | post-launch monitoring sprint |
 | P2 | Backup tamper-evidence (third hash store) | post-launch ops sprint |
 | P2 | HSTS preload **submission to hstspreload.org** — the header already carries `preload`; the list submission is the remaining manual step (overdue vs the original 2026-07 target) | operator, one-time |
@@ -352,26 +352,28 @@ upload time) for tamper-evidence.
 
 ---
 
-## 8. Incident-response posture (skeleton)
+## 8. Incident-response posture
 
-A full `docs/INCIDENT_RESPONSE.md` is open (§7, P1). Pending that,
-the working skeleton:
+The full playbook is [`docs/INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md) —
+severity model (SEV1–4), the detect → triage → contain → assess → recover →
+communicate → learn loop, five playbooks (server compromise, tampered image,
+account loss-of-control, data-exposure, key/secret rotation), and the
+incident-record format. In brief:
 
 1. **Detection.** ntfy push from `metrics/security_threshold.sh`,
    `metrics/host_metrics.sh`, `metrics/error_digest.sh`, plus HC.io
-   missed-ping alerts.
+   missed-ping alerts — and a credible user report.
 2. **Containment.** First action on confirmed compromise:
-   `systemctl stop ciphra-app.service` — keeps data plane intact
+   `systemctl stop ciphra-app.service` — keeps the data plane intact
    while serving 503 to all traffic.
 3. **Assessment.** journalctl + audit_log table + nginx access logs.
-4. **User communication.** If patient-data exposure suspected: in-app
-   banner + transparency log entry. **No silent compromise.** This is
-   a published commitment, not an aspiration.
-5. **Recovery.** Either restore-from-backup to a new VPS, or in-place
-   patch + restart. Document the timeline.
-6. **Lessons.** Postmortem within 7 days. Public summary unless it
-   would aid attackers; in that case, public summary + private
-   detailed version for affected users on request.
+4. **User communication.** If patient-data exposure is possible: in-app
+   notice + transparency entry. **No silent compromise** — a published
+   commitment (`SECURITY.md`), not an aspiration.
+5. **Recovery.** Restore-from-backup to a new VPS, or in-place patch +
+   restart. Rotate exposed secrets. Document the timeline.
+6. **Lessons.** Postmortem within 7 days as `docs/incidents/INC-NNN.md`,
+   with the mechanical guard that prevents recurrence.
 
 ---
 
