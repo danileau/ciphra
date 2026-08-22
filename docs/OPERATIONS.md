@@ -357,7 +357,7 @@ disagrees with `package.json`, or lacks a `CHANGELOG.md` entry; and the
 tag. Users read what shipped at **`/docs → Changelog`** and in
 `CHANGELOG.md`.
 
-The three workflows:
+The workflows:
 - `ci.yml` — PR + main gates: `version-guard` (SemVer + changelog),
   frontend (svelte-check → build → vitest, build-first so
   `built-css-guard` sees the artifact), api (pytest in the dev image),
@@ -365,6 +365,12 @@ The three workflows:
 - `release-images.yml` — on merge to main: validate `VERSION` → buildx +
   sign + push (tags `X.Y.Z` + `<sha>` + `latest`).
 - `security-scan.yml` — daily Trivy of repo + published images.
+- `security-monitor.yml` — daily deterministic drift check of the LIVE
+  prod edge (`scripts/security-monitor.sh`): CSP shape, HSTS+preload, the
+  security headers, no framework leak, and — with `CF_API_TOKEN` +
+  `CF_ZONE_ID` secrets — the Cloudflare TLS mode. Red = a control drifted
+  on prod; pushes ntfy when `NTFY_TOPIC_URL` is set. Complements Trivy
+  (which sees deps/images, not the running edge).
 
 Deploys remain an operator action — CI never touches the VPS, and the
 VPS holds no GitHub credentials.
