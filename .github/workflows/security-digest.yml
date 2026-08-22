@@ -1,0 +1,32 @@
+# Weekly consolidated security posture digest (Spur A, anti-alert-fatigue).
+#
+# The daily jobs (security-scan = Trivy CVEs, security-monitor = edge drift)
+# alert on RED on their own. This aggregates their latest status plus open
+# Dependabot PRs into ONE weekly message, and sends a green HEARTBEAT when all
+# is clear — so silence can't mean both "fine" and "the monitor died".
+#
+# It does not re-scan; it reads the other workflows' latest conclusions via the
+# API. See scripts/security-digest.sh.
+name: Security digest
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'    # Mondays 06:00 UTC — after the weekend's daily runs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read      # read other workflows' run conclusions
+  pull-requests: read # count open Dependabot PRs
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compose the weekly security digest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NTFY_TOPIC_URL: ${{ secrets.NTFY_TOPIC_URL }}
+        run: scripts/security-digest.sh
