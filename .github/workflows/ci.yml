@@ -33,6 +33,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Mechanical enforcement of the versioning rules (docs/VERSIONING.md):
+  # VERSION is valid SemVer, frontend/package.json agrees, and CHANGELOG.md has
+  # a section for it. A version bump without a changelog entry cannot merge.
+  version-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: scripts/version-guard.sh
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

@@ -37,6 +37,13 @@ updates:
       # Node version in Dockerfile.prod and ci.yml.
       - dependency-name: "@types/node"
         update-types: [version-update:semver-major]
+      # TypeScript 7 is the native (Go) compiler rewrite, and the toolchain is
+      # not ready: svelte-check 4.7.6 peers `typescript: ^5 || ^6`, so a bump to
+      # 7 makes `npm ci` ERESOLVE and fails the frontend job (PR #150). Hold the
+      # major until @sveltejs/kit + svelte-check declare TS 7 support; 6.x
+      # minor/patch still flow through.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: pip
     directory: /api

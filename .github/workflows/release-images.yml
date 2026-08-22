@@ -44,7 +44,24 @@ permissions:
   id-token: write # cosign keyless signing (GitHub OIDC)
 
 jobs:
+  # Standardize + FORCE the image version tag. Reads the VERSION file, runs the
+  # same guard as CI (valid SemVer + package.json + CHANGELOG), and exports the
+  # version for the image jobs. An invalid/missing VERSION fails here, so no
+  # images are published without a standardized X.Y.Z tag. See docs/VERSIONING.md.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Guard + resolve version
+        id: v
+        run: |
+          scripts/version-guard.sh
+          echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
+
   frontend-image:
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -57,7 +74,7 @@ jobs:
       - name: Stage docs for the ciphraDocs vite plugin
         run: |
           mkdir -p frontend/_docs-src
-          cp -r docs README.md SECURITY.md frontend/_docs-src/
+          cp -r docs README.md SECURITY.md CHANGELOG.md frontend/_docs-src/
       - name: Resolve tags
         id: meta
         uses: docker/metadata-action@v6
@@ -65,6 +82,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/ciphra-frontend
           tags: |
             type=sha,prefix=
+            type=raw,value=${{ needs.version.outputs.version }}
             type=raw,value=latest
       - uses: docker/build-push-action@v7
         id: build
@@ -88,6 +106,7 @@ jobs:
         run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/ciphra-frontend@${{ steps.build.outputs.digest }}
 
   api-image:
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -104,6 +123,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/ciphra-api
           tags: |
             type=sha,prefix=
+            type=raw,value=${{ needs.version.outputs.version }}
             type=raw,value=latest
       - uses: docker/build-push-action@v7
         id: build
@@ -124,6 +144,7 @@ jobs:
         run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/ciphra-api@${{ steps.build.outputs.digest }}
 
   nginx-image:
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -140,6 +161,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/ciphra-nginx
           tags: |
             type=sha,prefix=
+            type=raw,value=${{ needs.version.outputs.version }}
             type=raw,value=latest
       - uses: docker/build-push-action@v7
         id: build

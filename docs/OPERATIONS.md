@@ -339,18 +339,30 @@ This is why we do paper-stash to 2 locations and quarterly drills.
 
 Since 2026-06-12 CI builds and publishes **all three** images on every
 merge to `main`: `ghcr.io/danileau/ciphra-{frontend,api,nginx}` tagged
-with the 7-char commit SHA + `latest`
-(`.github/workflows/release-images.yml`). Images are **cosign-signed**
-(keyless via GitHub OIDC, logged to Rekor); the docs staging for
-`/docs` is encoded in the workflow. Build sources are all in-repo
-(`frontend/Dockerfile.prod`, `nginx/`); the old `golive/` copies are
-fail-loud stubs. Config changes flow through PR + CI, not rsync.
+with the release **`X.Y.Z`** (from the root `VERSION` file) + the 7-char
+commit SHA + `latest` (`.github/workflows/release-images.yml`). The
+`X.Y.Z` tag is the human-readable release name; the `<sha>` tag is what
+the CD trigger below selects (`CIPHRA_TAG=<sha>`). Images are
+**cosign-signed** (keyless via GitHub OIDC, logged to Rekor); the docs
+staging for `/docs` is encoded in the workflow. Build sources are all
+in-repo (`frontend/Dockerfile.prod`, `nginx/`); the old `golive/` copies
+are fail-loud stubs. Config changes flow through PR + CI, not rsync.
+
+**Versioning is enforced, not conventional** (`docs/VERSIONING.md`): the
+`version-guard` CI job blocks a merge whose `VERSION` isn't valid SemVer,
+disagrees with `package.json`, or lacks a `CHANGELOG.md` entry; and the
+`version` job in `release-images.yml` fails the build on an invalid
+`VERSION`, so no image is ever published without a standardized `X.Y.Z`
+tag. Users read what shipped at **`/docs → Changelog`** and in
+`CHANGELOG.md`.
 
 The three workflows:
-- `ci.yml` — PR + main gates: frontend (svelte-check → build → vitest,
-  build-first so `built-css-guard` sees the artifact), api (pytest in
-  the dev image), Trivy fs scan.
-- `release-images.yml` — on merge to main: buildx + sign + push.
+- `ci.yml` — PR + main gates: `version-guard` (SemVer + changelog),
+  frontend (svelte-check → build → vitest, build-first so
+  `built-css-guard` sees the artifact), api (pytest in the dev image),
+  Trivy fs scan.
+- `release-images.yml` — on merge to main: validate `VERSION` → buildx +
+  sign + push (tags `X.Y.Z` + `<sha>` + `latest`).
 - `security-scan.yml` — daily Trivy of repo + published images.
 
 Deploys remain an operator action — CI never touches the VPS, and the
