@@ -32,7 +32,10 @@ cosign-signed and deployed via pull-based CD — see
   `api/entrypoint.sh` (which calls `init_db()` once before exec-ing gunicorn,
   so workers don't race on `CREATE TABLE IF NOT EXISTS`).
 - **postgres** — PostgreSQL 15.
-- **redis** — rate-limit counter store for flask-limiter. In-memory only
+- **redis** — rate-limit counter store for flask-limiter. **Prod only** — it
+  is in the production data-plane compose, NOT in the local-dev
+  `docker-compose.yml` (which runs postgres/api/frontend/nginx); locally
+  `REDIS_URL` defaults to `memory://` (server.py). In-memory only
   (`--save '' --appendonly no`, 64mb LRU cap, no host port). Lives in the
   data plane next to postgres so counters survive `systemctl restart
   ciphra-app`; without persistence across app restarts, an attacker could
@@ -90,7 +93,9 @@ JSON document defining what that user tracks: symptom groups, episode types,
 triggers, vitals, medications, and which columns appear in the monthly grid.
 The blueprint is just another encrypted document; the server never sees it.
 
-- **Presets** (`frontend/src/lib/blueprint/presets.ts`) — 25 condition presets
+- **Presets** (`frontend/src/lib/blueprint/presets.ts`) — 25 condition
+  blueprints defined (22 currently offered in the setup picker; autism,
+  cardiovascular and dermatology are shelved, kept for a possible re-enable)
   (epilepsy, migraine, diabetes, bipolar, hypertension, PCOS, Hashimoto, …)
   plus a `custom` from-scratch option. Setup copies one; the user can then
   customize it.

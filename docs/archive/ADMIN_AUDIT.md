@@ -1,5 +1,13 @@
 # /admin surface audit — pi24-5b
 
+> **ARCHIVED 2026-08-22.** Point-in-time dry-run (2026-05-12), never updated
+> since. The surface has moved past it — `admin/+page.svelte` now renders a
+> Sparkline-first metrics block (Slice 2) the doc predates, and the is_admin
+> seed mechanism it cites has since been inverted. Kept as a record of the
+> dry-run, not a description of the current admin surface. Was
+> `frontend/src/routes/admin/AUDIT.md`.
+
+
 Open-lens dry-run, **2026-05-12.** Persona: Danilo-as-operator (the
 only real admin user today; `seed_common.py:106-110` documents the
 bootstrap `UPDATE users SET is_admin = TRUE` flip).

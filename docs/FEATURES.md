@@ -5,7 +5,7 @@ What ciphra does today. For how it's built see
 
 ## Onboarding — blueprints
 
-A new account picks a **blueprint** in the setup wizard: one of 25 condition
+A new account picks a **blueprint** in the setup wizard: one of 22 condition
 presets (epilepsy, migraine, diabetes, bipolar, hypertension, PCOS, Hashimoto,
 MS, IBD, asthma, endometriosis, long-COVID, and more) or a `custom`
 build-your-own. The blueprint defines what that user tracks — symptom groups,
