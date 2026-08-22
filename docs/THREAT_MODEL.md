@@ -395,7 +395,8 @@ the working skeleton:
 3. **Backup is age-encrypted:** `file /var/backups/ciphra-*.age`
    reports "age encryption v1".
 4. **Patient data is ciphertext at rest:** `psql ciphra` → `SELECT
-   payload FROM documents LIMIT 1` returns opaque bytes, not JSON.
+   encrypted_data FROM encrypted_documents LIMIT 1` returns opaque
+   bytes, not JSON.
 5. **Audit log is filling:** `SELECT count(*) FROM audit_log WHERE
    ts > now() - interval '1 day'` returns a non-zero number after
    the first real user activity.

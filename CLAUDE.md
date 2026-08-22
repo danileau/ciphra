@@ -25,7 +25,7 @@ TypeScript (`frontend/`). **API**: Flask + Python (`api/`). **Edge**: nginx
 3. **Never read whole secret files.** age/ssh/gpg keys and live `.env` files
    must never be `Read`/`cat`/`head` into the transcript — that leaked the age
    private key once and forced a rotation. Extract only what you need
-   (`grep "public key" …`). `.env.example` / `.env.docker.example` are safe.
+   (`grep "public key" …`). `.env.example` is safe.
 4. **Branch off fresh `origin/main`.** Always `git fetch origin && git checkout
    origin/main -b <branch>` — never branch off a just-merged sibling (causes
    phantom conflicts).

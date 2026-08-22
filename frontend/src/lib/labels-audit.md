@@ -49,7 +49,7 @@ What's NOT in scope for CIPH-882 (preserved for future work):
   (line ~340).
 - `routes/setup/+page.svelte` — step-2 symptom-item preview (line ~414).
 - `lib/pdf.ts` — every `labelOf(t, item)` call in `drawGridSection`,
-  `generateDoctorPdf`, `generateCompactPdf`, `exportCsv`, frequency
+  `generateDoctorPdf`, `exportCsv`, frequency
   aggregations.
 
 ## Trigger labels

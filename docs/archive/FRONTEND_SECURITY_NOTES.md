@@ -1,5 +1,11 @@
 # Frontend security notes
 
+> **ARCHIVED 2026-08-22.** Historical reasoning trail, not live state. Its
+> premise — svelte 4 / vite 5.4 / esbuild 0.21 CVEs "gated on the Svelte 5
+> migration" — is resolved: that migration landed (`frontend/package.json` now
+> pins svelte ^5.x, vite ^8.x, @sveltejs/kit ^2.x). Kept for the record of why
+> the override block existed. Was `frontend/SECURITY_NOTES.md`.
+
 ## Trivy `fs` findings (2026-04-28)
 
 Eight medium-severity advisories surfaced in `frontend/package-lock.json`.

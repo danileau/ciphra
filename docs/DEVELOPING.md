@@ -6,8 +6,10 @@ Local setup, demo data, tests, and project layout. For the system design see
 ## Prerequisites
 
 - Docker + Docker Compose — the supported way to run the stack.
-- For running frontend tooling directly on the host: Node.js (the repo is
-  developed against Node 18). See the vitest note under [Tests](#tests).
+- For running frontend tooling directly on the host: Node.js **22** (the
+  baseline — `frontend/Dockerfile` is `node:22-alpine`; Vite 8 requires
+  ≥20.19/22.12 and crashes on Node 18). See the vitest note under
+  [Tests](#tests).
 
 ## First run
 
