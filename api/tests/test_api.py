@@ -162,7 +162,11 @@ class TestLogin:
         assert resp.status_code == 429
         assert 'Locked' in resp.get_json()['error']
 
-    def test_login_already_locked(self, client, mock_db):
+    @patch('server.verify_auth')
+    def test_login_already_locked_wrong_password(self, mock_verify, client, mock_db):
+        # An attacker (wrong password) hitting a locked account is still
+        # rejected as locked — brute-force protection intact.
+        mock_verify.return_value = False
         future = datetime.now(timezone.utc) + timedelta(minutes=10)
         mock_db.queue(_user_row(login_attempts=5, locked_until=future))
 
@@ -172,6 +176,22 @@ class TestLogin:
         })
         assert resp.status_code == 429
         assert 'locked' in resp.get_json()['error'].lower()
+
+    @patch('server.verify_auth')
+    def test_login_correct_password_bypasses_lock(self, mock_verify, client, mock_db):
+        # The lockout-DoS fix: a lock set by an attacker's wrong guesses must
+        # NOT deny the real user, whose correct password proves identity.
+        # Without this, knowing a username = a permanent DoS on that account.
+        mock_verify.return_value = True
+        future = datetime.now(timezone.utc) + timedelta(minutes=10)
+        mock_db.queue(_user_row(login_attempts=5, locked_until=future))
+
+        resp = client.post('/api/login', json={
+            'username': 'alice',
+            'auth_key': VALID_AUTH_KEY,
+        })
+        assert resp.status_code == 200, "correct password must succeed even during a lock"
+        assert resp.get_json()['success'] is True
 
     def test_login_nonexistent_user(self, client, mock_db):
         # SELECT returns None — user not found path (server.py:556-557)
@@ -619,6 +639,31 @@ class TestRecovery:
         assert resp.status_code == 200
         assert resp.get_json()['success'] is True
 
+    @patch('server.verify_auth')
+    def test_recovery_correct_code_bypasses_lock(self, mock_verify, client, mock_db):
+        # Same lockout-DoS fix as login: a lock set by wrong recovery guesses
+        # must not deny the real user, whose correct recovery code proves
+        # identity.
+        mock_verify.return_value = True
+        future = datetime.now(timezone.utc) + timedelta(minutes=10)
+        mock_db.queue({
+            'id': 1,
+            'recovery_auth': 'storedhash',
+            'recovery_attempts': 3,
+            'locked_until': future,
+        })
+
+        resp = client.post('/api/recover', json={
+            'username': 'alice',
+            'recovery_key': VALID_AUTH_KEY,
+            'auth_hash': VALID_AUTH_KEY,
+            'auth_params': 'ap',
+            'vault_params': 'vp',
+            'encrypted_master': 'em',
+        })
+        assert resp.status_code == 200, "correct recovery code must succeed even during a lock"
+        assert resp.get_json()['success'] is True
+
     def test_recovery_missing_fields(self, client, mock_db):
         # Missing recovery_key + auth_hash → fail validation gate (server.py:801).
         # Anti-enumeration: returns 401, not 400 (same response as bad credentials).
@@ -849,3 +894,29 @@ class TestFakeParamsAntiEnumeration:
         assert len(rp) == len(up), (
             f"login_init leaks account existence via length: real={len(rp)} unknown={len(up)}"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Rate-limiter enablement must not be coupled to the mock-data flag
+#
+# `enabled=` used to read CIPHRA_DEV_MOCKS, so the mock toggle silently
+# disabled the entire limiter — a footgun if that flag ever reached a
+# prod-like deploy. Enablement now has its own switch (RATELIMIT_ENABLED,
+# default on). This guards against the coupling coming back.
+# ═══════════════════════════════════════════════════════════════════
+
+class TestRateLimiterConfig:
+    def test_limiter_enable_is_decoupled_from_dev_mocks(self):
+        import inspect
+        import server
+        src = inspect.getsource(server)
+        # The Limiter construction must gate on RATELIMIT_ENABLED, not on the
+        # mock-data flag.
+        assert "enabled=os.environ.get('RATELIMIT_ENABLED'" in src, \
+            "limiter must be enabled via RATELIMIT_ENABLED"
+        assert "enabled=os.environ.get('CIPHRA_DEV_MOCKS'" not in src, \
+            "limiter enablement must not be coupled to CIPHRA_DEV_MOCKS"
+
+    def test_default_is_enabled(self):
+        # Absent the env var, the limiter is ON (prod default).
+        assert (os.environ.get('RATELIMIT_ENABLED', '1') != '0') is True

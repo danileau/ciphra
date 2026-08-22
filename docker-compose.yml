@@ -36,6 +36,10 @@ services:
       SECRET_KEY: "${SECRET_KEY:?SECRET_KEY required (see .env.example)}"
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
       CIPHRA_DEV_MOCKS: ${CIPHRA_DEV_MOCKS:-0}
+      # Rate limiter is ON by default (prod posture). Set RATELIMIT_ENABLED=0
+      # in your shell/.env to turn it off for rapid local testing — a separate,
+      # explicit choice, no longer a side effect of CIPHRA_DEV_MOCKS.
+      RATELIMIT_ENABLED: ${RATELIMIT_ENABLED:-1}
       PYTHONUNBUFFERED: "1"
     # CIPH-pi20-LB-6 — exposed on host :5050 to avoid macOS AirPlay/AirTunes
     # collision on :5000. Container-internal port stays 5000 (the gunicorn
