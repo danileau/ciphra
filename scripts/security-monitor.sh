@@ -101,13 +101,15 @@ if $app_reached; then
 elif [ -n "$(h cf-ray)" ]; then
     # Cloudflare answered before ciphra did (bot challenge / WAF). We'd be
     # looking at CF's interstitial, not ciphra — INCONCLUSIVE, not drift.
+    #
+    # ACCEPTED STATE (decision 2026-08-23): on the Free plan Bot Fight can't be
+    # reliably skipped for a datacenter runner, so this leg is expected to be
+    # inconclusive from CI — it is NOT a to-do and NOT a warning. The header
+    # config is guarded in CI (app-html-csp.test.ts) and the CF-only TLS drift
+    # is covered by the leg above, so this is a plain informational note, not an
+    # annotation that would flag every daily run.
     header_inconclusive=true
-    echo "::warning::security-monitor: edge header leg INCONCLUSIVE — Cloudflare returned ${status:-?} (bot challenge) before ciphra answered. TLS leg above is unaffected."
-    {
-      echo "ℹ Edge-header leg inconclusive: Cloudflare bot challenge (HTTP ${status:-?})."
-      echo "  Not a ciphra drift; the header config is guarded in CI (app-html-csp.test.ts)."
-      echo "  Free-plan Bot Fight can't be reliably skipped; this leg stays best-effort."
-    } >&2
+    echo "ℹ edge-header leg inconclusive (expected): Cloudflare bot challenge (HTTP ${status:-?}) before ciphra answered — not a drift; header config is CI-guarded. TLS leg above is unaffected."
 else
     fail "root did not return 200 (got ${status:-none}), and it was not a Cloudflare block"
 fi
