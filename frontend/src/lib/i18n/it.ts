@@ -254,7 +254,6 @@ export default {
 	'reports.legend_empty': 'nessuna voce',
 	'reports.legend_logged': 'registrato',
 	'reports.legend_episode': 'episodio',
-	'pdf.event_tracking_started': 'Monitoraggio avviato',
 	'companion.symptoms': 'Sintomi',
 	'companion.fill_today': 'Compila la giornata',
 	'companion.quick_add': 'Aggiungi rapido',

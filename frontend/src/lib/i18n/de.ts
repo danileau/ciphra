@@ -260,7 +260,6 @@ export default {
 	'reports.legend_empty': 'kein Eintrag',
 	'reports.legend_logged': 'erfasst',
 	'reports.legend_episode': 'Ereignis',
-	'pdf.event_tracking_started': 'Erfassung gestartet',
 	'companion.symptoms': 'Symptome',
 	'companion.fill_today': 'Tag ausfüllen',
 	'companion.quick_add': 'Schnell erfassen',
