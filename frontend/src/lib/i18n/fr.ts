@@ -945,6 +945,7 @@ export default {
 	'encryption.badge': 'Chiffrement de bout en bout',
 	'footer.aria_label': 'Pied de page',
 	'footer.links_aria': 'Mentions légales',
+	'footer.source': 'Code source',
 	'encryption.zero_knowledge': 'Le serveur ne peut pas lire vos données',
 
 	// Landing page

@@ -15,6 +15,7 @@
 	import { t } from '$lib/i18n';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import Asterisk from '$lib/components/Asterisk.svelte';
+	import { sourceUrl } from '$lib/source';
 
 	$: pathname = $page.url.pathname;
 	// Focus surfaces: a sticky save bar / wizard chrome already owns the
@@ -46,6 +47,11 @@
 			<nav class="authed-footer-links" aria-label={$t('footer.links_aria')}>
 				<a href="/privacy">{$t('privacy.title')}</a>
 				<a href="/terms">{$t('terms.title')}</a>
+				<!-- AGPL-3.0 §13 — an authed user is "interacting with it
+					 remotely", so the source offer has to reach this shell too,
+					 not only the public footer. URL is per-deployment; see
+					 $lib/source.ts. -->
+				<a href={sourceUrl} target="_blank" rel="noopener">{$t('footer.source')}</a>
 				<!-- CIPH-912 — `/#security` removed: routes to the public
 					 landing's #security anchor, but authed users land on the
 					 Companion dashboard so the anchor never resolves.

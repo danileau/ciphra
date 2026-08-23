@@ -58,6 +58,8 @@ without it. Generate one with `python -c 'import secrets; print(secrets.token_he
 | [CHANGELOG.md](CHANGELOG.md)                 | What changed in each release — also readable in-app at `/docs → Changelog` |
 | [docs/VERSIONING.md](docs/VERSIONING.md)     | SemVer policy (what's a patch / feature / breaking change) + the release process |
 | [SECURITY.md](SECURITY.md)                   | Security model — the honest description of what is and isn't protected |
+| [LICENSE](LICENSE)                           | GNU Affero General Public License v3.0 — the terms ciphra is offered under |
+| [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | Third-party code that ships inside ciphra, and its licenses |
 | [frontend/src/lib/components/README.md](frontend/src/lib/components/README.md) | The design-system reference (components, tokens) |
 | [docs/archive/](docs/archive/)               | Retired specs and origin documents, kept for provenance |
 
@@ -71,3 +73,40 @@ without it. Generate one with `python -c 'import secrets; print(secrets.token_he
 
 ciphra is a serious tool for managing a real condition — not a wellness app.
 No gamification, no email required, four languages (DE/EN/FR/IT).
+
+## License
+
+ciphra is free software under the **[GNU Affero General Public License v3.0](LICENSE)**
+(`AGPL-3.0-only`). You may run it, study it, change it, and share it — including
+commercially.
+
+The AGPL adds one obligation beyond the GPL, and it is the reason it was chosen
+here. Under **§13**, if you run a modified ciphra as a network service, you must
+offer *your* users the source of the version *you* are running. Self-hosting a
+patched copy privately is fine; serving it to other people while keeping your
+changes closed is not.
+
+So if you modify ciphra and put it online, point the app at your own repository:
+
+```bash
+PUBLIC_SOURCE_URL=https://git.example.org/you/ciphra
+```
+
+The app renders that URL in its footer and on the landing page's "Verify it
+yourself" card. It is read at runtime, so setting it on a pulled image is
+enough — no rebuild. Left unset, the app links to this repository, which is the
+truth only for an unmodified deployment. A modified instance that still links
+here is not compliant: it shows users code that is not what it is serving.
+`frontend/src/lib/source.ts` has the details, and a test fails the build if any
+component hardcodes a repository URL again.
+
+**Zero-knowledge is a claim you should not have to take on faith.** The license
+is half of what makes it checkable: it guarantees the source of a running
+instance is available. The other half is the [signed release
+images](SECURITY.md#how-to-verify-our-claims-yourself) — cosign-keyless via
+GitHub OIDC, logged to Rekor — which tie the published source to the bytes
+actually served.
+
+**The name is not covered.** "ciphra", the wordmark, the asterisk and the icons
+in `brand_assets/` are not licensed under the AGPL. Fork the code freely; call
+your fork something else, so nobody mistakes your deployment for this one.
