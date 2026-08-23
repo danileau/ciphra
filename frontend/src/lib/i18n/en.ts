@@ -254,7 +254,6 @@ export default {
 	'reports.legend_empty': 'no entry',
 	'reports.legend_logged': 'logged',
 	'reports.legend_episode': 'episode',
-	'pdf.event_tracking_started': 'Tracking started',
 	'companion.symptoms': 'Symptoms',
 	'companion.fill_today': 'Fill out today',
 	'companion.quick_add': 'Quick add',
