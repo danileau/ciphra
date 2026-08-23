@@ -2,6 +2,17 @@
   "name": "ciphra",
   "version": "0.1.0",
   "private": true,
+  "description": "Zero-knowledge health notebook for chronic conditions — data is encrypted in the browser, the server only ever stores ciphertext.",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://ciphra.ch",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danileau/ciphra.git",
+    "directory": "frontend"
+  },
+  "bugs": {
+    "url": "https://github.com/danileau/ciphra/issues"
+  },
   "scripts": {
     "dev": "vite dev --host 0.0.0.0",
     "build": "vite build",

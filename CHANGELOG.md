@@ -11,14 +11,13 @@ app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
-### Changed
-- The in-app documentation at **/docs** now shows only what's written for you:
-  the security model, features, architecture, the changelog and the developer
-  guide. The operator runbook, incident playbook and product backlog were being
-  published there too — they're written for whoever runs the server, and they
-  now live only in the repository. The security model moved from `/docs/security`
-  to `/docs/security_model`; `/docs/security` is now the vulnerability-reporting
-  policy.
+### Added
+- ciphra is now published under the **GNU Affero General Public License v3.0**.
+  You may run, study, change and share it. If you run a modified copy as a
+  service, §13 obliges you to offer your own users its source.
+- Every screen now links to the source code of the version you are actually
+  looking at (footer → "Quellcode"). Operators of a modified copy point it at
+  their own repository with `PUBLIC_SOURCE_URL`; unset, it links here.
 
 <!--
 Add lines under the relevant heading (omit empty headings):

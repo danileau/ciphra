@@ -967,6 +967,7 @@ export default {
 	'encryption.badge': 'Ende-zu-Ende verschlüsselt',
 	'footer.aria_label': 'Fusszeile',
 	'footer.links_aria': 'Rechtliches',
+	'footer.source': 'Quellcode',
 	'encryption.zero_knowledge': 'Der Server kann deine Daten nicht lesen',
 
 	// Landing page

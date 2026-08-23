@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
     plugins: [sveltekit()],
@@ -10,6 +11,16 @@ export default defineConfig({
     // bump (2026-06-07). jsdom tests are browser tests; say so.
     resolve: {
         conditions: ['browser'],
+        alias: {
+            // `$env/dynamic/public` is a SvelteKit *server*-runtime module.
+            // Under vitest it resolves to code that dereferences a runtime
+            // object that isn't there, so importing any component which reads
+            // public env fails at import time. Point it at an empty stub —
+            // see src/lib/testing/env-dynamic-public.ts.
+            '$env/dynamic/public': fileURLToPath(
+                new URL('./src/lib/testing/env-dynamic-public.ts', import.meta.url),
+            ),
+        },
     },
     test: {
         include: ['src/**/*.test.ts'],
