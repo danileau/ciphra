@@ -70,6 +70,9 @@ services:
       - ./SECURITY.md:/docs-src/SECURITY.md:ro
     environment:
       - VITE_API_URL=http://api:5000
+      # AGPL-3.0 §13 source offer. Unset = link to upstream (correct only for
+      # an unmodified deployment). See .env.example and frontend/src/lib/source.ts.
+      - PUBLIC_SOURCE_URL=${PUBLIC_SOURCE_URL:-}
     networks:
       - ciphra
 

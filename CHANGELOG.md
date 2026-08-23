@@ -11,8 +11,13 @@ app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
-_Nothing released yet since the last version. Add entries here as you work; a
-release moves them into a dated section below._
+### Added
+- ciphra is now published under the **GNU Affero General Public License v3.0**.
+  You may run, study, change and share it. If you run a modified copy as a
+  service, §13 obliges you to offer your own users its source.
+- Every screen now links to the source code of the version you are actually
+  looking at (footer → "Quellcode"). Operators of a modified copy point it at
+  their own repository with `PUBLIC_SOURCE_URL`; unset, it links here.
 
 <!--
 Add lines under the relevant heading (omit empty headings):

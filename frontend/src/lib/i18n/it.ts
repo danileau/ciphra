@@ -945,6 +945,7 @@ export default {
 	'encryption.badge': 'Crittografia end-to-end',
 	'footer.aria_label': 'Piè di pagina',
 	'footer.links_aria': 'Note legali',
+	'footer.source': 'Codice sorgente',
 	'encryption.zero_knowledge': 'Il server non può leggere i tuoi dati',
 
 	// Landing page
