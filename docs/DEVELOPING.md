@@ -171,7 +171,7 @@ production deploys should build `--target prod`.
 ```
 ciphra/
 ├── README.md                 project overview + quick start
-├── SECURITY.md               security model
+├── SECURITY.md               vulnerability reporting policy
 ├── docker-compose.yml        the 4-service stack
 ├── .env.example              env template
 ├── docs/                     ARCHITECTURE, DEVELOPING, FEATURES, archive/

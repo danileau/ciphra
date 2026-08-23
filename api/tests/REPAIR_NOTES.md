@@ -41,7 +41,7 @@ also `@patch('server.e2e')` for a module attribute that no longer exists —
 **Mode-3 ALERT:** none. All 5 failures are test-side drift; lockout-after-5
 and locked-until logic are intact in current `server.py`.
 
-**Cross-check vs LB-8 SECURITY.md drift test:** the lockout count is stable at
+**Cross-check vs LB-8 security-model drift test:** the lockout count is stable at
 5 in `server.py:590`. If the LB-8 drift test passes (vitest 865/865 baseline
 includes it), that confirms doc and code agree on the lockout policy — strong
 evidence the test failures are not hiding code-side regressions.

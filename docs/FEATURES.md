@@ -59,7 +59,7 @@ A patient can grant a caregiver access with a **family code** — a short phrase
 that re-wraps the patient's key. The caregiver claims the grant from their own
 account and can then read and add entries on the patient's behalf. Grants are
 revocable (though revocation cannot retract data already downloaded). See
-[SECURITY.md](../SECURITY.md) for the cryptographic detail.
+[SECURITY_MODEL.md](SECURITY_MODEL.md) for the cryptographic detail.
 
 ## Account and recovery
 
@@ -77,7 +77,7 @@ orthography (`ss`, never `ß`).
 ## Privacy by construction
 
 - Zero-knowledge: the server stores only opaque encrypted blobs (see
-  [SECURITY.md](../SECURITY.md)).
+  [SECURITY_MODEL.md](SECURITY_MODEL.md)).
 - No email address is collected — accounts are a username and password only.
 - A decrypted-document cache in IndexedDB makes revisits fast; logout wipes it.
 - Public condition pages (`/conditions/[id]`) explain what each condition

@@ -24,6 +24,7 @@ const REPO = resolve(__dirname, '..', '..', '..');
 const CANONICAL = [
 	'README.md',
 	'SECURITY.md',
+	'docs/SECURITY_MODEL.md',
 	'docs/ARCHITECTURE.md',
 	'docs/DEVELOPING.md',
 	'docs/FEATURES.md',

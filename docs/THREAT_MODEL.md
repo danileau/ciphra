@@ -1,12 +1,12 @@
 # ciphra — operational threat model
 
-This is the engineering / audit companion to `/SECURITY.md`. `SECURITY.md`
+This is the engineering / audit companion to `SECURITY_MODEL.md`. `SECURITY_MODEL.md`
 describes the **protocol-layer** zero-knowledge model (what the server,
 the network, and the browser can each see). This file covers the
 **operational-layer** model — the adversaries introduced by the
 production deploy stack (`golive/`) and how each is bounded.
 
-If you only have time for one, read `SECURITY.md` first. This document
+If you only have time for one, read `SECURITY_MODEL.md` first. This document
 assumes you've read it.
 
 **Last updated:** 2026-06-12
@@ -68,7 +68,7 @@ and decrypting client-side.
   the JS-swap attack. See §5.
 
 **Residual risk: HIGH** for users with a paranoid threat model.
-This is why `SECURITY.md` says "use something air-gapped if your
+This is why `SECURITY_MODEL.md` says "use something air-gapped if your
 adversary includes us."
 
 ### B. Stolen Infomaniak account credentials
@@ -138,7 +138,7 @@ hotspot, etc.
   strict + origin cert pinned 15-year validity).
 - HSTS header set by nginx; preload deferred (see C).
 - The protocol model assumes a passive network attacker by default —
-  see `SECURITY.md` §Threat model.
+  see `SECURITY_MODEL.md` §Threat model.
 
 **Residual risk: LOW** for passive attackers; **MEDIUM** for active
 attackers who can also obtain a fraudulent cert from a CA Cloudflare
@@ -146,7 +146,7 @@ trusts (rare but documented).
 
 ### F. Stolen / unlocked user device
 
-**Out of scope** per `SECURITY.md`. Documented for completeness:
+**Out of scope** per `SECURITY_MODEL.md`. Documented for completeness:
 IndexedDB plaintext cache + localStorage JWT are both readable from
 an unlocked browser profile. Logout wipes both. The Settings →
 "Clear local cache" affordance (CIPH-pi20-LB-2, shipped) lets users
@@ -271,7 +271,7 @@ to detect this; the page looks identical.
 - Native desktop / mobile app with signed binaries (would defeat the
   purpose for many users — web is the access model).
 
-**Posture:** disclosed clearly in `SECURITY.md` (§What is NOT done
+**Posture:** disclosed clearly in `SECURITY_MODEL.md` (§What is NOT done
 yet → "No reproducible-build pipeline"). Users with a threat model
 that includes us-as-adversary are explicitly told to use a different
 tool.
@@ -369,7 +369,7 @@ incident-record format. In brief:
 3. **Assessment.** journalctl + audit_log table + nginx access logs.
 4. **User communication.** If patient-data exposure is possible: in-app
    notice + transparency entry. **No silent compromise** — a published
-   commitment (`SECURITY.md`), not an aspiration.
+   commitment (`SECURITY_MODEL.md`), not an aspiration.
 5. **Recovery.** Restore-from-backup to a new VPS, or in-place patch +
    restart. Rotate exposed secrets. Document the timeline.
 6. **Lessons.** Postmortem within 7 days as `docs/incidents/INC-NNN.md`,

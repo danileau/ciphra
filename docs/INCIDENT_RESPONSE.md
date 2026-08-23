@@ -85,7 +85,7 @@ Stop the bleeding before understanding it.
 - nginx access logs for the source IPs and the exact requests.
 - For a suspected breach: what could the attacker reach? Ciphertext + metadata
   + `audit_log`, **not** plaintext (ZK). Confirm the master-key material never
-  lived server-side (it doesn't — [`SECURITY.md`](../SECURITY.md)).
+  lived server-side (it doesn't — [`SECURITY_MODEL.md`](SECURITY_MODEL.md)).
 
 ### 5. Eradicate & recover
 
@@ -102,7 +102,7 @@ Stop the bleeding before understanding it.
 
 - **The commitment: no silent compromise.** If patient-data exposure is ever
   *possible*, affected users are told — in-app notice + a transparency entry.
-  This is published in [`SECURITY.md`](../SECURITY.md), not optional.
+  This is published in [`SECURITY_MODEL.md`](SECURITY_MODEL.md), not optional.
 - **A broken flow for known users** (the INC-001 shape): reach them directly.
   The reply-template pattern lives in
   [`docs/incidents/INC-001-reply-de.md`](incidents/INC-001-reply-de.md) — Swiss
@@ -200,6 +200,6 @@ SEV4s don't need their own file; fix and move on.
   rotation, deploy/rollback, troubleshooting).
 - [`THREAT_MODEL.md`](THREAT_MODEL.md) — adversary classes and the attack-surface
   inventory this playbook responds to.
-- [`SECURITY.md`](../SECURITY.md) — what is and isn't protected; the
+- [`SECURITY_MODEL.md`](SECURITY_MODEL.md) — what is and isn't protected; the
   no-silent-compromise commitment.
 - [`docs/incidents/`](incidents/) — the record of what has actually happened.

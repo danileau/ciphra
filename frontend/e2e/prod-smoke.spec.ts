@@ -5,8 +5,11 @@ test('prod landing renders new release', async ({ page }) => {
 	await expect(page.getByRole('radiogroup').getByRole('radio', { name: /dunkel|dark/i })).toBeVisible();
 	await page.screenshot({ path: 'e2e/_screenshots/prod-landing-light.png' });
 });
-test('prod docs/security renders SECURITY.md incl §5', async ({ page }) => {
-	await page.goto('https://ciphra.ch/docs/security');
+// The security model moved to docs/SECURITY_MODEL.md (2026-08-23) when
+// SECURITY.md became the vulnerability-reporting policy GitHub renders
+// under that name; the in-app slug moved with it.
+test('prod docs/security_model renders the model incl §5', async ({ page }) => {
+	await page.goto('https://ciphra.ch/docs/security_model');
 	await expect(page.getByText(/What the browser stores/i).first()).toBeVisible({ timeout: 15000 });
 	await expect(page.getByText(/ciphra_focus_month/i).first()).toBeVisible();
 });

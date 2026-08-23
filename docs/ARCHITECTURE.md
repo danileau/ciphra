@@ -2,7 +2,7 @@
 
 How ciphra is put together. For the security model specifically — threat
 model, key hierarchy, what the browser caches — see
-[SECURITY.md](../SECURITY.md). For local setup see
+[SECURITY_MODEL.md](SECURITY_MODEL.md). For local setup see
 [DEVELOPING.md](DEVELOPING.md).
 
 ## The shape of it
@@ -50,7 +50,7 @@ The browser derives two keys from the password with **Argon2id**: an
 **AES-256-GCM**. The server only ever receives `SHA-256(auth_key)` and opaque
 ciphertext — never the password, the keys, or any plaintext. Decryption
 happens exclusively in the browser. The full hierarchy, the recovery-code
-path, and family sharing are documented in [SECURITY.md](../SECURITY.md).
+path, and family sharing are documented in [SECURITY_MODEL.md](SECURITY_MODEL.md).
 
 ## Data model
 
@@ -84,7 +84,7 @@ scale of personal health data (hundreds of documents, not millions).
 
 The frontend models a document as `CiphraDocument { id, serverCreatedAt, data }`
 (`frontend/src/lib/stores/documents.ts`). The store keeps a decrypted copy in
-IndexedDB for warm loads — see SECURITY.md for the cache's wipe semantics.
+IndexedDB for warm loads — see SECURITY_MODEL.md for the cache's wipe semantics.
 
 ## The blueprint + cohort system
 

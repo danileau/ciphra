@@ -98,7 +98,7 @@
 	let passwordLoading = false;
 
 	// CIPH-pi20-LB-2 — Local-cache wipe affordance. Counterpart to the
-	// SECURITY.md "What the browser stores" disclosure: lets the user
+	// docs/SECURITY_MODEL.md "What the browser stores": lets the user
 	// wipe IndexedDB plaintext + SW navigation cache without ending
 	// the session.
 	let cachedDocCount: number | null = null;
@@ -632,7 +632,7 @@
 
 	<!-- CIPH-pi20-LB-2 — Local data row. Sibling action to logout: same
 		 wipe path (IndexedDB plaintext + SW cache), session preserved.
-		 SECURITY.md "What the browser stores" section is the long-form
+		 docs/SECURITY_MODEL.md "What the browser stores" is the long-form
 		 disclosure this row points users at. -->
 	<section class="card p-5 mt-6" aria-labelledby="settings-local-data-heading">
 		<h3 id="settings-local-data-heading" class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.local_data')}</h3>

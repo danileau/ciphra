@@ -11,8 +11,14 @@ app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
-_Nothing released yet since the last version. Add entries here as you work; a
-release moves them into a dated section below._
+### Changed
+- The in-app documentation at **/docs** now shows only what's written for you:
+  the security model, features, architecture, the changelog and the developer
+  guide. The operator runbook, incident playbook and product backlog were being
+  published there too — they're written for whoever runs the server, and they
+  now live only in the repository. The security model moved from `/docs/security`
+  to `/docs/security_model`; `/docs/security` is now the vulnerability-reporting
+  policy.
 
 <!--
 Add lines under the relevant heading (omit empty headings):
