@@ -3,7 +3,7 @@
 This is the day-to-day operations runbook for ciphra in production —
 the production deploy at `ciphra.ch`. For local development setup, see
 [DEVELOPING.md](DEVELOPING.md). For the security model and threat
-boundaries, see [SECURITY.md](../SECURITY.md). For initial VPS
+boundaries, see [SECURITY_MODEL.md](SECURITY_MODEL.md). For initial VPS
 provisioning, see `golive/SECTION1_RUNBOOK.md` (gitignored).
 
 If you arrived here because something is broken, jump to

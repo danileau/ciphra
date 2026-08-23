@@ -564,7 +564,7 @@
 							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6zm5.2 0 4.6-4.6-4.6-4.6L16 6l6 6-6 6z"/></svg>
 							{sourceLabel(sourceUrl)}
 						</a>
-						<!-- 3-step verification list — condensed from SECURITY.md
+						<!-- 3-step verification list — condensed from docs/SECURITY_MODEL.md
 							 §"How to verify our claims yourself". Each step is
 							 verifiable in <2 minutes by anyone with browser
 							 DevTools. Inline <code> spans live in i18n values

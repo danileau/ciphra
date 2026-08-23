@@ -183,7 +183,7 @@ function createAuthStore() {
 		// SW navigation cache) but leaves localStorage/sessionStorage and
 		// the in-memory state intact so the user stays logged in. Returns
 		// when both wipes complete (or fail loudly via console.error).
-		// SECURITY.md "What the browser stores" section points users at
+		// docs/SECURITY_MODEL.md "What the browser stores" points users at
 		// this — keep that doc in sync with the wipe contract here.
 		async clearLocalCache() {
 			if (!browser) return;

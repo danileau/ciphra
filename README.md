@@ -19,7 +19,8 @@ All key derivation and encryption happen in the browser. The password never
 leaves the device. The server receives a hashed credential and opaque
 ciphertext, and stores exactly that. A database breach yields encrypted blobs,
 nothing else. The full model — threat model, key hierarchy, what the browser
-caches — is in **[SECURITY.md](SECURITY.md)**.
+caches — is in **[docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md)**.
+Found a vulnerability? [SECURITY.md](SECURITY.md) says where to send it.
 
 ## Quick start
 
@@ -52,6 +53,7 @@ without it. Generate one with `python -c 'import secrets; print(secrets.token_he
 | [docs/DEVELOPING.md](docs/DEVELOPING.md)     | Local setup, seeding demo data, running tests, project layout |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md)     | Production ops — CI/CD pipeline, pull-based deploy, cron jobs, monitoring, backup + restore, disaster recovery |
 | [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) | Operational threat model — adversary classes, attack-surface inventory, supply-chain + backup integrity, JS-swap problem |
+| [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md) | Security model — what is and isn't protected, the key hierarchy, what the browser caches, how to verify it yourself |
 | [docs/INCIDENT_RESPONSE.md](docs/INCIDENT_RESPONSE.md) | Incident playbook — severity model, detect→learn loop, per-scenario playbooks, the incident-record format |
 | [docs/backlog.md](docs/backlog.md)           | Forward-looking backlog — the larger items (each with a ready continuation prompt), operator actions, and decisions made |
 | [docs/FEATURES.md](docs/FEATURES.md)         | What ciphra does today, feature by feature |

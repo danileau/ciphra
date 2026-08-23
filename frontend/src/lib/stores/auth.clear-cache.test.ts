@@ -6,7 +6,7 @@
  * MUST leave session state intact (in-memory + localStorage +
  * sessionStorage all untouched).
  *
- * This is a doc-vs-code anchor — SECURITY.md "What the browser
+ * This is a doc-vs-code anchor — SECURITY_MODEL.md "What the browser
  * stores" tells users the button exists and exactly what it does.
  * If this test breaks, the doc is lying.
  */
@@ -107,18 +107,18 @@ describe('CIPH-pi20-LB-2 i18n', () => {
 	}
 });
 
-describe('CIPH-pi20-LB-2 SECURITY.md and code agree', () => {
+describe('CIPH-pi20-LB-2 SECURITY_MODEL.md and code agree', () => {
 	const SECURITY = readFileSync(
-		join(__dirname, '..', '..', '..', '..', 'SECURITY.md'),
+		join(__dirname, '..', '..', '..', '..', 'docs', 'SECURITY_MODEL.md'),
 		'utf8',
 	);
 
-	it('SECURITY.md "What the browser stores" section discusses IndexedDB plaintext', () => {
+	it('SECURITY_MODEL.md "What the browser stores" section discusses IndexedDB plaintext', () => {
 		expect(SECURITY).toMatch(/What the browser stores/);
 		expect(SECURITY).toMatch(/IndexedDB[\s\S]{0,500}plaintext/i);
 	});
 
-	it('SECURITY.md cites the wipe code path', () => {
+	it('SECURITY_MODEL.md cites the wipe code path', () => {
 		expect(SECURITY).toMatch(/clearAllPartitions/);
 	});
 });

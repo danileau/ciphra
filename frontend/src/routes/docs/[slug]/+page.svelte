@@ -74,6 +74,15 @@
 		text-decoration: underline;
 		text-underline-offset: 2px;
 	}
+	/* A document that exists in the repository but is not published in
+	   the app (see lib/docs-manifest.ts). Reads as a name, not as a
+	   broken link — dotted underline, no colour, no pointer. */
+	.doc-prose :global(.doc-offsite) {
+		color: var(--text-muted);
+		text-decoration: underline dotted;
+		text-underline-offset: 2px;
+		cursor: help;
+	}
 	.doc-prose :global(strong) {
 		color: var(--text-primary);
 		font-weight: 600;

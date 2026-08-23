@@ -1,13 +1,17 @@
 /**
- * CIPH-pi20-LB-8 — SECURITY.md doc-vs-code drift test.
+ * CIPH-pi20-LB-8 — security-model doc-vs-code drift test.
  *
- * The PI v20 operating rule: SECURITY.md cannot make a claim the code
+ * The model moved to docs/SECURITY_MODEL.md when SECURITY.md became the
+ * vulnerability-reporting policy GitHub expects under that name. The
+ * claims pinned here are unchanged — only the file they live in.
+ *
+ * The PI v20 operating rule: SECURITY_MODEL.md cannot make a claim the code
  * doesn't enforce. This test pins each load-bearing claim against
  * current source so silent drift fails CI.
  *
  * If a claim here breaks because the doc is wrong, fix the doc.
  * If it breaks because the CODE changed, the doc must be updated to
- * match — `SECURITY.md` is a contract with users, not a sketch.
+ * match — `SECURITY_MODEL.md` is a contract with users, not a sketch.
  *
  * Sister test: `src/lib/stores/auth.clear-cache.test.ts` covers the
  * LB-2 wipe contract specifically. This file covers the broader
@@ -19,14 +23,14 @@ import { join } from 'node:path';
 
 // __dirname = frontend/src/lib at runtime.
 const REPO_ROOT = join(__dirname, '..', '..', '..');
-const SECURITY = readFileSync(join(REPO_ROOT, 'SECURITY.md'), 'utf8');
+const SECURITY = readFileSync(join(REPO_ROOT, 'docs', 'SECURITY_MODEL.md'), 'utf8');
 const CRYPTO = readFileSync(join(__dirname, 'crypto.ts'), 'utf8');
 const AUTH = readFileSync(join(__dirname, 'stores', 'auth.ts'), 'utf8');
 const IDB = readFileSync(join(__dirname, 'idb.ts'), 'utf8');
 const SERVER = readFileSync(join(REPO_ROOT, 'api', 'server.py'), 'utf8');
 
 describe('CIPH-pi20-LB-8 Argon2id parameters', () => {
-	it('SECURITY.md states memory_cost=64 MiB', () => {
+	it('SECURITY_MODEL.md states memory_cost=64 MiB', () => {
 		expect(SECURITY).toMatch(/memory_cost\s*=\s*64\s*MiB/);
 	});
 
@@ -34,7 +38,7 @@ describe('CIPH-pi20-LB-8 Argon2id parameters', () => {
 		expect(CRYPTO).toMatch(/memory_cost:\s*65536/);
 	});
 
-	it('SECURITY.md states time_cost=3 / parallelism=4 / hash_len=32', () => {
+	it('SECURITY_MODEL.md states time_cost=3 / parallelism=4 / hash_len=32', () => {
 		expect(SECURITY).toMatch(/time_cost\s*=\s*3/);
 		expect(SECURITY).toMatch(/parallelism\s*=\s*4/);
 		expect(SECURITY).toMatch(/hash_len\s*=\s*32\s*bytes/);
@@ -54,7 +58,7 @@ describe('CIPH-pi20-LB-8 Argon2id parameters', () => {
 });
 
 describe('CIPH-pi20-LB-8 AES-GCM contract', () => {
-	it('SECURITY.md states AES-256-GCM with 12-byte nonce', () => {
+	it('SECURITY_MODEL.md states AES-256-GCM with 12-byte nonce', () => {
 		expect(SECURITY).toMatch(/AES-256-GCM/);
 		expect(SECURITY).toMatch(/12-byte\s+(random\s+)?nonce/);
 	});
@@ -69,7 +73,7 @@ describe('CIPH-pi20-LB-8 AES-GCM contract', () => {
 });
 
 describe('CIPH-pi20-LB-8 JWT secret requirement', () => {
-	it('SECURITY.md states JWT secret required, ≥32 chars, fails to start without it', () => {
+	it('SECURITY_MODEL.md states JWT secret required, ≥32 chars, fails to start without it', () => {
 		expect(SECURITY).toMatch(/JWT secret[\s\S]{0,200}≥\s*32\s*chars/);
 	});
 
@@ -91,7 +95,7 @@ describe('CIPH-pi20-LB-8 browser-storage section claims', () => {
 		expect(SECURITY).toMatch(/[Ss]ervice worker cache/);
 	});
 
-	it('SECURITY.md cites auth.ts:34-83 region for the storage discipline', () => {
+	it('SECURITY_MODEL.md cites auth.ts:34-83 region for the storage discipline', () => {
 		// The doc's file:line cite must point to a region that still
 		// contains the relevant logic.
 		expect(SECURITY).toMatch(/frontend\/src\/lib\/stores\/auth\.ts:34-83/);
@@ -101,20 +105,20 @@ describe('CIPH-pi20-LB-8 browser-storage section claims', () => {
 		expect(AUTH).toMatch(/const SS_MASTER_KEY = 'ciphra_master_key'/);
 	});
 
-	it('SECURITY.md references idb.ts and the wipe API', () => {
+	it('SECURITY_MODEL.md references idb.ts and the wipe API', () => {
 		expect(SECURITY).toMatch(/frontend\/src\/lib\/idb\.ts/);
 		expect(SECURITY).toMatch(/clearAllPartitions/);
 		// idb.ts must still export the function the doc names.
 		expect(IDB).toMatch(/export async function clearAllPartitions\(\)/);
 	});
 
-	it('SECURITY.md cites the logout wipe call site', () => {
+	it('SECURITY_MODEL.md cites the logout wipe call site', () => {
 		expect(SECURITY).toMatch(/auth\.ts:127-149/);
 		// auth.ts must still call clearAllPartitions inside logout.
 		expect(AUTH).toMatch(/async logout\(\)\s*\{[\s\S]{0,800}clearAllPartitions\(\)/);
 	});
 
-	it('SECURITY.md verification step 5 lists the actual storage keys', () => {
+	it('SECURITY_MODEL.md verification step 5 lists the actual storage keys', () => {
 		expect(SECURITY).toMatch(/ciphra_auth/);
 		expect(SECURITY).toMatch(/ciphra_master_key/);
 		expect(SECURITY).toMatch(/ciphra_cache/);
@@ -123,16 +127,16 @@ describe('CIPH-pi20-LB-8 browser-storage section claims', () => {
 });
 
 describe('CIPH-pi20-LB-8 server-side claims', () => {
-	it('SECURITY.md says no user enumeration on /login/init etc.', () => {
+	it('SECURITY_MODEL.md says no user enumeration on /login/init etc.', () => {
 		expect(SECURITY).toMatch(/no\s+user\s+enumeration/i);
 	});
 
-	it('SECURITY.md says lockout: 5 login / 3 recovery', () => {
+	it('SECURITY_MODEL.md says lockout: 5 login / 3 recovery', () => {
 		expect(SECURITY).toMatch(/5\s+failed\s+login/);
 		expect(SECURITY).toMatch(/3\s+failed\s+recovery/);
 	});
 
-	it('SECURITY.md says recovery code is 12 words from a 300-word list (~99 bits)', () => {
+	it('SECURITY_MODEL.md says recovery code is 12 words from a 300-word list (~99 bits)', () => {
 		expect(SECURITY).toMatch(/12-word\s+code/);
 		expect(SECURITY).toMatch(/300-word\s+list/);
 		expect(SECURITY).toMatch(/~?99\s+bits/);
@@ -140,7 +144,7 @@ describe('CIPH-pi20-LB-8 server-side claims', () => {
 });
 
 describe('CIPH-pi20-LB-8 sectional integrity', () => {
-	it('SECURITY.md "Last updated" date is present and parseable', () => {
+	it('SECURITY_MODEL.md "Last updated" date is present and parseable', () => {
 		expect(SECURITY).toMatch(/\*\*Last updated:\*\*\s+\d{4}-\d{2}-\d{2}/);
 	});
 

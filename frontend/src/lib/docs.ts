@@ -12,6 +12,7 @@
  */
 import { marked } from 'marked';
 import { docs as rawDocs } from 'virtual:ciphra-docs';
+import { rewriteDocLinks } from '$lib/docs-links';
 
 export interface DocMeta {
 	slug: string;
@@ -25,7 +26,7 @@ export interface RenderedDoc {
 }
 
 /** Display order on the index; anything unlisted sorts alphabetically after. */
-const ORDER = ['readme', 'features', 'architecture', 'developing', 'security'];
+const ORDER = ['readme', 'features', 'architecture', 'security_model', 'security', 'developing'];
 
 function slugOf(path: string): string {
 	const file = path.split('/').pop() ?? '';
@@ -52,22 +53,6 @@ function blurbOf(raw: string): string {
 	return flat.length > 160 ? flat.slice(0, 157).trimEnd() + '…' : flat;
 }
 
-/**
- * Rewrite intra-doc markdown links so they resolve inside the `/docs`
- * route: a link to `ARCHITECTURE.md`, `../SECURITY.md`, `docs/FEATURES.md`
- * etc. becomes `/docs/{slug}`. Links to deeper repo paths (source files,
- * docs/archive) are left untouched — they are repo references.
- */
-function rewriteDocLinks(html: string, known: Set<string>): string {
-	return html.replace(/href="([^"]*)"/g, (full, href: string) => {
-		const norm = href.replace(/^(?:\.\.?\/)+/, '').replace(/^docs\//, '');
-		const m = norm.match(/^([A-Za-z][\w-]*)\.md(#.*)?$/);
-		if (m && known.has(m[1].toLowerCase())) {
-			return `href="/docs/${m[1].toLowerCase()}${m[2] ?? ''}"`;
-		}
-		return full;
-	});
-}
 
 interface DocEntry {
 	meta: DocMeta;

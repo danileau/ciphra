@@ -13,7 +13,7 @@
  * health data goes, shown at the moment of authoring.
  *
  * It matters more than a normal copy bug because ciphra's whole promise is
- * about disclosure. SECURITY.md is scoped to the server and the device and
+ * about disclosure. docs/SECURITY_MODEL.md is scoped to server + device and
  * says nothing about the export — the one channel where the text genuinely
  * leaves the user's control, by design and by their own action.
  *
