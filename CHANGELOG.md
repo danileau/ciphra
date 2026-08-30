@@ -20,6 +20,11 @@ app at **/docs → Changelog** and here on the public repo.
   their own repository with `PUBLIC_SOURCE_URL`; unset, it links here.
 
 ### Fixed
+- The account switcher in the header ("Ansicht") opened a dropdown that looked
+  broken and, in dark mode, was close to unreadable. It now opens a proper
+  ciphra menu that looks the same in both themes. If someone has shared their
+  account with you, this is the control you use to switch between their data
+  and your own.
 - **Someone you gave family access to could read your diary and your locked
   entries.** The app said they couldn't — the banner on their screen even said
   how many entries were being kept back — but nothing was filtering them. Family
