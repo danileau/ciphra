@@ -121,6 +121,7 @@ export default {
 	'family.private_context': 'Vedi {visible} voci condivise. {private} voci personali restano private.',
 	'family.banner_desc': 'qualsiasi nuova voce, modifica o eliminazione andrà nel suo diario.',
 	'family.banner_switch_back': 'Torna al mio',
+	'family.scope_change': 'Modifica',
 	'family.scope_legend': 'Cosa può vedere questo invito',
 	'family.scope_shared_only': 'Tutto tranne il diario',
 	'family.scope_shared_only_hint': 'Voci, episodi, farmaci e parametri vitali. Le voci del diario e quelle bloccate restano con te.',

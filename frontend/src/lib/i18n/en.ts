@@ -121,6 +121,7 @@ export default {
 	'family.private_context': 'You see {visible} shared entries. {private} personal entries stay private.',
 	'family.banner_desc': 'any new entry, edit, or delete goes to their diary.',
 	'family.banner_switch_back': 'Switch back to mine',
+	'family.scope_change': 'Change',
 	'family.scope_legend': 'What this invitation may see',
 	'family.scope_shared_only': 'Everything except the diary',
 	'family.scope_shared_only_hint': 'Entries, episodes, medications and vitals. Diary entries and locked entries stay with you.',

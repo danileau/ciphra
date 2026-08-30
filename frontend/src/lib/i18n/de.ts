@@ -126,6 +126,7 @@ export default {
 	'family.private_context': 'Du siehst {visible} geteilte Einträge. {private} persönliche Einträge bleiben privat.',
 	'family.banner_desc': 'alle neuen Einträge, Änderungen und Löschungen gehen in dessen Tagebuch.',
 	'family.banner_switch_back': 'Zurück zu meinen',
+	'family.scope_change': 'Ändern',
 	'family.scope_legend': 'Was diese Einladung sehen darf',
 	'family.scope_shared_only': 'Alles ausser Tagebuch',
 	'family.scope_shared_only_hint': 'Einträge, Episoden, Medikamente und Vitalwerte. Tagebuch-Einträge und gesperrte Einträge bleiben bei dir.',

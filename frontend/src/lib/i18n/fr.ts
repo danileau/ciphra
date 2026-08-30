@@ -121,6 +121,7 @@ export default {
 	'family.private_context': 'Vous voyez {visible} entrées partagées. {private} entrées personnelles restent privées.',
 	'family.banner_desc': 'toute nouvelle entrée, modification ou suppression ira dans son journal.',
 	'family.banner_switch_back': 'Revenir au mien',
+	'family.scope_change': 'Modifier',
 	'family.scope_legend': 'Ce que cette invitation peut voir',
 	'family.scope_shared_only': 'Tout sauf le journal intime',
 	'family.scope_shared_only_hint': 'Entrées, épisodes, médicaments et constantes. Les entrées du journal intime et les entrées verrouillées restent chez vous.',
