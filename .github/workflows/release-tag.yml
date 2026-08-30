@@ -1,0 +1,104 @@
+name: Release tag
+
+# Mint the `vX.Y.Z` tag and the GitHub release for a version, from the merged
+# commit that shipped it.
+#
+# The CHANGELOG has always linked to these tags ("compare/v0.1.0...HEAD",
+# "releases/tag/v0.1.0") and nothing ever created one, so every link in the
+# file users read at /docs → Changelog was dead. This closes that loop.
+#
+# It never writes to a branch. Creating a tag is not a push to `main`, so
+# `main-protection` stays exactly as it is and no bypass actor is needed —
+# the version bump still arrives the normal way, through a reviewed PR.
+#
+# Idempotent: if the tag already exists the run is a no-op, so re-running a
+# workflow or pushing an unrelated commit cannot mint a second release.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      # Only a change to the version can start a release.
+      - VERSION
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag (X.Y.Z). Defaults to the VERSION file.'
+        required: false
+        type: string
+      sha:
+        description: 'Commit to tag. Defaults to the current ref. Use this to backfill a historical release.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Tags and full history: version-guard's computed-bump check reads
+          # both, and a shallow clone silently skips it.
+          fetch-depth: 0
+          ref: ${{ inputs.sha || github.sha }}
+
+      - name: Resolve the version
+        id: v
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION="$(tr -d '[:space:]' < VERSION)"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing $VERSION at $(git rev-parse --short HEAD)"
+
+      - name: Guard the version
+        # The same gate CI and Release images run. A release must not be
+        # mintable under rules the rest of the pipeline enforces.
+        if: ${{ !inputs.version }}
+        run: scripts/version-guard.sh
+
+      - name: Skip if the tag already exists
+        id: exists
+        run: |
+          if git rev-parse --verify --quiet "refs/tags/v${{ steps.v.outputs.version }}" >/dev/null; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "v${{ steps.v.outputs.version }} already exists — nothing to do."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read the release notes
+        if: steps.exists.outputs.skip == 'false'
+        run: |
+          # Fails loudly when the section is missing or empty, so a release
+          # cannot be minted with a body nobody wrote.
+          scripts/changelog-section.sh "${{ steps.v.outputs.version }}" > /tmp/notes.md
+          echo "--- release body ---"
+          cat /tmp/notes.md
+
+      - name: Create the annotated tag
+        if: steps.exists.outputs.skip == 'false'
+        run: |
+          # Annotated, like the deploy tags: it carries its own tagger date,
+          # so ordering does not depend on the commit's date. (The deploy-tag
+          # rollback no-op of 2026-07-25 was exactly this trap.)
+          git config user.name 'ciphra release'
+          git config user.email 'release@ciphra.ch'
+          git tag -a "v${{ steps.v.outputs.version }}" \
+            -m "ciphra ${{ steps.v.outputs.version }}" \
+            "$(git rev-parse HEAD)"
+          git push origin "v${{ steps.v.outputs.version }}"
+
+      - name: Publish the GitHub release
+        if: steps.exists.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.v.outputs.version }}" \
+            --title "ciphra ${{ steps.v.outputs.version }}" \
+            --notes-file /tmp/notes.md \
+            --verify-tag

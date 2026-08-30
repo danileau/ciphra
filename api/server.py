@@ -191,6 +191,124 @@ def get_db():
         conn.close()
 
 
+# --- Schema versioning ----------------------------------------------------
+#
+# The migrations below used to be an unordered pile of idempotent ALTERs at the
+# bottom of init_db(). They worked, but nothing recorded WHICH of them a given
+# database had, so "which schema is this database at" had no answer, and an
+# older image meeting a newer database was undefined behaviour.
+#
+# Both matter here because the deploy is pull-based and rolls back on its own:
+# a release that adds a column, fails its health check, and gets rolled back
+# leaves the previous image running against the newer schema. That has to be a
+# defined, survivable state — so:
+#
+#   compatible=True   an older image can still run against a database that has
+#                     this migration. True for anything additive: a new
+#                     nullable column or index is simply never selected by
+#                     code that predates it.
+#   compatible=False  it cannot. Raises the floor the server enforces at boot,
+#                     and an image below that floor refuses to start rather
+#                     than read a schema it will misinterpret.
+#
+# Refusing on ANY mismatch would be the wrong reflex: it would turn the
+# auto-rollback safety net into an outage, because the rollback target would
+# refuse to boot on the schema the failed release had already applied.
+#
+# To add one: append with the next number, set `compatible` honestly, and bump
+# SCHEMA_VERSION. Never renumber or edit a shipped migration — databases in the
+# field have already recorded it.
+SCHEMA_VERSION = 8
+
+# (number, name, sql, compatible)
+MIGRATIONS = [
+    (1, 'users.is_admin',
+     "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE", True),
+    (2, 'users.auth_params',
+     "ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_params TEXT", True),
+    (3, 'users.recovery_auth',
+     "ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_auth TEXT", True),
+    (4, 'users.recovery_attempts',
+     "ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_attempts INTEGER DEFAULT 0", True),
+    (5, 'users.password_version',
+     "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_version INTEGER DEFAULT 1", True),
+    (6, 'family_grants.last_access_at',
+     "ALTER TABLE family_grants ADD COLUMN IF NOT EXISTS last_access_at TIMESTAMP WITH TIME ZONE", True),
+    # One metadata bit per user, used by /admin to count epilepc migrations.
+    (7, 'users.registration_source',
+     "ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_source VARCHAR(16) DEFAULT 'web'", True),
+    # Track-3 3.4 — bulk-import idempotency. `client_key` is an OPAQUE,
+    # server-blind token the client supplies (sha256(username:source_id)) so a
+    # retried migration batch is a no-op instead of duplicating docs. Nullable
+    # + a PARTIAL unique index → existing rows and all normal single-doc saves
+    # (which never set it) stay NULL and never collide.
+    (8, 'encrypted_documents.client_key',
+     "ALTER TABLE encrypted_documents ADD COLUMN IF NOT EXISTS client_key TEXT;"
+     " CREATE UNIQUE INDEX IF NOT EXISTS uq_docs_user_clientkey"
+     " ON encrypted_documents (user_id, client_key) WHERE client_key IS NOT NULL", True),
+]
+
+
+class SchemaTooNewError(RuntimeError):
+    """The database has a migration this image cannot safely read."""
+
+
+def _apply_migrations(cur):
+    """Bring the database up to SCHEMA_VERSION and record where it got to.
+
+    Existing databases predate the ledger: they record version 0 while already
+    carrying every column. That is why each statement stays idempotent — the
+    first run after this ships replays 1-8 as no-ops and stamps the result.
+    """
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS schema_meta (
+            id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+            version INTEGER NOT NULL DEFAULT 0,
+            min_app_schema INTEGER NOT NULL DEFAULT 0,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+    """)
+    cur.execute("INSERT INTO schema_meta (id) VALUES (1) ON CONFLICT (id) DO NOTHING")
+    cur.execute("SELECT version, min_app_schema FROM schema_meta WHERE id = 1")
+    row = cur.fetchone()
+    current, floor = row['version'], row['min_app_schema']
+
+    if floor > SCHEMA_VERSION:
+        raise SchemaTooNewError(
+            f"database schema is at version {current} and requires an app that "
+            f"understands at least schema {floor}, but this image only knows "
+            f"{SCHEMA_VERSION}. A newer release applied an incompatible "
+            f"migration; roll forward instead of back, or restore the database "
+            f"from the backup taken before that release."
+        )
+
+    if current > SCHEMA_VERSION:
+        # Older image, newer-but-additive database. Fine: the columns this
+        # image does not know about are simply never selected. Say so loudly
+        # once, because it means a rollback happened.
+        logger.warning(
+            "schema: database is at version %s, this image knows %s. "
+            "Running anyway — every migration in between is additive.",
+            current, SCHEMA_VERSION,
+        )
+        return current
+
+    for number, name, sql, compatible in MIGRATIONS:
+        if number <= current:
+            continue
+        logger.info("schema: applying %s (%s)", number, name)
+        cur.execute(sql)
+        if not compatible:
+            floor = number
+        cur.execute(
+            "UPDATE schema_meta SET version = %s, min_app_schema = %s, updated_at = NOW() WHERE id = 1",
+            (number, floor),
+        )
+        current = number
+
+    return current
+
+
 def init_db():
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -257,69 +375,13 @@ def init_db():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_family_source ON family_grants(source_user_id) WHERE revoked_at IS NULL")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_family_claimed ON family_grants(claimed_by_user_id) WHERE revoked_at IS NULL")
-            # Migrations for existing databases. Localhost-only — if legacy rows
-            # still use the old (server-side-KDF) auth_hash format, operator must
-            # reset the users table manually.
-            cur.execute("""
-                DO $$ BEGIN
-                    ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;
-                EXCEPTION WHEN duplicate_column THEN NULL;
-                END $$
-            """)
-            cur.execute("""
-                DO $$ BEGIN
-                    ALTER TABLE users ADD COLUMN auth_params TEXT;
-                EXCEPTION WHEN duplicate_column THEN NULL;
-                END $$
-            """)
-            cur.execute("""
-                DO $$ BEGIN
-                    ALTER TABLE users ADD COLUMN recovery_auth TEXT;
-                EXCEPTION WHEN duplicate_column THEN NULL;
-                END $$
-            """)
-            cur.execute("""
-                DO $$ BEGIN
-                    ALTER TABLE users ADD COLUMN recovery_attempts INTEGER DEFAULT 0;
-                EXCEPTION WHEN duplicate_column THEN NULL;
-                END $$
-            """)
-            cur.execute("""
-                DO $$ BEGIN
-                    ALTER TABLE users ADD COLUMN password_version INTEGER DEFAULT 1;
-                EXCEPTION WHEN duplicate_column THEN NULL;
-                END $$
-            """)
-            cur.execute("""
-                DO $$ BEGIN
-                    ALTER TABLE family_grants ADD COLUMN last_access_at TIMESTAMP WITH TIME ZONE;
-                EXCEPTION WHEN duplicate_column THEN NULL;
-                END $$
-            """)
-            # Registration source — one metadata bit per user, used by the
-            # /admin dashboard to count epilepc migrations. No content leak.
-            cur.execute("""
-                DO $$ BEGIN
-                    ALTER TABLE users ADD COLUMN registration_source VARCHAR(16) DEFAULT 'web';
-                EXCEPTION WHEN duplicate_column THEN NULL;
-                END $$
-            """)
-            # Track-3 3.4 — bulk-import idempotency. `client_key` is an OPAQUE,
-            # server-blind token the client supplies (sha256(username:source_id))
-            # so a retried migration batch is a no-op instead of duplicating docs.
-            # Nullable + a PARTIAL unique index → existing rows and all normal
-            # single-doc saves (which never set it) stay NULL and never collide.
-            cur.execute("""
-                DO $$ BEGIN
-                    ALTER TABLE encrypted_documents ADD COLUMN client_key TEXT;
-                EXCEPTION WHEN duplicate_column THEN NULL;
-                END $$
-            """)
-            cur.execute("""
-                CREATE UNIQUE INDEX IF NOT EXISTS uq_docs_user_clientkey
-                ON encrypted_documents (user_id, client_key) WHERE client_key IS NOT NULL
-            """)
-    logger.info("Database initialized")
+            # Numbered, recorded migrations for existing databases. See
+            # MIGRATIONS above for the ledger and what `compatible` means.
+            # Localhost-only caveat, unchanged: if legacy rows still use the
+            # old (server-side-KDF) auth_hash format, the operator must reset
+            # the users table manually.
+            applied = _apply_migrations(cur)
+    logger.info("Database initialized (schema version %s)", applied)
 
 
 # --- JWT ---
@@ -515,11 +577,31 @@ def valid_b64(value, min_bytes=1, max_bytes=4096) -> bool:
 
 @app.route('/health', methods=['GET'])
 def health():
+    """Liveness probe.
+
+    Carries the schema version the database reports and the one this image
+    knows. It answers "which schema is prod at" from outside the box, which is
+    exactly what you want mid-deploy, and it is not a disclosure: both numbers
+    are in the public repository. A mismatch here is the tell that a rollback
+    left an older image on a newer schema.
+    """
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
-        return jsonify({'status': 'healthy'}), 200
+                try:
+                    cur.execute("SELECT version FROM schema_meta WHERE id = 1")
+                    row = cur.fetchone()
+                    db_schema = row['version'] if row else None
+                except Exception:
+                    # Pre-ledger database, or the table is not there yet.
+                    conn.rollback()
+                    db_schema = None
+        return jsonify({
+            'status': 'healthy',
+            'schema': db_schema,
+            'app_schema': SCHEMA_VERSION,
+        }), 200
     except Exception:
         return jsonify({'status': 'unhealthy'}), 503
 

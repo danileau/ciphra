@@ -42,8 +42,13 @@ def test_on_conflict_repeats_the_partial_index_predicate():
     """A partial unique index needs its predicate in the ON CONFLICT clause."""
     src = _source()
 
+    # The predicate ends where its string literal ends. Match any quote rather
+    # than `"""` specifically: the statement moved from a triple-quoted heredoc
+    # in init_db() into the numbered MIGRATIONS ledger, where it is written as
+    # adjacent single-quoted fragments. The invariant below is unchanged — only
+    # where the SQL lives is.
     index = re.search(
-        r'CREATE UNIQUE INDEX[^;]*?ON\s+encrypted_documents\s*\(([^)]*)\)\s*WHERE\s+([^\s"\']+[^"\']*?)\s*"""',
+        r'CREATE UNIQUE INDEX[^;]*?ON\s+encrypted_documents\s*\(([^)]*)\)\s*WHERE\s+([^\s"\']+[^"\']*?)\s*["\']',
         src,
         re.IGNORECASE | re.DOTALL,
     )

@@ -40,6 +40,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Tags + full history. version-guard compares VERSION against the
+          # bump the commits since the last release tag earn; a shallow clone
+          # has no baseline and the check silently skips.
+          fetch-depth: 0
+      - run: scripts/test-version-next.sh
       - run: scripts/version-guard.sh
 
   frontend:
