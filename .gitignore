@@ -34,3 +34,10 @@ tmp/
 # INC-001 deploy-gate reports (scripts/verify-migration-prod.sh) — local
 # evidence with machine-specific timestamps, regenerated on demand
 .inc001/
+
+# AI-assistant configuration — operator-local, not part of the product.
+# The working agreement, the PreToolUse guardrail hook, the skills and the
+# review agent all still live here on disk and still run; they are simply not
+# something a public repository should publish or a contributor should need.
+CLAUDE.md
+.claude/

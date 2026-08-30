@@ -135,15 +135,14 @@ Users read what shipped at **`/docs` → Changelog** (in-app) and in
   see the release process above.
 - **`Release images`**: reads `VERSION`, **fails the build** if it isn't valid
   SemVer, and only then tags/pushes the images. No valid version → no images.
-- **`.claude/hooks/guardrails.py`** (pre-commit, assistant-side): blocks a
-  `feat:`/`fix:` commit that doesn't stage `CHANGELOG.md` in the same commit —
-  the per-commit companion to `version-guard`. chore/docs/test/refactor/ci are
-  exempt; `[skip changelog]` in the message overrides. CI binds everyone; the
-  hook binds the assistant so the entry is written *as the change is made*.
+The operator additionally runs a local pre-commit guard that refuses a
+`feat:`/`fix:` commit which doesn't stage `CHANGELOG.md` alongside it, so the
+entry gets written *as the change is made* rather than remembered at release
+time. That guard is workstation-local and not part of this repository — CI is
+what binds everyone.
 
-So an image without a standardized `X.Y.Z` tag cannot be produced, a version
-bump without a changelog entry cannot be merged, and a feature/fix commit
-without a changelog line is caught at commit time.
+So an image without a standardized `X.Y.Z` tag cannot be produced, and a
+version bump without a changelog entry cannot be merged.
 
 ## The database schema has its own version
 
