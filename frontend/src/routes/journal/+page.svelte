@@ -139,7 +139,11 @@
 			updated.text = momentText;
 		}
 		// CIPH-713 — preserve absence of `private` rather than writing `false`.
-		if (momentPrivate) updated.private = true;
+		// A diary entry is private by its type and carries the flag for
+		// explicitness (types.ts DiaryDoc); it is re-asserted here so a doc
+		// whose flag was cleared while the toggle was still offered gets
+		// repaired on the next save.
+		if (momentPrivate || momentDoc.data.type === 'diary') updated.private = true;
 		else delete updated.private;
 		await documents.updateDoc(momentDoc.id, updated);
 		momentSaving = false;
@@ -435,6 +439,20 @@
 				></textarea>
 			</div>
 
+			{#if momentDoc.data.type === 'diary'}
+				<!-- No toggle here. `isExportable` drops every `type: 'diary'`
+					 document unconditionally, so the switch changed nothing while
+					 its default state read "Erscheint im Export für die Ärztin" —
+					 an affirmative false statement about where the text goes, on
+					 the one surface built for the things people don't want read. -->
+				<p class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<rect x="4" y="11" width="16" height="10" rx="2" />
+						<path d="M8 11V7a4 4 0 1 1 8 0v4" />
+					</svg>
+					{$t('journal.diary_hint')}
+				</p>
+			{:else}
 			<label class="flex items-center gap-2 text-xs" style="color: var(--text-secondary)"
 				aria-label={momentPrivate ? $t('private.toggle_to_public') : $t('private.toggle_to_private')}>
 				<input type="checkbox" bind:checked={momentPrivate} class="w-4 h-4" />
@@ -453,6 +471,7 @@
 				<!-- Same bug as the quick-add sheet: the hint must follow the state. -->
 				<span style="color: var(--text-muted)">— {momentPrivate ? $t('private.tooltip') : $t('private.state_public_hint')}</span>
 			</label>
+			{/if}
 
 			<div class="flex flex-wrap gap-2 justify-end pt-2" style="border-top: 1px solid var(--border)">
 				{#if momentConfirmDelete}

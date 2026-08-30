@@ -19,6 +19,19 @@ app at **/docs → Changelog** and here on the public repo.
   looking at (footer → "Quellcode"). Operators of a modified copy point it at
   their own repository with `PUBLIC_SOURCE_URL`; unset, it links here.
 
+### Fixed
+- **Someone you gave family access to could read your diary and your locked
+  entries.** The app said they couldn't — the banner on their screen even said
+  how many entries were being kept back — but nothing was filtering them. Family
+  access now shows only what you share: the diary and any entry you locked stay
+  with you. If you have given someone access, their copy of those entries is
+  removed from their device the next time they open ciphra.
+- The diary offered a "private" switch that did nothing. Diary entries are never
+  exported, whichever way it was set, while the switch claimed the entry would
+  appear in the export for your doctor. The switch is gone from diary entries and
+  says plainly that they stay private; it still works as before on day entries
+  and note markers.
+
 <!--
 Add lines under the relevant heading (omit empty headings):
 

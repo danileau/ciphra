@@ -9,7 +9,7 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { documents, documentsError } from '$lib/stores/documents';
+	import { documents, documentsError, caregiverHiddenCount } from '$lib/stores/documents';
 	import { pendingCount } from '$lib/outbox';
 	import { get } from 'svelte/store';
 	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem, hasBedarfMeds, bedarfMedsForPicker, foldRescueMedications } from '$lib/blueprint';
@@ -919,8 +919,8 @@
 
 	{#if $activeVault}
 		{@const activeLink = $familyLinks.find(l => l.sourceUserId === $activeVault)}
-		{@const hiddenCount = $documents.filter(d => d.data?.type === 'diary' || d.data?.private === true).length}
-		{@const visibleCount = $documents.length - hiddenCount}
+		{@const hiddenCount = $caregiverHiddenCount}
+		{@const visibleCount = $documents.length}
 		<div class="border-b px-4 py-2" style="background: rgba(159, 99, 11, 0.08); border-color: rgba(159, 99, 11, 0.2)">
 			<div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
 				<p class="text-sm" style="color: var(--ochre)">

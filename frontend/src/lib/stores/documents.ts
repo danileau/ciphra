@@ -5,6 +5,7 @@ import { familyLinks, activeVault } from './familyLinks';
 import * as api from '$lib/api';
 import { encryptDocument, decryptDocument } from '$lib/crypto';
 import { getAllDocs, putDocs, type CachedDoc } from '$lib/idb';
+import { isVisibleToCaregiver } from '$lib/utils/exportable';
 import {
 	enqueue as outboxEnqueue,
 	dequeue as outboxDequeue,
@@ -15,6 +16,18 @@ import {
 } from '$lib/outbox';
 
 export const documentsError = writable<string | null>(null);
+
+/**
+ * How many of the patient's documents the current linked-vault view is
+ * withholding (diary + entries the patient locked). Zero when looking at your
+ * own vault.
+ *
+ * The caregiver banner tells them the number exists — CIPH-726's point is that
+ * a caregiver has to know they are seeing a partial record, or they will read
+ * a quiet week as a quiet week. It used to count them out of `$documents`,
+ * which only worked because the filter it was describing did not exist.
+ */
+export const caregiverHiddenCount = writable(0);
 
 export interface CiphraDocument {
 	id: number;
@@ -112,8 +125,9 @@ function createDocStore() {
 		rawDocs: RawDoc[],
 		masterKey: Uint8Array,
 		cachedByEtag: Map<string, CachedDoc>,
-		cacheKey: string
-	): Promise<{ docs: CiphraDocument[]; freshCache: CachedDoc[] }> {
+		cacheKey: string,
+		linked: boolean
+	): Promise<{ docs: CiphraDocument[]; freshCache: CachedDoc[]; hidden: number }> {
 		const results = await Promise.allSettled(
 			rawDocs.map(async (d) => {
 				const etag = d.encrypted_data;
@@ -134,12 +148,26 @@ function createDocStore() {
 
 		const docs: CiphraDocument[] = [];
 		const freshCache: CachedDoc[] = [];
+		let hidden = 0;
 		for (const r of results) {
 			if (r.status !== 'fulfilled') continue;
 			const { doc, etag } = r.value;
 			// family_link entries live in the same encrypted_documents table
 			// but are metadata for the family-sharing store, not health data.
 			if (doc.data?.type === 'family_link') continue;
+			// The patient's diary and locked entries are not the caregiver's to
+			// read. Dropped before `freshCache` so they are not written to this
+			// device either — `putDocs` replaces the partition, so a cache from
+			// before this filter is purged on the first successful load.
+			//
+			// This is a client-side control: the grant re-wraps the patient's
+			// master key, so the ciphertext still arrives and is still
+			// decryptable here. Making it a real boundary means not sending
+			// those rows at all — see the per-grant scope work.
+			if (linked && !isVisibleToCaregiver(doc)) {
+				hidden++;
+				continue;
+			}
 			docs.push(doc);
 			freshCache.push({
 				id: doc.id,
@@ -149,7 +177,7 @@ function createDocStore() {
 				created_at: doc.serverCreatedAt,
 			});
 		}
-		return { docs, freshCache };
+		return { docs, freshCache, hidden };
 	}
 
 	/**
@@ -164,9 +192,12 @@ function createDocStore() {
 		base: CiphraDocument[],
 		masterKey: Uint8Array,
 		cacheKey: string,
-		username: string
+		username: string,
+		linked: boolean
 	): Promise<CiphraDocument[]> {
-		if (!browser) return base;
+		const gate = (docs: CiphraDocument[]) =>
+			linked ? docs.filter(isVisibleToCaregiver) : docs;
+		if (!browser) return gate(base);
 		let pending: OutboxRecord[];
 		try {
 			pending = await outboxGetPending(username);
@@ -174,7 +205,7 @@ function createDocStore() {
 			return base;
 		}
 		const mine = pending.filter(r => r.cacheKey === cacheKey);
-		if (mine.length === 0) return base;
+		if (mine.length === 0) return gate(base);
 
 		const removedIds = new Set(
 			mine.filter(r => r.op === 'remove' && r.serverId != null).map(r => r.serverId)
@@ -217,7 +248,9 @@ function createDocStore() {
 		}
 		// Newest queued create first; server docs keep their order after.
 		createDocs.reverse();
-		return [...createDocs, ...surviving];
+		// Gated last so a queued write cannot reintroduce what the load
+		// filtered: an update can flip an already-visible doc to private.
+		return gate([...createDocs, ...surviving]);
 	}
 
 	/** Find the outbox tempId backing an optimistic (negative-id) doc. */
@@ -321,6 +354,7 @@ function createDocStore() {
 			inFlight = (async (): Promise<boolean> => {
 			const { masterKey, sourceUserId, cacheKey, username } = ctx;
 			if (!masterKey) return false;
+			const linked = sourceUserId != null;
 
 			const t0 = performance.now();
 			let cacheHits = 0;
@@ -337,10 +371,16 @@ function createDocStore() {
 						const instant = cached
 							.filter(c => c.data?.type !== 'family_link')
 							.map(c => ({ id: c.id, serverCreatedAt: c.created_at, data: c.data } as CiphraDocument));
-						set(await applyOutbox(instant, masterKey, cacheKey, username));
+						// A cache written before the caregiver filter existed still
+						// holds the patient's private documents. applyOutbox gates
+						// them out of the render; the server pass below rewrites the
+						// partition without them.
+						const shown = await applyOutbox(instant, masterKey, cacheKey, username, linked);
+						caregiverHiddenCount.set(linked ? instant.length - shown.length : 0);
+						set(shown);
 					} else {
 						// No cache yet, but queued offline writes may still exist.
-						set(await applyOutbox([], masterKey, cacheKey, username));
+						set(await applyOutbox([], masterKey, cacheKey, username, linked));
 					}
 				} catch {
 					// cache miss is fine
@@ -359,9 +399,10 @@ function createDocStore() {
 						if (cachedByEtag.has(`${d.id}|${d.encrypted_data}`)) cacheHits++;
 						else fresh++;
 					}
-					const { docs, freshCache } = await decryptDocs(rawDocs, masterKey, cachedByEtag, cacheKey);
+					const { docs, freshCache, hidden } = await decryptDocs(rawDocs, masterKey, cachedByEtag, cacheKey, linked);
 					const tDecrypt = performance.now();
-					set(await applyOutbox(docs, masterKey, cacheKey, username));
+					caregiverHiddenCount.set(hidden);
+					set(await applyOutbox(docs, masterKey, cacheKey, username, linked));
 					if (browser && cacheKey) {
 						try {
 							await putDocs(cacheKey, freshCache);
@@ -625,6 +666,7 @@ function createDocStore() {
 		clear() {
 			set([]);
 			tempIdToNeg.clear();
+			caregiverHiddenCount.set(0);
 			inFlightKey = null;
 		}
 	};
