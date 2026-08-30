@@ -144,7 +144,7 @@ export default {
 	'family.revoke': 'Révoquer',
 	'family.confirm_revoke': 'Révoquer cette invitation ? L\'accès sera coupé à la prochaine requête.',
 	'family.confirm_revoke_all': 'VRAIMENT révoquer TOUTES les invitations familiales actives ? Tous les comptes liés perdront l\'accès immédiatement.',
-	'family.revoke_all': 'Tout révoquer (panique)',
+	'family.revoke_all': 'Tout révoquer',
 	'family.revoke_caveat': "La révocation arrête les nouveaux accès. Les personnes qui ont déjà téléchargé vos données conservent leur copie locale — nous ne pouvons pas l'atteindre.",
 	'family.last_seen': 'Vu il y a {ago}',
 	'family.no_grants': 'Aucune invitation active. Créez-en une pour partager l\'accès.',

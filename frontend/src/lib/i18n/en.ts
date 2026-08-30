@@ -144,7 +144,7 @@ export default {
 	'family.revoke': 'Revoke',
 	'family.confirm_revoke': 'Revoke this invite? Any active access will be cut off on the next request.',
 	'family.confirm_revoke_all': 'Revoke ALL active family invites? Everyone you gave access to will lose it.',
-	'family.revoke_all': 'Revoke all (panic)',
+	'family.revoke_all': 'Revoke all',
 	'family.revoke_caveat': 'Revocation stops new access. Anyone who already downloaded your data keeps their local copy — we can\'t reach into their device.',
 	'family.last_seen': 'Last seen {ago} ago',
 	'family.no_grants': 'No active invites. Create one to share access.',

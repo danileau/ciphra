@@ -144,7 +144,7 @@ export default {
 	'family.revoke': 'Revoca',
 	'family.confirm_revoke': 'Revocare questo invito? L\'accesso verrà interrotto alla prossima richiesta.',
 	'family.confirm_revoke_all': 'Revocare DAVVERO TUTTI gli inviti familiari attivi? Tutti gli account collegati perderanno l\'accesso subito.',
-	'family.revoke_all': 'Revoca tutto (panico)',
+	'family.revoke_all': 'Revoca tutto',
 	'family.revoke_caveat': 'La revoca ferma i nuovi accessi. Chi ha già scaricato i tuoi dati conserva la sua copia locale — non possiamo raggiungerla.',
 	'family.last_seen': 'Visto {ago} fa',
 	'family.no_grants': 'Nessun invito attivo. Creane uno per condividere l\'accesso.',

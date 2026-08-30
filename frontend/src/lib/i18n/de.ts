@@ -149,7 +149,7 @@ export default {
 	'family.revoke': 'Widerrufen',
 	'family.confirm_revoke': 'Diese Einladung widerrufen? Aktiver Zugriff endet beim nächsten Request.',
 	'family.confirm_revoke_all': 'WIRKLICH alle aktiven Familien-Einladungen widerrufen? Alle verknüpften Konten verlieren sofort den Zugriff.',
-	'family.revoke_all': 'Alle widerrufen (Panik)',
+	'family.revoke_all': 'Alle widerrufen',
 	'family.revoke_caveat': 'Widerrufen stoppt neuen Zugriff. Wer deine Daten schon heruntergeladen hat, behält seine lokale Kopie — das erreichen wir nicht.',
 	'family.last_seen': 'Zuletzt gesehen vor {ago}',
 	'family.no_grants': 'Keine aktiven Einladungen. Erstelle eine, um Zugriff zu teilen.',
