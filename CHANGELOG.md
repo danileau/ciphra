@@ -19,6 +19,13 @@ app at **/docs → Changelog** and here on the public repo.
   looking at (footer → "Quellcode"). Operators of a modified copy point it at
   their own repository with `PUBLIC_SOURCE_URL`; unset, it links here.
 
+### Fixed
+- The account switcher in the header ("Ansicht") opened a dropdown that looked
+  broken and, in dark mode, was close to unreadable. It now opens a proper
+  ciphra menu that looks the same in both themes. If someone has shared their
+  account with you, this is the control you use to switch between their data
+  and your own.
+
 <!--
 Add lines under the relevant heading (omit empty headings):
 

@@ -19,6 +19,7 @@
 	import { resolvedTheme } from '$lib/stores/theme';
 	import { quickAddOpen } from '$lib/stores/quickAdd';
 	import BottomNav from '$lib/components/BottomNav.svelte';
+	import VaultSwitcher from '$lib/components/VaultSwitcher.svelte';
 	import AuthedFooter from '$lib/components/AuthedFooter.svelte';
 	import PublicFooter from '$lib/components/PublicFooter.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
@@ -649,11 +650,6 @@
 	// picker now lives only in PublicFooter, which has its own local
 	// copy of the handler.
 
-	function onVaultChange(e: Event) {
-		const target = e.currentTarget as HTMLSelectElement;
-		activeVault.set(target.value ? Number(target.value) : null);
-	}
-
 	$: currentPath = $page.url.pathname as string;
 	// CIPH-833 — route-shell registry. One lookup per route drives
 	// both the chrome selection and the auth/blueprint guards below,
@@ -856,25 +852,10 @@
 
 			{#if liveLinks.length > 0}
 				<!-- Vault switcher: visible label + eye icon so it reads as
-					 "you're viewing X" rather than a bare dropdown. -->
-				<label class="flex items-center gap-1.5 rounded-lg px-2 py-1 min-h-[36px] cursor-pointer"
-					style="background: {$activeVault ? 'rgba(159, 99, 11, 0.12)' : 'var(--surface-muted)'};
-					       border: 1px solid {$activeVault ? 'var(--ochre)' : 'var(--border)'};">
-					<svg class="w-4 h-4 shrink-0" style="color: {$activeVault ? 'var(--ochre)' : 'var(--text-muted)'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
-					<span class="text-xs hidden sm:inline" style="color: var(--text-muted)">{$t('family.switcher_viewing')}</span>
-					<select
-						aria-label={$t('family.switcher_label')}
-						class="text-sm bg-transparent border-none outline-none cursor-pointer font-medium pr-1"
-						style="color: {$activeVault ? 'var(--ochre)' : 'var(--text-primary)'}"
-						value={$activeVault ?? ''}
-						on:change={onVaultChange}
-					>
-						<option value="">{$t('family.switcher_self')}</option>
-						{#each liveLinks as l}
-							<option value={l.sourceUserId}>{l.sourceUsername}</option>
-						{/each}
-					</select>
-				</label>
+					 "you're viewing X" rather than a bare dropdown. The native
+					 <select> it replaced could not style its own options panel
+					 — see VaultSwitcher.svelte. -->
+				<VaultSwitcher links={liveLinks} />
 			{/if}
 			<div class="flex items-center gap-1 ml-auto">
 				<!-- Admin link -->
@@ -921,7 +902,7 @@
 		{@const activeLink = $familyLinks.find(l => l.sourceUserId === $activeVault)}
 		{@const hiddenCount = $documents.filter(d => d.data?.type === 'diary' || d.data?.private === true).length}
 		{@const visibleCount = $documents.length - hiddenCount}
-		<div class="border-b px-4 py-2" style="background: rgba(159, 99, 11, 0.08); border-color: rgba(159, 99, 11, 0.2)">
+		<div class="border-b px-4 py-2" style="background: rgba(var(--ochre-rgb), 0.08); border-color: rgba(var(--ochre-rgb), 0.2)">
 			<div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
 				<p class="text-sm" style="color: var(--ochre)">
 					<strong>{$t('family.banner_viewing', { user: activeLink?.sourceUsername ?? '' })}</strong>
@@ -931,7 +912,7 @@
 					type="button"
 					on:click={() => activeVault.set(null)}
 					class="text-xs font-medium px-3 py-1 rounded-lg shrink-0 min-h-[32px]"
-					style="background: rgba(159,99,11,0.15); color: var(--ochre)"
+					style="background: rgba(var(--ochre-rgb), 0.15); color: var(--ochre)"
 				>
 					{$t('family.banner_switch_back')}
 				</button>

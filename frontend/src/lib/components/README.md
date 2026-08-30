@@ -388,6 +388,18 @@ route kind.
   "listbox"` popover with keyboard nav (Up/Down/Home/End/Esc) and
   outside-click dismissal. Form-context selects (settings, EntryComposer)
   keep the native control on purpose.
+- **VaultSwitcher.svelte** — the "Ansicht: <account>" control in the app
+  header, letting a caregiver switch between their own vault and the
+  accounts shared with them. Same reasoning as `LocaleSelect.svelte`, and
+  the same shape: it replaced a native `<select>` whose `bg-transparent`
+  left the open options panel with no background of its own, so it fell
+  back to UA chrome and read as broken — worst in dark mode, light panel
+  under near-white text. Reported from production. The active-vault tint
+  uses `rgba(var(--ochre-rgb), …)`; the literal `rgba(159, 99, 11, …)` it
+  replaced is the light-theme ochre and was wrong on a dark surface.
+  Third listbox after `LocaleSelect` and `ExportPeriodPopover` —
+  extracting the shared mechanics into one primitive is the open
+  follow-up.
 - **ExportNoteReview.svelte** — pre-export opt-in for note markers.
   Freeform note markers are the only export content authored as prose,
   and people write prose: a real export carried a third party's name,
