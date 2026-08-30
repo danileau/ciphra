@@ -5,7 +5,7 @@ they come up; this file holds the **larger items that each deserve their own
 session**, plus the operator-only actions and the decisions already made (so
 nothing gets re-proposed).
 
-Last reviewed: 2026-08-23. Day-to-day state lives in git + the operator's
+Last reviewed: 2026-08-30. Day-to-day state lives in git + the operator's
 memory; this is the forward-looking list.
 
 ---
@@ -13,7 +13,7 @@ memory; this is the forward-looking list.
 ## Larger items — each is its own project
 
 Every prompt below is self-contained: paste it to start a fresh session. All
-three respect the repo's hard rules (branch off fresh `origin/main`,
+four respect the repo's hard rules (branch off fresh `origin/main`,
 `/green-gate` before push, never merge/deploy — the operator does that, CHANGELOG
 + `version-guard` for user-facing changes).
 
@@ -54,7 +54,79 @@ Akzeptanz: reproduzierbarer Build nachgewiesen, Verify-Prozedur dokumentiert,
 SRI verdrahtet soweit machbar.
 ```
 
-### 2 — Backup tamper-evidence (third hash store) · ops · P2
+### 2 — Per-invite sharing scope · security/product · user-driven
+
+Today a family grant is all-or-nothing: it re-wraps the master key, so the
+linked account can decrypt everything the patient has. PR #171 stopped the app
+from *showing* a caregiver the diary and the locked entries, but that is a
+client-side filter — the ciphertext still arrives and the key still opens it.
+This item moves the decision to the invitation and makes the server enforce it.
+
+Driven by a real user (2026-08-30) who asked whether the doctor she had sent an
+invite link to could read her diary. Both answers must be first-class: she wants
+to share everything, the next person will want the diary held back.
+
+**Operator decision 2026-08-30 — the one-bit disclosure is accepted.** The
+server may learn a per-document class saying whether the user considers a
+document shareable. It stays at two classes until a user asks for finer
+granularity; a full per-type label would tell the server the type of every
+document, which is a bigger step and is not approved. `SECURITY_MODEL.md`
+§What the server can see must name the new field in the same change.
+
+```
+Ziel: Beim Erstellen einer Familien-Einladung wählbar machen, was dieser Zugriff
+sehen darf — und die Wahl SERVERSEITIG durchsetzen, nicht nur im Client anzeigen.
+
+Kontext: Ein family_grant wrappt den master_key des Patienten neu, der verknüpfte
+Account entschlüsselt also alles. PR #171 filtert Tagebuch + gesperrte Einträge
+client-seitig aus der Caregiver-Ansicht (`isVisibleToCaregiver` in
+lib/utils/exportable.ts) — ehrlich, aber keine echte Grenze. Der Server kann nicht
+nach Typ filtern: der Typ liegt IM Ciphertext (docs/ARCHITECTURE.md §Data model).
+Operator-Entscheid 2026-08-30: EIN Bit pro Dokument darf der Server sehen.
+
+Umfang:
+- `encrypted_documents.share_class SMALLINT NULL` — der Client stempelt es beim
+  Schreiben aus dem Klartext-Typ (er kennt ihn ohnehin). SMALLINT statt Boolean,
+  damit die Partition später ohne zweite Migration feiner werden kann.
+- `family_grants.share_mask INT` — Bitmaske erlaubter Klassen. Heute: 1 =
+  teilbar, 2 = Tagebuch/gesperrt; "alles teilen" = 3.
+- `family_documents_list` filtert per Maske. Der Caregiver bekommt die Zeile gar
+  nicht erst.
+- FAIL CLOSED: NULL = nicht klassifiziert = nicht geteilt. Sonst fliessen am
+  Deploy-Tag alle Alt-Tagebücher wieder. Der Client des PATIENTEN backfillt
+  seinen Bestand nach dem nächsten erfolgreichen load() in EINEM Batch-Call
+  (Vorbild: /api/documents/batch + nginx-Zone api_batch). Bis dahin sieht ein
+  Caregiver WENIGER, nie mehr.
+- Zwei Guards: (a) der Caregiver darf NICHT umklassifizieren — `share_class` auf
+  dem family-POST/PUT-Pfad ignorieren, nur der Owner setzt sie; (b) das
+  Verengen eines bestehenden Grants hat dieselbe Eigenschaft wie ein Widerruf —
+  bereits Heruntergeladenes bleibt beim Empfänger (Satz aus
+  `family.revoke_caveat` übernehmen).
+- UI in FamilySharing.svelte: zwei Optionen beim Erstellen, Default ist die
+  ENGERE ("Alles ausser Tagebuch und gesperrten Einträgen" / "Alles, auch das
+  Tagebuch"). Gewählter Umfang nochmals im Reveal-Schritt vor dem Versenden,
+  pro Grant in der Liste sichtbar, nachträglich änderbar.
+- i18n 4 Locales, DE mit 'ss'. Brand-Voice: sagen, was der Zugriff zeigt, nicht
+  was "wir nicht können".
+- Docs: SECURITY_MODEL.md §What the server can see (das neue Feld benennen),
+  ARCHITECTURE.md (beide Tabellen), FEATURES.md §Family sharing, CHANGELOG als
+  MINOR (neue Fähigkeit, rückwärtskompatibel, nichts wird unlesbar).
+
+Nicht in diesem Umfang: Klasse 2 unter einem eigenen Schlüssel verschlüsseln, den
+kein Grant je erhält. Das wäre die einzige Variante, die auch gegen bereits
+heruntergeladene Bytes schützt — aber Key-Hierarchie-Änderung = MAJOR plus
+Re-Encryption-Migration (docs/VERSIONING.md). Als Endausbau notieren, nicht bauen.
+
+Regeln: Branch off frischem origin/main; /green-gate vor Push; NICHT mergen/
+deployen (Operator); CHANGELOG + version-guard. Client-Filter aus PR #171 bleibt
+als Defense-in-Depth bestehen.
+Akzeptanz: Umfang bei der Einladung wählbar und nachträglich änderbar; der
+Server liefert einem Grant nur erlaubte Klassen (Test gegen die rohe API, nicht
+nur gegen die UI); Backfill nachgewiesen; Fail-closed nachgewiesen; Docs
+aktualisiert.
+```
+
+### 3 — Backup tamper-evidence (third hash store) · ops · P2
 
 [`THREAT_MODEL.md`](THREAT_MODEL.md) §2.D / §7 P2. Medium size, code-side buildable.
 
@@ -84,7 +156,7 @@ Akzeptanz: backup.sh schreibt pro Lauf einen Hash in den unabhängigen Store;
 Verify-Schritt vorhanden; Docs aktualisiert.
 ```
 
-### 3 — SEO / SSR-landing architectural fix · product
+### 4 — SEO / SSR-landing architectural fix · product
 
 The biggest product lever. A prior SSR landing was shipped then reverted because
 it broke registration (operator memory `project_seo_state`).
