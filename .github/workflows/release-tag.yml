@@ -3,6 +3,11 @@ name: Release tag
 # Mint the `vX.Y.Z` tag and the GitHub release for a version, from the merged
 # commit that shipped it.
 #
+# RUN BY HAND. Operator decision 2026-08-30: a merge must not mint a release on
+# its own. Cutting a release is a judgement about what the version means to a
+# user, and the moment to make it is not "whenever VERSION happened to change".
+# Actions → Release tag → Run workflow.
+#
 # The CHANGELOG has always linked to these tags ("compare/v0.1.0...HEAD",
 # "releases/tag/v0.1.0") and nothing ever created one, so every link in the
 # file users read at /docs → Changelog was dead. This closes that loop.
@@ -15,15 +20,10 @@ name: Release tag
 # workflow or pushing an unrelated commit cannot mint a second release.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      # Only a change to the version can start a release.
-      - VERSION
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to tag (X.Y.Z). Defaults to the VERSION file.'
+        description: 'Version to tag (X.Y.Z). Defaults to the VERSION file on the chosen ref.'
         required: false
         type: string
       sha:

@@ -364,12 +364,14 @@ The workflows:
   Trivy fs scan.
 - `release-images.yml` — on merge to main: validate `VERSION` → buildx +
   sign + push (tags `X.Y.Z` + `<sha>` + `latest`).
-- `release-tag.yml` — on a merge that changes `VERSION`: create the annotated
-  **`vX.Y.Z` git tag** and publish the GitHub release, with that version's
-  `CHANGELOG.md` section as the body. Idempotent, and never writes to a branch
-  (a tag is not a branch push, so `main-protection` is untouched). Also runs on
-  `workflow_dispatch` with an explicit version + commit, to backfill a release
-  that shipped before this existed. See `docs/VERSIONING.md`.
+- `release-tag.yml` — **manual only** (Actions → *Release tag* → *Run
+  workflow*). Creates the annotated **`vX.Y.Z` git tag** and publishes the
+  GitHub release, with that version's `CHANGELOG.md` section as the body.
+  Takes an optional version + commit, so it also backfills a release that
+  shipped before it existed. Idempotent, and never writes to a branch (a tag is
+  not a branch push, so `main-protection` is untouched). It used to fire on any
+  merge that moved `VERSION`; that was removed 2026-08-30 — cutting a release
+  is a decision, not a side effect. See `docs/VERSIONING.md`.
 - `security-scan.yml` — daily Trivy of repo + published images.
 - `security-monitor.yml` — daily deterministic drift check of the LIVE
   prod edge (`scripts/security-monitor.sh`): CSP shape, HSTS+preload, the

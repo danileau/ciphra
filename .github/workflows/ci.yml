@@ -40,10 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        # Full history for the version-next suite, which builds its own
+        # throwaway repos but is cheap to run against a complete checkout.
         with:
-          # Tags + full history. version-guard compares VERSION against the
-          # bump the commits since the last release tag earn; a shallow clone
-          # has no baseline and the check silently skips.
           fetch-depth: 0
       - run: scripts/test-version-next.sh
       - run: scripts/version-guard.sh
