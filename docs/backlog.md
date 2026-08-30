@@ -13,7 +13,7 @@ memory; this is the forward-looking list.
 ## Larger items — each is its own project
 
 Every prompt below is self-contained: paste it to start a fresh session. All
-four respect the repo's hard rules (branch off fresh `origin/main`,
+three respect the repo's hard rules (branch off fresh `origin/main`,
 `/green-gate` before push, never merge/deploy — the operator does that, CHANGELOG
 + `version-guard` for user-facing changes).
 
@@ -54,81 +54,7 @@ Acceptance: a reproducible build demonstrated, the verify procedure documented,
 SRI wired as far as feasible.
 ```
 
-### 2 — Per-invite sharing scope · security/product · user-driven
-
-Today a family grant is all-or-nothing: it re-wraps the master key, so the
-linked account can decrypt everything the patient has. PR #171 stopped the app
-from *showing* a caregiver the diary and the locked entries, but that is a
-client-side filter — the ciphertext still arrives and the key still opens it.
-This item moves the decision to the invitation and makes the server enforce it.
-
-Driven by a real user (2026-08-30) who asked whether the doctor she had sent an
-invite link to could read her diary. Both answers must be first-class: she wants
-to share everything, the next person will want the diary held back.
-
-**Operator decision 2026-08-30 — the one-bit disclosure is accepted.** The
-server may learn a per-document class saying whether the user considers a
-document shareable. It stays at two classes until a user asks for finer
-granularity; a full per-type label would tell the server the type of every
-document, which is a bigger step and is not approved. `SECURITY_MODEL.md`
-§What the server can see must name the new field in the same change.
-
-```
-Goal: let the patient choose, when creating a family invitation, what that
-access may see — and have the SERVER enforce the choice rather than the client
-merely honouring it.
-
-Context: a family_grant re-wraps the patient's master_key, so the linked account
-decrypts everything. PR #171 filters the diary and locked entries out of the
-caregiver view on the client (`isVisibleToCaregiver` in lib/utils/exportable.ts)
-— honest, but not a real boundary. The server cannot filter by type: the type
-lives INSIDE the ciphertext (docs/ARCHITECTURE.md §Data model). Operator
-decision 2026-08-30: the server may learn ONE bit per document.
-
-Scope:
-- `encrypted_documents.share_class SMALLINT NULL` — the client stamps it at
-  write time from the plaintext type, which it already knows. SMALLINT rather
-  than a boolean so the partition can get finer later without a second
-  migration.
-- `family_grants.share_mask INT` — bitmask of permitted classes. Today: 1 =
-  shareable, 2 = diary/locked; "share everything" = 3.
-- `family_documents_list` filters on the mask. The caregiver never receives the
-  row at all.
-- FAIL CLOSED: NULL means unclassified means not shared. Any other default
-  re-releases every existing diary on the day this deploys. The PATIENT's client
-  backfills their corpus in ONE batch call after the next successful load
-  (precedent: /api/documents/batch and the nginx api_batch zone). Until then a
-  caregiver sees LESS, never more.
-- Two guards: (a) a caregiver must NOT be able to reclassify — ignore
-  `share_class` on the family POST/PUT path, only the owner sets it; (b)
-  narrowing an existing grant has the same property as revoking one — whatever
-  they already downloaded, they keep (reuse the sentence from
-  `family.revoke_caveat`).
-- UI in FamilySharing.svelte: two options at creation, defaulting to the
-  NARROWER one ("Everything except the diary and locked entries" / "Everything,
-  including the diary"). Repeat the chosen scope on the reveal step before the
-  link is sent, show it per grant in the list, and allow changing it afterwards.
-- i18n across 4 locales, German with 'ss'. Brand voice: say what the access
-  shows, not what "we cannot" do.
-- Docs: SECURITY_MODEL.md §What the server can see (name the new field),
-  ARCHITECTURE.md (both tables), FEATURES.md §Family sharing, CHANGELOG as a
-  MINOR (new capability, backward compatible, nothing becomes unreadable).
-
-Out of scope: encrypting class 2 under a separate key that no grant ever
-receives. That is the only variant that also protects bytes a caregiver already
-holds — but it is a key-hierarchy change, so MAJOR plus a re-encryption
-migration (docs/VERSIONING.md). Note it as the endgame; do not build it here.
-
-Rules: branch off fresh origin/main; /green-gate before push; do NOT merge or
-deploy (the operator does that); CHANGELOG + version-guard. The client-side
-filter from PR #171 stays as defence in depth.
-Acceptance: the scope is selectable at invitation time and changeable
-afterwards; the server returns only permitted classes to a grant (tested
-against the raw API, not just the UI); the backfill is demonstrated; fail-closed
-is demonstrated; docs updated.
-```
-
-### 3 — Backup tamper-evidence (third hash store) · ops · P2
+### 2 — Backup tamper-evidence (third hash store) · ops · P2
 
 [`THREAT_MODEL.md`](THREAT_MODEL.md) §2.D / §7 P2. Medium size, code-side buildable.
 
@@ -159,7 +85,7 @@ Acceptance: backup.sh writes one hash per run to the independent store; the
 verify step exists; docs updated.
 ```
 
-### 4 — SEO / SSR-landing architectural fix · product
+### 3 — SEO / SSR-landing architectural fix · product
 
 The biggest product lever. A prior SSR landing was shipped then reverted because
 it broke registration (operator memory `project_seo_state`).
@@ -206,6 +132,14 @@ registration and login flow is intact per e2e; CSP unchanged; documented.
   suggest it runs; confirm `/etc/logrotate.d/ciphra` exists).
 
 ## Decided — do NOT re-propose
+
+- **Per-invite sharing scope** — built and merged (#176, 2026-08-30). The owner
+  picks at invitation time whether a family grant may read the diary and locked
+  entries, and the server enforces it via one metadata bit per document. The
+  operator approved that one-bit disclosure; **a full per-type label is NOT
+  approved** — it would tell the server the type of every document. Encrypting
+  the personal class under a separate key remains the unbuilt endgame (MAJOR:
+  key hierarchy + re-encryption migration).
 
 - **SBOM generation in CI** — declined (Trivy already covers CVE detection; SBOM
   is provenance-only and not wanted). 2026-08-23.
