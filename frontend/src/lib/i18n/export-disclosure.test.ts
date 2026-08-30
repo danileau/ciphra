@@ -101,6 +101,65 @@ describe('the section hint cannot contradict the toggle', () => {
 	}
 });
 
+describe('the diary is not offered a switch it does not have', () => {
+	/**
+	 * `isExportable` drops every `type: 'diary'` document unconditionally —
+	 * there is no toggle, by design. The journal's moment view rendered the
+	 * private switch for diary entries anyway, and its default state reads
+	 * "Standard — Erscheint im Export für die Ärztin."
+	 *
+	 * So the surface built for the things people do not want read told them
+	 * their entry was on its way to a doctor, and the switch that appeared to
+	 * control it did nothing in either position. A user asked us to explain it.
+	 */
+	const GUARD = "{#if momentDoc.data.type === 'diary'}";
+	const TOGGLE = 'bind:checked={momentPrivate}';
+
+	it('the toggle sits in the non-diary branch', () => {
+		const src = read('routes/journal/+page.svelte');
+		const idx = src.indexOf(TOGGLE);
+		expect(idx, 'the private toggle should still exist for entries/markers').toBeGreaterThan(0);
+
+		const before = src.slice(0, idx);
+		const lastElse = before.lastIndexOf('{:else}');
+		expect(lastElse, 'the toggle is not behind an {:else}').toBeGreaterThan(0);
+		expect(
+			before.lastIndexOf(GUARD, lastElse),
+			'the {:else} the toggle sits in does not belong to a diary check',
+		).toBeGreaterThan(0);
+		expect(
+			before.slice(lastElse).includes('{/if}'),
+			'the diary branch closes before the toggle, so the toggle is unguarded',
+		).toBe(false);
+	});
+
+	it('the diary branch states the truth instead', () => {
+		const src = read('routes/journal/+page.svelte');
+		const idx = src.indexOf(TOGGLE);
+		const diaryBranch = src.slice(src.lastIndexOf(GUARD, idx), idx);
+		expect(diaryBranch).toContain("$t('journal.diary_hint')");
+	});
+
+	it('a diary entry keeps the flag when saved', () => {
+		// Belt-and-suspenders: the type alone excludes it, but a doc whose flag
+		// was cleared while the toggle was still offered gets repaired.
+		const src = read('routes/journal/+page.svelte');
+		expect(src).toMatch(
+			/if \(momentPrivate \|\| momentDoc\.data\.type === 'diary'\) updated\.private = true;/,
+		);
+	});
+
+	for (const [name, dict] of DICTS) {
+		it(`${name}: the diary hint promises no export`, () => {
+			const v = dict['journal.diary_hint'];
+			expect(v, `${name}: journal.diary_hint missing`).toBeTruthy();
+			expect(v).not.toMatch(
+				/Export für die Ärztin|export pour le médecin|esportazione per il medico|doctor export/i,
+			);
+		});
+	}
+});
+
 describe('the guard is not vacuous', () => {
 	it('private.tooltip still says what it says', () => {
 		// If someone "fixes" this by watering down the string instead, the

@@ -364,6 +364,12 @@ The workflows:
   Trivy fs scan.
 - `release-images.yml` — on merge to main: validate `VERSION` → buildx +
   sign + push (tags `X.Y.Z` + `<sha>` + `latest`).
+- `release-tag.yml` — on a merge that changes `VERSION`: create the annotated
+  **`vX.Y.Z` git tag** and publish the GitHub release, with that version's
+  `CHANGELOG.md` section as the body. Idempotent, and never writes to a branch
+  (a tag is not a branch push, so `main-protection` is untouched). Also runs on
+  `workflow_dispatch` with an explicit version + commit, to backfill a release
+  that shipped before this existed. See `docs/VERSIONING.md`.
 - `security-scan.yml` — daily Trivy of repo + published images.
 - `security-monitor.yml` — daily deterministic drift check of the LIVE
   prod edge (`scripts/security-monitor.sh`): CSP shape, HSTS+preload, the
@@ -436,6 +442,18 @@ Rollback by hand = `r` in the wizard, or push a fresh **annotated** deploy
 tag for the previous SHA (delete the existing `deploy-<sha>` first so it can
 be recreated with a new timestamp). Watch a deploy live:
 `journalctl -u ciphra-deploy -f`.
+
+**Rollback and the database schema.** A release that adds a column migrates the
+database before it serves traffic, so a rollback puts the *previous* image on
+the *newer* schema. That is a supported state as long as the migration was
+additive: the old code never selects the column, and the API logs a warning
+saying the database is ahead. `curl -s https://ciphra.ch/health` shows both
+numbers — `schema` (what the database is at) and `app_schema` (what the running
+image knows); the mismatch is the confirmation. If the API instead **refuses to
+start** with a schema message, the failed release carried a migration marked
+incompatible: roll *forward* to a fixed build, or restore the database from the
+backup taken before that release. Do not try to hand-edit the schema back.
+`docs/VERSIONING.md` has the ledger and what `compatible` means.
 
 ### CDN caching — `/sw.js` must not be edge-cached
 
@@ -610,7 +628,9 @@ Check in order:
    curl -k -H "CF-Connecting-IP: 127.0.0.1" \
      --resolve "ciphra.ch:8443:127.0.0.1" \
      "https://ciphra.ch:8443/health"
-   # Expected: {"status":"healthy"}
+   # Expected: {"status":"healthy","schema":8,"app_schema":8}
+   # `schema` > `app_schema` means a rollback left an older image on a newer
+   # (additive) schema — supported, see §Deploying → Rollback and the schema.
    ```
 5. If healthy here but cron still failing: env var problem in cron context. Verify
    `.env` is readable by `ubuntu` and contains `HEALTHCHECK_URL_LIVENESS`.

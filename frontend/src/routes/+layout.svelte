@@ -9,7 +9,7 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { documents, documentsError } from '$lib/stores/documents';
+	import { documents, documentsError, caregiverHiddenCount } from '$lib/stores/documents';
 	import { pendingCount } from '$lib/outbox';
 	import { get } from 'svelte/store';
 	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem, hasBedarfMeds, bedarfMedsForPicker, foldRescueMedications } from '$lib/blueprint';

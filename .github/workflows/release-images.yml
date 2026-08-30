@@ -54,6 +54,9 @@ jobs:
       version: ${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # version-guard's computed-bump check needs tags + history.
+          fetch-depth: 0
       - name: Guard + resolve version
         id: v
         run: |
