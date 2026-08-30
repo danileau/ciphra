@@ -9,9 +9,10 @@ production deploy stack (`golive/`) and how each is bounded.
 If you only have time for one, read `SECURITY_MODEL.md` first. This document
 assumes you've read it.
 
-**Last updated:** 2026-06-12
-**Deploy stack reviewed:** `golive/` + CI/CD revision 2026-06-12
-(pull-based CD, cosign-signed images, scanner edge-blocking)
+**Last updated:** 2026-08-30
+**Deploy stack reviewed:** `golive/` + CI/CD revision 2026-08-30
+(pull-based CD, cosign-signed images, scanner edge-blocking, daily edge-drift
+monitor, weekly posture digest, recorded schema migrations)
 **Status:** launch-readiness review, not third-party audit
 
 ---
@@ -102,10 +103,14 @@ sees a valid certificate.
 **Mitigations:**
 - Cloudflare account uses unique password + TOTP 2FA.
 - TLS mode locked at "Full (strict)" in `golive/CHECKLIST.md`
-  pre-cutover step. There is currently no automated alert if it
-  changes — see §7.
-- HSTS preload would prevent a downgrade attack but locks the domain
-  to HTTPS for 2 years; deferred until 30 days of clean prod.
+  pre-cutover step, and `security-monitor.yml` re-checks it daily
+  against the Cloudflare API — a drift alerts rather than waiting to
+  be noticed. That leg needs `CF_API_TOKEN` + `CF_ZONE_ID` as repo
+  secrets; without them it skips with a notice. See §7.
+- The HSTS header carries `preload`, which is what protects a
+  returning visitor from a downgrade. Submitting the domain to the
+  preload *list* — which would also cover a first-ever visit — is
+  declined: it locks the domain to HTTPS for ~2 years. See §7.
 
 **Residual risk: MEDIUM-HIGH** — Cloudflare is a single point of
 trust that sits between the user and our origin. This is the cost
@@ -136,7 +141,8 @@ hotspot, etc.
 **Mitigations:**
 - TLS 1.2+ enforced end-to-end (Cloudflare → origin with Full
   strict + origin cert pinned 15-year validity).
-- HSTS header set by nginx; preload deferred (see C).
+- HSTS header set by nginx, `preload` included; the preload-list
+  submission is declined (see C).
 - The protocol model assumes a passive network attacker by default —
   see `SECURITY_MODEL.md` §Threat model.
 
@@ -222,13 +228,13 @@ itself. The master key never leaves the BROWSER layer.
 | XSS → key theft | Frontend | E + B+C compromise paths | ✅ CSP strict (SvelteKit hash mode) + no inline script; only `'wasm-unsafe-eval'` for Argon2 WASM, no `unsafe-eval` |
 | CSRF | API mutating endpoints | E | ✅ JWT-bearer auth (not cookie) → no automatic credential attachment |
 | SQL injection | API/Postgres | E | ✅ Parameterized queries (psycopg) |
-| TLS downgrade | Edge | C (CF takeover) | ⚠️ Manual lock; no automated alert |
-| BGP hijack / cert fraud | Network | E (sophisticated) | ⚠️ HSTS preload deferred |
+| TLS downgrade | Edge | C (CF takeover) | ⚠️ Locked at Full (strict); `security-monitor.yml` re-checks it daily via the CF API — needs `CF_API_TOKEN` + `CF_ZONE_ID` to be set, else that leg skips |
+| BGP hijack / cert fraud | Network | E (sophisticated) | ⚠️ HSTS sent with `preload`; preload-*list* submission declined 2026-08-23 |
 | JS swap | Server-served bundle | A, B, C | ❌ Structural — see §5 |
 | Backup leak | R2 / Swiss Backup | D | ✅ age-encrypted + protocol-layer ciphertext underneath |
 | Postgres dump leak | VPS compromise | A, B | ✅ Patient health data is ciphertext at rest |
 | Container CVE | Docker base images | E (sophisticated) | ✅ Daily Trivy scan of repo + published ghcr images (`security-scan.yml`), fresh DB, fails on HIGH/CRITICAL |
-| Supply-chain (npm/pip) | Build-time | E (sophisticated) | ⚠️ Lockfiles + `trivy fs` in CI + grouped Dependabot (majors solo-PR'd); images cosign-signed (keyless, Rekor-logged) so the registry→VPS hop is verified; SBOM not yet generated |
+| Supply-chain (npm/pip) | Build-time | E (sophisticated) | ⚠️ Lockfiles + `trivy fs` in CI + grouped Dependabot (majors solo-PR'd); images cosign-signed (keyless, Rekor-logged) so the registry→VPS hop is verified; SBOM declined 2026-08-23 (Trivy covers detection; provenance has no consumer here) |
 | Tampered deploy image | Registry → VPS | C, E | ✅ Pull-based CD digest-verifies the cosign signature (workflow identity on `main`) before restart; a tag alone cannot deploy unsigned bits |
 | Side-channel (timing) | API auth verification | A, E (sophisticated) | ✅ Constant-time hash compare in auth_verify |
 
@@ -329,10 +335,10 @@ upload time) for tamper-evidence.
 | ✅ done | `docs/INCIDENT_RESPONSE.md` written (severity model, detect→learn loop, 5 playbooks, incident-record format) (2026-08-22) | — |
 | ⚙️ mechanism shipped | Cloudflare TLS-mode drift alerting — `security-monitor.yml` checks it daily via the CF API; **activate by setting `CF_API_TOKEN` + `CF_ZONE_ID` as GH secrets** (until then that one leg skips-with-notice; the edge-header checks already run) | operator: add secrets |
 | P2 | Backup tamper-evidence (third hash store) | post-launch ops sprint |
-| P2 | HSTS preload **submission to hstspreload.org** — the header already carries `preload`; the list submission is the remaining manual step (overdue vs the original 2026-07 target) | operator, one-time |
+| ⛔ declined | HSTS preload **submission to hstspreload.org** — the `preload` header stays (it protects returning visitors); the list submission is not wanted, as it locks the domain to HTTPS for ~2 years. Decided 2026-08-23 | — |
 | ✅ done | Continuous container CVE scan — `.github/workflows/security-scan.yml` runs Trivy daily against the repo + the published ghcr images (fresh DB), fails on HIGH/CRITICAL, emails on red (2026-06-12) | — |
 | ✅ done | Cross-vendor offsite backup secondary — `RCLONE_SECONDARY` active (2026-08) | — |
-| P2 | SBOM generation in CI — the precondition ("build in CI") is met since 2026-06-12; this is now actionable, just not yet done | release hardening |
+| ⛔ declined | SBOM generation in CI — Trivy already covers CVE detection against the repo and the published images; an SBOM adds provenance we have no consumer for. Decided 2026-08-23 | — |
 | P3 | Hardware-key 2FA for provider accounts (CF + Infomaniak) | when YubiKey arrives |
 | P3 | Reproducible-build pipeline for frontend bundle | structural, no timeline |
 
@@ -346,9 +352,15 @@ upload time) for tamper-evidence.
 - **Single sysadmin.** No 4-eyes principle on production changes.
   Acceptable at current scale (single developer, single-digit
   early users); revisit when team grows or user count crosses 100.
-- **No DAST.** Manual penetration testing pre-launch only; no
-  continuous automated DAST. Deferred to post-launch monitoring
-  sprint.
+- **No *continuous* DAST.** A first black-box pass ran against the
+  running stack on 2026-08-21 — 5 confirmed findings, all since
+  fixed: username enumeration via a JSON-spacing oracle (#152),
+  a non-object JSON body reaching a 500 pre-auth (#153), an
+  account-lockout DoS and a rate-limiter coupled to the dev-mocks
+  flag (#158), and ungated entry notes in the CSV export (#159).
+  What is still accepted is that nothing re-runs it on a schedule;
+  `security-monitor.yml` watches the edge's configuration daily,
+  which is a narrower thing.
 
 ---
 

@@ -174,7 +174,9 @@ ciphra/
 ├── SECURITY.md               vulnerability reporting policy
 ├── docker-compose.yml        the 4-service stack
 ├── .env.example              env template
-├── docs/                     ARCHITECTURE, DEVELOPING, FEATURES, archive/
+├── docs/                     ARCHITECTURE, DEVELOPING, FEATURES, OPERATIONS,
+│                             SECURITY_MODEL, THREAT_MODEL, INCIDENT_RESPONSE,
+│                             VERSIONING, backlog, incidents/, archive/
 ├── api/
 │   ├── server.py             the whole Flask API
 │   ├── seed_*.py             demo-data seed scripts
