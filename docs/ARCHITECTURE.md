@@ -28,9 +28,11 @@ cosign-signed and deployed via pull-based CD — see
   docker bridge gateway so the real client IP reaches the rate-limiter.
 - **frontend** — SvelteKit + TypeScript. All cryptography runs here.
 - **api** — Flask (Python 3.11), run under gunicorn. A thin authenticated
-  store: it never decrypts anything. Schema is created at boot by
+  store: it never decrypts anything. Schema is created and migrated at boot by
   `api/entrypoint.sh` (which calls `init_db()` once before exec-ing gunicorn,
-  so workers don't race on `CREATE TABLE IF NOT EXISTS`).
+  so workers don't race on `CREATE TABLE IF NOT EXISTS`). Migrations are a
+  numbered ledger recorded in `schema_meta` — see
+  [VERSIONING.md](VERSIONING.md#the-database-schema-has-its-own-version).
 - **postgres** — PostgreSQL 15.
 - **redis** — rate-limit counter store for flask-limiter. **Prod only** — it
   is in the production data-plane compose, NOT in the local-dev
@@ -54,8 +56,8 @@ path, and family sharing are documented in [SECURITY_MODEL.md](SECURITY_MODEL.md
 
 ## Data model
 
-The database has four tables. Health content lives in exactly one of them, as
-opaque ciphertext.
+The database has four data tables plus a one-row schema ledger. Health content
+lives in exactly one of them, as opaque ciphertext.
 
 | Table | Holds | Server can read? |
 |-------|-------|------------------|
@@ -63,6 +65,7 @@ opaque ciphertext.
 | `encrypted_documents` | `user_id`, `encrypted_data` (AES-256-GCM blob), timestamps | **No** — opaque blobs |
 | `family_grants` | caregiver-sharing grants: a re-wrapped `master_key` + a family-code auth proof | No — wrapped key is opaque |
 | `audit_log` | auth events, action, IP (anonymized after 30 days, purged at 90) | Yes — this is operational metadata, by design |
+| `schema_meta` | one row: how far the schema has been migrated, and the lowest image allowed to read it | Yes — no user data; see [VERSIONING.md](VERSIONING.md#the-database-schema-has-its-own-version) |
 
 ### Documents
 
