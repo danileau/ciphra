@@ -5,7 +5,7 @@ import { familyLinks, activeVault } from './familyLinks';
 import * as api from '$lib/api';
 import { encryptDocument, decryptDocument } from '$lib/crypto';
 import { getAllDocs, putDocs, type CachedDoc } from '$lib/idb';
-import { isVisibleToCaregiver } from '$lib/utils/exportable';
+import { shareClassOf, isVisibleUnderMask, SHARE_MASK_SHARED_ONLY } from '$lib/utils/shareClass';
 import {
 	enqueue as outboxEnqueue,
 	dequeue as outboxDequeue,
@@ -39,7 +39,7 @@ export interface CiphraDocument {
 	_tempId?: string;
 }
 
-interface RawDoc { id: number; encrypted_data: string; created_at: string; }
+interface RawDoc { id: number; encrypted_data: string; created_at: string; share_class?: number | null; }
 
 interface VaultCtx {
 	masterKey: Uint8Array | null;
@@ -126,7 +126,8 @@ function createDocStore() {
 		masterKey: Uint8Array,
 		cachedByEtag: Map<string, CachedDoc>,
 		cacheKey: string,
-		linked: boolean
+		linked: boolean,
+		shareMask: number
 	): Promise<{ docs: CiphraDocument[]; freshCache: CachedDoc[]; hidden: number }> {
 		const results = await Promise.allSettled(
 			rawDocs.map(async (d) => {
@@ -164,7 +165,7 @@ function createDocStore() {
 			// master key, so the ciphertext still arrives and is still
 			// decryptable here. Making it a real boundary means not sending
 			// those rows at all — see the per-grant scope work.
-			if (linked && !isVisibleToCaregiver(doc)) {
+			if (linked && !isVisibleUnderMask(doc, shareMask)) {
 				hidden++;
 				continue;
 			}
@@ -193,10 +194,11 @@ function createDocStore() {
 		masterKey: Uint8Array,
 		cacheKey: string,
 		username: string,
-		linked: boolean
+		linked: boolean,
+		shareMask: number
 	): Promise<CiphraDocument[]> {
 		const gate = (docs: CiphraDocument[]) =>
-			linked ? docs.filter(isVisibleToCaregiver) : docs;
+			linked ? docs.filter((d) => isVisibleUnderMask(d, shareMask)) : docs;
 		if (!browser) return gate(base);
 		let pending: OutboxRecord[];
 		try {
@@ -253,6 +255,40 @@ function createDocStore() {
 		return gate([...createDocs, ...surviving]);
 	}
 
+	/**
+	 * Classify documents the server holds without a `share_class`.
+	 *
+	 * Everything written before the sharing scope existed carries NULL, and
+	 * the server reads NULL as not-shareable — the safe direction, but it
+	 * means a caregiver sees less until the owner's client says which is
+	 * which. Only the owner can do this: the class comes from the plaintext,
+	 * and only the owner's session holds the key.
+	 *
+	 * Runs after the owner's own load, never on a linked vault. Failures are
+	 * swallowed: it is a repair pass, and the next load tries again.
+	 */
+	async function backfillShareClasses(rawDocs: RawDoc[], docs: CiphraDocument[]): Promise<void> {
+		const byId = new Map(docs.map((d) => [d.id, d]));
+		const pending: { id: number; share_class: number }[] = [];
+		for (const raw of rawDocs) {
+			if (raw.share_class !== null && raw.share_class !== undefined) continue;
+			const doc = byId.get(raw.id);
+			if (!doc?.data) continue; // undecryptable — leave it alone
+			pending.push({ id: raw.id, share_class: shareClassOf(doc.data) });
+		}
+		if (pending.length === 0) return;
+		// The server caps a call; send in chunks so a long history still
+		// classifies in one pass rather than silently dropping the tail.
+		const CHUNK = 100;
+		for (let i = 0; i < pending.length; i += CHUNK) {
+			try {
+				await api.classifyDocuments(pending.slice(i, i + CHUNK));
+			} catch {
+				return; // offline or refused — the next load retries
+			}
+		}
+	}
+
 	/** Find the outbox tempId backing an optimistic (negative-id) doc. */
 	function tempIdOf(negId: number): string | undefined {
 		return get({ subscribe }).find((d) => d.id === negId)?._tempId;
@@ -271,6 +307,7 @@ function createDocStore() {
 			sourceUserId: ctx.sourceUserId,
 			op: 'create',
 			ciphertext: encrypted,
+			shareClass: shareClassOf(data),
 		});
 		update((docs) => [
 			{
@@ -355,6 +392,11 @@ function createDocStore() {
 			const { masterKey, sourceUserId, cacheKey, username } = ctx;
 			if (!masterKey) return false;
 			const linked = sourceUserId != null;
+			// Narrow until the server says otherwise. The client filter is
+			// defence in depth behind the server's own WHERE clause — if it
+			// defaulted wide, a stale response would show what a narrow grant
+			// must not.
+			let shareMask = SHARE_MASK_SHARED_ONLY;
 
 			const t0 = performance.now();
 			let cacheHits = 0;
@@ -375,12 +417,12 @@ function createDocStore() {
 						// holds the patient's private documents. applyOutbox gates
 						// them out of the render; the server pass below rewrites the
 						// partition without them.
-						const shown = await applyOutbox(instant, masterKey, cacheKey, username, linked);
+						const shown = await applyOutbox(instant, masterKey, cacheKey, username, linked, shareMask);
 						caregiverHiddenCount.set(linked ? instant.length - shown.length : 0);
 						set(shown);
 					} else {
 						// No cache yet, but queued offline writes may still exist.
-						set(await applyOutbox([], masterKey, cacheKey, username, linked));
+						set(await applyOutbox([], masterKey, cacheKey, username, linked, shareMask));
 					}
 				} catch {
 					// cache miss is fine
@@ -394,15 +436,27 @@ function createDocStore() {
 					: await api.getDocuments();
 				const tFetch = performance.now();
 				if (res.ok) {
+					// The grant's scope and the count it withholds are the
+					// server's to state — it is the only party that can see
+					// both sides of the filter.
+					if (linked && typeof res.data.share_mask === 'number') {
+						shareMask = res.data.share_mask as number;
+					}
 					const rawDocs = (res.data.documents as RawDoc[]) || [];
 					for (const d of rawDocs) {
 						if (cachedByEtag.has(`${d.id}|${d.encrypted_data}`)) cacheHits++;
 						else fresh++;
 					}
-					const { docs, freshCache, hidden } = await decryptDocs(rawDocs, masterKey, cachedByEtag, cacheKey, linked);
+					const { docs, freshCache, hidden } = await decryptDocs(rawDocs, masterKey, cachedByEtag, cacheKey, linked, shareMask);
 					const tDecrypt = performance.now();
-					caregiverHiddenCount.set(hidden);
-					set(await applyOutbox(docs, masterKey, cacheKey, username, linked));
+					// Prefer the server's number: it counts what it withheld,
+					// which the client cannot see at all any more.
+					const withheld = res.data.withheld;
+					caregiverHiddenCount.set(
+						linked && typeof withheld === 'number' ? (withheld as number) : hidden,
+					);
+					set(await applyOutbox(docs, masterKey, cacheKey, username, linked, shareMask));
+					if (!linked) void backfillShareClasses(rawDocs, docs);
 					if (browser && cacheKey) {
 						try {
 							await putDocs(cacheKey, freshCache);
@@ -462,7 +516,7 @@ function createDocStore() {
 			try {
 				const res = ctx.sourceUserId
 					? await api.familyDocumentCreate(ctx.sourceUserId, encrypted)
-					: await api.storeDocument(encrypted);
+					: await api.storeDocument(encrypted, shareClassOf(data));
 				if (res.ok) {
 					documentsError.set(null);
 					// CIPH-767e — sync indicator: notify the UI that a successful
@@ -503,11 +557,14 @@ function createDocStore() {
 		): Promise<{ ok: boolean; status: number; results: Array<{ client_key?: string; status: string; id?: number; error?: string }> }> {
 			const ctx = resolveVault();
 			if (!ctx.masterKey || ctx.sourceUserId) return { ok: false, status: 0, results: [] };
-			const payload: { client_key?: string; encrypted_data: string }[] = [];
+			const payload: { client_key?: string; encrypted_data: string; share_class?: number }[] = [];
 			try {
 				for (const it of items) {
 					const enc = await encryptDocument(it.data, ctx.masterKey);
-					payload.push(it.clientKey ? { client_key: it.clientKey, encrypted_data: enc } : { encrypted_data: enc });
+					const share_class = shareClassOf(it.data);
+					payload.push(it.clientKey
+						? { client_key: it.clientKey, encrypted_data: enc, share_class }
+						: { encrypted_data: enc, share_class });
 				}
 			} catch {
 				documentsError.set('Failed to save document');
@@ -555,7 +612,7 @@ function createDocStore() {
 			try {
 				const res = ctx.sourceUserId
 					? await api.familyDocumentUpdate(ctx.sourceUserId, id, encrypted)
-					: await api.updateDocument(id, encrypted);
+					: await api.updateDocument(id, encrypted, shareClassOf(data));
 				if (res.ok) {
 					documentsError.set(null);
 					await reloadAfterWrite();
@@ -624,11 +681,11 @@ function createDocStore() {
 					if (rec.op === 'create') {
 						res = rec.sourceUserId
 							? await api.familyDocumentCreate(rec.sourceUserId, rec.ciphertext as string)
-							: await api.storeDocument(rec.ciphertext as string);
+							: await api.storeDocument(rec.ciphertext as string, rec.shareClass);
 					} else if (rec.op === 'update') {
 						res = rec.sourceUserId
 							? await api.familyDocumentUpdate(rec.sourceUserId, rec.serverId as number, rec.ciphertext as string)
-							: await api.updateDocument(rec.serverId as number, rec.ciphertext as string);
+							: await api.updateDocument(rec.serverId as number, rec.ciphertext as string, rec.shareClass);
 					} else {
 						res = rec.sourceUserId
 							? await api.familyDocumentDelete(rec.sourceUserId, rec.serverId as number)

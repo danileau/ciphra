@@ -79,10 +79,10 @@ export async function login(username: string, authKeyB64: string) {
 	});
 }
 
-export async function storeDocument(encryptedData: string) {
+export async function storeDocument(encryptedData: string, shareClass?: number) {
 	return request('/documents', {
 		method: 'POST',
-		body: JSON.stringify({ encrypted_data: encryptedData })
+		body: JSON.stringify({ encrypted_data: encryptedData, share_class: shareClass })
 	});
 }
 
@@ -92,7 +92,7 @@ export async function storeDocument(encryptedData: string) {
 // { results: [{client_key, status: 'created'|'skipped'|'error', id?, error?}],
 //   created, skipped, errored }.
 export async function storeDocumentsBatch(
-	documents: { client_key?: string; encrypted_data: string }[]
+	documents: { client_key?: string; encrypted_data: string; share_class?: number }[]
 ) {
 	return request('/documents/batch', {
 		method: 'POST',
@@ -104,10 +104,20 @@ export async function getDocuments() {
 	return request('/documents');
 }
 
-export async function updateDocument(id: number, encryptedData: string) {
+export async function updateDocument(id: number, encryptedData: string, shareClass?: number) {
 	return request(`/documents/${id}`, {
 		method: 'PUT',
-		body: JSON.stringify({ encrypted_data: encryptedData })
+		body: JSON.stringify({ encrypted_data: encryptedData, share_class: shareClass })
+	});
+}
+
+// Backfill the sharing class for documents written before it existed. The
+// server treats an unclassified document as NOT shareable, so until this runs
+// a caregiver sees less — never more. Owner-only server-side.
+export async function classifyDocuments(documents: { id: number; share_class: number }[]) {
+	return request('/documents/classify', {
+		method: 'POST',
+		body: JSON.stringify({ documents })
 	});
 }
 
@@ -194,12 +204,21 @@ export async function familyGrantCreate(payload: {
 	grant_params: string;
 	grant_auth: string;
 	wrapped_master: string;
+	/** 1 = everything but the diary and locked entries (default), 3 = everything. */
+	share_mask?: number;
 }) {
 	return request('/family/grants', { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export async function familyGrantList() {
 	return request('/family/grants');
+}
+
+export async function familyGrantRescope(id: number, shareMask: number) {
+	return request(`/family/grants/${id}/scope`, {
+		method: 'POST',
+		body: JSON.stringify({ share_mask: shareMask })
+	});
 }
 
 export async function familyGrantRevoke(id: number) {

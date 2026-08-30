@@ -43,6 +43,11 @@ export interface OutboxRecord {
 	serverId?: number;
 	/** Encrypted payload — set for create/update. */
 	ciphertext?: string;
+	/** Sharing class of the plaintext. Derived at capture time, because the
+	 *  queue holds ciphertext and the flush cannot look inside it. Without it
+	 *  a synced-from-offline document lands unclassified, which the server
+	 *  reads as not-shareable until the next backfill. */
+	shareClass?: number;
 	createdAt: number;
 }
 

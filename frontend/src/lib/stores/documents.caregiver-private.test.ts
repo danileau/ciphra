@@ -28,18 +28,33 @@ type Raw = { id: number; encrypted_data: string; created_at: string };
 const h = vi.hoisted(() => {
 	const state: {
 		vault: number | null;
+		shareMask: number;
+		/** Simulate a server that has not learned to filter yet. */
+		sendEverything: boolean;
+		withheld: number | null;
 		serverDocs: Raw[];
 		plaintext: Record<string, unknown>;
 		cached: Array<{ id: number; user_id: string; data: unknown; etag: string; created_at: string }>;
 		putDocsCalls: Array<{ key: string; docs: Array<{ data: { type?: string } }> }>;
-	} = { vault: 7, serverDocs: [], plaintext: {}, cached: [], putDocsCalls: [] };
+	} = { vault: 7, shareMask: 1, sendEverything: false, withheld: null, serverDocs: [], plaintext: {}, cached: [], putDocsCalls: [] };
 	return { state };
 });
 
 vi.mock('$app/environment', () => ({ browser: true }));
 vi.mock('$lib/api', () => ({
 	getDocuments: async () => ({ ok: true, data: { documents: h.state.serverDocs } }),
-	familyDocuments: async () => ({ ok: true, data: { documents: h.state.serverDocs } }),
+	familyDocuments: async () => ({
+		ok: true,
+		data: {
+			// The server filters; this mock stands in for that by returning
+			// only what the mask admits, exactly as the endpoint does.
+			documents: h.state.shareMask === 3 || h.state.sendEverything
+				? h.state.serverDocs
+				: h.state.serverDocs.filter((d) => !String(d.encrypted_data).match(/diary|locked/)),
+			share_mask: h.state.shareMask,
+			withheld: h.state.withheld,
+		},
+	}),
 	storeDocument: vi.fn(),
 	updateDocument: vi.fn(),
 	deleteDocument: vi.fn(),
@@ -107,6 +122,9 @@ function seedPatientVault() {
 describe('linked-vault load withholds the patient private documents', () => {
 	beforeEach(() => {
 		h.state.vault = 7;
+		h.state.shareMask = 1;
+		h.state.sendEverything = false;
+		h.state.withheld = null;
 		h.state.cached = [];
 		h.state.putDocsCalls = [];
 		seedPatientVault();
@@ -121,11 +139,18 @@ describe('linked-vault load withholds the patient private documents', () => {
 		expect(ids).toEqual([1, 4]);
 	});
 
-	it('reports how many it withheld, so the banner can say so', async () => {
+	it('still filters, and counts, if a server sends what the scope forbids', async () => {
+		// Defence in depth. The server is the boundary now, but the client
+		// filter stays: during a rolling deploy, or against a server that
+		// predates the scope, the response can still carry documents this
+		// grant may not see. They must not render, and the banner must still
+		// say how many are missing.
+		h.state.sendEverything = true;
 		const { documents, caregiverHiddenCount } = await import('./documents');
 		documents.clear();
 		await documents.load();
 
+		expect(get(documents).map((d) => d.id).sort()).toEqual([1, 4]);
 		expect(get(caregiverHiddenCount)).toBe(2);
 	});
 
@@ -156,6 +181,28 @@ describe('linked-vault load withholds the patient private documents', () => {
 		await Promise.resolve();
 		expect(get(documents).some((d) => (d.data as { type?: string }).type === 'diary')).toBe(false);
 		await pending;
+	});
+
+	it('shows the diary when the invitation was given the wide scope', async () => {
+		// The feature this whole mechanism exists for: an owner who WANTS to
+		// share everything can, and the client must not second-guess it.
+		h.state.shareMask = 3;
+		const { documents } = await import('./documents');
+		documents.clear();
+		expect(await documents.load()).toBe(true);
+
+		const types = get(documents).map((d) => (d.data as { type?: string }).type).sort();
+		expect(types).toEqual(['diary', 'entry', 'entry', 'event']);
+	});
+
+	it('takes the withheld count from the server, which can still see both sides', async () => {
+		// The client can no longer count what it never received.
+		h.state.withheld = 4;
+		const { documents, caregiverHiddenCount } = await import('./documents');
+		documents.clear();
+		await documents.load();
+
+		expect(get(caregiverHiddenCount)).toBe(4);
 	});
 
 	it('leaves the owner own vault untouched', async () => {

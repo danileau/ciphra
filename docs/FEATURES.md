@@ -61,6 +61,14 @@ account and can then read and add entries on the patient's behalf. Grants are
 revocable (though revocation cannot retract data already downloaded). See
 [SECURITY_MODEL.md](SECURITY_MODEL.md) for the cryptographic detail.
 
+**Each invitation has a scope, chosen when it is created:** everything except
+the diary and locked entries (the default), or everything including them. Some
+people want a relative to see the whole picture; others keep the diary to
+themselves. The scope is enforced on the server — an out-of-scope document is
+never sent to the caregiver at all, rather than being filtered in their browser
+— and it can be changed afterwards. Narrowing a scope stops further access; it
+cannot retract what was already downloaded.
+
 ## Account and recovery
 
 - **Recovery code** — a 12-word code shown once at signup. It is the only way

@@ -218,7 +218,42 @@ def get_db():
 # To add one: append with the next number, set `compatible` honestly, and bump
 # SCHEMA_VERSION. Never renumber or edit a shipped migration — databases in the
 # field have already recorded it.
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
+
+# --- Sharing scope --------------------------------------------------------
+#
+# `share_class` is ONE bit of metadata the server is allowed to learn about a
+# document: whether its owner considers it shareable, or personal. Operator
+# decision 2026-08-30, and it is what makes a per-invite scope enforceable at
+# all — the document TYPE lives inside the ciphertext, so the server cannot
+# work this out for itself. It stays at two classes deliberately: a full
+# per-type label would tell the server the type of every document, which is a
+# larger disclosure and was not approved. Named in SECURITY_MODEL.md.
+#
+# NULL means "not classified yet" and is treated as NOT shareable. That
+# direction is not an accident: a database predating this column must degrade
+# to showing a caregiver LESS, never more. The owner's own client backfills it.
+SHARE_CLASS_SHAREABLE = 1
+SHARE_CLASS_PERSONAL = 2          # diary documents + anything the owner locked
+SHARE_MASK_SHARED_ONLY = SHARE_CLASS_SHAREABLE                          # 1
+SHARE_MASK_EVERYTHING = SHARE_CLASS_SHAREABLE | SHARE_CLASS_PERSONAL    # 3
+VALID_SHARE_MASKS = (SHARE_MASK_SHARED_ONLY, SHARE_MASK_EVERYTHING)
+
+
+def _share_class(data):
+    """The share_class in a request body, or None if absent/invalid.
+
+    Only the OWNER may set this. Caregiver write paths must not pass a body
+    through to here — see family_documents_create.
+    """
+    raw = data.get('share_class')
+    if raw is None:
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if value in (SHARE_CLASS_SHAREABLE, SHARE_CLASS_PERSONAL) else None
 
 # (number, name, sql, compatible)
 MIGRATIONS = [
@@ -246,6 +281,14 @@ MIGRATIONS = [
      "ALTER TABLE encrypted_documents ADD COLUMN IF NOT EXISTS client_key TEXT;"
      " CREATE UNIQUE INDEX IF NOT EXISTS uq_docs_user_clientkey"
      " ON encrypted_documents (user_id, client_key) WHERE client_key IS NOT NULL", True),
+    # Per-invite sharing scope. Additive, so an older image simply never
+    # selects either column and keeps behaving as it did. `share_mask`
+    # defaults to 1 (shareable only), which is what every existing grant
+    # already effectively had after the client-side filter shipped — so no
+    # grant's visible content changes on the day this lands.
+    (9, 'sharing scope: share_class + share_mask',
+     "ALTER TABLE encrypted_documents ADD COLUMN IF NOT EXISTS share_class SMALLINT;"
+     " ALTER TABLE family_grants ADD COLUMN IF NOT EXISTS share_mask INTEGER NOT NULL DEFAULT 1", True),
 ]
 
 
@@ -847,9 +890,9 @@ def store_document():
                 if count >= DOCUMENT_QUOTA_PER_USER:
                     return jsonify({'error': 'quota_exceeded'}), 429
                 cur.execute("""
-                    INSERT INTO encrypted_documents (user_id, encrypted_data)
-                    VALUES (%s, %s) RETURNING id, created_at
-                """, (request.user_id, encrypted_data))
+                    INSERT INTO encrypted_documents (user_id, encrypted_data, share_class)
+                    VALUES (%s, %s, %s) RETURNING id, created_at
+                """, (request.user_id, encrypted_data, _share_class(data)))
                 doc = cur.fetchone()
                 audit(conn, request.user_id, 'DOC_CREATED')
         return jsonify({
@@ -913,17 +956,17 @@ def store_documents_batch():
                         # specification") -> 500 -> the client fell back to one
                         # request per document. See docs/incidents/INC-001.md.
                         cur.execute("""
-                            INSERT INTO encrypted_documents (user_id, encrypted_data, client_key)
-                            VALUES (%s, %s, %s)
+                            INSERT INTO encrypted_documents (user_id, encrypted_data, client_key, share_class)
+                            VALUES (%s, %s, %s, %s)
                             ON CONFLICT (user_id, client_key) WHERE client_key IS NOT NULL
                             DO NOTHING
                             RETURNING id
-                        """, (request.user_id, enc, ck))
+                        """, (request.user_id, enc, ck, _share_class(d)))
                     else:
                         cur.execute("""
-                            INSERT INTO encrypted_documents (user_id, encrypted_data)
-                            VALUES (%s, %s) RETURNING id
-                        """, (request.user_id, enc))
+                            INSERT INTO encrypted_documents (user_id, encrypted_data, share_class)
+                            VALUES (%s, %s, %s) RETURNING id
+                        """, (request.user_id, enc, _share_class(d)))
                     row = cur.fetchone()
                     if row:
                         results.append({'client_key': ck, 'status': 'created', 'id': row['id']})
@@ -947,6 +990,60 @@ def store_documents_batch():
         return jsonify({'error': 'Failed to store documents'}), 500
 
 
+@app.route('/api/documents/classify', methods=['POST'])
+@limiter.limit("30 per minute")
+@token_required
+def classify_documents():
+    """Backfill `share_class` for the caller's OWN documents.
+
+    Documents written before the sharing scope existed carry NULL, which the
+    caregiver read treats as not-shareable. That is the safe direction, but it
+    means a caregiver sees less until the owner's client says which is which —
+    so the client sends the whole set in one call after its next load, and
+    again before it creates or rescopes an invitation, where correctness
+    actually matters.
+
+    Owner-only by construction: the WHERE clause is pinned to request.user_id,
+    so a caregiver cannot reclassify a patient's documents through it.
+    """
+    data = _json_object()
+    items = data.get('documents')
+    if not isinstance(items, list) or not items:
+        return jsonify({'error': 'documents must be a non-empty array'}), 400
+    if len(items) > BATCH_MAX_DOCS:
+        return jsonify({'error': f'at most {BATCH_MAX_DOCS} documents per call'}), 413
+
+    pairs = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        share_class = _share_class(item)
+        try:
+            doc_id = int(item.get('id'))
+        except (TypeError, ValueError):
+            continue
+        if share_class is not None:
+            pairs.append((share_class, doc_id))
+    if not pairs:
+        return jsonify({'error': 'no valid {id, share_class} pairs'}), 400
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                updated = 0
+                for share_class, doc_id in pairs:
+                    cur.execute(
+                        "UPDATE encrypted_documents SET share_class = %s"
+                        " WHERE id = %s AND user_id = %s",
+                        (share_class, doc_id, request.user_id),
+                    )
+                    updated += cur.rowcount
+        return jsonify({'success': True, 'updated': updated}), 200
+    except Exception:
+        logger.exception("classify_documents failed")
+        return jsonify({'error': 'Failed to classify documents'}), 500
+
+
 @app.route('/api/documents', methods=['GET'])
 @token_required
 def get_documents():
@@ -954,7 +1051,7 @@ def get_documents():
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT id, encrypted_data, created_at, updated_at
+                    SELECT id, encrypted_data, share_class, created_at, updated_at
                     FROM encrypted_documents
                     WHERE user_id = %s
                     ORDER BY created_at DESC
@@ -964,6 +1061,9 @@ def get_documents():
             'documents': [{
                 'id': d['id'],
                 'encrypted_data': d['encrypted_data'],
+                # The owner's own classification, so their client can spot the
+                # documents it has not classified yet and backfill them.
+                'share_class': d['share_class'],
                 'created_at': d['created_at'].isoformat(),
                 'updated_at': d['updated_at'].isoformat(),
             } for d in docs]
@@ -984,12 +1084,17 @@ def update_document(doc_id):
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
+                # COALESCE so a client that does not send the class leaves it
+                # alone rather than wiping it back to unclassified. Locking an
+                # entry IS a reclassification, which is why the owner's update
+                # path has to carry it at all.
                 cur.execute("""
                     UPDATE encrypted_documents
-                    SET encrypted_data = %s, updated_at = NOW()
+                    SET encrypted_data = %s, share_class = COALESCE(%s, share_class),
+                        updated_at = NOW()
                     WHERE id = %s AND user_id = %s
                     RETURNING id
-                """, (encrypted_data, doc_id, request.user_id))
+                """, (encrypted_data, _share_class(data), doc_id, request.user_id))
                 if not cur.fetchone():
                     return jsonify({'error': 'Document not found'}), 404
                 audit(conn, request.user_id, 'DOC_UPDATED')
@@ -1671,20 +1776,28 @@ def family_grant_create():
     for field, val in (('grant_params', grant_params), ('wrapped_master', wrapped_master)):
         if not isinstance(val, str) or not (1 <= len(val) <= 8192):
             return jsonify({'error': f'Invalid {field}'}), 400
+    # Absent = the narrow scope. A privacy control defaults closed, and an old
+    # client that does not know about the field must not widen a grant.
+    share_mask = data.get('share_mask', SHARE_MASK_SHARED_ONLY)
+    if share_mask not in VALID_SHARE_MASKS:
+        return jsonify({'error': 'Invalid share_mask'}), 400
 
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
                     INSERT INTO family_grants
-                        (source_user_id, label, grant_params, grant_auth, wrapped_master)
-                    VALUES (%s, %s, %s, %s, %s) RETURNING id, created_at
-                """, (request.user_id, label, grant_params, grant_auth, wrapped_master))
+                        (source_user_id, label, grant_params, grant_auth, wrapped_master,
+                         share_mask)
+                    VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, created_at
+                """, (request.user_id, label, grant_params, grant_auth, wrapped_master,
+                      share_mask))
                 row = cur.fetchone()
-                audit(conn, request.user_id, 'FAMILY_GRANT_CREATED')
+                audit(conn, request.user_id, f'FAMILY_GRANT_CREATED:mask={share_mask}')
         return jsonify({
             'id': row['id'],
             'created_at': row['created_at'].isoformat(),
+            'share_mask': share_mask,
         }), 201
     except Exception:
         logger.exception("family_grant_create failed")
@@ -1699,7 +1812,7 @@ def family_grant_list():
             with conn.cursor() as cur:
                 cur.execute("""
                     SELECT g.id, g.label, g.created_at, g.claimed_at, g.claimed_by_user_id,
-                           g.last_access_at, u.username AS claimed_by_username
+                           g.last_access_at, g.share_mask, u.username AS claimed_by_username
                     FROM family_grants g
                     LEFT JOIN users u ON u.id = g.claimed_by_user_id
                     WHERE g.source_user_id = %s AND g.revoked_at IS NULL
@@ -1714,6 +1827,7 @@ def family_grant_list():
                 'claimed_at': r['claimed_at'].isoformat() if r['claimed_at'] else None,
                 'claimed_by_username': r['claimed_by_username'],
                 'last_access_at': r['last_access_at'].isoformat() if r['last_access_at'] else None,
+                'share_mask': r['share_mask'],
             } for r in rows]
         }), 200
     except Exception:
@@ -1747,6 +1861,37 @@ def family_claimed_list():
     except Exception:
         logger.exception("family_claimed_list failed")
         return jsonify({'error': 'Failed to list claimed grants'}), 500
+
+
+@app.route('/api/family/grants/<int:grant_id>/scope', methods=['POST'])
+@limiter.limit("20 per hour")
+@token_required
+def family_grant_rescope(grant_id):
+    """Change what an existing invitation may see. Owner only.
+
+    Narrowing takes effect on the caregiver's next request, and stops there:
+    whatever they have already downloaded stays on their device. That is the
+    same limit revocation has, and the UI says so in both places rather than
+    implying a reach we do not have.
+    """
+    data = _json_object()
+    share_mask = data.get('share_mask')
+    if share_mask not in VALID_SHARE_MASKS:
+        return jsonify({'error': 'Invalid share_mask'}), 400
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE family_grants SET share_mask = %s
+                    WHERE id = %s AND source_user_id = %s AND revoked_at IS NULL
+                """, (share_mask, grant_id, request.user_id))
+                if cur.rowcount == 0:
+                    return jsonify({'error': 'Grant not found'}), 404
+                audit(conn, request.user_id, f'FAMILY_GRANT_RESCOPED:{grant_id}:mask={share_mask}')
+        return jsonify({'success': True, 'share_mask': share_mask}), 200
+    except Exception:
+        logger.exception("family_grant_rescope failed")
+        return jsonify({'error': 'Rescope failed'}), 500
 
 
 @app.route('/api/family/grants/revoke-all', methods=['POST'])
@@ -1896,23 +2041,32 @@ def family_grant_claim():
         return jsonify({'error': 'Claim failed'}), 500
 
 
-def _family_access(caregiver_id: int, source_user_id: int) -> bool:
+def _family_scope(caregiver_id: int, source_user_id: int):
+    """The grant's share_mask, or None when there is no live grant.
+
+    Access and scope resolve together on purpose: a caller that checks one
+    without the other is the bug this shape prevents.
+    """
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id FROM family_grants
+                SELECT id, share_mask FROM family_grants
                 WHERE source_user_id = %s AND claimed_by_user_id = %s
                   AND revoked_at IS NULL LIMIT 1
             """, (source_user_id, caregiver_id))
             row = cur.fetchone()
             if not row:
-                return False
+                return None
             # Stamp the access so the patient sees "last seen X" in Settings.
             cur.execute(
                 "UPDATE family_grants SET last_access_at = NOW() WHERE id = %s",
                 (row['id'],),
             )
-            return True
+            return row['share_mask']
+
+
+def _family_access(caregiver_id: int, source_user_id: int) -> bool:
+    return _family_scope(caregiver_id, source_user_id) is not None
 
 
 @app.route('/api/family/documents', methods=['GET'])
@@ -1922,23 +2076,54 @@ def family_documents_list():
         source_user_id = int(request.args.get('source_user_id', 0))
     except (TypeError, ValueError):
         return jsonify({'error': 'Invalid source_user_id'}), 400
-    if not source_user_id or not _family_access(request.user_id, source_user_id):
+    share_mask = _family_scope(request.user_id, source_user_id)
+    if not source_user_id or share_mask is None:
         return jsonify({'error': 'Not authorized'}), 403
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
+                # THE boundary. Out-of-scope rows are not filtered client-side,
+                # not marked, not sent — the caregiver never holds the
+                # ciphertext, so no modified client and no look at IndexedDB
+                # gets them back.
+                #
+                # `share_class IS NOT NULL` makes it fail CLOSED: a document
+                # written before this column existed is withheld until its
+                # owner's client classifies it. A caregiver seeing less for a
+                # while is a nuisance; the other direction re-releases every
+                # diary in the database.
                 cur.execute("""
                     SELECT id, encrypted_data, created_at, updated_at
-                    FROM encrypted_documents WHERE user_id = %s
+                    FROM encrypted_documents
+                    WHERE user_id = %s
+                      AND share_class IS NOT NULL
+                      AND (share_class & %s) <> 0
                     ORDER BY created_at DESC
-                """, (source_user_id,))
+                """, (source_user_id, share_mask))
                 docs = cur.fetchall()
-        return jsonify({'documents': [{
-            'id': d['id'],
-            'encrypted_data': d['encrypted_data'],
-            'created_at': d['created_at'].isoformat(),
-            'updated_at': d['updated_at'].isoformat() if d['updated_at'] else None,
-        } for d in docs]}), 200
+                # How many were withheld. CIPH-726: a caregiver has to know
+                # they are seeing a partial record, or they read a quiet week
+                # as a quiet week. The client used to count this out of the
+                # documents it held, which only worked while it held them.
+                # A count is what the banner already disclosed; the content
+                # stays on the server.
+                cur.execute(
+                    "SELECT COUNT(*) AS n FROM encrypted_documents"
+                    " WHERE user_id = %s"
+                    "   AND (share_class IS NULL OR (share_class & %s) = 0)",
+                    (source_user_id, share_mask),
+                )
+                withheld = cur.fetchone()['n']
+        return jsonify({
+            'documents': [{
+                'id': d['id'],
+                'encrypted_data': d['encrypted_data'],
+                'created_at': d['created_at'].isoformat(),
+                'updated_at': d['updated_at'].isoformat() if d['updated_at'] else None,
+            } for d in docs],
+            'share_mask': share_mask,
+            'withheld': withheld,
+        }), 200
     except Exception:
         logger.exception("family_documents_list failed")
         return jsonify({'error': 'Failed to list documents'}), 500
@@ -1968,10 +2153,14 @@ def family_documents_create():
                 )
                 if cur.fetchone()['n'] >= DOCUMENT_QUOTA_PER_USER:
                     return jsonify({'error': 'quota_exceeded'}), 429
+                # The class is NOT read from the body. A caregiver who could
+                # set it could file a document outside their own scope, or
+                # reclassify their way into one. What they write is by
+                # definition something they can see, so it is shareable.
                 cur.execute("""
-                    INSERT INTO encrypted_documents (user_id, encrypted_data)
-                    VALUES (%s, %s) RETURNING id, created_at
-                """, (source_user_id, encrypted_data))
+                    INSERT INTO encrypted_documents (user_id, encrypted_data, share_class)
+                    VALUES (%s, %s, %s) RETURNING id, created_at
+                """, (source_user_id, encrypted_data, SHARE_CLASS_SHAREABLE))
                 doc = cur.fetchone()
                 audit(conn, request.user_id, f'FAMILY_DOC_CREATED:{source_user_id}')
         return jsonify({
@@ -1993,19 +2182,27 @@ def family_documents_update(doc_id):
     except (TypeError, ValueError):
         return jsonify({'error': 'Invalid source_user_id'}), 400
     encrypted_data = data.get('encrypted_data')
-    if not source_user_id or not _family_access(request.user_id, source_user_id):
+    share_mask = _family_scope(request.user_id, source_user_id)
+    if not source_user_id or share_mask is None:
         return jsonify({'error': 'Not authorized'}), 403
     if not encrypted_data:
         return jsonify({'error': 'No encrypted data'}), 400
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
+                # Scoped exactly like the read. Without this a narrow-scope
+                # caregiver could overwrite a diary entry by guessing its id —
+                # they could not READ it, but destroying what you cannot see is
+                # not meaningfully better. `share_class` is deliberately absent
+                # from the SET: a caregiver never reclassifies.
                 cur.execute("""
                     UPDATE encrypted_documents
                     SET encrypted_data = %s, updated_at = NOW()
                     WHERE id = %s AND user_id = %s
+                      AND share_class IS NOT NULL
+                      AND (share_class & %s) <> 0
                     RETURNING id, updated_at
-                """, (encrypted_data, doc_id, source_user_id))
+                """, (encrypted_data, doc_id, source_user_id, share_mask))
                 doc = cur.fetchone()
                 if not doc:
                     return jsonify({'error': 'Document not found'}), 404
@@ -2027,14 +2224,18 @@ def family_documents_delete(doc_id):
         source_user_id = int(request.args.get('source_user_id') or 0)
     except (TypeError, ValueError):
         return jsonify({'error': 'Invalid source_user_id'}), 400
-    if not source_user_id or not _family_access(request.user_id, source_user_id):
+    share_mask = _family_scope(request.user_id, source_user_id)
+    if not source_user_id or share_mask is None:
         return jsonify({'error': 'Not authorized'}), 403
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
+                # Same scope as the read — see family_documents_update.
                 cur.execute(
-                    "DELETE FROM encrypted_documents WHERE id = %s AND user_id = %s",
-                    (doc_id, source_user_id),
+                    "DELETE FROM encrypted_documents"
+                    " WHERE id = %s AND user_id = %s"
+                    "   AND share_class IS NOT NULL AND (share_class & %s) <> 0",
+                    (doc_id, source_user_id, share_mask),
                 )
                 if cur.rowcount == 0:
                     return jsonify({'error': 'Document not found'}), 404
