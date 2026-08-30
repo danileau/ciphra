@@ -11,6 +11,15 @@ app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
+<!-- Nothing yet. Add lines here as you work; they become the next release. -->
+
+## [1.3.0] — 2026-08-30
+
+The first release under the 1.x line. ciphra has been serving real users since
+0.1.0 in June; the version now says so. From here the SemVer rules in
+[`docs/VERSIONING.md`](docs/VERSIONING.md) apply in full — in particular, a
+breaking change bumps MAJOR rather than MINOR.
+
 ### Added
 - ciphra is now published under the **GNU Affero General Public License v3.0**.
   You may run, study, change and share it. If you run a modified copy as a
@@ -73,5 +82,6 @@ above.
   and the admin surface. (Established feature set — see
   [`docs/FEATURES.md`](docs/FEATURES.md).)
 
-[Unreleased]: https://github.com/danileau/ciphra/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/danileau/ciphra/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/danileau/ciphra/releases/tag/v1.3.0
 [0.1.0]: https://github.com/danileau/ciphra/releases/tag/v0.1.0

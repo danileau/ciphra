@@ -1,6 +1,6 @@
 {
   "name": "ciphra",
-  "version": "0.1.0",
+  "version": "1.3.0",
   "private": true,
   "description": "Zero-knowledge health notebook for chronic conditions — data is encrypted in the browser, the server only ever stores ciphertext.",
   "license": "AGPL-3.0-only",

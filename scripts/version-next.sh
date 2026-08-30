@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-# version-next — compute the version this release should carry.
+# version-next — SUGGEST the version this release could carry.
+#
+# Advisory only. Nothing enforces the answer: `version-guard` checks that
+# VERSION, package.json and the changelog agree, not that the number matches
+# what the commits imply. The operator decides what a version means to a user
+# (2026-08-30) — this exists so that decision starts from the facts instead of
+# from memory.
 #
 # Reads the commit subjects since the last release tag and applies the
 # prefix → bump table from docs/VERSIONING.md:

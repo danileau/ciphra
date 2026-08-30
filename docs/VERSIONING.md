@@ -66,51 +66,61 @@ contributed since the last release:
 | `perf`, `refactor`, `style`, `a11y` | PATCH |
 | `docs`, `test`, `chore`, `build`, `ci` | none on their own (fold into the next release) |
 
-`0.y.z` caveat: while the major is `0`, the public API is still considered
-unstable — a breaking change bumps MINOR (`0.1.0 → 0.2.0`), not MAJOR. The
-first `1.0.0` is the point we commit to the contract above.
+`0.y.z` caveat — **no longer in force.** While the major was `0`, a breaking
+change bumped MINOR (`0.1.0 → 0.2.0`) rather than MAJOR. ciphra moved to the
+`1.x` line at **1.3.0** (2026-08-30), so the table above now applies in full: a
+break in the encrypted-data or API contract bumps MAJOR.
 
 ## Release process
 
 A release is just **"bump the number and say what changed"**, then the normal
-deploy. You do not have to work the bump out by hand — ask:
+deploy. To see what the commits would suggest, ask:
 
 ```bash
-scripts/version-next.sh      # prints the version the commits since the last release earn
+scripts/version-next.sh      # suggests a version from the commits since the last release
 ```
 
 It reads the commit subjects since the newest `vX.Y.Z` tag and applies the
 table above, largest bump wins. `scripts/test-version-next.sh` proves it
-implements that table, case by case.
+implements that table, case by case. It prints a suggestion and changes
+nothing.
 
-1. On your feature branch, run `scripts/version-next.sh` — that is the bump.
+1. On your feature branch, decide the bump. `scripts/version-next.sh` will
+   suggest one from the commit prefixes — it is **advisory**, and nothing fails
+   if you disagree with it. What a version says to a user is a judgement, and
+   the operator makes it.
 2. Edit [`VERSION`](../VERSION) and set `frontend/package.json` `"version"` to
    the same value.
 3. Move the `## [Unreleased]` notes in [`CHANGELOG.md`](../CHANGELOG.md) into a
    new `## [X.Y.Z] — YYYY-MM-DD` section (keep an empty `[Unreleased]` on top).
-4. Open the PR. The `version-guard` CI job checks all three agree, that the
-   changelog section is dated, and that the number is **at least** what the
-   commits earn. Merge as usual.
-5. On merge, two things happen without you:
-   - `Release images` tags the three images `:X.Y.Z` (plus `:<sha>` and
-     `:latest`) and cosign-signs them.
-   - `Release tag` creates the annotated **`vX.Y.Z` git tag** and publishes a
-     GitHub release whose body is that version's changelog section. This is
-     what the `[X.Y.Z]` links at the bottom of `CHANGELOG.md` point at.
-6. Deploy with `scripts/deploy-wizard.sh` as always (the CD trigger is still the
+4. Open the PR. The `version-guard` CI job checks that `VERSION`,
+   `frontend/package.json` and the changelog agree, and that the section is
+   dated. It does not second-guess the number. Merge as usual.
+5. `Release images` then tags the three images `:X.Y.Z` (plus `:<sha>` and
+   `:latest`) and cosign-signs them. That part is automatic — an image without
+   a standardized tag is useless, and there is no judgement in it.
+6. **Mint the release tag by hand**, when you decide the release is a release:
+   Actions → **Release tag** → *Run workflow*. It creates the annotated
+   `vX.Y.Z` tag and publishes a GitHub release whose body is that version's
+   changelog section — which is what the `[X.Y.Z]` links at the bottom of
+   `CHANGELOG.md` point at. Give it a `version` and `sha` to tag something
+   other than the current `VERSION` on the default branch; it skips silently
+   if the tag already exists, so re-running is safe.
+7. Deploy with `scripts/deploy-wizard.sh` as always (the CD trigger is still the
    `deploy-<sha>` tag; the `:X.Y.Z` image tag is the human-readable name for
    that same build).
 
-Nothing in that automation writes to `main`. Creating a tag is not a branch
-push, so `main-protection` is untouched and no bot needs a bypass — the bump
-still arrives the way every other change does, through a reviewed PR.
+**Nothing mints a release on its own.** A merge that moves `VERSION` used to
+trigger the tag; that was removed on 2026-08-30. Cutting a release is a
+judgement about what the number means to a user, and "whenever VERSION happened
+to change" is not that moment. Tagging also never writes to a branch, so
+`main-protection` is untouched either way.
 
 ### Backfilling a release tag
 
-`Release tag` also runs on `workflow_dispatch` with an explicit version and
-commit, for a release that shipped before the workflow existed (0.1.0). Actions
-→ *Release tag* → *Run workflow*, give it `0.1.0` and the commit that shipped
-it. It skips silently if the tag already exists.
+The same workflow backfills a release that shipped before it existed — `0.1.0`
+was never tagged, which is why the `[0.1.0]` link in `CHANGELOG.md` still
+404s. Run it with version `0.1.0` and the commit that was live on 2026-06-11.
 
 Users read what shipped at **`/docs` → Changelog** (in-app) and in
 [`CHANGELOG.md`](../CHANGELOG.md) on the public repo.
@@ -118,12 +128,11 @@ Users read what shipped at **`/docs` → Changelog** (in-app) and in
 ## Enforcement (this is mechanical, not a convention)
 
 - **`version-guard`** (`.github/workflows/ci.yml`, runs on every PR): fails if
-  `VERSION` isn't valid SemVer, if `frontend/package.json` disagrees, if
-  `CHANGELOG.md` has no dated section for the current `VERSION`, or if the
-  number is **smaller than the commits earn**. The first three only prove the
-  three places agree; the last is the one that asks whether the number is
-  right. A *larger* bump than earned passes with a warning — over-signalling is
-  safe, under-signalling is how a breaking change ships looking like a patch.
+  `VERSION` isn't valid SemVer, if `frontend/package.json` disagrees, or if
+  `CHANGELOG.md` has no dated section for the current `VERSION`. It checks that
+  the three places **agree**; it does not judge whether the number is the one
+  the commits imply. That check existed briefly and was removed on 2026-08-30 —
+  see the release process above.
 - **`Release images`**: reads `VERSION`, **fails the build** if it isn't valid
   SemVer, and only then tags/pushes the images. No valid version → no images.
 - **`.claude/hooks/guardrails.py`** (pre-commit, assistant-side): blocks a
