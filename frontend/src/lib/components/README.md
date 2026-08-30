@@ -400,6 +400,16 @@ route kind.
   Third listbox after `LocaleSelect` and `ExportPeriodPopover` —
   extracting the shared mechanics into one primitive is the open
   follow-up.
+- **ScopeChoice.svelte** — the two things a family invitation may be
+  allowed to read (everything except the diary and locked entries, or
+  everything), as a radio pair with a hint under each. Shared by the
+  create form and the per-grant modify panel in `FamilySharing.svelte`
+  so the two cannot drift: "modify" must not offer a different promise
+  from the one the person agreed to when they sent the invitation.
+  Radios rather than a checkbox because both answers are legitimate —
+  a checkbox frames one as the deviation, and keeping your diary to
+  yourself is not a deviation. `name` distinguishes the groups when a
+  create form and an editing row are open at once.
 - **ExportNoteReview.svelte** — pre-export opt-in for note markers.
   Freeform note markers are the only export content authored as prose,
   and people write prose: a real export carried a third party's name,

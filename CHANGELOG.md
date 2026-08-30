@@ -18,6 +18,14 @@ app at **/docs → Changelog** and here on the public repo.
 - Every screen now links to the source code of the version you are actually
   looking at (footer → "Quellcode"). Operators of a modified copy point it at
   their own repository with `PUBLIC_SOURCE_URL`; unset, it links here.
+- **You now choose what a family invitation may see.** When you create one, pick
+  "everything except the diary" — which stays the default — or "everything,
+  diary included". Some people want a relative to see the whole picture; others
+  keep the diary to themselves, and both are now a choice rather than an
+  assumption. You can change it later on any invitation you have already sent.
+  The limit is enforced by the server, so an entry outside the scope is never
+  sent to the other person at all. Narrowing an invitation stops further access;
+  as with revoking, it cannot take back what was already downloaded.
 
 ### Fixed
 - The account switcher in the header ("Ansicht") opened a dropdown that looked

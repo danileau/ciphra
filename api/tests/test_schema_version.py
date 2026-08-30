@@ -80,7 +80,8 @@ class TestApply:
     def test_partially_migrated_database_resumes(self):
         cur = FakeCursor(version=5)
         assert _apply_migrations(cur) == SCHEMA_VERSION
-        assert cur.applied_numbers() == [6, 7, 8]
+        # Derived, not hardcoded: adding a migration should not fail this.
+        assert cur.applied_numbers() == [n for n, *_ in MIGRATIONS if n > 5]
 
     def test_older_image_on_a_newer_additive_database_still_runs(self):
         # The rollback case. Nothing is applied, nothing is downgraded, and

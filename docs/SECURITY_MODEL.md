@@ -6,7 +6,7 @@ This document is the honest description of what ciphra protects, what it doesn't
 > [`SECURITY.md`](../SECURITY.md) at the repository root: where to send it,
 > what's in scope, and what response you can realistically expect.
 
-**Last updated:** 2026-08-23
+**Last updated:** 2026-08-30
 
 ---
 
@@ -77,6 +77,15 @@ Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from 
 - Argon2 salts and parameters.
 - `encrypted_master`, `recovery_vault`, `wrapped_master` — opaque ciphertexts.
 - Encrypted document blobs — opaque ciphertexts. We can see size and timestamp.
+- **One bit per document saying whether you consider it shareable.** Added so a
+  family invitation can be limited to "everything except my diary" and have the
+  *server* enforce it rather than the app merely honouring it — the document's
+  type lives inside the ciphertext, so without this bit the server cannot tell
+  what it is being asked to withhold. It says shareable or personal, and nothing
+  else: not the type, not the content, not the date. A document written before
+  this existed carries no value at all, and is treated as not shareable.
+- The scope of each family invitation (`share_mask`): whether it may read your
+  diary and locked entries, or not.
 - IP address of each request, retained 30 days raw, then anonymized to /24, deleted at 90 days.
 - An audit log of authentication events (login success/fail, lockouts, password changes, family grants created/revoked, account deletion).
 

@@ -338,8 +338,13 @@ class TestDocuments:
         mock_db.queue(
             PWD_VERSION_ROW,
             [
-                {'id': 1, 'encrypted_data': 'enc1', 'created_at': now, 'updated_at': now},
-                {'id': 2, 'encrypted_data': 'enc2', 'created_at': now, 'updated_at': now},
+                {'id': 1, 'encrypted_data': 'enc1', 'share_class': 1,
+                 'created_at': now, 'updated_at': now},
+                # share_class None = written before the sharing scope existed;
+                # the owner's own list still returns it, so their client can
+                # spot the gap and backfill it.
+                {'id': 2, 'encrypted_data': 'enc2', 'share_class': None,
+                 'created_at': now, 'updated_at': now},
             ],
         )
 
@@ -350,6 +355,8 @@ class TestDocuments:
         docs = resp.get_json()['documents']
         assert len(docs) == 2
         assert docs[0]['id'] == 1
+        assert docs[0]['share_class'] == 1
+        assert docs[1]['share_class'] is None
 
     def test_update_document(self, client, mock_db, auth_token):
         mock_db.queue(PWD_VERSION_ROW, {'id': 5})
