@@ -41,8 +41,12 @@ TypeScript (`frontend/`). **API**: Flask + Python (`api/`). **Edge**: nginx
   file (mirrored in `frontend/package.json`). A user-facing feature → MINOR, a
   fix → PATCH, a break in the encrypted-data/API contract → MAJOR. Every release
   gets a `CHANGELOG.md` entry (users read it in-app at `/docs → Changelog`). The
-  `version-guard` CI job blocks a bump that skips the changelog; `Release images`
-  refuses to build without a valid `VERSION`. Full rules: `docs/VERSIONING.md`.
+  `version-guard` CI job blocks a bump that skips the changelog and checks the
+  three places agree — it does NOT judge the number itself.
+  `scripts/version-next.sh` suggests one from the commits; it is advisory.
+  `Release images` refuses to build without a valid `VERSION`; the `vX.Y.Z`
+  release tag is minted by hand (Actions → Release tag). Full rules:
+  `docs/VERSIONING.md`.
 - **i18n**: every user-facing string is a key in all four locales
   (`de`/`en`/`fr`/`it`, `frontend/src/lib/i18n/`). `de` is the default. Parity +
   orphan-key tests will fail CI if you miss one or leave a key unused.
@@ -60,7 +64,9 @@ TypeScript (`frontend/`). **API**: Flask + Python (`api/`). **Edge**: nginx
    `frontend/package.json` and added a `CHANGELOG.md` entry (the `version-guard`
    job enforces this — see `docs/VERSIONING.md`).
 1. Operator merges the PR(s) → `Release images` CI rebuilds + signs the three
-   images, tagged `:X.Y.Z` (from `VERSION`) + `:<sha>` + `:latest`.
+   images, tagged `:X.Y.Z` (from `VERSION`) + `:<sha>` + `:latest`. The `vX.Y.Z`
+   git tag and the GitHub release are NOT automatic — the operator runs
+   `Release tag` when they decide the release is one.
 2. Summarise what would ship (commits since the live tag) and confirm the SHA.
 3. Hand over **`scripts/deploy-wizard.sh`** — the operator runs it themselves
    via `! scripts/deploy-wizard.sh`. It is the single entry point: it lists the
