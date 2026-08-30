@@ -97,11 +97,9 @@ triggers, vitals, medications, and which columns appear in the monthly grid.
 The blueprint is just another encrypted document; the server never sees it.
 
 - **Presets** (`frontend/src/lib/blueprint/presets.ts`) — 25 condition
-  blueprints defined (22 currently offered in the setup picker; autism,
-  cardiovascular and dermatology are shelved, kept for a possible re-enable)
-  (epilepsy, migraine, diabetes, bipolar, hypertension, PCOS, Hashimoto, …)
-  plus a `custom` from-scratch option. Setup copies one; the user can then
-  customize it.
+  blueprints (epilepsy, migraine, diabetes, bipolar, hypertension, PCOS,
+  Hashimoto, …) plus a `custom` from-scratch option, all 26 offered in the
+  setup picker. Setup copies one; the user can then customize it.
 - **Cohorts** (`frontend/src/lib/blueprint/cohort.ts`) — a *computed* grouping
   (never stored) of conditions by how their UX should behave. The cohort is
   derived from the `conditionId`, so new presets stay consistent without any
@@ -141,7 +139,7 @@ SvelteKit, file-based routing under `frontend/src/routes/`:
 | `/setup` | Onboarding — pick and customize a blueprint |
 | `/log/[date]` | The daily entry form |
 | `/journal`, `/calendar`, `/reports` | Browse, view, and export logged data |
-| `/conditions`, `/conditions/[id]` | Public condition pages |
+| `/conditions/[id]` | Public condition page per condition (`/conditions` 308-redirects to the landing page's `#conditions` section) |
 | `/settings` | Account, language, family sharing |
 | `/migrate`, `/join/[grantId]` | epilepc import; family-sharing claim |
 | `/admin` | Operator dashboard — metadata only |

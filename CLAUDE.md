@@ -41,12 +41,10 @@ TypeScript (`frontend/`). **API**: Flask + Python (`api/`). **Edge**: nginx
   file (mirrored in `frontend/package.json`). A user-facing feature → MINOR, a
   fix → PATCH, a break in the encrypted-data/API contract → MAJOR. Every release
   gets a `CHANGELOG.md` entry (users read it in-app at `/docs → Changelog`). The
-  `version-guard` CI job blocks a bump that skips the changelog and checks the
-  three places agree — it does NOT judge the number itself.
-  `scripts/version-next.sh` suggests one from the commits; it is advisory.
-  `Release images` refuses to build without a valid `VERSION`; the `vX.Y.Z`
-  release tag is minted by hand (Actions → Release tag). Full rules:
-  `docs/VERSIONING.md`.
+  `version-guard` CI job blocks a bump that skips the changelog, and also fails
+  a bump smaller than the commits earn — ask `scripts/version-next.sh` rather
+  than working it out by hand. `Release images` refuses to build without a valid
+  `VERSION`. Full rules: `docs/VERSIONING.md`.
 - **i18n**: every user-facing string is a key in all four locales
   (`de`/`en`/`fr`/`it`, `frontend/src/lib/i18n/`). `de` is the default. Parity +
   orphan-key tests will fail CI if you miss one or leave a key unused.
@@ -64,9 +62,9 @@ TypeScript (`frontend/`). **API**: Flask + Python (`api/`). **Edge**: nginx
    `frontend/package.json` and added a `CHANGELOG.md` entry (the `version-guard`
    job enforces this — see `docs/VERSIONING.md`).
 1. Operator merges the PR(s) → `Release images` CI rebuilds + signs the three
-   images, tagged `:X.Y.Z` (from `VERSION`) + `:<sha>` + `:latest`. The `vX.Y.Z`
-   git tag and the GitHub release are NOT automatic — the operator runs
-   `Release tag` when they decide the release is one.
+   images, tagged `:X.Y.Z` (from `VERSION`) + `:<sha>` + `:latest`. If the merge
+   moved `VERSION`, `Release tag` also mints the annotated `vX.Y.Z` tag and the
+   GitHub release, using that version's changelog section as the body.
 2. Summarise what would ship (commits since the live tag) and confirm the SHA.
 3. Hand over **`scripts/deploy-wizard.sh`** — the operator runs it themselves
    via `! scripts/deploy-wizard.sh`. It is the single entry point: it lists the
@@ -75,6 +73,10 @@ TypeScript (`frontend/`). **API**: Flask + Python (`api/`). **Edge**: nginx
    health afterwards. Every push needs an explicit y/N inside the wizard.
 4. VPS `ciphra-deploy.timer` pulls within ~3 min (cosign-verify → `.env`
    `CIPHRA_TAG` bump → restart → health check, with auto-rollback + ntfy).
+   A release that adds a DB column migrates on boot, so a rollback puts the
+   older image on the newer schema — supported while migrations are additive.
+   `/health` reports `schema` and `app_schema`; a mismatch is the tell. See
+   `docs/VERSIONING.md` → the schema has its own version.
 5. Post-deploy smoke (public reads, fine to run here):
    `curl -sI https://ciphra.ch/sw.js` (expect `cache-control: no-cache` + a
    fresh `last-modified`), root 200 + security headers, key routes 200.

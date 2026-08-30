@@ -5,7 +5,7 @@ What ciphra does today. For how it's built see
 
 ## Onboarding — blueprints
 
-A new account picks a **blueprint** in the setup wizard: one of 22 condition
+A new account picks a **blueprint** in the setup wizard: one of 25 condition
 presets (epilepsy, migraine, diabetes, bipolar, hypertension, PCOS, Hashimoto,
 MS, IBD, asthma, endometriosis, long-COVID, and more) or a `custom`
 build-your-own. The blueprint defines what that user tracks — symptom groups,
@@ -47,8 +47,7 @@ to use it. The export produces a multi-page A4 PDF, rendered in the browser:
 
 - a KPI glance and a cohort-aware trend chart,
 - symptom / trigger frequency and medication tables,
-- a landscape day-by-day protocol grid,
-- the patient's own most-recent note as a top-line quote.
+- a landscape day-by-day protocol grid.
 
 The PDF is the one moment data leaves the device — once saved it is plaintext,
 and the export UI says so plainly. A CSV export is also available.

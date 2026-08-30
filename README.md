@@ -59,7 +59,7 @@ without it. Generate one with `python -c 'import secrets; print(secrets.token_he
 | [docs/FEATURES.md](docs/FEATURES.md)         | What ciphra does today, feature by feature |
 | [CHANGELOG.md](CHANGELOG.md)                 | What changed in each release — also readable in-app at `/docs → Changelog` |
 | [docs/VERSIONING.md](docs/VERSIONING.md)     | SemVer policy (what's a patch / feature / breaking change) + the release process |
-| [SECURITY.md](SECURITY.md)                   | Security model — the honest description of what is and isn't protected |
+| [SECURITY.md](SECURITY.md)                   | Vulnerability reporting policy — where to report, what's in scope, what response to expect |
 | [LICENSE](LICENSE)                           | GNU Affero General Public License v3.0 — the terms ciphra is offered under |
 | [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | Third-party code that ships inside ciphra, and its licenses |
 | [frontend/src/lib/components/README.md](frontend/src/lib/components/README.md) | The design-system reference (components, tokens) |
