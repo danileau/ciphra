@@ -205,6 +205,39 @@ describe('linked-vault load withholds the patient private documents', () => {
 		expect(get(caregiverHiddenCount)).toBe(4);
 	});
 
+	it('follows a scope the owner changes, without the caregiver re-logging in', async () => {
+		// The question this feature invites: can you change an invitation that
+		// is already claimed and in use? The mask is re-read from every
+		// response rather than remembered, so the answer has to be yes on the
+		// caregiver's very next load.
+		const { documents } = await import('./documents');
+
+		// Transport held constant on purpose: the mock sends everything in
+		// both passes, so the only thing that can change the outcome is the
+		// client honouring the new mask rather than remembering the old one.
+		h.state.sendEverything = true;
+		h.state.shareMask = 3;
+		documents.clear();
+		await documents.load();
+		expect(
+			get(documents).some((d) => (d.data as { type?: string }).type === 'diary'),
+			'a wide grant shows the diary',
+		).toBe(true);
+
+		// The owner narrows it. Nothing else changes — same session, same key.
+		h.state.shareMask = 1;
+		await documents.load();
+		expect(
+			get(documents).some((d) => (d.data as { type?: string }).type === 'diary'),
+			'the diary is gone on the next load',
+		).toBe(false);
+
+		// And it leaves their device: putDocs replaces the partition, so the
+		// plaintext they had cached is overwritten rather than orphaned.
+		const written = h.state.putDocsCalls.at(-1);
+		expect(written!.docs.map((d) => d.data.type)).not.toContain('diary');
+	});
+
 	it('leaves the owner own vault untouched', async () => {
 		h.state.vault = null;
 		const { documents, caregiverHiddenCount } = await import('./documents');

@@ -141,6 +141,21 @@ class TestGrantScope:
         )
         assert res.status_code == 400
 
+    def test_a_claimed_invitation_can_still_be_rescoped(self):
+        # The obvious way to get this wrong is to treat a grant as settled
+        # once it is claimed. An invitation someone is actively using is
+        # exactly the one whose scope a person changes their mind about.
+        sql = statement('family_grant_rescope')
+        assert 'claimed_at' not in sql and 'claimed_by_user_id' not in sql, \
+            'rescope refuses claimed grants — the only ones worth rescoping'
+
+    def test_the_scope_is_read_per_request_not_cached(self):
+        # A changed scope has to bind on the caregiver's very next request,
+        # without them logging out or the server restarting.
+        sql = statement('_family_scope')
+        assert 'SELECT id, share_mask FROM family_grants' in sql, \
+            'the scope is no longer read from the row on each call'
+
     def test_rescope_is_owner_scoped(self):
         sql = statement('family_grant_rescope')
         assert 'source_user_id = %s' in sql and 'request.user_id' in sql, \
