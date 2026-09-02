@@ -114,6 +114,7 @@ Three checks at https://healthchecks.io/. Email on missed pings.
 | `ciphra-liveness` | `HEALTHCHECK_URL_LIVENESS` | 5 min | 2 min | App stack down. nginx, api, or postgres unreachable. |
 | `ciphra-vps-pulse` | `HEALTHCHECK_URL_VPS_PULSE` | 5 min | 5 min | VPS itself unreachable. Host crash, network outage, kernel panic. |
 | `ciphra-backup` | `HEALTHCHECK_URL` | 1 day | 6 hours | Nightly backup failed. Possibly: pg_dump error, age error, rclone upload failed. |
+| `ciphra-deploy` | `HEALTHCHECK_URL_DEPLOY` | 5 min | 15 min | **Pull-based CD is dead** — the watcher can't reach GitHub, so a `deploy-<sha>` tag would never ship. Prod keeps serving the old image and every other check stays green. |
 
 Read combinations:
 
@@ -123,6 +124,11 @@ Read combinations:
 | 🔴 | 🟢 | (any) | App stack broken — `docker ps`, `journalctl -u ciphra-app`, check logs |
 | 🔴 | 🔴 | (any) | VPS unreachable — check Infomaniak Manager / provider status |
 | 🟢 | 🟢 | 🔴 | Backup pipeline broken — `tail -30 /var/log/ciphra-backup.log` |
+
+`ciphra-deploy` is deliberately read separately from the three above: they
+answer "is prod serving?", it answers "can we still ship to prod?". Those are
+different questions, and on 2026-09-01 they had different answers for a full
+day. Red there is never urgent for users — it is urgent for the next deploy.
 
 ### ntfy
 
@@ -654,6 +660,35 @@ Common:
 - `pg_dump` failed → DB connection (is postgres up?)
 - `age --recipient` failed → BACKUP_PUBKEY malformed in `.env`
 - `backup.sh` not finding `.env` → file permission or path issue
+
+### `ciphra-deploy` is red (auto-deploy stopped)
+
+Prod is fine; the watcher isn't. Nothing will ship until this clears.
+
+```bash
+journalctl -t ciphra-deploy --since '6 hours ago'   # every attempt, incl. throttled ones
+journalctl -u ciphra-deploy --since '1 hour ago'
+```
+
+The journal carries git's real error. Reproduce it in the unit's own context —
+`sudo` keeps `HOME=/home/ubuntu` while the unit sets `HOME=/root`, so a fetch
+can work by hand and fail under systemd:
+
+```bash
+sudo env HOME=/root GIT_TERMINAL_PROMPT=0 \
+  git -c safe.directory=/opt/ciphra/src -c credential.helper= \
+  -C /opt/ciphra/src fetch --ipv4 --tags --force origin </dev/null; echo "exit=$?"
+```
+
+`GIT_TERMINAL_PROMPT=0` and `</dev/null` matter: a prompting git otherwise eats
+your next pasted line as a username. **A credential prompt here is not an auth
+problem** — the clone is anonymous against a public repo and the box holds no
+GitHub credential by design. git retries with authentication when it receives a
+200 whose body it cannot parse, so "could not read Username" means *the response
+was malformed*, not *access was denied*. Check the transport before the
+credentials: `git -c http.version=HTTP/1.1 …` and `git -c protocol.version=0 …`
+isolate it, and `/var/log/apt/history.log` says whether a library moved
+underneath you. The watcher pins HTTP/1.1 for exactly this reason (2026-09-01).
 
 ### Rate-limiter doesn't seem to work
 

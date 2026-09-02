@@ -55,6 +55,19 @@ Answer three questions, in order:
    last deploy time. A fresh deploy is the first suspect — but **verify before
    rolling back** (INC-001 was a redirect on the *source* host, not our deploy;
    the /reports 502 on 2026-08-22 was an nginx buffer, not the shipped code).
+4. **Did the box change *itself*?** If nothing was deployed and nothing was
+   configured, read the machine's own package history:
+   ```bash
+   grep -B3 -A8 '<date>' /var/log/apt/history.log
+   zgrep -h -B3 -A8 '<date>' /var/log/apt/history.log.*.gz
+   ```
+   The VPS runs `unattended-upgrades`, so it is the only component that changes
+   production with no deploy tag and no notification. On 2026-09-01 a `zlib1g`
+   upgrade at 06:34 broke git's HTTP/2 and killed pull-based CD for a day while
+   every health check stayed green. An overnight onset with no deploy is the
+   tell — ask this question early, not after the obvious suspects are exhausted.
+   The nightly digest now reports self-patches, so this is usually already on
+   your phone.
 
 ### 3. Contain
 
