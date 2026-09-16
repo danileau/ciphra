@@ -49,6 +49,12 @@ app at **/docs → Changelog** and here on the public repo.
 - Malformed requests that used to crash the server are refused cleanly, and one
   bad entry in a bulk import no longer fails the whole import.
 
+### Fixed
+- Mistyping your current password when changing your password or deleting your
+  account signed you out of ciphra. It now just says the password is wrong.
+- Signing in to a suspended account now says the account is suspended, instead
+  of claiming the password is wrong.
+
 ## [1.3.0] — 2026-08-30
 
 The first release under the 1.x line. ciphra has been serving real users since

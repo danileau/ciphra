@@ -810,3 +810,30 @@ class TestCountersAgainstPostgres:
         cur.execute("UPDATE users SET locked_until = %s WHERE id = 1", (now - timedelta(minutes=1),))
         server._apply_auto_lock(cur, 1, now)
         assert self._row(cur)['locked_until'] == now + server.AUTO_LOCK_DURATION
+
+
+# ═══════════════════════════════════════════════════════════════════
+# a wrong re-entered password is not an expired session
+# ═══════════════════════════════════════════════════════════════════
+
+class TestWrongPasswordIsNotLogout:
+    """The frontend treats a 401 on an authenticated request as "session
+    expired" and logs out. A typo in the current password on change-password
+    or delete-account must therefore be a 403."""
+
+    @patch('server.verify_auth', return_value=False)
+    def test_change_password_wrong_current_password_is_403(self, _v, client, mock_db, auth_token):
+        mock_db.queue(AUTH_ROW, {'id': 1, 'auth_hash': 'h'})
+        resp = client.post('/api/change-password', headers=_bearer(auth_token), json={
+            'current_auth_key': VALID_KEY, 'auth_hash': VALID_KEY,
+            'auth_params': '{"s":"x"}', 'vault_params': '{"s":"y"}', 'encrypted_master': 'ZW5jcnlwdGVk',
+        })
+        assert resp.status_code == 403
+        assert not any('UPDATE users' in sql for sql in _sql(mock_db))
+
+    @patch('server.verify_auth', return_value=False)
+    def test_delete_account_wrong_password_is_403(self, _v, client, mock_db, auth_token):
+        mock_db.queue(AUTH_ROW, {'id': 1, 'auth_hash': 'h'})
+        resp = client.post('/api/delete-account', headers=_bearer(auth_token), json={'auth_key': VALID_KEY})
+        assert resp.status_code == 403
+        assert not any('DELETE FROM users' in sql for sql in _sql(mock_db))

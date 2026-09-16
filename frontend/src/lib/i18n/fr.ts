@@ -90,6 +90,7 @@ export default {
 	'auth.error_credentials': "Nom d'utilisateur ou mot de passe incorrect. Réessayez ou utilisez votre code de récupération.",
 	'auth.error_vault_decrypt': "Impossible de déverrouiller votre journal. Veuillez vous reconnecter.",
 	'auth.error_locked': 'Trop de tentatives. Veuillez attendre 15 minutes.',
+	'auth.error_suspended': 'Ce compte est suspendu. Si vous pensez qu’il s’agit d’une erreur, écrivez à info@ciphra.ch.',
 	'auth.session_expired': 'Votre session a expiré. Veuillez vous reconnecter.',
 	'auth.technical_details': 'Afficher les détails techniques',
 	'auth.phase_checking': 'Vérification…',

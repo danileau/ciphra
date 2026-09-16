@@ -1673,7 +1673,11 @@ def change_password():
                     return jsonify({'error': 'User not found'}), 404
 
                 if not verify_auth(current_auth_key, user['auth_hash']):
-                    return jsonify({'error': 'Current password is incorrect'}), 401
+                    # 403, not 401: the SESSION is valid, the re-entered
+                    # password is not. The frontend reads any 401 on an
+                    # authenticated request as an expired session and logs the
+                    # user out — a typo here used to sign them out of the app.
+                    return jsonify({'error': 'Current password is incorrect'}), 403
 
                 cur.execute("""
                     UPDATE users
@@ -1733,7 +1737,8 @@ def delete_account():
                     return jsonify({'error': 'User not found'}), 404
 
                 if not verify_auth(auth_key, user['auth_hash']):
-                    return jsonify({'error': 'Invalid password'}), 401
+                    # 403, not 401 — see change_password.
+                    return jsonify({'error': 'Invalid password'}), 403
 
                 audit(conn, request.user_id, 'ACCOUNT_DELETED')
                 # Full erasure (GDPR Art. 17): drop user_id AND ip_address from
