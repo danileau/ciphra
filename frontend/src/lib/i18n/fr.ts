@@ -2100,6 +2100,9 @@ export default {
 	'medication.save_failed': 'L’enregistrement a échoué. Réessaie, s’il te plaît.',
 	'medication.start_date': 'Depuis',
 	'medication.start_date_hint': 'Laisse vide si tu le prends depuis longtemps.',
+	'medication.day_change': '{name} : {after} dès ce jour (avant {before})',
+	'medication.day_start': '{name} : dès ce jour, {dose}',
+	'medication.day_stop': '{name} : plus pris dès ce jour',
 
 	// CIPH-411c — Assistant étape 4
 	'setup.medications_title': 'Médicaments',

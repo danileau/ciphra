@@ -2100,6 +2100,9 @@ export default {
 	'medication.save_failed': 'Il salvataggio non è riuscito. Riprova, per favore.',
 	'medication.start_date': 'Dal',
 	'medication.start_date_hint': 'Lascia vuoto se lo prendi già da tempo.',
+	'medication.day_change': '{name}: {after} da questo giorno (prima {before})',
+	'medication.day_start': '{name}: da questo giorno, {dose}',
+	'medication.day_stop': '{name}: non più da questo giorno',
 
 	// CIPH-411c — Wizard passo 4
 	'setup.medications_title': 'Farmaci',

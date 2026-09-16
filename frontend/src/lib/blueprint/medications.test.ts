@@ -47,6 +47,29 @@ describe('bedarfMedsForPicker / hasBedarfMeds', () => {
 	});
 });
 
+describe('bedarfMedsForPicker — dose history', () => {
+	const midazolam = slot({
+		id: 'mid', name: 'Midazolam', dose: '10 mg', asNeeded: true,
+		periods: [
+			{ to: '2026-09-16', dose: '5 mg', schedule: '' },
+			{ from: '2026-09-17', to: '2026-12-31', dose: '10 mg', schedule: '' },
+		],
+	});
+
+	it('offers the dose that applies on the day of the intake', () => {
+		const b = bp({ medications: [midazolam] });
+		expect(bedarfMedsForPicker(b, '2026-09-16')[0].dose).toBe('5 mg');
+		expect(bedarfMedsForPicker(b, '2026-09-17')[0].dose).toBe('10 mg');
+	});
+
+	it('does not offer a stopped medication, but history gates still see it', () => {
+		const b = bp({ medications: [midazolam] });
+		expect(bedarfMedsForPicker(b, '2027-01-05')).toEqual([]);
+		expect(hasBedarfMeds(b)).toBe(true);
+		expect(bedarfMedColumns(b, t).map((c) => c.id)).toEqual(['mid']);
+	});
+});
+
 describe('resolveMedDisplay', () => {
 	it('resolves a configured med to its plain name (unit empty — dose carries it)', () => {
 		const b = bp({ medications: [slot({ id: 'ibu', name: 'Ibuprofen' })] });

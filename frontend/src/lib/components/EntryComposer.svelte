@@ -52,7 +52,7 @@
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
 	import type { Blueprint, CustomKind, MedicationSlot } from '$lib/blueprint';
-	import { isCustomItem, blueprint } from '$lib/blueprint';
+	import { isCustomItem, blueprint, createMedication, isActiveOn, medicationChanges, newMedicationId, periodOn } from '$lib/blueprint';
 	import { groupIconPath } from '$lib/groupIcons';
 	import { get } from 'svelte/store';
 	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
@@ -121,12 +121,6 @@
 		newMedName = ''; newMedDose = ''; newMedSchedule = ''; newMedAsNeeded = false;
 		medAddOpen = true;
 	}
-	function newMedId(): string {
-		try {
-			if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-		} catch { /* fallthrough */ }
-		return `med-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-	}
 	async function handleAddMed() {
 		const name = newMedName.trim();
 		const dose = newMedDose.trim();
@@ -134,7 +128,9 @@
 		const raw = get(blueprint);
 		if (!raw) { medAddOpen = false; return; }
 		const next: Blueprint = JSON.parse(JSON.stringify(raw));
-		const med: MedicationSlot = { id: newMedId(), name, dose, schedule: newMedSchedule.trim(), asNeeded: newMedAsNeeded };
+		// No start date: added from a day's log, it is something already being
+		// taken, not something that starts on the day being edited.
+		const med: MedicationSlot = createMedication(newMedicationId(), { name, dose, schedule: newMedSchedule, asNeeded: newMedAsNeeded });
 		(next.medications ||= []).push(med);
 		await blueprint.save(next);
 		medications = { ...medications, [med.id]: true };
@@ -843,14 +839,35 @@
 
 			<!-- ─── Medications card ─── -->
 			{#if bp.medications.length > 0}
-				{@const standardMeds = bp.medications.filter(m => !m.asNeeded)}
-				{@const asNeededMeds = bp.medications.filter(m => m.asNeeded)}
+				<!-- Dose history: a day shows the medications that were part of the
+					 regimen ON THAT DAY, at the dose that applied then — opening an
+					 entry from before a dose change shows the old dose. A medication
+					 this day already mentions stays visible either way, so nothing
+					 recorded can become uneditable. -->
+				{@const standardMeds = bp.medications.filter(m => !m.asNeeded && (isActiveOn(m, date) || missedMeds[m.id]))}
+				{@const asNeededMeds = bp.medications.filter(m => m.asNeeded && (isActiveOn(m, date) || medications[m.id]))}
+				{@const medChangesToday = medicationChanges(bp.medications, { from: date, to: date })}
 				<section id="section-medications" class="log-card log-card--olive">
 					<button class="log-section-toggle" on:click={() => toggleSection('medications')}>
 						<h2 class="log-section-header">{$t('protocol.medications')}</h2>
 						<svg class="log-section-chevron" class:log-section-chevron--open={!collapsed['medications']} width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					</button>
 					{#if !collapsed['medications']}
+					{#if medChangesToday.length > 0}
+						<ul class="log-med-changes" data-testid="entry-med-changes">
+							{#each medChangesToday as c}
+								<li>
+									{#if c.kind === 'change'}
+										{$t('medication.day_change', { name: c.name, before: c.before?.dose ?? '', after: c.after?.dose ?? '' })}
+									{:else if c.kind === 'start'}
+										{$t('medication.day_start', { name: c.name, dose: c.after?.dose ?? '' })}
+									{:else}
+										{$t('medication.day_stop', { name: c.name })}
+									{/if}
+								</li>
+							{/each}
+						</ul>
+					{/if}
 					{#if standardMeds.length > 0}
 						<!-- Assume-taken model: scheduled meds are part of the daily
 							 regimen, so there's no per-day "taken" tap. Tapping a chip
@@ -866,7 +883,7 @@
 									title={missedMeds[med.id] ? $t('protocol.meds_missed_on') : $t('protocol.meds_missed_off')}
 								>
 									<span class="log-chip-med-name">{med.name}</span>
-									<span class="log-chip-med-dose">{med.dose}</span>
+									<span class="log-chip-med-dose">{periodOn(med, date)?.dose ?? med.dose}</span>
 									{#if missedMeds[med.id]}<span class="log-chip-missed-tag">{$t('protocol.meds_missed_tag')}</span>{/if}
 								</button>
 							{/each}
@@ -883,7 +900,7 @@
 									aria-pressed={medications[med.id]}
 								>
 									<span class="log-chip-med-name">{med.name}</span>
-									<span class="log-chip-med-dose">{med.dose}</span>
+									<span class="log-chip-med-dose">{periodOn(med, date)?.dose ?? med.dose}</span>
 								</button>
 							{/each}
 						</div>
@@ -1425,6 +1442,17 @@
 </Modal>
 
 <style>
+	/* Dose history — a change that takes effect on the day being logged. */
+	.log-med-changes {
+		margin: 0 0 12px;
+		padding: 8px 12px;
+		list-style: none;
+		border-radius: 10px;
+		background: var(--surface-muted);
+		color: var(--text-secondary);
+		font-size: 13px;
+		line-height: 1.4;
+	}
 	/* ─── Section-jump nav (mobile) — CIPH-420b ─── */
 	.log-section-nav {
 		position: sticky;

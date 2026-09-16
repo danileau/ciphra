@@ -2128,6 +2128,9 @@ export default {
 	'medication.save_failed': 'Speichern hat nicht geklappt. Bitte versuche es nochmals.',
 	'medication.start_date': 'Seit',
 	'medication.start_date_hint': 'Leer lassen, wenn du es schon länger nimmst.',
+	'medication.day_change': '{name}: ab diesem Tag {after} statt {before}',
+	'medication.day_start': '{name}: ab diesem Tag, {dose}',
+	'medication.day_stop': '{name}: ab diesem Tag nicht mehr',
 
 	// CIPH-411c — Setup Schritt 4
 	'setup.medications_title': 'Medikamente',

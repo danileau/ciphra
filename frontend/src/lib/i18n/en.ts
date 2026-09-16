@@ -2117,6 +2117,9 @@ export default {
 	'medication.save_failed': 'Saving didn’t work. Please try again.',
 	'medication.start_date': 'Since',
 	'medication.start_date_hint': 'Leave empty if you have been taking it for a while.',
+	'medication.day_change': '{name}: {after} from this day (was {before})',
+	'medication.day_start': '{name}: from this day, {dose}',
+	'medication.day_stop': '{name}: no longer from this day',
 
 	// CIPH-411c — Setup wizard step 4
 	'setup.medications_title': 'Medications',

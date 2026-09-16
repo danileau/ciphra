@@ -1,5 +1,6 @@
 import type { Blueprint, MedicationPeriod, MedicationSlot } from './types';
-import { docReferencesMed, isActiveOn, isUnbounded, medPeriods } from './medicationHistory';
+import { docReferencesMed, isActiveOn, isUnbounded, medPeriods, periodOn } from './medicationHistory';
+import { todayISO } from '$lib/date';
 import { translateUnit } from '$lib/i18n';
 
 /**
@@ -33,15 +34,34 @@ export interface MedDisplay {
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
 
-/** The meds offered in the FAB "Bedarfsmedikation" picker: the user's own
- *  as-needed medications, configured in Settings. */
-export function bedarfMedsForPicker(bp: Blueprint | null | undefined): MedicationSlot[] {
+/** Every as-needed medication the user has configured, stopped ones included
+ *  — the set that historical intakes can refer to. */
+function allBedarfMeds(bp: Blueprint | null | undefined): MedicationSlot[] {
 	return (bp?.medications ?? []).filter((m) => m.asNeeded);
 }
 
-/** True when there is anything to show in the FAB "med" mode. */
+/** The meds offered in the FAB "Bedarfsmedikation" picker: the user's own
+ *  as-needed medications that are part of the regimen on `date` (default
+ *  today), each carrying the dose that applies that day — so an intake logged
+ *  after a dose change is stamped with the new dose, and a stopped medication
+ *  is not offered. */
+export function bedarfMedsForPicker(
+	bp: Blueprint | null | undefined,
+	date: string = todayISO(),
+): MedicationSlot[] {
+	const out: MedicationSlot[] = [];
+	for (const m of allBedarfMeds(bp)) {
+		const period = periodOn(m, date);
+		if (period) out.push({ ...m, dose: period.dose, schedule: period.schedule });
+	}
+	return out;
+}
+
+/** True when the user has any as-needed medication, current or stopped.
+ *  Gates the rescue-medication counts and marks, which describe history and
+ *  must not vanish because the medication was later stopped. */
 export function hasBedarfMeds(bp: Blueprint | null | undefined): boolean {
-	return bedarfMedsForPicker(bp).length > 0;
+	return allBedarfMeds(bp).length > 0;
 }
 
 export interface MedAdherence {
@@ -197,7 +217,7 @@ export function bedarfMedColumns(
 ): { id: string; label: string; unit: string }[] {
 	const cols: { id: string; label: string; unit: string }[] = [];
 	const seen = new Set<string>();
-	for (const m of bedarfMedsForPicker(bp)) {
+	for (const m of allBedarfMeds(bp)) {
 		if (seen.has(m.id)) continue;
 		seen.add(m.id);
 		cols.push({ id: m.id, label: m.name, unit: '' });
