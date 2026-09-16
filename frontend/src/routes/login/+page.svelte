@@ -191,11 +191,13 @@
 							<div>
 								<label for="rec-user" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.username')}</label>
 								<input id="rec-user" type="text" bind:value={recUser} required minlength="3"
+									autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"
 									class="input" />
 							</div>
 							<div>
 								<label for="rec-code" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.recovery_code')}</label>
 								<input id="rec-code" type="text" bind:value={recCode} required
+									autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
 									placeholder="able acid aged also area army away baby back ball born boss"
 									class="input font-mono" />
 							</div>
@@ -203,6 +205,7 @@
 								<label for="rec-new-pass" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.new_password')}</label>
 								<PasswordField
 									id="rec-new-pass"
+									autocomplete="new-password"
 									bind:value={recNewPass}
 									required
 									class="input"
@@ -212,6 +215,7 @@
 								<label for="rec-new-pass2" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.password_confirm')}</label>
 								<PasswordField
 									id="rec-new-pass2"
+									autocomplete="new-password"
 									bind:value={recNewPassConfirm}
 									required
 									class="input"

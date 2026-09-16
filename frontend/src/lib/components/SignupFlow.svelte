@@ -218,7 +218,7 @@
 		<div>
 			<label for="signup-user" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.username')}</label>
 			<input id="signup-user" type="text" bind:value={username}
-				autocomplete="username"
+				autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"
 				on:blur={() => { touched.user = true; }}
 				aria-invalid={userInvalid}
 				aria-describedby={userInvalid ? 'signup-user-err' : undefined}

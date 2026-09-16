@@ -25,6 +25,10 @@
 	export { cls as class };
 
 	let visible = false;
+	// Revealing the password switches the input to type="text", where phone
+	// keyboards capitalize the first letter, autocorrect words and swap in
+	// smart quotes — silently changing the password that gets derived. The
+	// input opts out of all three in both states (2026-09-16).
 
 	function handleInput(e: Event) {
 		const target = e.currentTarget as HTMLInputElement;
@@ -44,6 +48,9 @@
 		{required}
 		{minlength}
 		{autocomplete}
+		autocapitalize="off"
+		autocorrect="off"
+		spellcheck="false"
 		aria-describedby={ariaDescribedby}
 		aria-invalid={ariaInvalid}
 		value={value}

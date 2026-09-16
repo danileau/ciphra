@@ -130,3 +130,20 @@ describe('CIPH-887 PasswordField audit guard', () => {
 		).toEqual([]);
 	});
 });
+
+describe('the password is never altered by the keyboard (2026-09-16)', () => {
+	// A real login failed on iOS: revealing the password switches the input to
+	// type="text", where the keyboard capitalizes, autocorrects and swaps in
+	// smart quotes — the string that reaches Argon2 is no longer the password.
+	it('opts out of capitalization, autocorrect and spellcheck, hidden and revealed', async () => {
+		const { container } = render(PasswordField, { props: { id: 'p1', value: 'secret' } });
+		const input = () => container.querySelector('input') as HTMLInputElement;
+		for (const state of ['hidden', 'revealed']) {
+			expect(input().getAttribute('autocapitalize'), state).toBe('off');
+			expect(input().getAttribute('autocorrect'), state).toBe('off');
+			expect(input().getAttribute('spellcheck'), state).toBe('false');
+			if (state === 'hidden') await fireEvent.click(container.querySelector('button[aria-pressed]') as HTMLButtonElement);
+		}
+		expect(input().type).toBe('text');
+	});
+});
