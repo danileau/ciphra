@@ -52,9 +52,13 @@
 	export let dateFormat: DateFormatChoice | undefined = undefined;
 	/** Injectable for tests; the local day the dialog treats as today. */
 	export let today: string = todayISO();
+	/** Other entries that look like the same drug (`duplicateGroups`) — the
+	 *  pre-dose-history workaround. Delete then offers combining first. */
+	export let duplicates: MedicationSlot[] = [];
 
 	const dispatch = createEventDispatcher<{
 		apply: { replace?: MedicationSlot; add?: MedicationSlot; remove?: string };
+		combine: { with: MedicationSlot };
 		close: void;
 	}>();
 
@@ -146,6 +150,16 @@
 	})();
 
 	$: dayBefore = from ? addDaysISO(from, -1) : '';
+	// A "change" to the dose and schedule that already apply that day records
+	// nothing (the history would read "8 mg → 8 mg"); say so instead.
+	$: noopChange = (() => {
+		if (!med || !from || !(view === 'resume' || (view === 'change' && kind === 'dose'))) return null;
+		const applying = periodOn(med, from);
+		const before = periodOn(med, dayBefore);
+		const same = (p: MedicationPeriod | null) =>
+			!!p && p.dose.trim() === dose.trim() && p.schedule.trim() === schedule.trim();
+		return same(applying) && same(before) ? applying : null;
+	})();
 	$: previewBefore = result?.replace && dayBefore ? periodOn(result.replace, dayBefore) : null;
 	$: previewAfterPeriod = result
 		? result.add
@@ -275,7 +289,11 @@
 					<input type="text" bind:value={note} class="input mt-1 w-full" autocomplete="off" placeholder={$t('medication.reason_placeholder')} data-testid="med-change-note" />
 				</label>
 
-				{#if dateError}
+				{#if noopChange && !dateError}
+					<p class="text-sm" style="color: var(--text-secondary)" role="status" data-testid="med-change-noop">
+						{$t('medication.change_noop', { date: fmt(from), regimen: regimenText(noopChange) })}
+					</p>
+				{:else if dateError}
 					<p class="text-sm" style="color: var(--danger)" role="alert" data-testid="med-change-error">
 						{#if dateError === 'required'}
 							{$t('medication.error_date_required')}
@@ -325,7 +343,7 @@
 
 				<div class="flex justify-end gap-2 pt-2">
 					<button type="button" class="btn-secondary min-h-[44px] px-4" on:click={close}>{$t('common.cancel')}</button>
-					<button type="button" class="btn-primary min-h-[44px] px-4" disabled={!result} on:click={submitChange} data-testid="med-change-apply">
+					<button type="button" class="btn-primary min-h-[44px] px-4" disabled={!result || !!noopChange} on:click={submitChange} data-testid="med-change-apply">
 						{$t('medication.apply')}
 					</button>
 				</div>
@@ -372,6 +390,18 @@
 			</div>
 		{:else if view === 'delete'}
 			<div class="space-y-4">
+				{#if duplicates.length > 0}
+					<!-- A same-named entry is almost always the old one-entry-per-dose
+					     workaround: combining keeps both histories, deleting loses one. -->
+					<div class="rounded-xl p-3 space-y-2" style="background: var(--surface-muted); border: 1px solid var(--border)" data-testid="med-delete-duplicate">
+						<p class="text-sm" style="color: var(--text-primary)">{$t('medication.delete_has_duplicate', { name: med.name })}</p>
+						{#each duplicates as other (other.id)}
+							<button type="button" class="btn-primary w-full min-h-[44px] px-4" on:click={() => dispatch('combine', { with: other })} data-testid="med-delete-combine">
+								{$t('medication.combine_with', { name: other.name })}
+							</button>
+						{/each}
+					</div>
+				{/if}
 				{#if historyDays > 0}
 					<p class="text-sm" style="color: var(--text-primary)" data-testid="med-delete-history">
 						{plural($t, loc, 'medication.delete_has_history', historyDays, { name: med.name })}

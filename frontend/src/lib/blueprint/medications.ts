@@ -1,5 +1,5 @@
 import type { Blueprint, MedicationPeriod, MedicationSlot } from './types';
-import { docReferencesMed, isActiveOn, isUnbounded, medPeriods, periodOn } from './medicationHistory';
+import { docReferencesMed, isActiveOn, isUnbounded, medIds, medPeriods, periodOn } from './medicationHistory';
 import { todayISO } from '$lib/date';
 import { translateUnit } from '$lib/i18n';
 
@@ -102,17 +102,20 @@ export function medAdherence(
 	const relevant = loggedDocs.filter((d) => {
 		const date = d.data?.date;
 		if (typeof date !== 'string') return isUnbounded(med);
-		return isActiveOn(med, date) || docReferencesMed(d, med.id);
+		return isActiveOn(med, date) || docReferencesMed(d, med);
 	});
+	// A combined medication answers for the duplicates merged into it.
+	const ids = medIds(med);
 	let taken: number;
 	if (med.asNeeded) {
-		taken = relevant.filter(
-			(d) => !!(d.data?.medications as Record<string, unknown> | undefined)?.[med.id],
-		).length;
+		taken = relevant.filter((d) => {
+			const toggles = d.data?.medications as Record<string, unknown> | undefined;
+			return ids.some((id) => !!toggles?.[id]);
+		}).length;
 	} else {
 		const missed = relevant.filter((d) => {
 			const m = d.data?.missedMedications;
-			return Array.isArray(m) && m.includes(med.id);
+			return Array.isArray(m) && m.some((id) => ids.includes(id));
 		}).length;
 		taken = Math.max(0, relevant.length - missed);
 	}
@@ -166,7 +169,7 @@ export function resolveMedDisplay(
 	t: Translator,
 ): MedDisplay {
 	if (!id) return { label: '?', unit: '' };
-	const slot = bp?.medications?.find((m) => m.id === id);
+	const slot = bp?.medications?.find((m) => medIds(m).includes(id));
 	if (slot) return { label: slot.name, unit: '' };
 	const preset = bp?.rescueMedications?.find((rm) => rm.id === id);
 	if (preset) return { label: t(preset.label), unit: preset.unit ? translateUnit(t, preset.unit) : '' };

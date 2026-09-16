@@ -15,7 +15,7 @@
  * line `pdf.no-assessment.test.ts` holds for the whole document.
  */
 import type { MedicationSlot } from '$lib/blueprint/types';
-import { addDaysISO, medicationChanges, medPeriods, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
+import { addDaysISO, medIds, medicationChanges, medPeriods, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
 import { medAdherenceByPeriod, type MedPeriodAdherence } from '$lib/blueprint/medications';
 
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
@@ -287,9 +287,10 @@ export function csvDoseCell(
 	missedWord: string,
 	takenWord: string,
 ): string {
+	const ids = medIds(med);
 	const missed = dayEntries.some((d) => {
 		const m = d.data?.missedMedications;
-		return Array.isArray(m) && m.includes(med.id);
+		return Array.isArray(m) && m.some((id) => ids.includes(id));
 	});
 	if (missed) return missedWord;
 	const period = periodOn(med, dayISO);

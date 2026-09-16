@@ -19,7 +19,7 @@
 -->
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
-	import { isCustomItem, resolveMedDisplay, medicationChanges, periodOn } from '$lib/blueprint';
+	import { isCustomItem, resolveMedDisplay, medicationChanges, periodOn, canonicalMedId } from '$lib/blueprint';
 	import type { Blueprint } from '$lib/blueprint/types';
 	import type { CiphraDocument } from '$lib/stores/documents';
 
@@ -175,8 +175,12 @@
 			if (Array.isArray(missed)) for (const id of missed) ids.add(String(id));
 		}
 		const out: string[] = [];
-		for (const id of ids) {
-			const med = (bp.medications ?? []).find((m) => m.id === id);
+		// Ids of combined duplicates resolve to the medication they became, so
+		// a day that missed both shows one line, not a name that no longer exists.
+		const meds = bp.medications ?? [];
+		const canonical = new Set([...ids].map((id) => canonicalMedId(meds, id)));
+		for (const id of canonical) {
+			const med = meds.find((m) => m.id === id);
 			if (!med) continue;
 			const dose = periodOn(med, dayDate)?.dose ?? med.dose;
 			out.push(dose ? `${med.name} ${dose}` : med.name);

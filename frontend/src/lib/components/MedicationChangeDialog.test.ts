@@ -125,3 +125,30 @@ describe('delete', () => {
 		expect(onApply).toHaveBeenCalledWith({ remove: 'lam' });
 	});
 });
+
+describe('a change to what already applies', () => {
+	it('is refused with a note instead of recording "8 mg → 8 mg"', async () => {
+		const { getByTestId, onApply } = mount();
+		// Default dose/schedule = current, default date = tomorrow.
+		expect(getByTestId('med-change-noop').textContent).toContain('10 mg');
+		expect((getByTestId('med-change-apply') as HTMLButtonElement).disabled).toBe(true);
+		await fireEvent.input(getByTestId('med-change-dose'), { target: { value: '12 mg' } });
+		expect((getByTestId('med-change-apply') as HTMLButtonElement).disabled).toBe(false);
+		expect(onApply).not.toHaveBeenCalled();
+	});
+});
+
+describe('delete with a same-named entry', () => {
+	it('offers combining first', async () => {
+		const other: MedicationSlot = { ...lamotrigin, id: 'lam-2', dose: '12 mg' };
+		const onCombine = vi.fn();
+		const { getByTestId } = render(MedicationChangeDialog, {
+			props: { open: true, med: lamotrigin, today: '2026-09-16', historyDays: 5, duplicates: [other] },
+			events: { combine: (e: CustomEvent) => onCombine(e.detail) },
+		});
+		await fireEvent.click(getByTestId('med-open-delete'));
+		expect(getByTestId('med-delete-duplicate')).toBeTruthy();
+		await fireEvent.click(getByTestId('med-delete-combine'));
+		expect(onCombine).toHaveBeenCalledWith({ with: other });
+	});
+});
