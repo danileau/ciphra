@@ -15,6 +15,21 @@ app at **/docs → Changelog** and here on the public repo.
 - When the server was briefly unreachable and the connection answered with an
   error page instead, saving an entry failed. It is now kept on your device and
   synced once the server is back, the same as when you are offline.
+- **An entry you locked while offline could still be shown to a family member
+  after it synced.** It now syncs as private. The next time you open ciphra it
+  also corrects any entry whose sharing no longer matches how you marked it.
+- Coming back online could save an entry you wrote offline twice.
+- If someone removed your access to their account while you still had unsynced
+  changes for it, none of your other offline changes synced any more. Your own
+  entries now sync regardless; the changes for the account you can no longer
+  open are discarded. If an account is full, its offline entries now wait
+  without holding up anything else, and ciphra tells you why.
+- Editing an entry online right after an offline edit of it could later be
+  overwritten by the older offline version.
+- Importing a long history with large diary entries could be rejected as too big
+  and fall back to a slow one-by-one import.
+- Error messages about loading or saving entries were shown in English whatever
+  your language.
 
 ## [1.3.0] — 2026-08-30
 

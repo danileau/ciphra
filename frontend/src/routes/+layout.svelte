@@ -148,6 +148,8 @@
 	let queuedToastKey = 0;
 	let revokedToastShow = false;
 	let revokedToastKey = 0;
+	let quotaToastShow = false;
+	let quotaToastKey = 0;
 	// Generic confirmation toast — any screen can fire a `ciphra:toast` window
 	// event with `detail.message` to confirm an action (e.g. saving a custom
 	// episode type in Settings, which previously closed with no feedback).
@@ -252,6 +254,16 @@
 		};
 		window.addEventListener('ciphra:toast', onToast as EventListener);
 
+		// The outbox set a vault's queued writes aside because its owner is
+		// at the document cap (documents.ts drainOutbox). They stay queued —
+		// say why the pending pill is not going away.
+		const onSyncBlocked = () => {
+			quotaToastKey += 1;
+			quotaToastShow = true;
+			setTimeout(() => { quotaToastShow = false; }, 6000);
+		};
+		window.addEventListener('ciphra:sync-blocked', onSyncBlocked);
+
 		const onOnline = () => { documents.flushOutbox(); };
 		window.addEventListener('online', onOnline);
 		const onVisible = () => {
@@ -291,6 +303,7 @@
 			window.removeEventListener('storage', onStorage);
 			window.removeEventListener('ciphra:family-revoked', onFamilyRevoked);
 			window.removeEventListener('ciphra:toast', onToast as EventListener);
+			window.removeEventListener('ciphra:sync-blocked', onSyncBlocked);
 			window.removeEventListener('online', onOnline);
 			document.removeEventListener('visibilitychange', onVisible);
 			window.removeEventListener('beforeinstallprompt', onBeforeInstall as EventListener);
@@ -937,7 +950,9 @@
 	{#if $documentsError}
 		<div class="mx-4 mt-2 p-3 rounded-xl flex items-center gap-3" style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)">
 			<svg class="w-5 h-5 shrink-0" style="color: var(--danger)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke-width="2" stroke-linecap="round"/></svg>
-			<p class="text-sm" style="color: var(--danger)">{$documentsError}</p>
+			<p class="text-sm" style="color: var(--danger)">
+				{#if $documentsError === 'load'}{$t('sync.error_load')}{:else if $documentsError === 'update'}{$t('sync.error_update')}{:else}{$t('sync.error_save')}{/if}
+			</p>
 			<button on:click={() => { documentsError.set(null); documents.load(); }} class="ml-auto text-xs font-medium min-h-[44px] px-2" style="color: var(--danger)">{$t('common.retry')}</button>
 		</div>
 	{/if}
@@ -1235,6 +1250,11 @@
 	<!-- A linked vault was revoked while viewing it — snapped back to own vault. -->
 	{#key revokedToastKey}
 		<Toast message={revokedToastShow ? $t('family.access_removed') : ''} duration={3000} show={revokedToastShow} />
+	{/key}
+
+	<!-- Offline writes held back because the vault is at its document cap. -->
+	{#key quotaToastKey}
+		<Toast message={quotaToastShow ? $t('sync.quota_exceeded') : ''} duration={6000} show={quotaToastShow} />
 	{/key}
 
 	<!-- Generic confirmation toast (ciphra:toast event, e.g. custom-item save). -->

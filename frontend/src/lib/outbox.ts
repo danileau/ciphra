@@ -121,8 +121,13 @@ export async function dequeue(tempId: string): Promise<void> {
 	});
 }
 
-/** Replace the ciphertext of a queued record (offline edit of a queued write). */
-export async function updateCiphertext(tempId: string, ciphertext: string): Promise<void> {
+/**
+ * Replace the ciphertext of a queued record (offline edit of a queued write).
+ * `shareClass` replaces the record's class along with it: the edit may have
+ * locked or unlocked the entry, and the flush cannot look inside to notice.
+ * Pass `undefined` for a caregiver's record, which carries none.
+ */
+export async function updateCiphertext(tempId: string, ciphertext: string, shareClass?: number): Promise<void> {
 	if (typeof indexedDB === 'undefined') return;
 	const db = await openDB();
 	return new Promise((resolve, reject) => {
@@ -131,7 +136,7 @@ export async function updateCiphertext(tempId: string, ciphertext: string): Prom
 		const getReq = store.get(tempId);
 		getReq.onsuccess = () => {
 			const rec = getReq.result as OutboxRecord | undefined;
-			if (rec) store.put({ ...rec, ciphertext });
+			if (rec) store.put({ ...rec, ciphertext, shareClass });
 		};
 		tx.oncomplete = () => { db.close(); resolve(); };
 		tx.onerror = () => { db.close(); reject(tx.error); };
