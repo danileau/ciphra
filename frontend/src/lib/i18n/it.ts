@@ -1215,7 +1215,14 @@ export default {
 	'common.date': 'Data',
 	'common.time': 'Ora',
 	'common.optional': 'opzionale',
-	'reports.recent_events_title': 'Segnalibri recenti',
+	'reports.recent_events_title': 'Eventi recenti',
+	'reports.current_meds_title': 'Terapia attuale',
+	'reports.current_med_previous': '(prima {dose})',
+	'reports.dose_bands_caption': 'Sfondo: dose di {name} — linea tratteggiata il giorno del cambio',
+	'reports.dose_bands_choose': 'Lo sfondo mostra la dose di:',
+	'reports.med_event_change': '{name}: {before} → {after}',
+	'reports.med_event_start': '{name}: inizio, {dose}',
+	'reports.med_event_stop': '{name}: sospeso',
 	'reports.no_events_yet': "Nessun segnalibro ancora. Creane uno dall'inserimento rapido — compare nell'andamento e nell'esportazione per il medico.",
 
 	// PDF

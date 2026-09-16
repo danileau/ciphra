@@ -1237,7 +1237,14 @@ export default {
 	'common.date': 'Datum',
 	'common.time': 'Uhrzeit',
 	'common.optional': 'optional',
-	'reports.recent_events_title': 'Letzte Notiz-Markierungen',
+	'reports.recent_events_title': 'Letzte Ereignisse',
+	'reports.current_meds_title': 'Aktuelle Medikation',
+	'reports.current_med_previous': '(vorher {dose})',
+	'reports.dose_bands_caption': 'Hintergrund: Dosis von {name} – gestrichelt der Tag der Änderung',
+	'reports.dose_bands_choose': 'Hintergrund zeigt die Dosis von:',
+	'reports.med_event_change': '{name}: {before} → {after}',
+	'reports.med_event_start': '{name}: Beginn, {dose}',
+	'reports.med_event_stop': '{name}: abgesetzt',
 	'reports.no_events_yet': 'Noch keine Notiz-Markierungen. Erstelle eine über den Schnelleintrag — sie erscheint im Verlauf und im Export für die Ärztin.',
 
 	// PDF

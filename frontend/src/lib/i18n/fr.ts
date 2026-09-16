@@ -1215,7 +1215,14 @@ export default {
 	'common.date': 'Date',
 	'common.time': 'Heure',
 	'common.optional': 'facultatif',
-	'reports.recent_events_title': 'Repères de notes récents',
+	'reports.recent_events_title': 'Événements récents',
+	'reports.current_meds_title': 'Médication actuelle',
+	'reports.current_med_previous': '(auparavant {dose})',
+	'reports.dose_bands_caption': 'Arrière-plan : dose de {name} — trait pointillé le jour du changement',
+	'reports.dose_bands_choose': 'L’arrière-plan montre la dose de :',
+	'reports.med_event_change': '{name} : {before} → {after}',
+	'reports.med_event_start': '{name} : début, {dose}',
+	'reports.med_event_stop': '{name} : arrêté',
 	'reports.no_events_yet': "Aucun repère de note pour le moment. Créez-en un depuis la saisie rapide — il apparaît dans l'évolution et dans l'export pour le médecin.",
 
 	// PDF

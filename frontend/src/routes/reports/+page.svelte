@@ -13,7 +13,8 @@
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import VitalTrendReportsCard from '$lib/components/VitalTrendReportsCard.svelte';
 	import MedicationTimeline from '$lib/components/MedicationTimeline.svelte';
-	import { medicationChanges } from '$lib/blueprint/medicationHistory';
+	import { medicationChanges, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
+	import { chartDoseBands, dayBins, medsChangedIn, monthBins } from '$lib/reports/doseBands';
 	import { toLocalISODate } from '$lib/date';
 	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
 	import { cohortPalette } from '$lib/cohortPalette';
@@ -257,14 +258,59 @@
 			if (viewMode === 'month') return dateStr.startsWith(currentDate.slice(0, 7));
 			return dateStr.startsWith(String(currentYear));
 		};
-		return exportableDocs
+		// Dose history (2026-09-17): a medication starting, changing dose or
+		// stopping is an event too — listed with the note markers and intakes,
+		// newest first, from the blueprint rather than from a document.
+		const scopeFrom = viewMode === 'month' ? `${currentDate.slice(0, 7)}-01` : `${currentYear}-01-01`;
+		const scopeTo = viewMode === 'month' ? `${currentDate.slice(0, 7)}-31` : `${currentYear}-12-31`;
+		const docs = exportableDocs
 			.filter(d => d.data?.type === 'event' && typeof d.data.date === 'string' && inScope(String(d.data.date)))
-			.sort((a, b) => String(b.data.date).localeCompare(String(a.data.date)))
+			.map((doc) => ({ date: String(doc.data.date), doc, change: null as MedChange | null }));
+		const changes = medicationChanges(bp?.medications ?? [], { from: scopeFrom, to: scopeTo })
+			.map((change) => ({ date: change.date, doc: null as CiphraDocument | null, change }));
+		return [...docs, ...changes]
+			.sort((a, b) => b.date.localeCompare(a.date))
 			.slice(0, 8);
+	})();
+
+	function medChangeText(c: MedChange): string {
+		if (c.kind === 'change') return $t('reports.med_event_change', { name: c.name, before: c.before?.dose ?? '', after: c.after?.dose ?? '' });
+		if (c.kind === 'start') return $t('reports.med_event_start', { name: c.name, dose: c.after?.dose ?? '' });
+		return $t('reports.med_event_stop', { name: c.name });
+	}
+
+	// The medication that applies today, whatever window is on screen: the
+	// change a doctor needs to know about may be outside the viewed month.
+	$: currentMeds = (() => {
+		const today = todayISO();
+		return (bp?.medications ?? []).flatMap((med) => {
+			const period = periodOn(med, today);
+			if (!period) return [];
+			const began = period.from
+				? medicationChanges([med], { from: period.from, to: period.from }).find((c) => c.kind === 'change')
+				: undefined;
+			// Built here, not in the template: Svelte trims the leading space of
+			// an {#if} block, which glued "· seit" to the text before it.
+			const details = [
+				[period.dose, period.schedule].filter(Boolean).join(' · '),
+				med.asNeeded ? $t('settings.medication_as_needed') : '',
+				period.from ? $t('medication.since', { date: formatISODateChoice(period.from, bp?.dateFormat) }) : '',
+			].filter(Boolean).join(' · ') + (began?.before?.dose ? ` ${$t('reports.current_med_previous', { dose: began.before.dose })}` : '');
+			return [{ med, details }];
+		});
 	})();
 
 	// Monthly grid helpers
 	$: monthDocs = getMonthDocs(exportableDocs, currentDate);
+	$: gridColumnCount = 2 + effectiveSymptomColumns.length + effectiveEpisodeColumns.length + effectiveTriggerColumns.length;
+	$: medChangesByDay = (() => {
+		const map = new Map<string, MedChange[]>();
+		const prefix = currentDate.slice(0, 7);
+		for (const c of medicationChanges(bp?.medications ?? [], { from: `${prefix}-01`, to: `${prefix}-31` })) {
+			map.set(c.date, [...(map.get(c.date) ?? []), c]);
+		}
+		return map;
+	})();
 
 	// CIPH-876 — Auto-expand the monthly episode-columns list to include any
 	// non-curated episode type that has ≥1 occurrence in the visible month.
@@ -942,6 +988,25 @@
 		};
 	})();
 	$: medChangesInWindow = medicationChanges(bp?.medications ?? [], medWindow);
+	// Dose bands behind the trend chart (2026-09-17): the chart's bins as date
+	// ranges, the medications that changed on that axis (most recent first),
+	// and the chosen one's periods as background shades. Structure only — no
+	// number is derived per period (lib/reports/doseBands.ts).
+	$: trendAxisBins = (() => {
+		if (viewMode === 'month') {
+			const d = new Date(currentDate + 'T12:00:00');
+			return dayBins(d.getFullYear(), d.getMonth());
+		}
+		const start = new Date(trendAnchor.getFullYear(), trendAnchor.getMonth() - 23, 1);
+		return monthBins(start.getFullYear(), start.getMonth(), 24);
+	})();
+	$: bandCandidates = bp && trendAxisBins.length > 0
+		? medsChangedIn(bp.medications ?? [], trendAxisBins[0].from, trendAxisBins[trendAxisBins.length - 1].to)
+		: [];
+	let bandMedId: string | null = null;
+	$: bandMed = bandCandidates.find((m) => m.id === bandMedId) ?? bandCandidates[0] ?? null;
+	$: trendBands = bandMed ? chartDoseBands(bandMed, trendAxisBins) : null;
+	$: trendBandSig = trendBands ? JSON.stringify(trendBands) : '';
 	// Per chart bin (day in month view, month in year view): one tooltip line
 	// per medication change. Tooltip, not a mark on the chart — the rule for
 	// aggregate-axis charts (see MedicationTimeline.svelte).
@@ -1014,6 +1079,7 @@
 	let _prevLocale = '';
 	let _prevViewMode = '';
 	let _prevDateFmt = '';
+	let _prevBandSig = '';
 	let _trendOpts: Record<string, unknown> | null = null;
 	$: trendChartOptions = (() => {
 		const dateFmt = bp?.dateFormat || '';
@@ -1025,6 +1091,7 @@
 			$locale === _prevLocale &&
 			viewMode === _prevViewMode &&
 			dateFmt === _prevDateFmt &&
+			trendBandSig === _prevBandSig &&
 			_trendOpts
 		) {
 			return _trendOpts;
@@ -1036,12 +1103,14 @@
 		_prevLocale = $locale;
 		_prevViewMode = viewMode;
 		_prevDateFmt = dateFmt;
+		_prevBandSig = trendBandSig;
 		// Capture by value so the memoized options object holds onto its
 		// own snapshot of trigger counts AND its own ($t, $locale) view —
 		// when any dep changes, the memo rebuilds and grabs fresh snapshots.
 		const triggerSnapshot = trendTriggerByBin;
 		const medChangeSnapshot = medChangeLinesByBin;
 		const binDates = trendBinDates;
+		const bands = trendBands;
 		const view = viewMode;
 		const fmt = bp?.dateFormat;
 		const tt = $t;
@@ -1049,8 +1118,12 @@
 		_trendOpts = {
 			responsive: true,
 			maintainAspectRatio: false,
+			// The strip above the plot where the dose-band labels sit (drawn
+			// there so they never overlap the data — see ChartWrapper).
+			layout: bands ? { padding: { top: 18 } } : undefined,
 			plugins: {
 				legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
+				doseBands: bands ?? undefined,
 				tooltip: {
 					callbacks: {
 						// pi24 dogfood: tooltip title mirrors the dashboard
@@ -1303,6 +1376,22 @@
 		</div>
 	{/if}
 
+	<!-- Dose history (2026-09-17) — what is taken today, since when, and the
+	     dose before, visible whatever window is on screen. -->
+	{#if currentMeds.length > 0}
+		<div class="card-inline mb-4" data-testid="reports-current-meds">
+			<p class="text-xs font-medium uppercase tracking-wider mb-2" style="color: var(--text-muted)">{$t('reports.current_meds_title')}</p>
+			<ul class="flex flex-col gap-1">
+				{#each currentMeds as cm (cm.med.id)}
+					<li class="text-sm" style="color: var(--text-secondary)">
+						<span class="font-medium" style="color: var(--text-primary)">{cm.med.name}</span>
+						{cm.details}
+					</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
+
 	<!-- Summary stats (scoped — month or year).
 		 CIPH-912 — Middle slot adapts to the cohort: cohorts with
 		 counter episodes (epilepsy, migraine, bipolar) show "Episoden
@@ -1374,6 +1463,26 @@
 						srTable={trendChartSrTable}
 					/>
 				</div>
+				{#if bandMed && trendBands}
+					<!-- Names the shaded medication — never leave the reader guessing
+					     which dose the background shows. -->
+					<div class="rpt-bands" data-testid="reports-dose-bands">
+						{#if bandCandidates.length === 1}
+							<span>{$t('reports.dose_bands_caption', { name: bandMed.name })}</span>
+						{:else}
+							<span>{$t('reports.dose_bands_choose')}</span>
+							{#each bandCandidates as m (m.id)}
+								<button
+									type="button"
+									class="rpt-bands-chip"
+									class:rpt-bands-chip--active={m.id === bandMed.id}
+									aria-pressed={m.id === bandMed.id}
+									on:click={() => (bandMedId = m.id)}
+								>{m.name}</button>
+							{/each}
+						{/if}
+					</div>
+				{/if}
 			{:else}
 				<!-- PI v17 (Jonas dry-run #2) — distinguish "no entries
 				     at all" from "entries exist but no episodes/symptoms
@@ -1429,10 +1538,13 @@
 			<p class="text-xs" style="color: var(--text-muted)">{$t('reports.no_events_yet')}</p>
 		{:else}
 			<ul class="flex flex-col gap-1.5">
-				{#each recentEvents as ev}
+				{#each recentEvents as item}
+					{@const ev = item.doc}
 					<li class="flex items-baseline gap-2 text-sm md:text-base">
-						<span class="font-mono text-xs shrink-0" style="color: var(--text-muted)">{ev.data.date}</span>
-						{#if ev.data.kind === 'medication'}
+						<span class="font-mono text-xs shrink-0" style="color: var(--text-muted)">{item.date}</span>
+						{#if item.change}
+							<span class="truncate font-medium" style="color: var(--olive)" data-testid="reports-event-med-change">{medChangeText(item.change)}</span>
+						{:else if ev && ev.data.kind === 'medication'}
 							<!-- CIPH-881b — rescue-medication events render with med
 								 name + dose + time, distinct from freeform notes. -->
 							{@const med = resolveMedDisplay(bp, ev.data.medicationId, $t)}
@@ -1441,7 +1553,7 @@
 							<span class="truncate" style="color: var(--brand)">
 								{medLabel}{ev.data.dose ? ` · ${ev.data.dose}${unit}` : ''}{ev.data.time ? ` · ${ev.data.time}` : ''}
 							</span>
-						{:else}
+						{:else if ev}
 							<span class="truncate" style="color: var(--text-primary)">{ev.data.notes || ''}</span>
 						{/if}
 					</li>
@@ -1654,6 +1766,14 @@
 					{#each Array.from({ length: daysInMonth }, (_, i) => i + 1) as day}
 						{@const dayStr = `${currentDate.slice(0, 8)}${String(day).padStart(2, '0')}`}
 						{@const dayDoc = monthDocs.find(d => d.data.date === dayStr)}
+						{#each medChangesByDay.get(dayStr) ?? [] as change}
+							<!-- Dose history — a divider row on the day a dose started,
+							     changed or stopped: the grid reads "before" above it and
+							     "after" below it. -->
+							<tr class="rpt-medchange-row" data-testid="reports-grid-med-change">
+								<td colspan={gridColumnCount}>{formatISODateChoice(dayStr, bp.dateFormat)} · {medChangeText(change)}</td>
+							</tr>
+						{/each}
 						<tr class="border-b border-slate-100">
 							<td class="bg-white px-3 py-1.5 font-medium whitespace-nowrap">
 								<a href="/log/{dayStr}" class="grid-day-link">{day}</a>
@@ -1881,6 +2001,41 @@
 	}
 	.rpt-trend-range {
 		font-size: 0.75rem;
+	}
+	/* Dose bands — which medication the chart background shows. */
+	.rpt-bands {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px;
+		margin-top: 8px;
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+	.rpt-bands-chip {
+		padding: 2px 10px;
+		min-height: 44px;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: var(--surface-card);
+		color: var(--text-secondary);
+		font-size: 12px;
+	}
+	.rpt-bands-chip--active {
+		border-color: var(--olive);
+		background: rgba(var(--olive-rgb), 0.12);
+		color: var(--text-primary);
+	}
+	/* The day a dose started, changed or stopped, as a divider in the grid. */
+	.rpt-medchange-row td {
+		padding: 4px 12px;
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--olive);
+		background: rgba(var(--olive-rgb), 0.08);
+		border-top: 1px dashed rgba(var(--olive-rgb), 0.6);
+		white-space: nowrap;
+		text-align: left;
 	}
 	.rpt-trend-empty {
 		height: 220px;

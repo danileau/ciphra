@@ -29,6 +29,7 @@
 	import { t, locale, plural } from '$lib/i18n';
 	import { formatDateChoice } from '$lib/blueprint/preferences';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
+	import { chartDoseBands, medsChangedIn, monthBins } from '$lib/reports/doseBands';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint, VitalField } from '$lib/blueprint/types';
 
@@ -197,6 +198,17 @@
 		};
 	})();
 
+	// Dose bands (2026-09-17): the same before/after structure as the episode
+	// trend — the most recently changed medication's dose periods behind the
+	// vital's monthly line. Structure only; nothing derived per period.
+	$: bandBins = activeTrend
+		? monthBins(activeTrend.months[0].y, activeTrend.months[0].m, activeTrend.months.length)
+		: [];
+	$: bandMed = bp && bandBins.length > 0
+		? medsChangedIn(bp.medications ?? [], bandBins[0].from, bandBins[bandBins.length - 1].to)[0] ?? null
+		: null;
+	$: vitalBands = bandMed ? chartDoseBands(bandMed, bandBins) : null;
+
 	$: chartOptions = (() => {
 		if (!chartConfig || !activeTrend) return null;
 		const months = activeTrend.months;
@@ -215,8 +227,10 @@
 		return {
 			responsive: true,
 			maintainAspectRatio: false,
+			layout: vitalBands ? { padding: { top: 18 } } : undefined,
 			plugins: {
 				legend: { display: false },
+				doseBands: vitalBands ?? undefined,
 				tooltip: {
 					callbacks: {
 						title: (items: Array<{ dataIndex: number }>) => {
@@ -308,6 +322,9 @@
 		<div class="vital-canvas">
 			<ChartWrapper type={chartConfig.type} data={chartConfig.data} options={chartOptions} />
 		</div>
+		{#if bandMed && vitalBands}
+			<p class="text-xs mt-2" style="color: var(--text-muted)" data-testid="vital-dose-bands">{$t('reports.dose_bands_caption', { name: bandMed.name })}</p>
+		{/if}
 
 		{#if !chipsMode && secondariesWithData.length > 0}
 			<!-- 2-3 vital secondary sparklines. Mini inline numeric +

@@ -119,3 +119,27 @@ export function monthBins(year: number, month0: number, count: number): AxisBin[
 		return { from: `${prefix}-01`, to: `${prefix}-${String(last).padStart(2, '0')}` };
 	});
 }
+
+/** What ChartWrapper's dose-band layer draws: positions in bin units, the
+ *  label already written. Plain data so it can ride Chart.js options. */
+export interface ChartDoseBands {
+	bands: Array<{ start: number; end: number; label: string; shaded: boolean }>;
+	boundaries: Array<{ at: number }>;
+}
+
+/** Chart-ready bands for one medication: the first band names the medication,
+ *  later ones only the dose; every other band is shaded so neighbours never
+ *  merge. Null when nothing changed on the axis. */
+export function chartDoseBands(med: MedicationSlot, bins: AxisBin[]): ChartDoseBands | null {
+	const { bands, boundaries } = doseBands(med, bins);
+	if (bands.length === 0) return null;
+	return {
+		bands: bands.map((b, i) => ({
+			start: b.start,
+			end: b.end,
+			label: i === 0 ? `${med.name} ${b.dose}`.trim() : b.dose,
+			shaded: b.index % 2 === 0,
+		})),
+		boundaries: boundaries.map((b) => ({ at: b.at })),
+	};
+}

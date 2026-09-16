@@ -1215,7 +1215,14 @@ export default {
 	'common.date': 'Date',
 	'common.time': 'Time',
 	'common.optional': 'optional',
-	'reports.recent_events_title': 'Recent note markers',
+	'reports.recent_events_title': 'Recent events',
+	'reports.current_meds_title': 'Current medication',
+	'reports.current_med_previous': '(previously {dose})',
+	'reports.dose_bands_caption': 'Background: {name} dose — dashed line on the day it changed',
+	'reports.dose_bands_choose': 'Background shows the dose of:',
+	'reports.med_event_change': '{name}: {before} → {after}',
+	'reports.med_event_start': '{name}: started, {dose}',
+	'reports.med_event_stop': '{name}: stopped',
 	'reports.no_events_yet': 'No note markers yet. Create one from the quick-add sheet — it appears in the trend and in the doctor export.',
 
 	// PDF
