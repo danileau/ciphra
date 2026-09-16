@@ -90,8 +90,6 @@ export interface MedChangeRow {
 	name: string;
 	/** Neutral description of the step: what applied before → after. */
 	change: string;
-	/** The reason the user gave, verbatim; '' when none. */
-	reason: string;
 }
 
 /**
@@ -99,10 +97,10 @@ export interface MedChangeRow {
  * table rows. Wording is descriptive only ("Abgesetzt", "10 mg → 12 mg") —
  * never why it mattered or what followed.
  *
- * A switch records one reason on both halves (the stop of A and the start of
- * B). Printed twice on adjacent rows it reads as two separate decisions, so
- * the start row drops it when the stop row on the same day already carries
- * the identical text.
+ * The reason a person typed for a change is deliberately NOT a column. It is
+ * free text, and free text leaves the device only by explicit choice: entry
+ * notes stay out of the PDF and CSV (#159), note markers need an opt-in at
+ * export. The reason stays in the app (Settings history, /reports timeline).
  */
 export function medicationChangeRows(
 	meds: MedicationSlot[],
@@ -125,14 +123,7 @@ export function medicationChangeRows(
 			const next = nameOf(c.switchedTo);
 			change = next ? t('pdf.med_change_stop_switch', { name: next }) : t('pdf.med_change_stop');
 		}
-		let reason = c.note?.trim() ?? '';
-		if (c.kind === 'start' && c.switchedFrom && reason) {
-			const stopHalf = changes.find(
-				(o) => o.kind === 'stop' && o.medId === c.switchedFrom && o.date === c.date,
-			);
-			if (stopHalf?.note?.trim() === reason) reason = '';
-		}
-		return { date: c.date, kind: c.kind, name: c.name, change, reason };
+		return { date: c.date, kind: c.kind, name: c.name, change };
 	});
 }
 

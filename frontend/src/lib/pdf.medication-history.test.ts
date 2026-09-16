@@ -177,12 +177,11 @@ describe('adherence splits by dose period', () => {
 describe('the medication changes section', () => {
 	it('lists every start, change and stop in the window, in neutral words', () => {
 		const rows = medicationChangeRows(MEDS, SEP, t);
-		expect(rows.map((r) => [r.date, r.name, r.change, r.reason])).toEqual([
-			['2026-09-10', 'Lamotrigin', '50 mg · 2× täglich → 75 mg · 2× täglich', 'Aufdosierung laut Dr. M.'],
-			['2026-09-12', 'Levetiracetam', 'Abgesetzt · Wechsel auf Brivaracetam', 'Müdigkeit'],
-			// The switch's one reason prints once, on the stop half.
-			['2026-09-12', 'Brivaracetam', 'Beginn · 50 mg · 2× täglich (ersetzt Levetiracetam)', ''],
-			['2026-09-24', 'Lamotrigin', '75 mg · 2× täglich → 100 mg · 2× täglich', ''],
+		expect(rows.map((r) => [r.date, r.name, r.change])).toEqual([
+			['2026-09-10', 'Lamotrigin', '50 mg · 2× täglich → 75 mg · 2× täglich'],
+			['2026-09-12', 'Levetiracetam', 'Abgesetzt · Wechsel auf Brivaracetam'],
+			['2026-09-12', 'Brivaracetam', 'Beginn · 50 mg · 2× täglich (ersetzt Levetiracetam)'],
+			['2026-09-24', 'Lamotrigin', '75 mg · 2× täglich → 100 mg · 2× täglich'],
 		]);
 	});
 
@@ -196,7 +195,13 @@ describe('the medication changes section', () => {
 		expect(texts).toContain(t('pdf.medication_changes'));
 		expect(texts).toContain(t('pdf.med_changes_provenance'));
 		expect(texts).toContain('Abgesetzt · Wechsel auf Brivaracetam');
-		expect(texts).toContain('Aufdosierung laut Dr. M.');
+	});
+
+	it('never prints the reason a person typed — free text leaves the device only by explicit choice', () => {
+		const { texts } = doctorPdf('month', 8, SEPTEMBER);
+		const all = texts.join('\n');
+		expect(all).not.toContain('Aufdosierung laut Dr. M.');
+		expect(all).not.toContain('Müdigkeit');
 	});
 
 	it('is absent when nothing changed in the window', () => {
@@ -389,7 +394,7 @@ describe('markers only — no before/after reading', () => {
 	const NEW_KEYS = [
 		'pdf.medication_timeline_title', 'pdf.timeline_legend_period', 'pdf.timeline_legend_change',
 		'pdf.timeline_legend_as_needed', 'pdf.medication_changes', 'pdf.med_changes_provenance',
-		'pdf.med_change_col', 'pdf.med_reason_col', 'pdf.med_change_dose', 'pdf.med_change_start',
+		'pdf.med_change_col', 'pdf.med_change_dose', 'pdf.med_change_start',
 		'pdf.med_change_start_switch', 'pdf.med_change_stop', 'pdf.med_change_stop_switch',
 		'pdf.med_mark_stop', 'pdf.legend_med_change_day', 'pdf.csv_dose_col',
 	];

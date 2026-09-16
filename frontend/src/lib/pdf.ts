@@ -4046,8 +4046,8 @@ export function generateDoctorPdf(
 	// Every start, dose change and stop taking effect inside the window, oldest
 	// first, in neutral wording. Dates follow the user's date format, like the
 	// note-marker list. The provenance line says who recorded it: this is the
-	// patient's own medication list, not a prescription record, and the reason
-	// column is their own words.
+	// patient's own medication list, not a prescription record. No reason
+	// column — see medicationChangeRows.
 	if (medChangeRows.length > 0) {
 		cursorY = reserveSpace(doc, cursorY, BREAK.sectionHead + BREAK.tableHeader);
 		doc.setFont('helvetica', 'bold');
@@ -4065,12 +4065,11 @@ export function generateDoctorPdf(
 		autoTable(doc, {
 			startY: cursorY,
 			margin: { left: 14, right: 14 },
-			head: [[t('pdf.date'), t('pdf.medication'), t('pdf.med_change_col'), t('pdf.med_reason_col')]],
+			head: [[t('pdf.date'), t('pdf.medication'), t('pdf.med_change_col')]],
 			body: medChangeRows.map((c) => [
 				formatISODateChoice(c.date, blueprint.dateFormat),
 				c.name,
 				c.change,
-				c.reason,
 			]),
 			theme: 'plain',
 			rowPageBreak: 'avoid',
@@ -4090,9 +4089,8 @@ export function generateDoctorPdf(
 			},
 			columnStyles: {
 				0: { cellWidth: 24, textColor: BRAND.textSecondary as any },
-				1: { cellWidth: 38 },
-				2: { cellWidth: 70 },
-				3: { cellWidth: 'auto', textColor: BRAND.textSecondary as any },
+				1: { cellWidth: 48 },
+				2: { cellWidth: 'auto' },
 			},
 			willDrawCell: arrows.willDrawCell,
 			didDrawCell: (data: any) => {

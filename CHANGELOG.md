@@ -20,6 +20,14 @@ app at **/docs → Changelog** and here on the public repo.
   you stopped a medication, or switched to a different one, the same way.
 - Stopped medications no longer disappear. They move to their own list in
   Settings, stay in your history, and can be taken up again.
+- **Dose changes show up wherever your data does.** The day view shows the dose
+  that applied that day; the calendar marks the day a medication started,
+  changed or stopped; the reports page shows a medication timeline next to your
+  trend chart; and the PDF for your doctor lists adherence per dose, the changes
+  in the report period, and a timeline. The CSV export gets a dose-of-the-day
+  column per daily medication. ciphra shows *when* a dose changed — it does not
+  compare how you were before and after. The reason you type for a change stays
+  in the app and is not printed in the PDF.
 
 ### Fixed
 - Editing a medication's dose used to rewrite every day you had already
@@ -32,6 +40,8 @@ app at **/docs → Changelog** and here on the public repo.
 - A newly added daily medication counted as "taken" on every logged day of the
   report, including days before you started it. Adherence now only counts days
   on which the medication was part of your regimen.
+- On a phone, a dialog taller than the screen was cut off at the top and bottom
+  and could not be scrolled, and the bottom navigation bar covered its buttons.
 
 ## [1.3.0] — 2026-08-30
 
