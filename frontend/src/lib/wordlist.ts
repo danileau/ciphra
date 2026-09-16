@@ -67,6 +67,16 @@ export function generateFamilyCode(wordCount = 6): string {
 	return words.join(' ');
 }
 
+/** The one spelling a word code is derived from: lowercase, single spaces.
+ *  Generated codes are already in this form, so normalizing typed input to it
+ *  is backward compatible — and necessary, because a phone keyboard
+ *  capitalizes the first word ("Able acid …") and turns a double space into
+ *  ". ", and validation (which lowercases) used to accept a code that then
+ *  derived the wrong key. */
+export function canonicalWordCode(code: string): string {
+	return code.toLowerCase().trim().split(/\s+/).join(' ');
+}
+
 export function validateFamilyCode(code: string): boolean {
 	const words = code.toLowerCase().trim().split(/\s+/);
 	if (words.length < 5 || words.length > 13) return false;

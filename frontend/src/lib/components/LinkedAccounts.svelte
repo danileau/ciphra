@@ -120,6 +120,7 @@
 				type="text"
 				bind:value={sourceUsername}
 				placeholder={$t('family.username_placeholder')}
+				autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
 				required
 				class="input w-full"
 			/>
@@ -127,6 +128,7 @@
 				type="text"
 				bind:value={familyCode}
 				placeholder={$t('family.code_placeholder')}
+				autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
 				required
 				class="input w-full font-mono"
 			/>

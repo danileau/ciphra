@@ -512,6 +512,7 @@
 					<PasswordField
 						bind:value={currentPassword}
 						placeholder={$t('settings.current_password')}
+						autocomplete="current-password"
 						class="input"
 						required
 					/>
@@ -931,6 +932,7 @@
 			<PasswordField
 				bind:value={deletePassword}
 				placeholder={$t('auth.password')}
+				autocomplete="current-password"
 				class="w-full px-4 py-2 min-h-[44px] rounded-xl text-sm outline-none"
 			/>
 		</div>

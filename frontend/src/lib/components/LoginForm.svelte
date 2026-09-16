@@ -111,7 +111,11 @@
 	{/if}
 	<div>
 		<label for="login-user" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.username')}</label>
+		<!-- autocomplete hints tell password managers which saved login this is,
+		     so they fill (and update after a password change) the right entry;
+		     the rest stops phone keyboards from altering what was typed. -->
 		<input id="login-user" type="text" bind:value={loginUser} required minlength="3"
+			autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"
 			on:blur={() => { touched.loginUser = true; }}
 			aria-invalid={userInvalid}
 			aria-describedby={userInvalid ? 'login-user-err' : undefined}
@@ -126,6 +130,7 @@
 			id="login-pass"
 			bind:value={loginPass}
 			required
+			autocomplete="current-password"
 			class="input"
 		/>
 	</div>

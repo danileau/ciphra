@@ -33,7 +33,7 @@
  *     WebCrypto internally emits ciphertext | tag(16); we reorder on encrypt/decrypt.
  */
 
-import { generateRecoveryCode } from './wordlist';
+import { canonicalWordCode, generateRecoveryCode } from './wordlist';
 
 // --- Base64 helpers ---
 
@@ -302,7 +302,7 @@ export async function decryptMasterKeyWithRecovery(
 	const params = decodeVaultParams(recoveryParamsB64);
 	const salt = b64ToBytes(params.salt);
 	const recoveryKey = await deriveArgon2Key(
-		recoveryCode.trim(), salt, `:${username}:RECOVERY`, params
+		canonicalWordCode(recoveryCode), salt, `:${username}:RECOVERY`, params
 	);
 	const recoveryVault = b64ToBytes(recoveryVaultB64);
 	const masterKey = await aesDecrypt(recoveryVault, recoveryKey);
@@ -377,7 +377,7 @@ export async function unwrapFamilyGrant(
 ): Promise<{ masterKey: Uint8Array; familyKeyB64: string }> {
 	const params = decodeVaultParams(grantParamsB64);
 	const salt = b64ToBytes(params.salt);
-	const familyKey = await deriveArgon2Key(familyCode.trim(), salt, ':FAMILY', params);
+	const familyKey = await deriveArgon2Key(canonicalWordCode(familyCode), salt, ':FAMILY', params);
 	const masterKey = await aesDecrypt(b64ToBytes(wrappedMasterB64), familyKey);
 	return { masterKey, familyKeyB64: bytesToB64(familyKey) };
 }
