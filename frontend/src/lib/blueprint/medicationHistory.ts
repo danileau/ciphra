@@ -42,8 +42,44 @@ function byFrom(a: MedicationPeriod, b: MedicationPeriod): number {
  *  and no end, carrying its one dose — which is exactly what the old model
  *  asserted about it. */
 export function medPeriods(med: MedicationSlot): MedicationPeriod[] {
-	if (med.periods && med.periods.length > 0) return [...med.periods].sort(byFrom);
+	if (med.periods && med.periods.length > 0) return coalesce([...med.periods].sort(byFrom));
 	return [{ dose: med.dose ?? '', schedule: med.schedule ?? '' }];
+}
+
+const sameRegimen = (a: MedicationPeriod, b: MedicationPeriod) =>
+	a.dose.trim() === b.dose.trim() && a.schedule.trim() === b.schedule.trim();
+
+/** Join back-to-back periods that carry the same dose and schedule. A "change"
+ *  to what already applied (10 mg → 8 mg, then 8 mg → 8 mg the next day) is
+ *  not a step anyone took; showing it as one misstates the history. Applied on
+ *  read, so data saved with such a step reads cleanly, and on write, so it is
+ *  not stored again. A switch boundary is kept even with equal doses — it
+ *  links two different medications. */
+function coalesce(periods: MedicationPeriod[]): MedicationPeriod[] {
+	const out: MedicationPeriod[] = [];
+	for (const p of periods) {
+		const prev = out[out.length - 1];
+		if (
+			prev &&
+			prev.to &&
+			p.from &&
+			addDaysISO(prev.to, 1) === p.from &&
+			sameRegimen(prev, p) &&
+			!prev.switchedTo &&
+			!p.switchedFrom
+		) {
+			const joined: MedicationPeriod = { ...prev, to: p.to, endNote: p.endNote, switchedTo: p.switchedTo };
+			if (!p.to) delete joined.to;
+			if (!p.endNote) delete joined.endNote;
+			if (!p.switchedTo) delete joined.switchedTo;
+			const notes = [prev.note?.trim(), p.note?.trim()].filter(Boolean);
+			if (notes.length > 0) joined.note = [...new Set(notes)].join(' · ');
+			out[out.length - 1] = joined;
+		} else {
+			out.push({ ...p });
+		}
+	}
+	return out;
 }
 
 function covers(p: MedicationPeriod, date: string): boolean {
@@ -117,7 +153,7 @@ export function plannedChange(med: MedicationSlot, date: string): PlannedChange 
 /* ─── Writers ─────────────────────────────────────────────────────────── */
 
 function withPeriods(med: MedicationSlot, periods: MedicationPeriod[]): MedicationSlot {
-	const sorted = [...periods].sort(byFrom);
+	const sorted = coalesce([...periods].sort(byFrom));
 	const last = sorted[sorted.length - 1];
 	// `dose`/`schedule` mirror the newest period: the value a reader that
 	// predates dose history should show (see MedicationSlot).
@@ -364,16 +400,32 @@ interface DayDoc {
 	data?: Record<string, unknown>;
 }
 
+/** Every id logged days may carry for this medication: its own, plus the
+ *  ids of duplicates combined into it. */
+export function medIds(med: MedicationSlot): string[] {
+	return [med.id, ...(med.mergedIds ?? [])];
+}
+
+/** The id of the configured medication an id logged on some day belongs to —
+ *  itself, or the medication it was combined into. Unknown ids pass through
+ *  (preset rescue medications, deleted medications). */
+export function canonicalMedId(meds: MedicationSlot[] | null | undefined, id: string): string {
+	const owner = (meds ?? []).find((m) => m.id === id || m.mergedIds?.includes(id));
+	return owner ? owner.id : id;
+}
+
 /** Does this logged document mention the medication explicitly — a missed
- *  scheduled dose, an as-needed "taken" toggle, or an intake event? */
-export function docReferencesMed(doc: DayDoc, medId: string): boolean {
+ *  scheduled dose, an as-needed "taken" toggle, or an intake event? A
+ *  medication also answers for the duplicates combined into it. */
+export function docReferencesMed(doc: DayDoc, med: MedicationSlot | string): boolean {
+	const ids = typeof med === 'string' ? [med] : medIds(med);
 	const d = doc.data ?? {};
-	if (d.type === 'event') return d.medicationId === medId;
+	if (d.type === 'event') return ids.includes(d.medicationId as string);
 	if (d.type !== 'entry') return false;
 	const missed = d.missedMedications;
-	if (Array.isArray(missed) && missed.includes(medId)) return true;
+	if (Array.isArray(missed) && missed.some((id) => ids.includes(id))) return true;
 	const taken = d.medications as Record<string, unknown> | undefined;
-	return !!taken?.[medId];
+	return ids.some((id) => !!taken?.[id]);
 }
 
 /** How many distinct days of history hang off this medication: days that
@@ -385,11 +437,119 @@ export function medHistoryDays(med: MedicationSlot, docs: DayDoc[]): number {
 	for (const doc of docs) {
 		const date = doc.data?.date;
 		if (typeof date !== 'string') continue;
-		if (docReferencesMed(doc, med.id)) {
+		if (docReferencesMed(doc, med)) {
 			days.add(date);
 		} else if (!med.asNeeded && doc.data?.type === 'entry' && isActiveOn(med, date)) {
 			days.add(date);
 		}
 	}
 	return days.size;
+}
+
+/* ─── Duplicates ──────────────────────────────────────────────────────── */
+
+// Same dose-token shape as the epilepc migration's name parser
+// (migration/epilepcMapping.ts): a number with a REQUIRED unit, so
+// "Vitamin B12" keeps its 12.
+const DOSE_TOKEN = /\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?\s*(?:mcg|µg|ug|mg|kg|ml|iu|ie|hübe?|hub|puffs?|tropfen|gtt|tabletten?|tabs?|stk|g|l|%)\b\.?/gi;
+
+/** A name's identity for spotting duplicates: case- and whitespace-
+ *  insensitive, ignoring an embedded dose ("Fycompa 8mg" = "fycompa"). Exact
+ *  otherwise — a near-miss spelling may be a different drug, and combining
+ *  two drugs would be a medical-safety bug. */
+export function medNameKey(name: string): string {
+	return name.replace(DOSE_TOKEN, ' ').toLowerCase().replace(/\s+/g, '');
+}
+
+/** Groups of two or more medications that look like the same drug — what
+ *  the pre-dose-history workaround produced: one entry per dose. In list
+ *  order, which is the order they were added. */
+export function duplicateGroups(meds: MedicationSlot[]): MedicationSlot[][] {
+	const byKey = new Map<string, MedicationSlot[]>();
+	for (const med of meds) {
+		const key = medNameKey(med.name);
+		if (!key) continue;
+		byKey.set(key, [...(byKey.get(key) ?? []), med]);
+	}
+	return [...byKey.values()].filter((group) => group.length > 1);
+}
+
+const EARLIEST = '0000-01-01';
+
+/** Were both medications recorded as taken on some same day? Then combining
+ *  them needs a date on which the later one takes over. */
+export function medicationsOverlap(a: MedicationSlot, b: MedicationSlot): boolean {
+	return medPeriods(a).some((p) =>
+		medPeriods(b).some((q) => {
+			const start = [p.from ?? EARLIEST, q.from ?? EARLIEST].sort()[1];
+			const ends = [p.to, q.to].filter((x): x is string => !!x).sort();
+			return ends.length === 0 || start <= ends[0];
+		}),
+	);
+}
+
+/** One history out of two: before `switchDate` whatever the EARLIER entry
+ *  says applied, from `switchDate` on whatever the LATER one says — each
+ *  falling back to the other on days it has nothing. So "10 mg (original
+ *  entry) + 8 mg (duplicate added on 01.08.)" with switchDate 01.08. reads
+ *  10 mg until 31.07. and 8 mg after, including days after the duplicate was
+ *  stopped if the original was changed to 8 mg meanwhile. Without overlap the
+ *  histories simply line up and `switchDate` is not needed. */
+export function combineHistories(
+	earlier: MedicationSlot,
+	later: MedicationSlot,
+	switchDate?: string,
+): MedicationPeriod[] {
+	const points = new Set<string>();
+	for (const p of [...medPeriods(earlier), ...medPeriods(later)]) {
+		if (p.from) points.add(p.from);
+		if (p.to) points.add(addDaysISO(p.to, 1));
+	}
+	if (switchDate) points.add(switchDate);
+	const starts = [...points].sort();
+
+	// Cut the timeline at every boundary either entry has; inside one piece
+	// the choice between them cannot change.
+	const pieces: Array<{ from?: string; to?: string }> =
+		starts.length === 0
+			? [{}]
+			: [
+					{ to: addDaysISO(starts[0], -1) },
+					...starts.map((from, i) => ({ from, to: i + 1 < starts.length ? addDaysISO(starts[i + 1], -1) : undefined })),
+				];
+
+	const out: MedicationPeriod[] = [];
+	for (const piece of pieces) {
+		const day = piece.from ?? EARLIEST;
+		const e = periodOn(earlier, day);
+		const l = periodOn(later, day);
+		const chosen = switchDate && day >= switchDate ? l ?? e : e ?? l;
+		if (!chosen) continue;
+		const period: MedicationPeriod = { dose: chosen.dose, schedule: chosen.schedule };
+		if (piece.from) period.from = piece.from;
+		if (piece.to) period.to = piece.to;
+		if (chosen.note && chosen.from === piece.from) period.note = chosen.note;
+		if (chosen.endNote && chosen.to === piece.to) period.endNote = chosen.endNote;
+		out.push(period);
+	}
+	return coalesce(out);
+}
+
+/** Combine `absorb` into `keep`: one medication, one history
+ *  (`combineHistories`), and `absorb`'s id kept as an alias so every day
+ *  logged against it stays attached. Nothing is deleted from any document.
+ *  Returns null when the result would have no period at all. */
+export function combineMedications(
+	keep: MedicationSlot,
+	absorb: MedicationSlot,
+	opts: { earlierId: string; switchDate?: string },
+): MedicationSlot | null {
+	const earlier = opts.earlierId === absorb.id ? absorb : keep;
+	const later = earlier === keep ? absorb : keep;
+	const periods = combineHistories(earlier, later, opts.switchDate);
+	if (periods.length === 0) return null;
+	const mergedIds = [...new Set([...(keep.mergedIds ?? []), absorb.id, ...(absorb.mergedIds ?? [])])].filter(
+		(id) => id !== keep.id,
+	);
+	return withPeriods({ ...keep, asNeeded: later.asNeeded, mergedIds }, periods);
 }

@@ -410,6 +410,12 @@ route kind.
   a checkbox frames one as the deviation, and keeping your diary to
   yourself is not a deviation. `name` distinguishes the groups when a
   create form and an editing row are open at once.
+- **MedicationCombineDialog.svelte** — combines two entries of the same
+  medication (the pre-dose-history workaround: one entry per dose) into one
+  history via `combineMedications`. Asks nothing when the histories line up;
+  otherwise which dose came first and from which day the other applied.
+  Preview rendered from the computed result. The removed entry's id stays as
+  an alias (`mergedIds`), so no logged document is rewritten.
 - **MedicationManager.svelte** — Settings → medications with dose
   history (2026-09-16). Lists what applies *today* (dose, since when, a
   planned change or stop), stopped medications in their own list rather

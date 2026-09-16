@@ -14,12 +14,18 @@ import {
 	applyDoseChange,
 	applyStop,
 	applySwitch,
+	canonicalMedId,
+	combineMedications,
 	createMedication,
 	docReferencesMed,
+	duplicateGroups,
 	earliestChangeDate,
 	isActiveOn,
 	medHistoryDays,
+	medIds,
+	medNameKey,
 	medicationChanges,
+	medicationsOverlap,
 	medPeriods,
 	medStatusOn,
 	periodOn,
@@ -205,5 +211,108 @@ describe('medHistoryDays — what deleting would strip', () => {
 
 	it('docReferencesMed ignores diary and other types', () => {
 		expect(docReferencesMed({ data: { type: 'diary', date: '2026-09-01', medicationId: 'lam' } }, 'lam')).toBe(false);
+	});
+});
+
+/* ─── Duplicates (the pre-dose-history workaround) ─────────────────────── */
+
+describe('coalescing a change to what already applied', () => {
+	it('reads back-to-back equal doses as one period — no "8 mg → 8 mg" step', () => {
+		const med = legacy({
+			periods: [
+				{ to: '2026-09-15', dose: '10mg', schedule: 'abends' },
+				{ from: '2026-09-16', to: '2026-09-16', dose: '8mg', schedule: 'abends' },
+				{ from: '2026-09-17', dose: '8mg', schedule: 'abends' },
+			],
+		});
+		expect(medPeriods(med)).toEqual([
+			{ to: '2026-09-15', dose: '10mg', schedule: 'abends' },
+			{ from: '2026-09-16', dose: '8mg', schedule: 'abends' },
+		]);
+		expect(medicationChanges([med]).map((c) => [c.date, c.kind])).toEqual([['2026-09-16', 'change']]);
+		expect(plannedChange(med, '2026-09-16')).toBeNull();
+	});
+
+	it('a "change" to the same dose stores nothing new', () => {
+		const med = legacy();
+		const same = applyDoseChange(med, { from: '2026-09-17', dose: '10 mg', schedule: '2× täglich' });
+		expect(medPeriods(same)).toEqual([{ dose: '10 mg', schedule: '2× täglich' }]);
+	});
+});
+
+describe('duplicateGroups', () => {
+	it('groups entries of the same drug, ignoring case, spacing and an embedded dose', () => {
+		const meds = [
+			legacy({ id: 'a', name: 'Fycompa' }),
+			legacy({ id: 'b', name: 'Lamotrigin' }),
+			legacy({ id: 'c', name: 'fycompa 8mg' }),
+			legacy({ id: 'd', name: 'Fycomp' }),
+			legacy({ id: 'e', name: 'Vitamin B12' }),
+			legacy({ id: 'f', name: 'Vitamin B1' }),
+		];
+		expect(duplicateGroups(meds).map((g) => g.map((m) => m.id))).toEqual([['a', 'c']]);
+		expect(medNameKey('Urbanyl 10 mg')).toBe(medNameKey('urbanyl'));
+	});
+});
+
+describe('combineMedications — the operator\'s Fycompa case (2026-09-16)', () => {
+	// The workaround: the original entry at 10 mg, a second "Fycompa" added at
+	// 8 mg when the dose changed. After dose history shipped, the original was
+	// changed to 8 mg from 16.09. (plus a same-dose step on 17.09.) and the
+	// duplicate stopped from 17.09.
+	const original = legacy({
+		id: 'fyc-1', name: 'Fycompa', dose: '8mg', schedule: '15min vor dem Schlafen gehen',
+		periods: [
+			{ to: '2026-09-15', dose: '10mg', schedule: '15min vor dem Schlafen gehen' },
+			{ from: '2026-09-16', to: '2026-09-16', dose: '8mg', schedule: '15min vor dem Schlafen gehen' },
+			{ from: '2026-09-17', dose: '8mg', schedule: '15min vor dem Schlafen gehen' },
+		],
+	});
+	const duplicate = legacy({
+		id: 'fyc-2', name: 'Fycompa', dose: '8mg', schedule: '15min vor dem Schlafen gehen',
+		periods: [{ to: '2026-09-16', dose: '8mg', schedule: '15min vor dem Schlafen gehen' }],
+	});
+
+	it('needs a switch date, because both entries claim the same days', () => {
+		expect(medicationsOverlap(original, duplicate)).toBe(true);
+	});
+
+	it('10 mg until the duplicate took over, 8 mg since — and it continues past the duplicate\'s stop', () => {
+		const combined = combineMedications(original, duplicate, { earlierId: 'fyc-1', switchDate: '2026-08-01' })!;
+		expect(combined.id).toBe('fyc-1');
+		expect(combined.mergedIds).toEqual(['fyc-2']);
+		expect(medPeriods(combined)).toEqual([
+			{ to: '2026-07-31', dose: '10mg', schedule: '15min vor dem Schlafen gehen' },
+			{ from: '2026-08-01', dose: '8mg', schedule: '15min vor dem Schlafen gehen' },
+		]);
+		expect(isActiveOn(combined, '2026-12-01')).toBe(true);
+		expect(combined.dose).toBe('8mg');
+	});
+
+	it('days logged against either id stay attached to the combined medication', () => {
+		const combined = combineMedications(original, duplicate, { earlierId: 'fyc-1', switchDate: '2026-08-01' })!;
+		const missedOnDuplicate = { data: { type: 'entry', date: '2026-08-10', missedMedications: ['fyc-2'] } };
+		expect(docReferencesMed(missedOnDuplicate, combined)).toBe(true);
+		expect(canonicalMedId([combined], 'fyc-2')).toBe('fyc-1');
+		expect(canonicalMedId([combined], 'someone-else')).toBe('someone-else');
+		expect(medIds(combined)).toEqual(['fyc-1', 'fyc-2']);
+	});
+
+	it('histories that do not overlap simply line up, no date needed', () => {
+		const stopped = createMedication('x1', { name: 'X', dose: '10 mg', schedule: '', asNeeded: false, from: '2026-01-01' });
+		const first = applyStop(stopped, '2026-05-01')!;
+		const second = createMedication('x2', { name: 'X', dose: '8 mg', schedule: '', asNeeded: false, from: '2026-05-01' });
+		expect(medicationsOverlap(first, second)).toBe(false);
+		const combined = combineMedications(first, second, { earlierId: 'x1' })!;
+		expect(medicationChanges([combined]).map((c) => [c.date, c.kind, c.after?.dose])).toEqual([
+			['2026-01-01', 'start', '10 mg'],
+			['2026-05-01', 'change', '8 mg'],
+		]);
+	});
+
+	it('an id combined earlier stays an alias after a second combine', () => {
+		const a = legacy({ id: 'a', mergedIds: ['old'] });
+		const b = legacy({ id: 'b', mergedIds: ['older'] });
+		expect(combineMedications(a, b, { earlierId: 'a', switchDate: '2026-01-01' })!.mergedIds).toEqual(['old', 'b', 'older']);
 	});
 });

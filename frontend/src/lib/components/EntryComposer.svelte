@@ -52,7 +52,7 @@
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
 	import type { Blueprint, CustomKind, MedicationSlot } from '$lib/blueprint';
-	import { isCustomItem, blueprint, createMedication, isActiveOn, medicationChanges, newMedicationId, periodOn } from '$lib/blueprint';
+	import { isCustomItem, blueprint, canonicalMedId, createMedication, isActiveOn, medicationChanges, newMedicationId, periodOn } from '$lib/blueprint';
 	import { groupIconPath } from '$lib/groupIcons';
 	import { get } from 'svelte/store';
 	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
@@ -364,13 +364,24 @@
 		userEdited = true;
 	}
 
+	/** As-needed "taken" toggles keyed by the medication's current id —
+	 *  a toggle logged against a duplicate later combined into it counts. */
+	function canonicalMedToggles(raw: Record<string, boolean>): Record<string, boolean> {
+		const out: Record<string, boolean> = {};
+		for (const [id, on] of Object.entries(raw)) {
+			const key = canonicalMedId(bp.medications ?? [], id);
+			out[key] = !!out[key] || !!on;
+		}
+		return out;
+	}
+
 	function copyPreviousDay() {
 		if (!previousDoc) return;
 		const d = previousDoc.data;
 		if (d.symptoms) symptoms = { ...symptoms, ...d.symptoms };
 		if (d.episodes) episodes = { ...episodes, ...d.episodes };
 		if (d.triggers) triggers = { ...triggers, ...d.triggers };
-		if (d.medications) medications = { ...medications, ...d.medications };
+		if (d.medications) medications = { ...medications, ...canonicalMedToggles(d.medications) };
 		markChanged();
 	}
 
@@ -535,10 +546,13 @@
 		if (d.seizures && !d.episodes) episodes = { ...episodes, ...d.seizures };
 		if (d.triggers) triggers = { ...triggers, ...d.triggers };
 		if (d.vitals) vitals = { ...vitals, ...d.vitals };
-		if (d.medications) medications = { ...medications, ...d.medications };
+		// A day logged against a duplicate that was later combined carries the
+		// duplicate's id; map it to the medication it became, so the chip shows
+		// its state and the next save writes the current id.
+		if (d.medications) medications = { ...medications, ...canonicalMedToggles(d.medications) };
 		if (Array.isArray(d.missedMedications)) {
 			missedMeds = {};
-			for (const id of d.missedMedications) missedMeds[id] = true;
+			for (const id of d.missedMedications) missedMeds[canonicalMedId(bp.medications ?? [], id)] = true;
 		}
 		if (d.episodeTimes) episodeTimes = { ...episodeTimes, ...d.episodeTimes };
 		if (d.episodeDurations) episodeDurations = { ...episodeDurations, ...d.episodeDurations };

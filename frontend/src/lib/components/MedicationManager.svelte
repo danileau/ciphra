@@ -17,7 +17,9 @@
 	import { blueprint, resolvedBlueprint } from '$lib/blueprint';
 	import {
 		createMedication,
+		duplicateGroups,
 		medHistoryDays,
+		medNameKey,
 		medicationChanges,
 		medPeriods,
 		medStartDate,
@@ -33,6 +35,7 @@
 	import { documents } from '$lib/stores/documents';
 	import { todayISO } from '$lib/date';
 	import MedicationChangeDialog, { type DialogMode } from '$lib/components/MedicationChangeDialog.svelte';
+	import MedicationCombineDialog from '$lib/components/MedicationCombineDialog.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 
 	// Render from the resolved view (medications are not customized, so it is
@@ -61,6 +64,30 @@
 	let expanded: Record<string, boolean> = {};
 	function changesFor(m: MedicationSlot): MedChange[] {
 		return medicationChanges([m]).reverse();
+	}
+
+	// ─── Duplicates (one entry per dose, the pre-dose-history workaround) ───
+	$: duplicates = duplicateGroups(meds);
+	function duplicatesOf(m: MedicationSlot | null): MedicationSlot[] {
+		if (!m) return [];
+		const key = medNameKey(m.name);
+		return meds.filter((x) => x.id !== m.id && medNameKey(x.name) === key);
+	}
+	let combineOpen = false;
+	let combinePair: [MedicationSlot, MedicationSlot] | null = null;
+	function openCombine(a: MedicationSlot, b: MedicationSlot) {
+		// List order = the order they were added; the first keeps its id.
+		combinePair = meds.indexOf(a) <= meds.indexOf(b) ? [a, b] : [b, a];
+		saveError = false;
+		dialogOpen = false;
+		combineOpen = true;
+	}
+	async function handleCombine(e: CustomEvent<{ replace: MedicationSlot; remove: string }>) {
+		const { replace, remove } = e.detail;
+		const ok = await persist((list) =>
+			list.filter((m) => m.id !== remove).map((m) => (m.id === replace.id ? replace : m)),
+		);
+		if (ok) combineOpen = false;
 	}
 
 	// ─── Dialog ───
@@ -155,6 +182,22 @@
 </script>
 
 <section class="card p-5">
+	{#each duplicates as group (group.map((m) => m.id).join('|'))}
+		<div class="p-3 mb-4 rounded-xl space-y-2" style="border: 1px solid var(--olive); background: var(--olive-light)" data-testid="med-duplicate-notice">
+			<p class="text-sm font-medium" style="color: var(--text-primary)">{$t('medication.duplicate_notice', { name: group[0].name })}</p>
+			<p class="text-xs" style="color: var(--text-secondary)">{$t('medication.duplicate_hint')}</p>
+			<button
+				type="button"
+				on:click={() => openCombine(group[0], group[1])}
+				class="text-xs font-medium px-3 py-1.5 rounded-lg min-h-[36px]"
+				style="color: var(--text-primary); background: var(--surface-card); border: 1px solid var(--border)"
+				data-testid="med-duplicate-combine"
+			>
+				{$t('medication.combine')}
+			</button>
+		</div>
+	{/each}
+
 	{#if meds.length === 0}
 		<p class="text-sm mb-4" style="color: var(--text-secondary)">{$t('settings.medications_empty')}</p>
 	{/if}
@@ -338,6 +381,17 @@
 	historyDays={dialogHistoryDays}
 	dateFormat={bp?.dateFormat}
 	{today}
+	duplicates={duplicatesOf(dialogMed)}
 	on:apply={handleApply}
+	on:combine={(e) => dialogMed && openCombine(dialogMed, e.detail.with)}
 	on:close={() => (dialogOpen = false)}
+/>
+
+<MedicationCombineDialog
+	open={combineOpen}
+	pair={combinePair}
+	docs={$documents}
+	dateFormat={bp?.dateFormat}
+	on:apply={handleCombine}
+	on:close={() => (combineOpen = false)}
 />

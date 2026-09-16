@@ -111,6 +111,11 @@ export interface MedicationSlot {
 	/** Dose history (2026-09-16). Absent on medications saved before it
 	 *  existed — `medPeriods()` treats those as one open-ended period. */
 	periods?: MedicationPeriod[];
+	/** Ids of medications that were combined into this one (duplicates
+	 *  created before dose history existed — one entry per dose). Logged days
+	 *  still carry those ids; readers resolve them here via `medIds()` /
+	 *  `canonicalMedId()`, so combining rewrites no document. */
+	mergedIds?: string[];
 }
 
 /** CIPH-881 — Rescue medication preset for the FAB quick-add "med" mode.

@@ -20,7 +20,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Blueprint, VitalField } from '$lib/blueprint';
-import { addDaysISO, isCustomItem, resolveBlueprint, resolveMedDisplay, bedarfMedColumns } from '$lib/blueprint';
+import { addDaysISO, canonicalMedId, isCustomItem, resolveBlueprint, resolveMedDisplay, bedarfMedColumns } from '$lib/blueprint';
 import {
 	adherenceRowsForWindow,
 	csvDoseCell,
@@ -4607,8 +4607,12 @@ export function exportCsv(
 		}
 		// CIPH-881b — count rescue-med events for this day per medication id.
 		for (const col of rescueMedCols) {
+			// Intakes logged against a duplicate later combined into this
+			// medication count here too (canonicalMedId).
 			const count = medScopeDocs.filter(
-				(d) => d.data.date === dayStr && (d.data as any).medicationId === col.id,
+				(d) =>
+					d.data.date === dayStr &&
+					canonicalMedId(blueprint.medications, String((d.data as any).medicationId ?? '')) === col.id,
 			).length;
 			row.push(String(count));
 		}

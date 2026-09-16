@@ -222,3 +222,18 @@ describe('medAdherenceByPeriod', () => {
 		expect(rows.map((r) => r.period.dose)).toEqual(['12 mg']);
 	});
 });
+
+describe('combined duplicates count as one medication', () => {
+	const entry = (date: string, data: Record<string, unknown> = {}) => ({ data: { type: 'entry', date, ...data } });
+	const combined = slot({ id: 'fyc-1', name: 'Fycompa', asNeeded: false, mergedIds: ['fyc-2'] });
+
+	it('a dose missed under the duplicate\'s id is a missed dose of the combined medication', () => {
+		const docs = [entry('2026-08-01', { missedMedications: ['fyc-2'] }), entry('2026-08-02')];
+		expect(medAdherence(combined, docs)).toEqual({ taken: 1, total: 2, pct: 50 });
+	});
+
+	it('an intake logged under the duplicate\'s id shows the combined name', () => {
+		const b = bp({ medications: [combined] });
+		expect(resolveMedDisplay(b, 'fyc-2', t).label).toBe('Fycompa');
+	});
+});
