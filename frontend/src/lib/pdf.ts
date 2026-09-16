@@ -3967,8 +3967,11 @@ export function generateDoctorPdf(
 			r.period.schedule,
 			`${r.taken} / ${r.total}`,
 			// A period without a logged day has no adherence to state. "0%" in
-			// brick would claim every dose was missed.
-			r.total > 0 ? `${r.pct}%` : '—',
+			// brick would claim every dose was missed. Nor does an as-needed
+			// medication: it is taken when needed, so 0 of 6 days is a fact
+			// about the days, not a missed regimen — a brick "0%" graded a
+			// rescue medication nobody needed. The count column states it.
+			r.total > 0 && !r.med.asNeeded ? `${r.pct}%` : '—',
 		]);
 
 		autoTable(doc, {

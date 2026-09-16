@@ -408,3 +408,9 @@ describe('markers only — no before/after reading', () => {
 		});
 	}
 });
+
+describe('as-needed medications are not graded', () => {
+	it('prints no adherence percentage for an as-needed medication', () => {
+		expect(PDF_SRC).toMatch(/r\.total > 0 && !r\.med\.asNeeded \? `\$\{r\.pct\}%` : '—'/);
+	});
+});
