@@ -187,7 +187,8 @@ breaking change bumps MAJOR rather than MINOR.
   and note markers.
 
 <!--
-Add lines under the relevant heading (omit empty headings):
+Pending entries are files in changelog.d/, one per change (changelog.d/README.md),
+using these headings (omit empty ones); a release compiles them into a section:
 
 ### Added        — new capability (→ MINOR)
 ### Changed      — behaviour of something that already existed (→ MINOR/PATCH)

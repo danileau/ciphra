@@ -89,10 +89,16 @@ nothing.
    suggest one from the commit prefixes — it is **advisory**, and nothing fails
    if you disagree with it. What a version says to a user is a judgement, and
    the operator makes it.
-2. Edit [`VERSION`](../VERSION) and set `frontend/package.json` `"version"` to
-   the same value.
-3. Move the `## [Unreleased]` notes in [`CHANGELOG.md`](../CHANGELOG.md) into a
-   new `## [X.Y.Z] — YYYY-MM-DD` section (keep an empty `[Unreleased]` on top).
+2. Run `node scripts/changelog.mjs release X.Y.Z`. It moves every pending
+   entry — the fragments in [`changelog.d/`](../changelog.d/README.md), plus
+   anything still under `[Unreleased]` in [`CHANGELOG.md`](../CHANGELOG.md) —
+   into a new `## [X.Y.Z] — YYYY-MM-DD` section, resets `[Unreleased]`, updates
+   the link references at the bottom, deletes the fragments, and sets
+   [`VERSION`](../VERSION) and `frontend/package.json` `"version"`. Read the new
+   section before committing; add a short intro paragraph if the release
+   deserves one. (`node scripts/changelog.mjs preview` shows it beforehand.)
+3. Commit as `release: X.Y.Z` — the release PR is the one PR that edits
+   `CHANGELOG.md` directly.
 4. Open the PR. The `version-guard` CI job checks that `VERSION`,
    `frontend/package.json` and the changelog agree, and that the section is
    dated. It does not second-guess the number. Merge as usual.
@@ -125,6 +131,18 @@ was never tagged, which is why the `[0.1.0]` link in `CHANGELOG.md` still
 Users read what shipped at **`/docs` → Changelog** (in-app) and in
 [`CHANGELOG.md`](../CHANGELOG.md) on the public repo.
 
+## Changelog entries: one file per change
+
+A change a user would notice gets its changelog entry **in the same PR**, as a
+new file in [`changelog.d/`](../changelog.d/README.md) — written like a slice of
+the changelog (`### Fixed` + `- ` entries). Not in `CHANGELOG.md`: every PR that
+edited its `[Unreleased]` block conflicted with every other open PR, and on
+2026-09-16 resolving one of those conflicts in GitHub's editor silently dropped
+all of #192's entries. New files never conflict; the release PR compiles them.
+
+`/docs → Changelog` in the app already shows pending fragments under
+**Unreleased**, so a change deployed before its release is not invisible.
+
 ## Enforcement (this is mechanical, not a convention)
 
 - **`version-guard`** (`.github/workflows/ci.yml`, runs on every PR): fails if
@@ -133,16 +151,26 @@ Users read what shipped at **`/docs` → Changelog** (in-app) and in
   the three places **agree**; it does not judge whether the number is the one
   the commits imply. That check existed briefly and was removed on 2026-08-30 —
   see the release process above.
+- **Changelog fragments** (same job): `scripts/changelog-guard.sh` fails a PR
+  that has `feat`/`fix` commits (or a `feat`/`fix` title) but adds no
+  `changelog.d/` fragment, and a non-release PR that edits `CHANGELOG.md`
+  itself. `[skip changelog]` in a commit message or the PR description waives
+  the first (nothing a user would notice); `[changelog edit]` waives the second
+  (correcting notes that already shipped). `node scripts/changelog.mjs check`
+  fails on a fragment that would lose text on release, and
+  `scripts/test-changelog.sh` proves both scripts do what this section says.
 - **`Release images`**: reads `VERSION`, **fails the build** if it isn't valid
   SemVer, and only then tags/pushes the images. No valid version → no images.
 The operator additionally runs a local pre-commit guard that refuses a
-`feat:`/`fix:` commit which doesn't stage `CHANGELOG.md` alongside it, so the
-entry gets written *as the change is made* rather than remembered at release
-time. That guard is workstation-local and not part of this repository — CI is
-what binds everyone.
+`feat:`/`fix:` commit which stages neither a `changelog.d/` fragment nor
+`CHANGELOG.md`, so the entry gets written *as the change is made* rather than
+remembered at release time. That guard is workstation-local and not part of
+this repository, and it never sees a conflict resolved in GitHub's web editor —
+CI is what binds everyone.
 
-So an image without a standardized `X.Y.Z` tag cannot be produced, and a
-version bump without a changelog entry cannot be merged.
+So an image without a standardized `X.Y.Z` tag cannot be produced, a version
+bump without a changelog entry cannot be merged, and neither can a feat/fix PR
+without one.
 
 ## The database schema has its own version
 
