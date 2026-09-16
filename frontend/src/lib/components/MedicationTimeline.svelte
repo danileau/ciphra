@@ -50,9 +50,16 @@
 	interface Lane { id: string; name: string; segments: Segment[] }
 
 	$: totalDays = Math.max(1, dayIndex(to) + 1);
+	$: changes = medicationChanges(meds, { from, to });
+	$: changedIds = new Set(changes.map((c) => c.medId));
 	$: lanes = (() => {
 		const out: Lane[] = [];
 		for (const med of meds) {
+			// A solid bar says "part of the daily regimen". That is true of a
+			// scheduled medication, not of an as-needed one — an unchanged
+			// rescue medication drawn across the whole month read as taken
+			// every day. As-needed lanes appear only when their dose changed.
+			if (med.asNeeded && !changedIds.has(med.id)) continue;
 			const segments: Segment[] = [];
 			const periods = medPeriods(med);
 			periods.forEach((p, i) => {
@@ -74,8 +81,6 @@
 		}
 		return out;
 	})();
-
-	$: changes = medicationChanges(meds, { from, to });
 
 	function nameOf(id: string | undefined): string {
 		return meds.find((m) => m.id === id)?.name ?? '';
