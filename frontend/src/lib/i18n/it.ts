@@ -97,6 +97,7 @@ export default {
 	'auth.error_rate_limited': 'Troppi tentativi in poco tempo. Attendi un momento e riprova.',
 	'auth.session_expired': 'La tua sessione è scaduta. Accedi di nuovo.',
 	'auth.technical_details': 'Mostra dettagli tecnici',
+	'auth.error_suspended': 'Questo account è sospeso. Se pensi che si tratti di un errore, scrivi a info@ciphra.ch.',
 	'auth.phase_checking': 'Verifica in corso…',
 	'auth.phase_deriving': 'Derivazione chiave (pochi secondi)…',
 	'auth.phase_verifying': 'Verifica…',

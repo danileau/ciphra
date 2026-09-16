@@ -76,7 +76,7 @@ Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from 
 - `SHA-256(auth_key)` — not the password, not the auth_key itself.
 - Argon2 salts and parameters.
 - `encrypted_master`, `recovery_vault`, `wrapped_master` — opaque ciphertexts.
-- Encrypted document blobs — opaque ciphertexts. We can see size and timestamp.
+- Encrypted document blobs — opaque ciphertexts. We can see size and timestamp, and for a document imported from epilepc, an opaque key derived from the original record so a repeated import does not duplicate it.
 - **One bit per document saying whether you consider it shareable.** Added so a
   family invitation can be limited to "everything except my diary" and have the
   *server* enforce it rather than the app merely honouring it — the document's
@@ -86,8 +86,32 @@ Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from 
   this existed carries no value at all, and is treated as not shareable.
 - The scope of each family invitation (`share_mask`): whether it may read your
   diary and locked entries, or not.
-- IP address of each request, retained 30 days raw, then anonymized to /24, deleted at 90 days.
-- An audit log of authentication events (login success/fail, lockouts, password changes, family grants created/revoked, account deletion).
+- **Bookkeeping about your account and your invitations.** When the account was
+  created and last logged in; whether it was registered through the epilepc
+  migration; whether it is an admin; failed-attempt counters and lock state. For
+  each family invitation: the name you gave it (stored as plain text), which
+  account claimed it, and when it was created, claimed, last used and revoked.
+- **An audit log of what your account does, and when.** Each row is an event
+  name, a timestamp, your account id, and the IP address the request came from.
+  It records sign-in activity (registration, logins that succeed or fail,
+  lockouts, password changes, recovery), family sharing (invitations created,
+  rescoped, revoked, and claim attempts), admin actions on your account, and
+  account deletion — **and every time a document is created, updated or
+  deleted** (`DOC_CREATED`, `DOC_UPDATED`, `DOC_DELETED`, `DOC_BATCH_CREATED`).
+  When someone you share with writes to your record, their row
+  (`FAMILY_DOC_CREATED` / `_UPDATED` / `_DELETED`) names your account and the
+  document's id. So the log is a record of *when* you wrote to ciphra and *from
+  which address* — never of what you wrote.
+- **IP addresses in that log** are kept raw for 30 days. After that they are
+  truncated — an IPv4 address to its /24 (the last octet zeroed), an IPv6
+  address to its /48 — and the whole row is deleted at 90 days. The clean-up
+  runs when the API starts and then about once a day while it is running, so
+  each step can land up to a day late. Deleting your account removes your
+  account id and the IP from the rows of your own actions at once; rows others
+  wrote about your account (an admin's action, a caregiver's write) keep your
+  former account id, which then leads nowhere. (The web server and Cloudflare
+  in front of the API also see each request's IP; this schedule is the audit
+  log's.)
 
 We **cannot** see:
 - Your password.
@@ -184,10 +208,15 @@ We will not pretend otherwise.
 - **CORS:** restricted to configured origins; no wildcard.
 - **CSP:** `default-src 'self'`, no inline scripts, no `eval`, `frame-ancestors 'none'`.
 - **Master key in browser:** lives in `sessionStorage` only — cleared when the browser closes. Limits the XSS window to "this tab session."
-- **Per-account lockout:** 5 failed login attempts → 15-minute lock; 3 failed recovery attempts → 15-minute lock.
-- **JWT invalidation:** `password_version` column incremented on password change or recovery; old tokens are rejected.
-- **Audit log retention:** 90 days max, IPs anonymized after 30 days, full IP cleared on account deletion.
-- **No user enumeration:** `/login/init`, `/recover/init`, and family-claim endpoints return identical-shape responses for unknown users (deterministic fake parameters derived from server-side HMAC).
+- **Per-account lockout:** 5 failed login attempts → 15-minute lock; 3 failed recovery attempts → 15-minute lock. Once a lock has run out, the count starts again from zero. The right password or recovery code still gets through this automatic lock — otherwise anyone who knows your username could keep you locked out. A lock set by an administrator is different: it holds even against the right password or recovery code, and it ends every session already open.
+- **JWT invalidation:** `password_version` column incremented on password change, recovery, or an admin lock; old tokens are rejected. Every authenticated request checks its token against the database: a deleted account's token stops working at once, admin rights are read from the database rather than from the token, and if the database cannot be reached the request is refused (503), not let through.
+- **Audit log retention:** 90 days max, IPs truncated after 30 days, both checked about daily; account id and IP cleared from your own audit rows on account deletion. Details under "What the server can see".
+- **User enumeration — what is hidden and what is not.** `/login/init` and `/recover/init` answer for every username with deterministic fake parameters (derived from a server-side HMAC) shaped exactly like real ones, and the family-claim lookup (`/family/grants/claim/init`, which needs a login) returns a decoy invitation for any username with nothing to claim. That is no user enumeration *through those lookups*. It does **not** make the existence of an account secret:
+  - **Registration says a name is taken.** `/api/register` answers 409 for a username that exists. Registration cannot work without telling you that; the endpoint is rate-limited to 3 attempts a minute per address and the error text is generic, but the status code is the answer.
+  - **A lockout says an account exists.** After 5 wrong passwords (or 3 wrong recovery codes, if recovery is set up) a real account answers "locked"; a username nobody registered never locks.
+  - **The family-claim lookup shows a patient with several invitations.** The decoy list always has exactly one entry, so a list of two or more is real.
+
+  Assume someone can confirm that your username exists — one reason it can be a pseudonym. What they cannot get from the server is anything inside your account.
 
 ---
 

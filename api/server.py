@@ -9,14 +9,18 @@ import json
 import base64
 import hashlib
 import hmac
+import ipaddress
 import logging
 import secrets
+import threading
+import time
 from contextlib import contextmanager
 from functools import wraps
 from datetime import datetime, timezone, timedelta
 
 import jwt
 import psycopg2
+from psycopg2 import errors as pg_errors
 from psycopg2.extras import RealDictCursor
 from flask import Flask, request, jsonify
 from werkzeug.exceptions import BadRequest
@@ -143,6 +147,67 @@ def _json_object() -> dict:
     return data
 
 
+def _str_field(data: dict, key: str) -> str:
+    """A string field from a JSON body: '' when absent or null, 400 otherwise.
+
+    Routes used to read `(data.get('username') or '').strip()`. The `or ''`
+    covers a missing or null field, but any TRUTHY non-string — `123`, `[1]`,
+    `{"a":1}` — sails through and `.strip()` raises AttributeError. Like the
+    non-object body `_json_object` catches, that fired above the route's
+    try/except, so it was an unhandled 500 on pre-auth endpoints (register,
+    login, login/init, recover/init, recover). Raising BadRequest sends it to
+    the JSON 400 handler instead.
+
+    Call it only OUTSIDE a route's try/except: inside one, `except Exception`
+    catches the BadRequest and turns it straight back into a 500.
+    """
+    value = data.get(key)
+    if value is None:
+        return ''
+    if not isinstance(value, str):
+        raise BadRequest(f'{key} must be a string')
+    return value
+
+
+def _is_text(value, max_len=None, min_len=1) -> bool:
+    """True when `value` is a string PostgreSQL can store in a TEXT column.
+
+    Two kinds of body field used to pass a truthiness check and fail in the
+    database instead, as a 500: a non-string (psycopg2 cannot adapt a dict, and
+    turns a list into an ARRAY the TEXT column rejects), and a string holding
+    U+0000, which PostgreSQL text cannot contain at all (psycopg2 refuses it
+    with ValueError). No ciphra field legitimately holds either — they are
+    base64, compact JSON, an opaque key, or a short label. `max_len=None` leaves
+    the length to MAX_CONTENT_LENGTH.
+    """
+    return (
+        isinstance(value, str)
+        and len(value) >= min_len
+        and (max_len is None or len(value) <= max_len)
+        and '\x00' not in value
+    )
+
+
+_DIGITS_RE = re.compile(r'[0-9]{1,18}')
+
+
+def _as_int(value):
+    """An integer from a JSON body (a number, or a string of digits), else None.
+
+    Refuses bool on purpose. In Python `True` IS an int: `int(True) == 1` and
+    `True in (1, 3)` both hold, so a JSON `true` quietly passed as the number 1
+    — as a share_class, a share_mask, a document id. Refuses floats rather
+    than truncating 1.9 to 1.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and _DIGITS_RE.fullmatch(value.strip()):
+        return int(value)
+    return None
+
+
 @app.after_request
 def set_security_headers(resp):
     """Defense-in-depth headers. CSP is strict: no inline scripts, no eval,
@@ -246,14 +311,18 @@ def _share_class(data):
     Only the OWNER may set this. Caregiver write paths must not pass a body
     through to here — see family_documents_create.
     """
-    raw = data.get('share_class')
-    if raw is None:
-        return None
-    try:
-        value = int(raw)
-    except (TypeError, ValueError):
-        return None
+    value = _as_int(data.get('share_class'))
     return value if value in (SHARE_CLASS_SHAREABLE, SHARE_CLASS_PERSONAL) else None
+
+
+def _valid_share_mask(raw) -> bool:
+    """Exactly one of VALID_SHARE_MASKS, as a JSON number.
+
+    `type(...) is int`, not `in VALID_SHARE_MASKS` alone: `True in (1, 3)` is
+    True, so a JSON `true` used to be accepted and stored as mask 1.
+    """
+    return type(raw) is int and raw in VALID_SHARE_MASKS
+
 
 # (number, name, sql, compatible)
 MIGRATIONS = [
@@ -439,38 +508,86 @@ def generate_token(user_id: int, username: str, is_admin: bool = False, pwd_vers
     }, SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 
-def _current_password_version(user_id: int) -> int:
+class AuthStoreUnavailable(Exception):
+    """The users table could not be consulted, so no token can be trusted."""
+
+
+def _token_subject(user_id: int):
+    """What the DATABASE says about a token's user, right now.
+
+    Returns {'password_version', 'is_admin'}, or None when the row is gone.
+    Raises AuthStoreUnavailable when the lookup itself fails.
+
+    This is where a token's authority comes from — not from its claims. The
+    lookup it replaces returned password_version 1 both for a missing row and
+    on ANY exception, which failed open twice over: a deleted user's token
+    (pv 1 unless they had changed their password) kept working until it
+    expired, and during a database blip every pv-1 token passed while every
+    other one was rejected as stale, logging its user out. `is_admin` came
+    from the JWT claim, so a demoted admin kept the admin API for up to
+    JWT_EXPIRATION_HOURS. The claim stays in the token for the frontend's UI;
+    no server-side check reads it any more.
+    """
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT password_version FROM users WHERE id = %s", (user_id,))
+                cur.execute(
+                    "SELECT password_version, is_admin FROM users WHERE id = %s",
+                    (user_id,),
+                )
                 row = cur.fetchone()
-                return int(row['password_version']) if row and row['password_version'] else 1
-    except Exception:
-        return 1
+    except Exception as e:
+        # One line with the cause, not a traceback: during an outage this runs
+        # for every authenticated request.
+        logger.warning("token check: users lookup failed: %s: %s", type(e).__name__, e)
+        raise AuthStoreUnavailable() from e
+    if not row:
+        return None
+    return {
+        'password_version': int(row['password_version'] or 1),
+        'is_admin': bool(row['is_admin']),
+    }
 
 
 def _decode_and_verify_token(auth_header: str):
-    """Returns decoded payload if token valid and password_version matches DB,
-    else raises. A password change increments pv and invalidates old tokens."""
+    """(payload, subject) for a valid token whose user still exists and whose
+    password_version matches the DB, else raises. A password change, a
+    recovery, or an admin lock increments pv and so invalidates old tokens."""
     if not auth_header.startswith('Bearer '):
         raise PermissionError('missing')
     payload = jwt.decode(auth_header[7:], SECRET_KEY, algorithms=[JWT_ALGORITHM])
-    current_pv = _current_password_version(payload['user_id'])
-    if int(payload.get('pv', 1)) != current_pv:
+    subject = _token_subject(payload['user_id'])
+    if subject is None:
+        raise PermissionError('gone')
+    if int(payload.get('pv', 1)) != subject['password_version']:
         raise PermissionError('stale')
-    return payload
+    return payload, subject
+
+
+def _authenticate_request():
+    """(subject, None) for an authenticated request, or (None, error response)."""
+    try:
+        payload, subject = _decode_and_verify_token(request.headers.get('Authorization', ''))
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, PermissionError):
+        return None, (jsonify({'error': 'Token invalid or expired'}), 401)
+    except AuthStoreUnavailable:
+        # Fail CLOSED, but with 503 rather than 401. The frontend reads a 401
+        # as "this session is dead" and logs the user out (api.ts dispatches
+        # ciphra:unauthorized); it reads a 503 as "offline, try later" and
+        # queues writes in the outbox. A database blip must refuse the request
+        # without signing every open session out.
+        return None, (jsonify({'error': 'service_unavailable'}), 503)
+    request.user_id = payload['user_id']
+    request.username = payload['username']
+    return subject, None
 
 
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        try:
-            payload = _decode_and_verify_token(request.headers.get('Authorization', ''))
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, PermissionError):
-            return jsonify({'error': 'Token invalid or expired'}), 401
-        request.user_id = payload['user_id']
-        request.username = payload['username']
+        _subject, error = _authenticate_request()
+        if error:
+            return error
         return f(*args, **kwargs)
     return decorated
 
@@ -478,16 +595,112 @@ def token_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        try:
-            payload = _decode_and_verify_token(request.headers.get('Authorization', ''))
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, PermissionError):
-            return jsonify({'error': 'Token invalid or expired'}), 401
-        request.user_id = payload['user_id']
-        request.username = payload['username']
-        if not payload.get('is_admin', False):
+        subject, error = _authenticate_request()
+        if error:
+            return error
+        if not subject['is_admin']:
             return jsonify({'error': 'Admin access required'}), 403
         return f(*args, **kwargs)
     return decorated
+
+
+# --- Account locks ----------------------------------------------------------
+#
+# `users.locked_until` carries two different locks that must not behave alike:
+#
+#   automatic  5 wrong passwords, or 3 wrong recovery codes → 15 minutes. It
+#              gates FAILED attempts only: a correct credential still gets in
+#              and clears it. Otherwise anyone who knows a username can keep
+#              its owner locked out indefinitely (the lockout-DoS fixed in #158).
+#   admin      POST /api/admin/users/<id>/lock. Meant to stop the account being
+#              used at all, so a correct credential must NOT clear it. Before
+#              this split it did — login and recovery both cleared any lock on
+#              success, which made the admin lock a no-op against anyone who
+#              knew their own password.
+#
+# Told apart without a schema change, by how far ahead the lock points. An
+# automatic lock is never more than 15 minutes out; an admin lock is set a
+# century out. Anything more than a day ahead is an admin lock — a margin wide
+# enough that no plausible clock skew between app and database blurs the two.
+AUTO_LOCK_DURATION = timedelta(minutes=15)
+ADMIN_LOCK_DURATION = timedelta(days=36500)
+ADMIN_LOCK_THRESHOLD = timedelta(days=1)
+LOGIN_MAX_ATTEMPTS = 5
+RECOVERY_MAX_ATTEMPTS = 3
+
+# Stable error code for "correct credential, but an admin locked this account".
+# 403, not 429: waiting will not help. Only ever sent to a caller who has just
+# proven the credential — a wrong guess against an admin-locked account gets
+# the same 429 as any locked account, so the two locks look alike from outside.
+ACCOUNT_SUSPENDED = 'account_suspended'
+
+
+def _lock_state(locked_until, now):
+    """'admin', 'auto', or None (no lock, or an expired one)."""
+    if not locked_until:
+        return None
+    if locked_until.tzinfo is None:
+        locked_until = locked_until.replace(tzinfo=timezone.utc)
+    if locked_until <= now:
+        return None
+    return 'admin' if locked_until - now > ADMIN_LOCK_THRESHOLD else 'auto'
+
+
+# Counting a failure is ONE statement. It used to be read-then-write — SELECT
+# login_attempts, then SET login_attempts = <read value + 1> — so concurrent
+# wrong guesses read the same count and wrote the same +1, and a parallel burst
+# got many more than five guesses in before the lock.
+#
+# The CASEs handle an EXPIRED lock. Nothing but a success ever reset the
+# counters, so once an account had been locked, the lock ran out with the
+# counter still at 5 and every later typo re-locked it for another 15 minutes.
+# An expired lock now means the cooldown was served: both counters restart —
+# the lock is shared, so its expiry clears both — and this failure counts as
+# the first. Every SET expression sees the row as it was before the UPDATE.
+_COUNT_FAILED_LOGIN_SQL = """
+    UPDATE users SET
+        login_attempts = CASE WHEN locked_until <= %(now)s THEN 1
+                              ELSE COALESCE(login_attempts, 0) + 1 END,
+        recovery_attempts = CASE WHEN locked_until <= %(now)s THEN 0
+                                 ELSE recovery_attempts END,
+        locked_until = CASE WHEN locked_until <= %(now)s THEN NULL
+                            ELSE locked_until END
+    WHERE id = %(id)s
+    RETURNING login_attempts AS attempts
+"""
+_COUNT_FAILED_RECOVERY_SQL = """
+    UPDATE users SET
+        recovery_attempts = CASE WHEN locked_until <= %(now)s THEN 1
+                                 ELSE COALESCE(recovery_attempts, 0) + 1 END,
+        login_attempts = CASE WHEN locked_until <= %(now)s THEN 0
+                              ELSE login_attempts END,
+        locked_until = CASE WHEN locked_until <= %(now)s THEN NULL
+                            ELSE locked_until END
+    WHERE id = %(id)s
+    RETURNING recovery_attempts AS attempts
+"""
+
+
+def _count_failed_attempt(cur, sql, user_id, now):
+    """Record one failure atomically; the new count, or None if the row is gone."""
+    cur.execute(sql, {'now': now, 'id': user_id})
+    row = cur.fetchone()
+    return int(row['attempts']) if row else None
+
+
+def _apply_auto_lock(cur, user_id, now):
+    """Start a 15-minute lock — unless an admin lock is already in place.
+
+    The guard matters for a lock that lands between this request's SELECT and
+    here: overwriting a century-long admin lock with a 15-minute one would
+    quietly undo it.
+    """
+    cur.execute("""
+        UPDATE users SET locked_until = %(until)s
+        WHERE id = %(id)s
+          AND (locked_until IS NULL OR locked_until <= %(admin_floor)s)
+    """, {'until': now + AUTO_LOCK_DURATION, 'id': user_id,
+          'admin_floor': now + ADMIN_LOCK_THRESHOLD})
 
 
 AUDIT_RETENTION_DAYS = int(os.environ.get('AUDIT_RETENTION_DAYS', 90))
@@ -495,17 +708,33 @@ AUDIT_IP_ANONYMIZE_DAYS = int(os.environ.get('AUDIT_IP_ANONYMIZE_DAYS', 30))
 
 
 def _anonymize_ip(ip):
-    """Truncate last octet of IPv4 / last 80 bits of IPv6. Keeps city-level
-    signal for forensic use but strips the unique identifier (nDSG Art. 6)."""
-    if not ip:
+    """Keep the network, drop the host: IPv4 → its /24, IPv6 → its /48 (the
+    last 80 bits zeroed). Keeps coarse, city-level signal for forensic use but
+    strips the unique identifier (nDSG Art. 6).
+
+    An IPv4-mapped IPv6 address (`::ffff:1.2.3.4`) is an IPv4 client and is
+    truncated as one. Idempotent: an already-anonymized value maps to itself,
+    which is what lets the retention job skip rows it has already done.
+    Anything unparseable returns None — dropping a value we cannot truncate is
+    the safe direction.
+
+    Reimplemented on `ipaddress`: the string-splitting version mangled
+    compressed IPv6 (`2001:db8::1` → `2001:db8:::`, `::ffff:1.2.3.4` →
+    `::ffff::`) — invalid addresses, and for the mapped form one that kept
+    nothing of the network at all.
+    """
+    if not ip or not isinstance(ip, str):
         return None
-    if ':' in ip:  # IPv6
-        parts = ip.split(':')
-        return ':'.join(parts[:3]) + '::' if len(parts) > 2 else '::'
-    parts = ip.split('.')
-    if len(parts) == 4:
-        return '.'.join(parts[:3]) + '.0'
-    return None
+    try:
+        addr = ipaddress.ip_address(ip.strip())
+    except ValueError:
+        return None
+    if addr.version == 6 and addr.ipv4_mapped is not None:
+        addr = addr.ipv4_mapped
+    if addr.version == 4:
+        return str(ipaddress.IPv4Address(int(addr) & ~0xFF))
+    # int() drops any %zone suffix, so this works for scoped addresses too.
+    return str(ipaddress.IPv6Address((int(addr) >> 80) << 80))
 
 
 def audit(conn, user_id, action):
@@ -516,12 +745,34 @@ def audit(conn, user_id, action):
         )
 
 
+# Any constant works as long as nothing else in the database uses it; this one
+# is "ciphra" read as bytes.
+_RETENTION_LOCK_KEY = 0x636970687261
+
+
 def apply_audit_retention():
     """Delete audit rows older than AUDIT_RETENTION_DAYS; anonymize IPs older
-    than AUDIT_IP_ANONYMIZE_DAYS. Idempotent — safe to call on startup and cron."""
+    than AUDIT_IP_ANONYMIZE_DAYS. Idempotent — safe on every boot, daily, and
+    on demand.
+
+    Returns what actually happened, so callers stop reporting success blind:
+      {'status': 'ok', 'deleted': n, 'anonymized': n}
+      {'status': 'busy'}    another process holds the retention lock right now
+      {'status': 'failed'}  the run raised; the traceback is in the log
+
+    The transaction-scoped advisory lock keeps concurrent runs (two gunicorn
+    workers, a boot run, an admin click) from working the same rows at once.
+    """
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT pg_try_advisory_xact_lock(%s) AS locked",
+                    (_RETENTION_LOCK_KEY,),
+                )
+                got = cur.fetchone()
+                if not got or not got['locked']:
+                    return {'status': 'busy'}
                 cur.execute(
                     "DELETE FROM audit_log WHERE created_at < NOW() - (%s || ' days')::interval",
                     (AUDIT_RETENTION_DAYS,),
@@ -532,16 +783,77 @@ def apply_audit_retention():
                     WHERE ip_address IS NOT NULL
                       AND created_at < NOW() - (%s || ' days')::interval
                 """, (AUDIT_IP_ANONYMIZE_DAYS,))
-                rows = cur.fetchall()
-                for r in rows:
+                anonymized = 0
+                for r in cur.fetchall():
                     anon = _anonymize_ip(r['ip_address'])
+                    # Skip rows an earlier run already truncated. Without this
+                    # every run rewrote a month of rows to the value they
+                    # already held.
+                    if anon == r['ip_address']:
+                        continue
                     cur.execute(
                         "UPDATE audit_log SET ip_address = %s WHERE id = %s",
                         (anon, r['id']),
                     )
-                logger.info(f"Audit retention: deleted {deleted}, anonymized {len(rows)}")
+                    anonymized += 1
+        logger.info("Audit retention: deleted %s, anonymized %s", deleted, anonymized)
+        return {'status': 'ok', 'deleted': deleted, 'anonymized': anonymized}
     except Exception:
         logger.exception("Audit retention run failed")
+        return {'status': 'failed'}
+
+
+# --- Daily retention, without a scheduler ------------------------------------
+#
+# Retention used to run only when the container started (entrypoint.sh) or when
+# an admin pressed the button, while SECURITY_MODEL.md promised raw IPs for 30
+# days and deletion at 90. A container that stays up for two months kept both
+# far longer. There is no cron in the image and adding one is new
+# infrastructure, so the API runs it itself, opportunistically: /health hands
+# _maybe_apply_audit_retention to the response's close hook, which the WSGI
+# server calls AFTER the response is sent. Docker's healthcheck hits /health
+# every 30 s whether or not anyone is using the app, and the check never waits
+# on the job.
+#
+# Gated three ways, so it is cheap on every call but the first of the day:
+#   - an in-process due-time: every call but one per day returns at a float
+#     comparison. It starts a day out, because entrypoint.sh just ran it at boot.
+#   - a non-blocking thread lock, for threaded servers.
+#   - the advisory lock inside apply_audit_retention, across gunicorn workers.
+# Each worker keeps its own due-time, so with N workers it can run up to N
+# times a day. The later runs are no-ops: nothing new to delete, and rows
+# already anonymized are skipped.
+AUDIT_RETENTION_INTERVAL_SECONDS = 24 * 3600
+# A failed run tries again sooner than a day, but not every 30 s.
+AUDIT_RETENTION_RETRY_SECONDS = 3600
+_retention_due_at = time.monotonic() + AUDIT_RETENTION_INTERVAL_SECONDS
+_retention_gate = threading.Lock()
+
+
+def _maybe_apply_audit_retention():
+    """Run retention if a day has passed since this process last did. Never raises."""
+    global _retention_due_at
+    try:
+        if time.monotonic() < _retention_due_at:
+            return None
+        if not _retention_gate.acquire(blocking=False):
+            return None
+        try:
+            if time.monotonic() < _retention_due_at:
+                return None
+            # Push the due-time out BEFORE running, so a run that hangs or
+            # raises cannot be re-entered by the next health check.
+            _retention_due_at = time.monotonic() + AUDIT_RETENTION_INTERVAL_SECONDS
+            result = apply_audit_retention()
+            if result.get('status') == 'failed':
+                _retention_due_at = time.monotonic() + AUDIT_RETENTION_RETRY_SECONDS
+            return result
+        finally:
+            _retention_gate.release()
+    except Exception:
+        # A retention problem must never become a health-check problem.
+        logger.exception("Scheduled audit retention failed")
+        return None
 
 
 # --- Crypto ---
@@ -640,11 +952,15 @@ def health():
                     # Pre-ledger database, or the table is not there yet.
                     conn.rollback()
                     db_schema = None
-        return jsonify({
+        resp = jsonify({
             'status': 'healthy',
             'schema': db_schema,
             'app_schema': SCHEMA_VERSION,
-        }), 200
+        })
+        # Runs after the response has gone out, and returns at once unless a
+        # day has passed. See "Daily retention, without a scheduler".
+        resp.call_on_close(_maybe_apply_audit_retention)
+        return resp, 200
     except Exception:
         return jsonify({'status': 'unhealthy'}), 503
 
@@ -660,7 +976,7 @@ def register():
     """Accepts a pre-built vault bundle from the browser. The server never
     sees the password, master_key, or recovery_code — those stay on device."""
     data = _json_object()
-    username = (data.get('username') or '').strip().lower()
+    username = _str_field(data, 'username').strip().lower()
     auth_hash = data.get('auth_hash')
     auth_params = data.get('auth_params')
     vault_params = data.get('vault_params')
@@ -681,12 +997,18 @@ def register():
     for field, val in (('auth_params', auth_params),
                        ('vault_params', vault_params),
                        ('encrypted_master', encrypted_master)):
-        if not isinstance(val, str) or len(val) < 1 or len(val) > 8192:
+        if not _is_text(val, 8192):
             return jsonify({'error': f'Invalid {field}'}), 400
-    # Recovery fields all-or-nothing
+    # Recovery fields all-or-nothing. Each one is type-checked, not just
+    # truthy: `{"recovery_vault": {"a": 1}}` used to reach the INSERT and 500.
     has_recovery = any([recovery_vault, recovery_params, recovery_auth])
-    if has_recovery and not (recovery_vault and recovery_params and valid_b64(recovery_auth, 32, 32)):
+    if has_recovery and not (_is_text(recovery_vault, 8192)
+                             and _is_text(recovery_params, 8192)
+                             and valid_b64(recovery_auth, 32, 32)):
         return jsonify({'error': 'Incomplete recovery bundle'}), 400
+    if not has_recovery:
+        # Falsy-but-present values (`[]`, `{}`, `0`) must not reach SQL either.
+        recovery_vault = recovery_params = recovery_auth = None
 
     _redact_sensitive(data)
 
@@ -699,6 +1021,8 @@ def register():
                     # username is taken, malformed, or the bundle is bad.
                     # The client distinguishes via the user-facing copy
                     # ("try another username"), the server doesn't disclose.
+                    # The 409 itself still says "taken" — an enumeration
+                    # oracle registration cannot avoid; see SECURITY_MODEL.md.
                     return jsonify({'error': 'registration_failed'}), 409
 
                 cur.execute("""
@@ -715,6 +1039,12 @@ def register():
                 audit(conn, user_id, 'REGISTER')
 
         return jsonify({'success': True, 'username': username, 'user_id': user_id}), 201
+    except pg_errors.UniqueViolation:
+        # Two registrations of the same name at once both pass the SELECT
+        # above; the unique index lets one INSERT through and rejects the
+        # other. That loser is the same "taken" case as the pre-check, not a
+        # server fault — same 409, same body.
+        return jsonify({'error': 'registration_failed'}), 409
     except Exception:
         logger.exception("Registration failed")
         return jsonify({'error': 'Registration failed'}), 500
@@ -762,7 +1092,7 @@ def login_init():
     """Returns the Argon2 params the client needs to derive auth_key.
     Always returns params (fake for unknown users) to prevent enumeration."""
     data = _json_object()
-    username = (data.get('username') or '').strip().lower()
+    username = _str_field(data, 'username').strip().lower()
     if not username or not USERNAME_RE.match(username):
         return jsonify({'error': 'Invalid username'}), 400
 
@@ -782,7 +1112,7 @@ def login_init():
 @limiter.limit("10 per minute")
 def login():
     data = _json_object()
-    username = (data.get('username') or '').strip().lower()
+    username = _str_field(data, 'username').strip().lower()
     auth_key = data.get('auth_key')
     if not username or not USERNAME_RE.match(username) or not valid_b64(auth_key, 32, 32):
         return jsonify({'error': 'Invalid credentials'}), 401
@@ -803,30 +1133,43 @@ def login():
                     return jsonify({'error': 'Invalid credentials'}), 401
 
                 # Compute the lock state, but DON'T reject on it yet. A correct
-                # password must succeed even during a lock — otherwise an
-                # attacker who only knows the username can lock the account (5
-                # wrong guesses → 15 min) and, with repeated locks, deny the
-                # real user indefinitely. The lock gates FAILED attempts, not a
-                # proven identity. (Guessing stays bounded: wrong attempts are
-                # still rejected, and nginx + flask-limiter cap the rate.)
-                locked_now = False
-                if user['locked_until']:
-                    locked = user['locked_until']
-                    if locked.tzinfo is None:
-                        locked = locked.replace(tzinfo=timezone.utc)
-                    locked_now = datetime.now(timezone.utc) < locked
+                # password must succeed even during an AUTOMATIC lock —
+                # otherwise an attacker who only knows the username can lock
+                # the account (5 wrong guesses → 15 min) and, with repeated
+                # locks, deny the real user indefinitely. That lock gates
+                # FAILED attempts, not a proven identity. (Guessing stays
+                # bounded: wrong attempts are still rejected, and nginx +
+                # flask-limiter cap the rate.) An ADMIN lock is the exception —
+                # see "Account locks" above.
+                now = datetime.now(timezone.utc)
+                lock = _lock_state(user['locked_until'], now)
 
                 if verify_auth(auth_key, user['auth_hash']):
-                    # Success clears attempts AND the lock — identity is proven.
-                    cur.execute(
-                        "UPDATE users SET login_attempts = 0, locked_until = NULL, last_login = NOW() WHERE id = %s",
-                        (user['id'],),
-                    )
+                    if lock == 'admin':
+                        audit(conn, user['id'], 'LOGIN_REFUSED_LOCKED')
+                        return jsonify({'error': ACCOUNT_SUSPENDED}), 403
+                    # Success clears both counters AND an automatic lock —
+                    # identity is proven. The WHERE re-checks for an admin lock
+                    # that landed after the SELECT above, which must survive;
+                    # RETURNING hands back the password_version as of this
+                    # write, so the token is not born stale.
+                    cur.execute("""
+                        UPDATE users
+                        SET login_attempts = 0, recovery_attempts = 0,
+                            locked_until = NULL, last_login = NOW()
+                        WHERE id = %s
+                          AND (locked_until IS NULL OR locked_until <= %s)
+                        RETURNING password_version
+                    """, (user['id'], now + ADMIN_LOCK_THRESHOLD))
+                    fresh = cur.fetchone()
+                    if not fresh:
+                        audit(conn, user['id'], 'LOGIN_REFUSED_LOCKED')
+                        return jsonify({'error': ACCOUNT_SUSPENDED}), 403
                     audit(conn, user['id'], 'LOGIN_SUCCESS')
                     is_admin = bool(user.get('is_admin', False))
                     token = generate_token(
                         user['id'], username, is_admin,
-                        pwd_version=int(user.get('password_version') or 1),
+                        pwd_version=int(fresh['password_version'] or 1),
                     )
                     return jsonify({
                         'success': True,
@@ -841,24 +1184,20 @@ def login():
                         },
                     }), 200
                 else:
-                    # Wrong password. If already locked, reject without letting
-                    # the attacker make progress (no counter change, no reveal).
-                    if locked_now:
+                    # Wrong password. If already locked — either kind — reject
+                    # without letting the attacker make progress: no counter
+                    # change, so an admin lock is never overwritten, and the
+                    # same 429 for both, so a guesser cannot tell them apart.
+                    if lock:
                         audit(conn, user['id'], 'LOGIN_FAILED')
                         return jsonify({'error': 'Account temporarily locked'}), 429
-                    attempts = user['login_attempts'] + 1
-                    if attempts >= 5:
-                        locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
-                        cur.execute(
-                            "UPDATE users SET login_attempts=%s, locked_until=%s WHERE id=%s",
-                            (attempts, locked_until, user['id']),
-                        )
+                    attempts = _count_failed_attempt(cur, _COUNT_FAILED_LOGIN_SQL, user['id'], now)
+                    if attempts is None:
+                        return jsonify({'error': 'Invalid credentials'}), 401
+                    if attempts >= LOGIN_MAX_ATTEMPTS:
+                        _apply_auto_lock(cur, user['id'], now)
                         audit(conn, user['id'], 'ACCOUNT_LOCKED')
                         return jsonify({'error': 'Too many failed attempts. Locked 15 min'}), 429
-                    cur.execute(
-                        "UPDATE users SET login_attempts=%s WHERE id=%s",
-                        (attempts, user['id']),
-                    )
                     audit(conn, user['id'], 'LOGIN_FAILED')
                     return jsonify({'error': 'Invalid credentials'}), 401
     except Exception:
@@ -878,6 +1217,8 @@ def store_document():
     encrypted_data = data.get('encrypted_data')
     if not encrypted_data:
         return jsonify({'error': 'No encrypted data'}), 400
+    if not _is_text(encrypted_data):
+        return jsonify({'error': 'Invalid encrypted_data'}), 400
 
     try:
         with get_db() as conn:
@@ -912,6 +1253,11 @@ def store_document():
 # retried/resumed migration re-sends the same batch and gets `skipped`, not
 # duplicates. Additive — the single POST /api/documents above is unchanged.
 BATCH_MAX_DOCS = int(os.environ.get('BATCH_MAX_DOCS', 100))
+# A real client_key is `v1:` + 43 base64url chars. The cap is generous for a
+# future scheme, and far below the ~2.7 KB a btree index entry may hold: a
+# longer key made the INSERT itself fail, which aborts the whole transaction —
+# the one bad blob failing the batch that the promise above rules out.
+CLIENT_KEY_MAX_LEN = 256
 
 
 @app.route('/api/documents/batch', methods=['POST'])
@@ -938,8 +1284,21 @@ def store_documents_batch():
                 for d in docs:
                     ck = d.get('client_key') if isinstance(d, dict) else None
                     enc = d.get('encrypted_data') if isinstance(d, dict) else None
+                    # Every per-item check happens BEFORE the item touches SQL.
+                    # A value the database rejects (a dict psycopg2 cannot
+                    # adapt, a NUL byte, an over-long index key) raises inside
+                    # the shared transaction and takes every other item in the
+                    # batch down with it as a 500.
+                    if ck and not _is_text(ck, CLIENT_KEY_MAX_LEN):
+                        results.append({'client_key': None, 'status': 'error', 'error': 'invalid client_key'})
+                        errored += 1
+                        continue
                     if not enc:
                         results.append({'client_key': ck, 'status': 'error', 'error': 'missing encrypted_data'})
+                        errored += 1
+                        continue
+                    if not _is_text(enc):
+                        results.append({'client_key': ck, 'status': 'error', 'error': 'invalid encrypted_data'})
                         errored += 1
                         continue
                     if count >= DOCUMENT_QUOTA_PER_USER:
@@ -1018,9 +1377,8 @@ def classify_documents():
         if not isinstance(item, dict):
             continue
         share_class = _share_class(item)
-        try:
-            doc_id = int(item.get('id'))
-        except (TypeError, ValueError):
+        doc_id = _as_int(item.get('id'))
+        if doc_id is None:
             continue
         if share_class is not None:
             pairs.append((share_class, doc_id))
@@ -1080,6 +1438,8 @@ def update_document(doc_id):
     encrypted_data = data.get('encrypted_data')
     if not encrypted_data:
         return jsonify({'error': 'No encrypted data'}), 400
+    if not _is_text(encrypted_data):
+        return jsonify({'error': 'Invalid encrypted_data'}), 400
 
     try:
         with get_db() as conn:
@@ -1160,7 +1520,7 @@ def recover_init():
     of who has an account and who has recovery enabled. Real attempts fail
     at the subsequent /api/recover step when the recovery_key hash mismatches."""
     data = _json_object()
-    username = (data.get('username') or '').strip().lower()
+    username = _str_field(data, 'username').strip().lower()
     if not username or not USERNAME_RE.match(username):
         return jsonify({'error': 'Invalid username'}), 400
 
@@ -1196,7 +1556,7 @@ def recover():
     a new password. Server verifies SHA-256(recovery_key) against stored
     recovery_auth, then swaps auth/vault (recovery_vault stays untouched)."""
     data = _json_object()
-    username = (data.get('username') or '').strip().lower()
+    username = _str_field(data, 'username').strip().lower()
     recovery_key = data.get('recovery_key')
     auth_hash = data.get('auth_hash')
     auth_params = data.get('auth_params')
@@ -1209,7 +1569,7 @@ def recover():
         return jsonify({'error': 'Invalid credentials'}), 401
     for field, val in (('auth_params', auth_params), ('vault_params', vault_params),
                        ('encrypted_master', encrypted_master)):
-        if not isinstance(val, str) or not (1 <= len(val) <= 8192):
+        if not _is_text(val, 8192):
             return jsonify({'error': f'Invalid {field}'}), 400
 
     # Redact secrets from the request-data dict before any downstream
@@ -1229,36 +1589,33 @@ def recover():
 
                 # Same lockout gate as login — 3 failed recoveries → 15 min
                 # lock — and the same DoS fix: compute the lock but let a
-                # correct recovery code through, so an attacker who knows a
-                # username can't lock the real user out of recovery. The lock
-                # gates FAILED attempts only.
-                locked_now = False
-                if user['locked_until']:
-                    locked = user['locked_until']
-                    if locked.tzinfo is None:
-                        locked = locked.replace(tzinfo=timezone.utc)
-                    locked_now = datetime.now(timezone.utc) < locked
+                # correct recovery code through an AUTOMATIC lock, so an
+                # attacker who knows a username can't lock the real user out of
+                # recovery. An admin lock holds here too: recovery resets the
+                # password, and must not become the way around it.
+                now = datetime.now(timezone.utc)
+                lock = _lock_state(user['locked_until'], now)
 
                 if not verify_auth(recovery_key, user['recovery_auth']):
-                    if locked_now:
+                    if lock:
                         audit(conn, user['id'], 'RECOVERY_FAILED')
                         return jsonify({'error': 'Account temporarily locked'}), 429
-                    attempts = (user['recovery_attempts'] or 0) + 1
-                    if attempts >= 3:
-                        locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
-                        cur.execute(
-                            "UPDATE users SET recovery_attempts=%s, locked_until=%s WHERE id=%s",
-                            (attempts, locked_until, user['id']),
-                        )
+                    attempts = _count_failed_attempt(cur, _COUNT_FAILED_RECOVERY_SQL, user['id'], now)
+                    if attempts is None:
+                        return jsonify({'error': 'Invalid recovery code'}), 401
+                    if attempts >= RECOVERY_MAX_ATTEMPTS:
+                        _apply_auto_lock(cur, user['id'], now)
                         audit(conn, user['id'], 'RECOVERY_LOCKED')
                         return jsonify({'error': 'Too many failed attempts. Locked 15 min'}), 429
-                    cur.execute(
-                        "UPDATE users SET recovery_attempts=%s WHERE id=%s",
-                        (attempts, user['id']),
-                    )
                     audit(conn, user['id'], 'RECOVERY_FAILED')
                     return jsonify({'error': 'Invalid recovery code'}), 401
 
+                if lock == 'admin':
+                    audit(conn, user['id'], 'RECOVERY_REFUSED_LOCKED')
+                    return jsonify({'error': ACCOUNT_SUSPENDED}), 403
+
+                # The WHERE re-checks for an admin lock that landed after the
+                # SELECT — the swap must not clear it (see login).
                 cur.execute("""
                     UPDATE users
                     SET auth_hash = %s, auth_params = %s, vault_params = %s,
@@ -1267,9 +1624,15 @@ def recover():
                         password_version = COALESCE(password_version, 1) + 1,
                         updated_at = NOW()
                     WHERE id = %s
+                      AND (locked_until IS NULL OR locked_until <= %s)
+                    RETURNING id
                 """, (
                     auth_hash, auth_params, vault_params, encrypted_master, user['id'],
+                    now + ADMIN_LOCK_THRESHOLD,
                 ))
+                if not cur.fetchone():
+                    audit(conn, user['id'], 'RECOVERY_REFUSED_LOCKED')
+                    return jsonify({'error': ACCOUNT_SUSPENDED}), 403
                 audit(conn, user['id'], 'RECOVERY_SUCCESS')
 
         return jsonify({'success': True}), 200
@@ -1296,7 +1659,7 @@ def change_password():
         return jsonify({'error': 'Invalid credentials'}), 400
     for field, val in (('auth_params', auth_params), ('vault_params', vault_params),
                        ('encrypted_master', encrypted_master)):
-        if not isinstance(val, str) or not (1 <= len(val) <= 8192):
+        if not _is_text(val, 8192):
             return jsonify({'error': f'Invalid {field}'}), 400
 
     _redact_sensitive(data)
@@ -1310,7 +1673,11 @@ def change_password():
                     return jsonify({'error': 'User not found'}), 404
 
                 if not verify_auth(current_auth_key, user['auth_hash']):
-                    return jsonify({'error': 'Current password is incorrect'}), 401
+                    # 403, not 401: the SESSION is valid, the re-entered
+                    # password is not. The frontend reads any 401 on an
+                    # authenticated request as an expired session and logs the
+                    # user out — a typo here used to sign them out of the app.
+                    return jsonify({'error': 'Current password is incorrect'}), 403
 
                 cur.execute("""
                     UPDATE users
@@ -1337,6 +1704,21 @@ def change_password():
         return jsonify({'error': 'Password change failed'}), 500
 
 
+def _revoke_grants_claimed_by(cur, user_id):
+    """Revoke every live family grant this user claimed as a caregiver.
+
+    Call before deleting the user. `family_grants.claimed_by_user_id` is ON
+    DELETE SET NULL, so deleting a caregiver used to put their grant back to
+    "unclaimed" — still live, same family code — and whoever next held the
+    link or the code could claim the patient's data. The patient can invite
+    again; nobody should inherit an invitation by default.
+    """
+    cur.execute("""
+        UPDATE family_grants SET revoked_at = NOW()
+        WHERE claimed_by_user_id = %s AND revoked_at IS NULL
+    """, (user_id,))
+
+
 @app.route('/api/delete-account', methods=['POST'])
 @limiter.limit("3 per minute")
 @token_required
@@ -1355,7 +1737,8 @@ def delete_account():
                     return jsonify({'error': 'User not found'}), 404
 
                 if not verify_auth(auth_key, user['auth_hash']):
-                    return jsonify({'error': 'Invalid password'}), 401
+                    # 403, not 401 — see change_password.
+                    return jsonify({'error': 'Invalid password'}), 403
 
                 audit(conn, request.user_id, 'ACCOUNT_DELETED')
                 # Full erasure (GDPR Art. 17): drop user_id AND ip_address from
@@ -1364,6 +1747,7 @@ def delete_account():
                     "UPDATE audit_log SET user_id = NULL, ip_address = NULL WHERE user_id = %s",
                     (request.user_id,),
                 )
+                _revoke_grants_claimed_by(cur, request.user_id)
                 cur.execute("DELETE FROM users WHERE id = %s", (request.user_id,))
 
         return jsonify({'success': True}), 200
@@ -1398,9 +1782,12 @@ def admin_stats():
                 cur.execute("SELECT COUNT(*) AS total FROM encrypted_documents")
                 total_docs = cur.fetchone()['total']
 
+                # Automatic lockouts from both gates: 5 wrong passwords
+                # (ACCOUNT_LOCKED) or 3 wrong recovery codes (RECOVERY_LOCKED).
+                # Counting only the first hid a recovery brute-force entirely.
                 cur.execute("""
                     SELECT COUNT(*) AS cnt FROM audit_log
-                    WHERE action = 'ACCOUNT_LOCKED'
+                    WHERE action IN ('ACCOUNT_LOCKED', 'RECOVERY_LOCKED')
                     AND created_at >= NOW() - INTERVAL '30 days'
                 """)
                 lockouts_30d = cur.fetchone()['cnt']
@@ -1439,7 +1826,7 @@ def admin_stats():
 
                 cur.execute("""
                     SELECT COUNT(*) AS cnt FROM audit_log
-                    WHERE action = 'ACCOUNT_LOCKED'
+                    WHERE action IN ('ACCOUNT_LOCKED', 'RECOVERY_LOCKED')
                     AND created_at >= NOW() - INTERVAL '24 hours'
                 """)
                 lockouts_today = cur.fetchone()['cnt']
@@ -1450,16 +1837,20 @@ def admin_stats():
                 """)
                 new_users_today = cur.fetchone()['cnt']
 
+                # Both ways an account ends: an admin deleting it, and the
+                # user deleting their own (ACCOUNT_DELETED — the row survives
+                # with user_id and IP nulled). Only the admin path was counted,
+                # so self-service deletions never showed up here.
                 cur.execute("""
                     SELECT COUNT(*) AS cnt FROM audit_log
-                    WHERE action LIKE 'ADMIN_DELETE_USER%'
+                    WHERE (action = 'ACCOUNT_DELETED' OR action LIKE 'ADMIN_DELETE_USER%')
                     AND created_at >= NOW() - INTERVAL '30 days'
                 """)
                 deletions_30d = cur.fetchone()['cnt']
 
                 cur.execute("""
                     SELECT COUNT(*) AS cnt FROM audit_log
-                    WHERE action LIKE 'ADMIN_DELETE_USER%'
+                    WHERE (action = 'ACCOUNT_DELETED' OR action LIKE 'ADMIN_DELETE_USER%')
                     AND created_at >= NOW() - INTERVAL '24 hours'
                 """)
                 deletions_today = cur.fetchone()['cnt']
@@ -1626,12 +2017,19 @@ def admin_lock_user(user_id):
                 cur.execute("SELECT id FROM users WHERE id = %s", (user_id,))
                 if not cur.fetchone():
                     return jsonify({'error': 'User not found'}), 404
-                # Lock indefinitely (far future) — admin must manually unlock
-                locked_until = datetime.now(timezone.utc) + timedelta(days=36500)
-                cur.execute(
-                    "UPDATE users SET locked_until = %s WHERE id = %s",
-                    (locked_until, user_id),
-                )
+                # Lock indefinitely (far future) — admin must manually unlock.
+                # The distance is what marks it as an admin lock, which login
+                # and recovery refuse to clear (see "Account locks").
+                # Bumping password_version ends every session the user already
+                # has; without it the lock only stopped NEW logins, and an open
+                # tab kept full access until its token expired.
+                locked_until = datetime.now(timezone.utc) + ADMIN_LOCK_DURATION
+                cur.execute("""
+                    UPDATE users
+                    SET locked_until = %s,
+                        password_version = COALESCE(password_version, 1) + 1
+                    WHERE id = %s
+                """, (locked_until, user_id))
                 audit(conn, request.user_id, f'ADMIN_LOCK_USER:{user_id}')
         return jsonify({'success': True}), 200
     except Exception:
@@ -1649,7 +2047,8 @@ def admin_unlock_user(user_id):
                 if not cur.fetchone():
                     return jsonify({'error': 'User not found'}), 404
                 cur.execute(
-                    "UPDATE users SET locked_until = NULL, login_attempts = 0 WHERE id = %s",
+                    "UPDATE users SET locked_until = NULL, login_attempts = 0,"
+                    " recovery_attempts = 0 WHERE id = %s",
                     (user_id,),
                 )
                 audit(conn, request.user_id, f'ADMIN_UNLOCK_USER:{user_id}')
@@ -1667,7 +2066,7 @@ def admin_delete_user(user_id):
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, username FROM users WHERE id = %s", (user_id,))
+                cur.execute("SELECT id FROM users WHERE id = %s", (user_id,))
                 user = cur.fetchone()
                 if not user:
                     return jsonify({'error': 'User not found'}), 404
@@ -1677,9 +2076,14 @@ def admin_delete_user(user_id):
                     "UPDATE audit_log SET user_id = NULL, ip_address = NULL WHERE user_id = %s",
                     (user_id,),
                 )
+                _revoke_grants_claimed_by(cur, user_id)
                 # CASCADE on encrypted_documents will delete all docs
                 cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
-                audit(conn, request.user_id, f'ADMIN_DELETE_USER:{user["username"]}')
+                # The id, not the username. This row outlives the account, and
+                # the erasure just above exists so nothing ties back to the
+                # person; writing their username into it undid that. Once the
+                # users row is gone the id resolves to no one.
+                audit(conn, request.user_id, f'ADMIN_DELETE_USER:{user_id}')
         return jsonify({'success': True}), 200
     except Exception:
         logger.exception("Admin delete user failed")
@@ -1692,12 +2096,14 @@ def admin_promote_user(user_id):
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, username FROM users WHERE id = %s", (user_id,))
+                cur.execute("SELECT id FROM users WHERE id = %s", (user_id,))
                 user = cur.fetchone()
                 if not user:
                     return jsonify({'error': 'User not found'}), 404
                 cur.execute("UPDATE users SET is_admin = TRUE WHERE id = %s", (user_id,))
-                audit(conn, request.user_id, f'ADMIN_PROMOTE:{user["username"]}')
+                # Id, not username — same reason as ADMIN_DELETE_USER: audit
+                # rows must not carry a name that survives the account.
+                audit(conn, request.user_id, f'ADMIN_PROMOTE:{user_id}')
         return jsonify({'success': True}), 200
     except Exception:
         logger.exception("Admin promote failed")
@@ -1712,12 +2118,14 @@ def admin_demote_user(user_id):
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, username FROM users WHERE id = %s", (user_id,))
+                cur.execute("SELECT id FROM users WHERE id = %s", (user_id,))
                 user = cur.fetchone()
                 if not user:
                     return jsonify({'error': 'User not found'}), 404
+                # Takes effect on the demoted admin's next request: admin
+                # routes read is_admin from the database, not from the token.
                 cur.execute("UPDATE users SET is_admin = FALSE WHERE id = %s", (user_id,))
-                audit(conn, request.user_id, f'ADMIN_DEMOTE:{user["username"]}')
+                audit(conn, request.user_id, f'ADMIN_DEMOTE:{user_id}')
         return jsonify({'success': True}), 200
     except Exception:
         logger.exception("Admin demote failed")
@@ -1764,22 +2172,22 @@ def admin_audit():
 @token_required
 def family_grant_create():
     data = _json_object()
-    label = (data.get('label') or '').strip()
+    label = _str_field(data, 'label').strip()
     grant_params = data.get('grant_params')
     grant_auth = data.get('grant_auth')
     wrapped_master = data.get('wrapped_master')
 
-    if not label or len(label) > 64:
+    if not _is_text(label, 64):
         return jsonify({'error': 'Invalid label'}), 400
     if not valid_b64(grant_auth, 32, 32):
         return jsonify({'error': 'Invalid grant_auth'}), 400
     for field, val in (('grant_params', grant_params), ('wrapped_master', wrapped_master)):
-        if not isinstance(val, str) or not (1 <= len(val) <= 8192):
+        if not _is_text(val, 8192):
             return jsonify({'error': f'Invalid {field}'}), 400
     # Absent = the narrow scope. A privacy control defaults closed, and an old
     # client that does not know about the field must not widen a grant.
     share_mask = data.get('share_mask', SHARE_MASK_SHARED_ONLY)
-    if share_mask not in VALID_SHARE_MASKS:
+    if not _valid_share_mask(share_mask):
         return jsonify({'error': 'Invalid share_mask'}), 400
 
     try:
@@ -1876,7 +2284,7 @@ def family_grant_rescope(grant_id):
     """
     data = _json_object()
     share_mask = data.get('share_mask')
-    if share_mask not in VALID_SHARE_MASKS:
+    if not _valid_share_mask(share_mask):
         return jsonify({'error': 'Invalid share_mask'}), 400
     try:
         with get_db() as conn:
@@ -1934,15 +2342,47 @@ def family_grant_revoke(grant_id):
         return jsonify({'error': 'Revoke failed'}), 500
 
 
-def _fake_grants_for_username(username: str):
-    """Deterministic fake grant list for unknown users, to block enumeration."""
+def _fake_grant_id(seed: bytes, max_grant_id: int) -> int:
+    """A decoy grant id that looks like a real one.
+
+    Real ids are SERIAL: positive, and no larger than the newest grant. The
+    decoy used to be NEGATIVE, so every fake list announced itself and one
+    request told you whether a username had live invitations — which, when it
+    did, meant the account existed.
+
+    Drawn from [1, largest power of two <= max_grant_id], not [1, max]: a
+    real grant's id never changes, so a decoy that moved with every new
+    invitation anywhere on the server would be its own tell. This one moves
+    only when the grant count crosses a power of two, and never exceeds an id
+    an attacker could learn by creating a grant of their own.
+
+    A decoy can therefore EQUAL a real grant's id (a negative one never
+    could). That discloses nothing: claiming it needs that grant's proof,
+    which a decoy-holder does not have, and a wrong proof answers exactly
+    like an unknown id (401). The proof check is a constant-time compare of
+    two SHA-256 digests, so the found-vs-not-found timing difference is far
+    below network jitter — and it predates the change.
+    """
+    span = 1 << (max_grant_id.bit_length() - 1) if max_grant_id > 0 else 1
+    return 1 + int.from_bytes(seed[:4], 'big') % span
+
+
+def _fake_grants_for_username(username: str, max_grant_id: int = 0):
+    """Deterministic fake grant list for usernames with no live grants.
+
+    That is an unknown username AND a real account with nothing to claim —
+    both get this, so those two are indistinguishable. What stays visible is a
+    count other than one: the decoy list always has exactly one entry, and a
+    patient with several live invitations returns several. SECURITY_MODEL.md
+    says so.
+    """
     fake = []
     for i in range(1):
         seed = hmac.new(
             SECRET_KEY.encode(), f'{username}:fake_grant:{i}'.encode(), hashlib.sha256
         ).digest()
         fake.append({
-            'id': -abs(int.from_bytes(seed[:4], 'big')),
+            'id': _fake_grant_id(seed, max_grant_id),
             'grant_params': _fake_recovery_params(f'{username}:fake:{i}'),
             'wrapped_master': _fake_recovery_vault(f'{username}:fake:{i}'),
             'grant_auth': base64.b64encode(seed[:32]).decode('ascii'),
@@ -1965,13 +2405,18 @@ def family_grant_claim_init():
     (~49 bits + Argon2id) already makes that attack infeasible; gating behind
     a token makes harvesting attributable + rate-limit-bound to an account."""
     data = _json_object()
-    source_username = (data.get('source_username') or '').strip().lower()
+    source_username = _str_field(data, 'source_username').strip().lower()
     if not source_username or not USERNAME_RE.match(source_username):
         return jsonify({'error': 'Invalid username'}), 400
 
+    max_grant_id = 0
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
+                # Asked on every call, real username or not, so both paths run
+                # the same two queries. The decoy id needs it; see _fake_grant_id.
+                cur.execute("SELECT COALESCE(MAX(id), 0) AS max_id FROM family_grants")
+                max_grant_id = int(cur.fetchone()['max_id'])
                 cur.execute("""
                     SELECT g.id, g.grant_params, g.wrapped_master, g.grant_auth
                     FROM family_grants g
@@ -1986,10 +2431,10 @@ def family_grant_claim_init():
                         'wrapped_master': r['wrapped_master'],
                         'grant_auth': r['grant_auth'],
                     } for r in rows]}), 200
-        return jsonify({'grants': _fake_grants_for_username(source_username)}), 200
+        return jsonify({'grants': _fake_grants_for_username(source_username, max_grant_id)}), 200
     except Exception:
         logger.exception("family_grant_claim_init failed")
-        return jsonify({'grants': _fake_grants_for_username(source_username)}), 200
+        return jsonify({'grants': _fake_grants_for_username(source_username, max_grant_id)}), 200
 
 
 @app.route('/api/family/grants/claim', methods=['POST'])
@@ -1999,7 +2444,9 @@ def family_grant_claim():
     data = _json_object()
     grant_id = data.get('grant_id')
     proof = data.get('proof')  # base64 family_key — server SHA-256s and compares
-    if not isinstance(grant_id, int) or not valid_b64(proof, 32, 32):
+    # `type(...) is int`: isinstance(True, int) holds, and `WHERE id = true`
+    # is a type error in PostgreSQL — a 500.
+    if type(grant_id) is not int or not valid_b64(proof, 32, 32):
         return jsonify({'error': 'Invalid request'}), 400
 
     try:
@@ -2011,20 +2458,32 @@ def family_grant_claim():
                     WHERE id = %s AND revoked_at IS NULL
                 """, (grant_id,))
                 g = cur.fetchone()
-                if not g:
-                    return jsonify({'error': 'Grant not available'}), 404
-                if g['source_user_id'] == request.user_id:
+                if g and g['source_user_id'] == request.user_id:
                     return jsonify({'error': 'Cannot claim your own grant'}), 400
-                if not verify_auth(proof, g['grant_auth']):
+                # One answer for "no such live grant" and "wrong code". They
+                # used to differ — 404 and 401 — and claim/init hands out a
+                # decoy grant for usernames with nothing to claim, so posting
+                # any proof against the decoy's id sorted decoys (404) from real
+                # invitations (401). The client only ever special-cases 409.
+                if not g or not verify_auth(proof, g['grant_auth']):
                     audit(conn, request.user_id, f'FAMILY_CLAIM_FAILED:{grant_id}')
                     return jsonify({'error': 'Invalid family code'}), 401
                 if g['claimed_by_user_id'] and g['claimed_by_user_id'] != request.user_id:
                     return jsonify({'error': 'Grant already claimed'}), 409
+                # Conditional, because the check above is not atomic with this
+                # write: two people holding the same code could both pass it,
+                # both get a 200, and the later UPDATE silently took the grant
+                # from the earlier one. Now the row lock serialises them and the
+                # loser matches nothing.
                 cur.execute("""
                     UPDATE family_grants
                     SET claimed_by_user_id = %s, claimed_at = COALESCE(claimed_at, NOW())
-                    WHERE id = %s
-                """, (request.user_id, grant_id))
+                    WHERE id = %s AND revoked_at IS NULL
+                      AND (claimed_by_user_id IS NULL OR claimed_by_user_id = %s)
+                    RETURNING id
+                """, (request.user_id, grant_id, request.user_id))
+                if not cur.fetchone():
+                    return jsonify({'error': 'Grant already claimed'}), 409
                 audit(conn, request.user_id, f'FAMILY_CLAIM_SUCCESS:{grant_id}')
                 cur.execute(
                     "SELECT username FROM users WHERE id = %s",
@@ -2046,13 +2505,24 @@ def _family_scope(caregiver_id: int, source_user_id: int):
 
     Access and scope resolve together on purpose: a caller that checks one
     without the other is the bug this shape prevents.
+
+    A caregiver can hold more than one live grant from the same patient (two
+    invitations, both claimed by the same account). `LIMIT 1` without an
+    ORDER BY let PostgreSQL pick either, so the scope could flip between
+    requests. Now the NARROWEST grant wins, deterministically: privacy-
+    conservative, and never a surprise to the patient, who can rescope or
+    revoke the other. Ordering by the mask's value is exact for the masks that
+    exist, because they nest (1 is a subset of 3); a mask that did not nest
+    would need an intersection here instead.
     """
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT id, share_mask FROM family_grants
                 WHERE source_user_id = %s AND claimed_by_user_id = %s
-                  AND revoked_at IS NULL LIMIT 1
+                  AND revoked_at IS NULL
+                ORDER BY share_mask ASC, id ASC
+                LIMIT 1
             """, (source_user_id, caregiver_id))
             row = cur.fetchone()
             if not row:
@@ -2133,15 +2603,16 @@ def family_documents_list():
 @token_required
 def family_documents_create():
     data = _json_object()
-    try:
-        source_user_id = int(data.get('source_user_id') or 0)
-    except (TypeError, ValueError):
-        return jsonify({'error': 'Invalid source_user_id'}), 400
+    # _as_int, not int(): int() took `true` as patient 1, truncated 1.9, and
+    # raised an uncaught OverflowError on 1e400 (JSON's infinity).
+    source_user_id = _as_int(data.get('source_user_id')) or 0
     encrypted_data = data.get('encrypted_data')
     if not source_user_id or not _family_access(request.user_id, source_user_id):
         return jsonify({'error': 'Not authorized'}), 403
     if not encrypted_data:
         return jsonify({'error': 'No encrypted data'}), 400
+    if not _is_text(encrypted_data):
+        return jsonify({'error': 'Invalid encrypted_data'}), 400
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
@@ -2177,16 +2648,15 @@ def family_documents_create():
 @token_required
 def family_documents_update(doc_id):
     data = _json_object()
-    try:
-        source_user_id = int(data.get('source_user_id') or 0)
-    except (TypeError, ValueError):
-        return jsonify({'error': 'Invalid source_user_id'}), 400
+    source_user_id = _as_int(data.get('source_user_id')) or 0  # see family_documents_create
     encrypted_data = data.get('encrypted_data')
     share_mask = _family_scope(request.user_id, source_user_id)
     if not source_user_id or share_mask is None:
         return jsonify({'error': 'Not authorized'}), 403
     if not encrypted_data:
         return jsonify({'error': 'No encrypted data'}), 400
+    if not _is_text(encrypted_data):
+        return jsonify({'error': 'Invalid encrypted_data'}), 400
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
@@ -2249,8 +2719,15 @@ def family_documents_delete(doc_id):
 @app.route('/api/admin/audit/retention', methods=['POST'])
 @admin_required
 def admin_run_retention():
-    apply_audit_retention()
-    return jsonify({'success': True}), 200
+    # Report what happened. This used to answer success regardless, including
+    # when the run had raised and changed nothing.
+    result = apply_audit_retention()
+    if result['status'] == 'ok':
+        return jsonify({'success': True, 'deleted': result['deleted'],
+                        'anonymized': result['anonymized']}), 200
+    if result['status'] == 'busy':
+        return jsonify({'error': 'retention_in_progress'}), 409
+    return jsonify({'error': 'retention_failed'}), 500
 
 
 # ───────────────────────────────────────────────────────────────────────────

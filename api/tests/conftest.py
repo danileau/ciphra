@@ -26,6 +26,7 @@ class MockCursor:
 
     def __init__(self):
         self._results = []  # stack of fetchone / fetchall results
+        self.rowcount = 0   # set per test where a route reads cur.rowcount
         self.executed = []  # record of (sql, params) for assertions
 
     def execute(self, sql, params=None):
