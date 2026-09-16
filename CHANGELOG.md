@@ -30,6 +30,12 @@ app at **/docs → Changelog** and here on the public repo.
   and fall back to a slow one-by-one import.
 - Error messages about loading or saving entries were shown in English whatever
   your language.
+- **Reloading the page while viewing someone else's account could show your own
+  entries under their name** — and a new entry could then be saved to the wrong
+  account. Switching between accounts quickly could also leave the previous
+  account's entries on screen. The account named in the banner is now always
+  the one you see and write to, and "Retry" reloads everything that account
+  needs.
 
 ## [1.3.0] — 2026-08-30
 

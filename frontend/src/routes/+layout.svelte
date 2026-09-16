@@ -532,17 +532,48 @@
 	// below bounced a fully-set-up returning user onto the wizard — until they
 	// manually refreshed and the second fetch happened to work. We now do that
 	// refresh automatically instead of stranding them.
+	//
+	// A reload inside a linked vault restores `activeVault` from
+	// sessionStorage, but the patient's key lives in the family links. Loading
+	// both in parallel used to let the documents load win the race, fall back
+	// to the caregiver's OWN vault, and render it under the patient's banner.
+	// With a vault active, the links load first; a vault they do not know is
+	// dropped back to "own" before any document is read.
 	async function loadInitialDocs(attempt = 1): Promise<void> {
-		const [docsOk, linksOk] = await Promise.all([
-			documents.load(),
-			familyLinks.load(),
-		]);
+		const seq = ++vaultLoadSeq;
+		let docsOk: boolean;
+		let linksOk: boolean;
+		let vault = get(activeVault);
+		if (vault !== null) {
+			linksOk = await familyLinks.load();
+			if (linksOk) {
+				linksLoaded = true;
+				snapToKnownVault();
+			}
+			vault = get(activeVault);
+			docsOk = await documents.load();
+		} else {
+			[docsOk, linksOk] = await Promise.all([documents.load(), familyLinks.load()]);
+			if (linksOk) linksLoaded = true;
+		}
+		// Superseded by a newer (re)load — a Retry, or a scheduled attempt.
+		if (seq !== vaultLoadSeq) return;
+		// The vault changed while that was on the wire (the switcher, a
+		// revoke snap-back): those documents are for a vault nobody is
+		// looking at. Start over for the one that is active now.
+		if (get(activeVault) !== vault) {
+			documents.clear();
+			blueprint.clear();
+			return loadInitialDocs(attempt);
+		}
 		blueprint.loadFromDocuments();
 		// Require BOTH loads: a docs-success / links-failure combo would leave
 		// `$familyLinks` empty and wrongly bounce a caregiver-only user to /setup.
 		if (docsOk && linksOk) {
 			docsLoading = false;
 			docsLoaded = true;
+			initialLoadOk = true;
+			initialLoadSettled = true;
 			// One-time single-source migration: fold any legacy preset
 			// `rescueMedications` into the editable `medications` list so the
 			// FAB + Settings read one source. No-op for blueprints already in
@@ -560,7 +591,68 @@
 			// redirect never fires; the $documentsError banner + manual retry
 			// button (below) stay visible for the user to act on.
 			docsLoading = false;
+			initialLoadSettled = true;
 		}
+	}
+
+	// The first-load sequence has run to an end (loaded, or gave up). Vault
+	// switches before that are handled by loadInitialDocs itself.
+	let initialLoadSettled = false;
+	// ...and it actually loaded. Until then a "reload" means the whole
+	// sequence, links included.
+	let initialLoadOk = false;
+	// A family-links load has succeeded this session, so "no link for the
+	// active vault" is a fact rather than "not loaded yet".
+	let linksLoaded = false;
+	// Bumped by every (re)load; one that finds it moved was superseded and
+	// must not touch the blueprint or `docsLoaded`.
+	let vaultLoadSeq = 0;
+
+	/** Drop an active vault the loaded links do not (or no longer) grant. */
+	function snapToKnownVault() {
+		const v = get(activeVault);
+		if (v !== null && !get(familyLinks).some((l) => l.sourceUserId === v && !l.revoked)) {
+			activeVault.set(null);
+		}
+	}
+
+	/**
+	 * Load the active vault's documents + blueprint. Every call supersedes
+	 * the previous one, so however fast the switcher is clicked — A→B→C, or
+	 * a 403 snap-back mid-load — the vault that ends up loaded is the one
+	 * that is active. `keepShown` (Retry) leaves the current view in place
+	 * while the reload runs.
+	 */
+	async function reloadVault(opts: { keepShown?: boolean } = {}): Promise<void> {
+		if (!initialLoadOk) {
+			if (!initialLoadSettled) return; // the first load is still retrying
+			initialLoadSettled = false;
+			docsLoading = true;
+			return loadInitialDocs();
+		}
+		const seq = ++vaultLoadSeq;
+		docsLoaded = false;
+		if (!opts.keepShown) {
+			documents.clear();
+			blueprint.clear();
+		}
+		const ok = await documents.load();
+		if (seq !== vaultLoadSeq) return;
+		blueprint.loadFromDocuments();
+		// Only commit docsLoaded on a genuine fetch success — a failed
+		// switch (offline / transient / revoked 403) must not flip to an
+		// authoritative empty state for the linked vault. The
+		// $documentsError banner + retry button stay visible instead.
+		if (ok) docsLoaded = true;
+	}
+
+	function resetLoadState() {
+		docsLoadStarted = false;
+		docsLoaded = false;
+		initialLoadSettled = false;
+		initialLoadOk = false;
+		linksLoaded = false;
+		vaultLoadSeq++;
 	}
 
 	// Redirect to setup when authenticated but no blueprint, only for
@@ -599,8 +691,7 @@
 		// purge has finished before any subsequent navigation could repopulate
 		// caches. UI already flipped (logout sets empty state synchronously).
 		await auth.logout();
-		docsLoadStarted = false;
-		docsLoaded = false;
+		resetLoadState();
 		blueprint.clear();
 		documents.clear();
 		familyLinks.clear();
@@ -618,8 +709,7 @@
 		if (handlingUnauthorized) return; // dedupe concurrent 401s
 		handlingUnauthorized = true;
 		await auth.logout();
-		docsLoadStarted = false;
-		docsLoaded = false;
+		resetLoadState();
 		blueprint.clear();
 		documents.clear();
 		familyLinks.clear();
@@ -631,21 +721,17 @@
 	// When the caregiver switches vault, clear cached docs + blueprint and
 	// reload from the new vault. `lastVault` lets us detect real changes and
 	// skip the initial render that fires while the store hydrates.
+	//
+	// This used to act only when `docsLoaded` was true, while always
+	// recording `lastVault` — so a switch that arrived during a load was
+	// dropped: A→B→C showed B's data under C's banner, and a 403 snap-back
+	// mid-load left the revoked vault's view in place. Every change now
+	// reloads; reloadVault makes the newest one win.
 	let lastVault: number | null | undefined = undefined;
 	$: {
 		const v = $activeVault;
-		if (browser && lastVault !== undefined && v !== lastVault && docsLoaded) {
-			docsLoaded = false;
-			documents.clear();
-			blueprint.clear();
-			documents.load().then((ok) => {
-				blueprint.loadFromDocuments();
-				// Only commit docsLoaded on a genuine fetch success — a failed
-				// switch (offline / transient / revoked 403) must not flip to an
-				// authoritative empty state for the linked vault. The
-				// $documentsError banner + retry button stay visible instead.
-				if (ok) docsLoaded = true;
-			});
+		if (browser && lastVault !== undefined && v !== lastVault && initialLoadSettled) {
+			void reloadVault();
 		}
 		lastVault = v;
 	}
@@ -653,7 +739,13 @@
 	// If the currently-selected vault has been revoked server-side (patient
 	// clicked their panic button), snap the switcher back to the caregiver's
 	// own view so they don't sit staring at a broken /family/documents 403.
-	$: if (browser && $activeVault !== null && $familyLinks.some(l => l.sourceUserId === $activeVault && l.revoked)) {
+	// Same once the links are known to hold no link for it at all (removed
+	// in another tab, or a stale sessionStorage value): without a link there
+	// is no key, and nothing in that vault can be read or written.
+	$: if (browser && $activeVault !== null && (
+		$familyLinks.some(l => l.sourceUserId === $activeVault && l.revoked)
+		|| (linksLoaded && !$familyLinks.some(l => l.sourceUserId === $activeVault))
+	)) {
 		activeVault.set(null);
 	}
 
@@ -953,7 +1045,10 @@
 			<p class="text-sm" style="color: var(--danger)">
 				{#if $documentsError === 'load'}{$t('sync.error_load')}{:else if $documentsError === 'update'}{$t('sync.error_update')}{:else}{$t('sync.error_save')}{/if}
 			</p>
-			<button on:click={() => { documentsError.set(null); documents.load(); }} class="ml-auto text-xs font-medium min-h-[44px] px-2" style="color: var(--danger)">{$t('common.retry')}</button>
+			<!-- Reloads documents AND the blueprint (and the links, if the first
+				 load never got through) — a documents-only reload left a vault
+				 switch that had failed without its blueprint. -->
+			<button on:click={() => { documentsError.set(null); void reloadVault({ keepShown: true }); }} class="ml-auto text-xs font-medium min-h-[44px] px-2" style="color: var(--danger)">{$t('common.retry')}</button>
 		</div>
 	{/if}
 
