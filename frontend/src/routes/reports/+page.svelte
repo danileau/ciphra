@@ -5,14 +5,15 @@
 	import { anyPhaseDayCount } from '$lib/monthAggregates';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, isCustomItem, prettifyCustomId, resolveMedDisplay, medicationChanges } from '$lib/blueprint';
-	import { toLocalISODate } from '$lib/date';
+	import { resolvedBlueprint, isCustomItem, prettifyCustomId, resolveMedDisplay } from '$lib/blueprint';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import VitalTrendReportsCard from '$lib/components/VitalTrendReportsCard.svelte';
 	import MedicationTimeline from '$lib/components/MedicationTimeline.svelte';
+	import { medicationChanges } from '$lib/blueprint/medicationHistory';
+	import { toLocalISODate } from '$lib/date';
 	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
 	import { cohortPalette } from '$lib/cohortPalette';
 	import { conditionColorOf } from '$lib/conditionAccent';
