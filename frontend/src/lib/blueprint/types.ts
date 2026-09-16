@@ -72,13 +72,45 @@ export interface VitalField {
 	splitByTimeOfDay?: boolean;
 }
 
+/** One stretch of a medication's regimen: a dose + schedule that applied
+ *  between two dates (2026-09-16, dose history).
+ *
+ *  Dates are LOCAL `YYYY-MM-DD`, both inclusive. `from` is absent only on the
+ *  first period of a medication whose start ciphra never learned (every med
+ *  created before dose history existed, and meds added without a start date):
+ *  "since before the record begins". `to` is absent while the period is still
+ *  open. Writers keep periods sorted and non-overlapping — read them through
+ *  `medPeriods()` in `medicationHistory.ts`, never directly. */
+export interface MedicationPeriod {
+	from?: string;
+	to?: string;
+	dose: string;
+	schedule: string;
+	/** Why this period began ("Aufdosierung laut Dr. M."), optional. */
+	note?: string;
+	/** Why the medication was stopped at `to`, optional. */
+	endNote?: string;
+	/** The medication this one was replaced by at `to` (a switch). */
+	switchedTo?: string;
+	/** The medication this one replaced at `from` (a switch). */
+	switchedFrom?: string;
+}
+
 /** Medication template */
 export interface MedicationSlot {
+	/** Stable identity. A dose change keeps the id, so every day ever logged
+	 *  against this medication stays attached to it. */
 	id: string;
 	name: string;
+	/** Mirror of the LAST period's dose/schedule, kept so readers that predate
+	 *  dose history (and a stale service-worker client) still see a sensible
+	 *  value. Anything date-specific must use `periodOn()` instead. */
 	dose: string;
 	schedule: string;    // e.g. "morgens, abends" or "as needed"
 	asNeeded: boolean;
+	/** Dose history (2026-09-16). Absent on medications saved before it
+	 *  existed — `medPeriods()` treats those as one open-ended period. */
+	periods?: MedicationPeriod[];
 }
 
 /** CIPH-881 — Rescue medication preset for the FAB quick-add "med" mode.

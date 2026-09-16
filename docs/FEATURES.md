@@ -27,6 +27,29 @@ The core daily interaction is the entry form at `/log/[date]`:
 For capture-as-it-happens rather than an evening review, **quick-add** records
 a single episode or a rescue-medication as a timestamped event.
 
+## Medications and dose history
+
+Medications are configured in Settings. A scheduled medication is assumed
+taken on each logged day and the daily log records only missed doses; an
+as-needed medication is ticked when taken, or logged as a timestamped intake.
+
+A medication's **dose changes over time without rewriting the past.** Each
+medication keeps one identity and a dated history of dose periods, stored
+inside the encrypted blueprint. *Change* asks what is changing — the dose or
+schedule, stopping it, or switching to a different medication — and from which
+date (tomorrow by default), and shows how it will be recorded before saving:
+days before the change keep the dose that applied then. A typo fix is a
+separate, explicitly retroactive correction. A stopped medication moves to its
+own list and stays in history; deleting one that has logged days first offers
+to stop it instead and says how many days would lose its name.
+
+Every surface reads the dose of the day: the daily log, the as-needed picker,
+the calendar (a mark on change days, and the day detail), `/reports` (a
+medication timeline for the visible window, with the change named in the trend
+chart's tooltip), and the doctor PDF (adherence per dose period, and the
+changes in the export window). The history is descriptive only: ciphra marks
+when a dose changed and never compares symptoms before and after it.
+
 ## Cohort-aware surfaces
 
 ciphra adapts to how a condition actually behaves. Each condition belongs to a

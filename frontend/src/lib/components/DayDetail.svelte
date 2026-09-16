@@ -19,12 +19,16 @@
 -->
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
-	import { isCustomItem, resolveMedDisplay } from '$lib/blueprint';
+	import { isCustomItem, resolveMedDisplay, medicationChanges, periodOn } from '$lib/blueprint';
 	import type { Blueprint } from '$lib/blueprint/types';
 	import type { CiphraDocument } from '$lib/stores/documents';
 
 	export let docs: CiphraDocument[];
 	export let bp: Blueprint | null;
+	/** The day shown. Needed for medication changes, which live on the
+	 *  blueprint rather than in a document — a change day can have no logged
+	 *  document at all. Falls back to the documents' date. */
+	export let date: string | null = null;
 
 	const POSITIVE_MARKERS = new Set(['slept_well']);
 
@@ -159,6 +163,27 @@
 		return u ? ' ' + u : '';
 	}
 
+	// Dose history — what changed on this day, and which scheduled doses were
+	// marked missed, each at the dose that applied THAT day (not today's).
+	$: dayDate = date ?? ((docs[0]?.data?.date as string | undefined) || null);
+	$: medChanges = dayDate && bp ? medicationChanges(bp.medications ?? [], { from: dayDate, to: dayDate }) : [];
+	$: missedMedLabels = (() => {
+		if (!bp || !dayDate) return [] as string[];
+		const ids = new Set<string>();
+		for (const d of entryDocs) {
+			const missed = d.data.missedMedications;
+			if (Array.isArray(missed)) for (const id of missed) ids.add(String(id));
+		}
+		const out: string[] = [];
+		for (const id of ids) {
+			const med = (bp.medications ?? []).find((m) => m.id === id);
+			if (!med) continue;
+			const dose = periodOn(med, dayDate)?.dose ?? med.dose;
+			out.push(dose ? `${med.name} ${dose}` : med.name);
+		}
+		return out;
+	})();
+
 	$: hasAnyContent =
 		activePhases.length > 0 ||
 		counterEpisodes.length > 0 ||
@@ -168,6 +193,8 @@
 		aggregated.notes.length > 0 ||
 		eventDocs.length > 0 ||
 		medEventDocs.length > 0 ||
+		medChanges.length > 0 ||
+		missedMedLabels.length > 0 ||
 		diaryDocs.length > 0;
 </script>
 
@@ -235,6 +262,33 @@
 				{#each aggregated.notes as n}
 					<p class="dd-notes">"{n}"</p>
 				{/each}
+			</section>
+		{/if}
+
+		{#if medChanges.length > 0 || missedMedLabels.length > 0}
+			<section class="dd-section" data-testid="dd-medication">
+				<h3 class="dd-label">{$t('protocol.medications')}</h3>
+				<ul class="dd-events">
+					{#each medChanges as c}
+						<li>
+							<span class="dd-event-text">
+								{#if c.kind === 'change'}
+									{$t('medication.day_change', { name: c.name, before: c.before?.dose ?? '', after: c.after?.dose ?? '' })}
+								{:else if c.kind === 'start'}
+									{$t('medication.day_start', { name: c.name, dose: c.after?.dose ?? '' })}
+								{:else}
+									{$t('medication.day_stop', { name: c.name })}
+								{/if}
+								{c.note ? ` — ${c.note}` : ''}
+							</span>
+						</li>
+					{/each}
+					{#if missedMedLabels.length > 0}
+						<li>
+							<span class="dd-event-text">{$t('day_detail.missed_doses', { list: missedMedLabels.join(' · ') })}</span>
+						</li>
+					{/if}
+				</ul>
 			</section>
 		{/if}
 

@@ -105,8 +105,15 @@
 </script>
 
 {#if open}
+	<!-- Stacking + overflow (2026-09-16): z-[65] sits above the mobile bottom
+	     nav (z-50, later in the DOM, so it used to paint over a dialog's
+	     buttons), the FAB and the quick-add sheet (z-[60]), and below toasts
+	     (z-[70]) so feedback stays visible. The overlay scrolls and the card
+	     centres with `m-auto` rather than `items-center`: flex-centring a card
+	     taller than the viewport clips its top and bottom with no way to
+	     scroll to them — the medication change dialog on a phone. -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center p-4"
+		class="fixed inset-0 z-[65] flex overflow-y-auto p-4"
 		style="background: rgba(0,0,0,0.45)"
 		role="dialog"
 		aria-modal="true"
@@ -115,7 +122,7 @@
 		{#if dismissable}
 			<button
 				type="button"
-				class="absolute inset-0 w-full h-full cursor-default"
+				class="fixed inset-0 w-full h-full cursor-default"
 				aria-label="Close"
 				tabindex="-1"
 				on:click={handleBackdropClick}
@@ -124,7 +131,7 @@
 		<div
 			bind:this={dialogEl}
 			tabindex="-1"
-			class="relative rounded-2xl p-6 w-full {maxWidth} focus:outline-none"
+			class="relative m-auto rounded-2xl p-6 w-full {maxWidth} focus:outline-none"
 			style="background: var(--surface-card); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.2)"
 		>
 			{#if title}

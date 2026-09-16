@@ -13,7 +13,8 @@
 	import { t, translateUnit } from '$lib/i18n';
 	import { browser } from '$app/environment';
 	import { isAuthenticated, auth } from '$lib/stores/auth';
-	import { blueprint, hasBlueprint, presets, isCustomItem, resolveBlueprint } from '$lib/blueprint';
+	import { blueprint, hasBlueprint, presets, isCustomItem, resolveBlueprint, periodOn } from '$lib/blueprint';
+	import { todayISO } from '$lib/date';
 	import type {
 		Blueprint,
 		BlueprintItem,
@@ -251,6 +252,8 @@
 	// from /settings (not the initial post-signup setup). Drives the
 	// "← Zurück zu Einstellungen" link in the wizard header.
 	let isCustomizeMode = false;
+	// Medications already saved on the blueprint before this wizard opened.
+	$: savedMedIds = new Set((existingBlueprint?.medications ?? []).map((m) => m.id));
 
 	function selectPreset(preset: PresetInfo) {
 		// Re-picking the SAME condition you already have keeps your whole
@@ -812,24 +815,34 @@
 					<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.medications_subtitle')}</p>
 				</div>
 
+				{#if savedMedIds.size > 0}
+					<p class="text-xs" style="color: var(--text-muted)">{$t('setup.medications_change_in_settings')}</p>
+				{/if}
 				{#if working.medications.length > 0}
 					<ul class="space-y-2">
 						{#each working.medications as med (med.id)}
+							{@const regimen = periodOn(med, todayISO()) ?? med}
 							<li class="flex items-center gap-3 p-3 rounded-xl" style="background: var(--surface-card); border: 1px solid var(--border)">
 								<div class="flex-1 min-w-0">
 									<p class="text-sm font-medium truncate" style="color: var(--text-primary)">{med.name}</p>
 									<p class="text-xs mt-0.5 truncate" style="color: var(--text-secondary)">
-										{med.dose}{med.schedule ? ' · ' + med.schedule : ''}{med.asNeeded ? ' · ' + $t('settings.medication_as_needed') : ''}
+										{regimen.dose}{regimen.schedule ? ' · ' + regimen.schedule : ''}{med.asNeeded ? ' · ' + $t('settings.medication_as_needed') : ''}
 									</p>
 								</div>
-								<button
-									type="button"
-									on:click={() => removeMed(med.id)}
-									class="text-xs font-medium px-2 py-1.5 rounded-lg min-h-[36px]"
-									style="color: var(--danger); background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)"
-								>
-									{$t('common.delete')}
-								</button>
+								<!-- Dose history — a medication that is already saved may have
+									 days logged against it. Removing it here would bypass the
+									 stop-instead-of-delete guard in Settings, so only medications
+									 added in this wizard session can be removed here. -->
+								{#if !savedMedIds.has(med.id)}
+									<button
+										type="button"
+										on:click={() => removeMed(med.id)}
+										class="text-xs font-medium px-2 py-1.5 rounded-lg min-h-[36px]"
+										style="color: var(--danger); background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)"
+									>
+										{$t('common.delete')}
+									</button>
+								{/if}
 							</li>
 						{/each}
 					</ul>

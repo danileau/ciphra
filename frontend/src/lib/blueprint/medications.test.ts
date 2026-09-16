@@ -13,6 +13,7 @@ import {
 	bedarfMedColumns,
 	foldRescueMedications,
 	medAdherence,
+	medAdherenceByPeriod,
 } from './medications';
 import type { Blueprint, MedicationSlot, RescueMedication } from './types';
 
@@ -43,6 +44,29 @@ describe('bedarfMedsForPicker / hasBedarfMeds', () => {
 		expect(bedarfMedsForPicker(b)).toEqual([]);
 		expect(hasBedarfMeds(b)).toBe(false);
 		expect(hasBedarfMeds(null)).toBe(false);
+	});
+});
+
+describe('bedarfMedsForPicker — dose history', () => {
+	const midazolam = slot({
+		id: 'mid', name: 'Midazolam', dose: '10 mg', asNeeded: true,
+		periods: [
+			{ to: '2026-09-16', dose: '5 mg', schedule: '' },
+			{ from: '2026-09-17', to: '2026-12-31', dose: '10 mg', schedule: '' },
+		],
+	});
+
+	it('offers the dose that applies on the day of the intake', () => {
+		const b = bp({ medications: [midazolam] });
+		expect(bedarfMedsForPicker(b, '2026-09-16')[0].dose).toBe('5 mg');
+		expect(bedarfMedsForPicker(b, '2026-09-17')[0].dose).toBe('10 mg');
+	});
+
+	it('does not offer a stopped medication, but history gates still see it', () => {
+		const b = bp({ medications: [midazolam] });
+		expect(bedarfMedsForPicker(b, '2027-01-05')).toEqual([]);
+		expect(hasBedarfMeds(b)).toBe(true);
+		expect(bedarfMedColumns(b, t).map((c) => c.id)).toEqual(['mid']);
 	});
 });
 
@@ -121,30 +145,80 @@ describe('medAdherence (assume-taken model)', () => {
 	it('scheduled meds: assumed taken on every logged day when nothing is missed', () => {
 		const med = slot({ id: 'lev', asNeeded: false });
 		const docs = [doc({}), doc({}), doc({})]; // 3 logged days, no misses
-		expect(medAdherence(med, docs, 3)).toEqual({ taken: 3, total: 3, pct: 100 });
+		expect(medAdherence(med, docs)).toEqual({ taken: 3, total: 3, pct: 100 });
 	});
 
 	it('scheduled meds: subtracts only explicitly-missed days', () => {
 		const med = slot({ id: 'lev', asNeeded: false });
 		const docs = [doc({ missedMedications: ['lev'] }), doc({}), doc({ missedMedications: ['other'] }), doc({})];
 		// 4 logged days, 1 missed for this med → 3 taken, 75%
-		expect(medAdherence(med, docs, 4)).toEqual({ taken: 3, total: 4, pct: 75 });
+		expect(medAdherence(med, docs)).toEqual({ taken: 3, total: 4, pct: 75 });
 	});
 
 	it('scheduled meds: legacy entries (per-day toggle, no missedMedications) read as taken', () => {
 		const med = slot({ id: 'lev', asNeeded: false });
 		// Old-model docs carry medications:{lev:false} but no missedMedications.
 		const docs = [doc({ medications: { lev: false } }), doc({ medications: { lev: true } })];
-		expect(medAdherence(med, docs, 2)).toEqual({ taken: 2, total: 2, pct: 100 });
+		expect(medAdherence(med, docs)).toEqual({ taken: 2, total: 2, pct: 100 });
 	});
 
 	it('as-needed meds: counts only days the taken-toggle was on', () => {
 		const med = slot({ id: 'ibu', asNeeded: true });
 		const docs = [doc({ medications: { ibu: true } }), doc({ medications: { ibu: false } }), doc({})];
-		expect(medAdherence(med, docs, 3)).toEqual({ taken: 1, total: 3, pct: 33 });
+		expect(medAdherence(med, docs)).toEqual({ taken: 1, total: 3, pct: 33 });
 	});
 
 	it('zero logged days → 0% (no divide-by-zero)', () => {
-		expect(medAdherence(slot({ asNeeded: false }), [], 0)).toEqual({ taken: 0, total: 0, pct: 0 });
+		expect(medAdherence(slot({ asNeeded: false }), [])).toEqual({ taken: 0, total: 0, pct: 0 });
+	});
+});
+
+describe('medAdherence — only days the medication was part of the regimen (dose history)', () => {
+	const entry = (date: string, data: Record<string, unknown> = {}) => ({ data: { type: 'entry', date, ...data } });
+
+	it('a scheduled med started mid-month is not "taken" on the days before it existed', () => {
+		const med = slot({ id: 'lam', asNeeded: false, periods: [{ from: '2026-09-15', dose: '25 mg', schedule: '' }] });
+		const docs = ['2026-09-01', '2026-09-10', '2026-09-15', '2026-09-16'].map((d) => entry(d));
+		expect(medAdherence(med, docs)).toEqual({ taken: 2, total: 2, pct: 100 });
+	});
+
+	it('a stopped med stops counting after its last day', () => {
+		const med = slot({ id: 'lam', asNeeded: false, periods: [{ from: '2026-09-01', to: '2026-09-10', dose: '25 mg', schedule: '' }] });
+		const docs = [entry('2026-09-05', { missedMedications: ['lam'] }), entry('2026-09-10'), entry('2026-09-20')];
+		expect(medAdherence(med, docs)).toEqual({ taken: 1, total: 2, pct: 50 });
+	});
+
+	it('an explicit mention outside the recorded periods still counts — nothing entered is dropped', () => {
+		const med = slot({ id: 'ibu', asNeeded: true, periods: [{ from: '2026-09-10', dose: '400 mg', schedule: '' }] });
+		const docs = [entry('2026-09-01', { medications: { ibu: true } }), entry('2026-09-12')];
+		expect(medAdherence(med, docs)).toEqual({ taken: 1, total: 2, pct: 50 });
+	});
+});
+
+describe('medAdherenceByPeriod', () => {
+	const entry = (date: string, data: Record<string, unknown> = {}) => ({ data: { type: 'entry', date, ...data } });
+	const titrated = slot({
+		id: 'lam', asNeeded: false, dose: '12 mg',
+		periods: [
+			{ to: '2026-09-16', dose: '10 mg', schedule: '2× täglich' },
+			{ from: '2026-09-17', dose: '12 mg', schedule: '2× täglich' },
+		],
+	});
+
+	it('splits a titration inside the window into one row per dose, each with its own days', () => {
+		const docs = [
+			entry('2026-09-14'), entry('2026-09-15', { missedMedications: ['lam'] }), entry('2026-09-16'),
+			entry('2026-09-17'), entry('2026-09-18'),
+		];
+		const rows = medAdherenceByPeriod(titrated, docs, { from: '2026-09-01', to: '2026-09-30' });
+		expect(rows.map((r) => [r.period.dose, r.from, r.to, r.taken, r.total])).toEqual([
+			['10 mg', '2026-09-01', '2026-09-16', 2, 3],
+			['12 mg', '2026-09-17', '2026-09-30', 2, 2],
+		]);
+	});
+
+	it('omits periods that do not overlap the window', () => {
+		const rows = medAdherenceByPeriod(titrated, [], { from: '2026-10-01', to: '2026-10-31' });
+		expect(rows.map((r) => r.period.dose)).toEqual(['12 mg']);
 	});
 });

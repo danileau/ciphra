@@ -1,4 +1,6 @@
-import type { Blueprint, MedicationSlot } from './types';
+import type { Blueprint, MedicationPeriod, MedicationSlot } from './types';
+import { docReferencesMed, isActiveOn, isUnbounded, medPeriods, periodOn } from './medicationHistory';
+import { todayISO } from '$lib/date';
 import { translateUnit } from '$lib/i18n';
 
 /**
@@ -32,21 +34,41 @@ export interface MedDisplay {
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
 
-/** The meds offered in the FAB "Bedarfsmedikation" picker: the user's own
- *  as-needed medications, configured in Settings. */
-export function bedarfMedsForPicker(bp: Blueprint | null | undefined): MedicationSlot[] {
+/** Every as-needed medication the user has configured, stopped ones included
+ *  — the set that historical intakes can refer to. */
+function allBedarfMeds(bp: Blueprint | null | undefined): MedicationSlot[] {
 	return (bp?.medications ?? []).filter((m) => m.asNeeded);
 }
 
-/** True when there is anything to show in the FAB "med" mode. */
+/** The meds offered in the FAB "Bedarfsmedikation" picker: the user's own
+ *  as-needed medications that are part of the regimen on `date` (default
+ *  today), each carrying the dose that applies that day — so an intake logged
+ *  after a dose change is stamped with the new dose, and a stopped medication
+ *  is not offered. */
+export function bedarfMedsForPicker(
+	bp: Blueprint | null | undefined,
+	date: string = todayISO(),
+): MedicationSlot[] {
+	const out: MedicationSlot[] = [];
+	for (const m of allBedarfMeds(bp)) {
+		const period = periodOn(m, date);
+		if (period) out.push({ ...m, dose: period.dose, schedule: period.schedule });
+	}
+	return out;
+}
+
+/** True when the user has any as-needed medication, current or stopped.
+ *  Gates the rescue-medication counts and marks, which describe history and
+ *  must not vanish because the medication was later stopped. */
 export function hasBedarfMeds(bp: Blueprint | null | undefined): boolean {
-	return bedarfMedsForPicker(bp).length > 0;
+	return allBedarfMeds(bp).length > 0;
 }
 
 export interface MedAdherence {
 	/** Days the med counts as taken, over `total`. */
 	taken: number;
-	/** Logged days in the window (the denominator). */
+	/** Logged days in the window on which the med was part of the regimen
+	 *  (the denominator). */
 	total: number;
 	/** Adherence percentage (0–100), 0 when there are no logged days. */
 	pct: number;
@@ -64,26 +86,75 @@ export interface MedAdherence {
  *    logged days minus the days the dose was explicitly marked missed
  *    (`missedMedications`). Back-compat: legacy entries used a per-day toggle
  *    and carry no `missedMedications`, so those days read as taken.
+ *
+ * Only days on which the medication was actually part of the regimen count
+ * (dose history, 2026-09-16). Before that, a medication started yesterday was
+ * "taken" on every logged day of the month — assume-taken has to know when
+ * there was something to assume. A logged day that mentions the medication
+ * explicitly always counts, even outside its recorded periods, so nothing the
+ * user entered is ever silently dropped. Documents without a date count only
+ * for a medication with no recorded start or end (the pre-history shape).
  */
 export function medAdherence(
 	med: MedicationSlot,
 	loggedDocs: Array<{ data?: Record<string, unknown> }>,
-	daysLogged: number,
 ): MedAdherence {
+	const relevant = loggedDocs.filter((d) => {
+		const date = d.data?.date;
+		if (typeof date !== 'string') return isUnbounded(med);
+		return isActiveOn(med, date) || docReferencesMed(d, med.id);
+	});
 	let taken: number;
 	if (med.asNeeded) {
-		taken = loggedDocs.filter(
+		taken = relevant.filter(
 			(d) => !!(d.data?.medications as Record<string, unknown> | undefined)?.[med.id],
 		).length;
 	} else {
-		const missed = loggedDocs.filter((d) => {
+		const missed = relevant.filter((d) => {
 			const m = d.data?.missedMedications;
 			return Array.isArray(m) && m.includes(med.id);
 		}).length;
-		taken = Math.max(0, daysLogged - missed);
+		taken = Math.max(0, relevant.length - missed);
 	}
-	const pct = daysLogged > 0 ? Math.round((taken / daysLogged) * 100) : 0;
-	return { taken, total: daysLogged, pct };
+	const total = relevant.length;
+	const pct = total > 0 ? Math.round((taken / total) * 100) : 0;
+	return { taken, total, pct };
+}
+
+export interface MedPeriodAdherence extends MedAdherence {
+	period: MedicationPeriod;
+	/** The part of the period inside the window, as local `YYYY-MM-DD`.
+	 *  `from` is null when the period has no recorded start and the window
+	 *  has no lower bound either. */
+	from: string | null;
+	to: string | null;
+}
+
+/**
+ * Adherence split by dose period, for every period that overlaps
+ * `[window.from, window.to]`, oldest first. A titration from 10 mg to 12 mg
+ * inside the window reads as two rows — each dose with its own days — instead
+ * of one row claiming 12 mg throughout.
+ */
+export function medAdherenceByPeriod(
+	med: MedicationSlot,
+	loggedDocs: Array<{ data?: Record<string, unknown> }>,
+	window: { from: string; to: string },
+): MedPeriodAdherence[] {
+	const rows: MedPeriodAdherence[] = [];
+	for (const period of medPeriods(med)) {
+		if (period.from && period.from > window.to) continue;
+		if (period.to && period.to < window.from) continue;
+		const from = !period.from || period.from < window.from ? window.from : period.from;
+		const to = !period.to || period.to > window.to ? window.to : period.to;
+		const slice = loggedDocs.filter((d) => {
+			const date = d.data?.date;
+			return typeof date === 'string' && date >= from && date <= to;
+		});
+		const single: MedicationSlot = { ...med, periods: [{ ...period, from, to }] };
+		rows.push({ period, from, to, ...medAdherence(single, slice) });
+	}
+	return rows;
 }
 
 /** Resolve a logged event's `medicationId` to a display label + unit.
@@ -146,7 +217,7 @@ export function bedarfMedColumns(
 ): { id: string; label: string; unit: string }[] {
 	const cols: { id: string; label: string; unit: string }[] = [];
 	const seen = new Set<string>();
-	for (const m of bedarfMedsForPicker(bp)) {
+	for (const m of allBedarfMeds(bp)) {
 		if (seen.has(m.id)) continue;
 		seen.add(m.id);
 		cols.push({ id: m.id, label: m.name, unit: '' });

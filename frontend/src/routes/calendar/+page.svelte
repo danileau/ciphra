@@ -3,7 +3,7 @@
 	import { todayISO } from '$lib/date';
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, isCustomItem, hasBedarfMeds } from '$lib/blueprint';
+	import { resolvedBlueprint, isCustomItem, hasBedarfMeds, medicationChanges } from '$lib/blueprint';
 	import { onMount, tick } from 'svelte';
 	import { rememberFocusMonth, recallFocusMonth } from '$lib/stores/focusMonth';
 	import { goto } from '$app/navigation';
@@ -190,6 +190,19 @@
 	$: showTriggerMark = (bp?.triggers?.length ?? 0) > 0;
 	$: showRescueMedMark = hasBedarfMeds(bp);
 
+	// Dose history — days on which a medication started, changed dose or
+	// stopped. Lives on the blueprint, not in documents, so a change day needs
+	// no logged entry to show. A daily-axis surface: one mark per day is fine
+	// here (unlike the aggregate trend charts).
+	$: medChangeDays = new Set(
+		medicationChanges(bp?.medications ?? [], { from: `${monthPrefix}-01`, to: `${monthPrefix}-31` }).map((c) => c.date),
+	);
+	$: showMedChangeMark = medChangeDays.size > 0;
+	function hasMedChangeOn(dateStr: string | null | undefined): boolean {
+		if (!dateStr || !bp) return false;
+		return medicationChanges(bp.medications ?? [], { from: dateStr, to: dateStr }).length > 0;
+	}
+
 	// CIPH-pi19-B — month-level tallies powering the rail's mini-summary.
 	$: triggerDayCount = triggerCountByDay.size;
 	$: rescueMedDayCount = rescueMedCountByDay.size;
@@ -289,7 +302,8 @@
 		} else {
 			base = $t('calendar.aria_day_empty', { date: dateFmt });
 		}
-		return base + trigSuffix + rescueSuffix;
+		const medSuffix = medChangeDays.has(dateStr) ? $t('calendar.aria_day_med_change_suffix') : '';
+		return base + trigSuffix + rescueSuffix + medSuffix;
 	}
 
 	$: selectedDayDocs = selectedDate ? $documents.filter(d => String(d.data.date || '') === selectedDate) : [];
@@ -659,6 +673,12 @@
 						<span style="color: var(--text-secondary)">{$t('calendar.cell_legend_rescue')}</span>
 					</span>
 				{/if}
+				{#if showMedChangeMark}
+					<span class="inline-flex items-center gap-1.5">
+						<span aria-hidden="true" class="block" style="width: 10px; height: 4px; border-radius: 2px; background: var(--olive)"></span>
+						<span style="color: var(--text-secondary)">{$t('calendar.cell_legend_med_change')}</span>
+					</span>
+				{/if}
 			</div>
 
 			<!-- Weekday headers -->
@@ -686,6 +706,7 @@
 					{@const phaseIsOverridden = dayPhaseOverride(day) !== null}
 					{@const hasTrigger = showTriggerMark && dayHasTrigger(day)}
 					{@const hasRescueMed = showRescueMedMark && dayHasRescueMed(day)}
+					{@const hasMedChange = medChangeDays.has(dayStr)}
 					<button
 						on:click={() => { selectedDate = dayStr; focusedDay = day; }}
 						on:keydown={(e) => handleGridKey(e, day)}
@@ -745,6 +766,18 @@
 								aria-hidden="true"
 								class="absolute"
 								style="top: 4px; bottom: 4px; right: 0; width: 4px; border-radius: 2px 0 0 2px; background: var(--brand); pointer-events: none;"
+							></span>
+						{/if}
+						{#if hasMedChange}
+							<!-- Dose history — a medication started, changed or stopped on
+								 this day. A horizontal capsule in the top-left corner: a
+								 shape no other mark uses (dots, triangle, edge bar), so it
+								 stays distinguishable without colour. -->
+							<span
+								aria-hidden="true"
+								class="absolute"
+								style="top: 4px; left: 4px; width: 10px; height: 4px; border-radius: 2px; background: var(--olive); pointer-events: none;"
+								data-testid="cal-med-change"
 							></span>
 						{/if}
 						{#if bands.length > 0}
@@ -875,8 +908,8 @@
 					</div>
 				{/if}
 
-				{#if railDocs.length > 0}
-					<DayDetail docs={railDocs} {bp} />
+				{#if railDocs.length > 0 || hasMedChangeOn(railSelectedDate)}
+					<DayDetail docs={railDocs} {bp} date={railSelectedDate} />
 				{:else}
 					<div class="text-center py-4">
 						<div class="mb-3 flex justify-center">
@@ -1010,7 +1043,7 @@
 				</div>
 			{/if}
 
-			{#if selectedDayDocs.length > 0}
+			{#if selectedDayDocs.length > 0 || hasMedChangeOn(selectedDate)}
 				<!-- CIPH-910 — DayDetail replaces the per-doc EntryPreview
 					 stack. Sectioned, labeled view of the day's full data:
 					 PHASE / EPISODEN / SYMPTOME / AUSLÖSER / VITALS / NOTIZEN
@@ -1019,7 +1052,7 @@
 					 /log/{date} for entry editing; events and diaries are
 					 edited via the journal moment-modal. Matches the
 					 "delete should be hidden" preference (CIPH-902). -->
-				<DayDetail docs={selectedDayDocs} {bp} />
+				<DayDetail docs={selectedDayDocs} {bp} date={selectedDate} />
 			{:else}
 				<div class="text-center py-4">
 					<div class="mb-3 flex justify-center">
