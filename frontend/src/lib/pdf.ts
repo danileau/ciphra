@@ -20,7 +20,21 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Blueprint, VitalField } from '$lib/blueprint';
-import { isCustomItem, resolveBlueprint, resolveMedDisplay, bedarfMedColumns, medAdherence } from '$lib/blueprint';
+import { addDaysISO, isCustomItem, resolveBlueprint, resolveMedDisplay, bedarfMedColumns } from '$lib/blueprint';
+import {
+	adherenceRowsForWindow,
+	csvDoseCell,
+	csvDoseMedications,
+	daysBetweenISO,
+	layoutTickLabels,
+	medChangeMarksForMonth,
+	medicationChangeRows,
+	medicationTimeline,
+	periodRangeText,
+	type DateWindow,
+	type DayMedMark,
+	type TimelineLane,
+} from '$lib/pdfMedicationHistory';
 import { cohortOf } from '$lib/blueprint/cohort';
 import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
 import { sectionsForCohort } from '$lib/cohortSections';
@@ -570,6 +584,71 @@ function continuationLabelHook(label: string) {
 }
 
 /**
+ * autoTable hook pair that prints "→" as a drawn arrow.
+ *
+ * Every page here is set in Helvetica, one of the PDF standard fonts, which
+ * jsPDF writes in WinAnsi encoding — and WinAnsi has no arrow. A literal
+ * U+2192 printed as `!'`, so "10 mg → 12 mg" would reach the doctor as
+ * "10 mg !' 12 mg". Embedding a whole font file for one glyph is not worth it.
+ *
+ * jsPDF still measures the glyph (≈ the width of an "a"), so autoTable wraps
+ * the cell as if it were there. `willDrawCell` swaps each arrow for spaces
+ * and remembers where it sat; `didDrawCell` strokes a small arrow into the
+ * gap in the cell's text colour. Assumes the table defaults: text aligned
+ * top-left.
+ */
+const ARROW_GLYPH = '→';
+const ARROW_GAP = '   ';
+function vectorArrowHooks() {
+	const marks = new WeakMap<object, Array<{ line: number; prefix: string }>>();
+	return {
+		willDrawCell(data: any) {
+			const lines: string[] = Array.isArray(data.cell.text) ? data.cell.text : [String(data.cell.text ?? '')];
+			if (!lines.some((l) => l.includes(ARROW_GLYPH))) return;
+			const found: Array<{ line: number; prefix: string }> = [];
+			data.cell.text = lines.map((line, i) => {
+				let out = '';
+				const parts = line.split(ARROW_GLYPH);
+				parts.forEach((part, p) => {
+					out += part;
+					if (p < parts.length - 1) {
+						found.push({ line: i, prefix: out });
+						out += ARROW_GAP;
+					}
+				});
+				return out;
+			});
+			marks.set(data.cell, found);
+		},
+		didDrawCell(data: any) {
+			const found = marks.get(data.cell);
+			if (!found) return;
+			const d = data.doc as jsPDF;
+			const cell = data.cell;
+			d.setFont(cell.styles.font ?? 'helvetica', cell.styles.fontStyle ?? 'normal');
+			d.setFontSize(cell.styles.fontSize);
+			const fs = cell.styles.fontSize / d.internal.scaleFactor;
+			const lineH = fs * d.getLineHeightFactor();
+			const pos = cell.getTextPos();
+			// autoTableText drops the first baseline by fs × (2 − 1.15).
+			const firstBaseline = pos.y + fs * 0.85;
+			const tc = cell.styles.textColor;
+			d.setDrawColor(...((Array.isArray(tc) ? tc : BRAND.textPrimary) as RGB));
+			d.setLineWidth(0.2);
+			const gapW = d.getTextWidth(ARROW_GAP);
+			for (const m of found) {
+				const y = firstBaseline + m.line * lineH - fs * 0.3;
+				const x0 = pos.x + d.getTextWidth(m.prefix) + gapW * 0.12;
+				const x1 = x0 + gapW * 0.76;
+				d.line(x0, y, x1, y);
+				d.line(x1 - 0.6, y - 0.45, x1, y);
+				d.line(x1 - 0.6, y + 0.45, x1, y);
+			}
+		},
+	};
+}
+
+/**
  * Top band used on cover-style pages (recovery, invite). Brick fill,
  * reverse wordmark on the left, page metadata on the right.
  */
@@ -1038,6 +1117,197 @@ function drawCycleStrip(
 	return cursorY;
 }
 
+/**
+ * Medication timeline strip (dose history, 2026-09-16).
+ *
+ * One lane per medication taken on any day of the report window, each dose
+ * period a bar across the window's date axis, labelled with its dose where
+ * the bar is wide enough. A gap in a lane is time the medication was not
+ * taken; a dose or schedule change is a short accent stroke where one bar
+ * meets the next. Rendered only when the window holds a change — a window of
+ * unchanged full-width bars would repeat the adherence table as decoration.
+ *
+ * Separate from the charts on purpose: the strip shares no axis with the
+ * episode or symptom series, so it cannot be read as setting a change beside
+ * an outcome. It documents the regimen; the reader relates it to the rest.
+ */
+function drawMedicationTimeline(
+	doc: jsPDF,
+	lanes: TimelineLane[],
+	win: DateWindow,
+	t: TranslateFn,
+	locale: string,
+	acc: CohortAccents,
+	rangeLabel: string,
+	cursorY: number,
+): number {
+	if (lanes.length === 0) return cursorY;
+	const pageW = 210;
+	const labelX = 14;
+	const labelW = 40;
+	const barX = labelX + labelW;
+	const barW = pageW - 14 - barX;
+	const totalDays = daysBetweenISO(win.from, win.to) + 1;
+	const xOf = (iso: string) => barX + (daysBetweenISO(win.from, iso) / totalDays) * barW;
+	const xEndOf = (iso: string) => barX + ((daysBetweenISO(win.from, iso) + 1) / totalDays) * barW;
+	const laneGap = 1.4;
+	const nameLineH = 2.8;
+
+	// Measure first, so the strip moves to the next page whole.
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.compact);
+	const nameLines = lanes.map((l) => doc.splitTextToSize(l.med.name, labelW - 3) as string[]);
+	const laneHs = nameLines.map((ls) => Math.max(5, ls.length * nameLineH + 1.6));
+	const bodyH = laneHs.reduce((a, b) => a + b, 0) + laneGap * (lanes.length - 1);
+	const hasChange = lanes.some((l) => l.segments.some((s) => s.changeAtStart));
+	const hasAsNeeded = lanes.some((l) => l.med.asNeeded);
+	cursorY = reserveSpace(doc, cursorY, 4 + bodyH + 16);
+
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.head);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.medication_timeline_title', { range: rangeLabel }), 14, cursorY);
+	cursorY += 4;
+
+	const top = cursorY;
+	const bottom = top + bodyH;
+
+	// Months in the window, for gridlines and axis labels.
+	const months: Array<{ start: string; end: string; y: number; m: number }> = [];
+	{
+		let y = Number(win.from.slice(0, 4));
+		let m = Number(win.from.slice(5, 7)) - 1;
+		while (months.length < 400) {
+			const key = `${y}-${String(m + 1).padStart(2, '0')}`;
+			if (key > win.to.slice(0, 7)) break;
+			const last = new Date(y, m + 1, 0).getDate();
+			const start = `${key}-01` < win.from ? win.from : `${key}-01`;
+			const endRaw = `${key}-${String(last).padStart(2, '0')}`;
+			months.push({ start, end: endRaw > win.to ? win.to : endRaw, y, m });
+			m += 1;
+			if (m > 11) { m = 0; y += 1; }
+		}
+	}
+	const singleMonth = months.length <= 1;
+
+	if (!singleMonth) {
+		doc.setDrawColor(...BRAND.borderSubtle);
+		doc.setLineWidth(0.15);
+		for (let i = 1; i < months.length; i++) {
+			const x = xOf(months[i].start);
+			doc.line(x, top - 0.6, x, bottom + 0.6);
+		}
+	}
+
+	const periodFill = softBlendRgb(acc.primary, 0.34);
+	const asNeededFill = softBlendRgb(acc.primary, 0.12);
+	const asNeededEdge = softBlendRgb(acc.primary, 0.5);
+	let y = top;
+	lanes.forEach((lane, li) => {
+		const h = laneHs[li];
+		const lines = nameLines[li];
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.compact);
+		doc.setTextColor(...BRAND.textPrimary);
+		const firstBaseline = y + (h - lines.length * nameLineH) / 2 + 2.1;
+		lines.forEach((ln, i) => doc.text(ln, labelX, firstBaseline + i * nameLineH));
+
+		// Hairline through the whole lane, so a gap reads as "not taken"
+		// rather than as a lane that ends.
+		const midY = y + h / 2;
+		doc.setDrawColor(...BRAND.border);
+		doc.setLineWidth(0.15);
+		doc.line(barX, midY, barX + barW, midY);
+
+		const barY = y + 0.7;
+		const barH = h - 1.4;
+		for (const seg of lane.segments) {
+			const x0 = xOf(seg.from);
+			const x1 = Math.max(xEndOf(seg.to), x0 + 0.6);
+			doc.setFillColor(...(lane.med.asNeeded ? asNeededFill : periodFill));
+			doc.rect(x0, barY, x1 - x0, barH, 'F');
+			if (lane.med.asNeeded) {
+				doc.setDrawColor(...asNeededEdge);
+				doc.setLineWidth(0.15);
+				doc.rect(x0, barY, x1 - x0, barH, 'S');
+			}
+			if (seg.changeAtStart) {
+				doc.setDrawColor(...acc.primary);
+				doc.setLineWidth(0.45);
+				doc.line(x0, barY - 0.5, x0, barY + barH + 0.5);
+			}
+			const label = seg.dose.trim() || seg.schedule.trim();
+			if (label) {
+				doc.setFont('helvetica', 'normal');
+				doc.setFontSize(TYPE.chartAxisMicro);
+				doc.setTextColor(...BRAND.textPrimary);
+				if (doc.getTextWidth(label) + 2 <= x1 - x0) {
+					doc.text(label, (x0 + x1) / 2, midY + 0.7, { align: 'center' });
+				}
+			}
+		}
+		y += h + laneGap;
+	});
+
+	// Date axis.
+	const axisY = bottom + 3.2;
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.chartAxis);
+	doc.setTextColor(...BRAND.textMuted);
+	if (singleMonth) {
+		const every = totalDays > 20 ? 5 : 2;
+		for (let i = 0; i < totalDays; i++) {
+			const day = Number(addDaysISO(win.from, i).slice(8, 10));
+			if (day !== 1 && day % every !== 0) continue;
+			const x = barX + ((i + 0.5) / totalDays) * barW;
+			doc.text(String(day), x, axisY, { align: 'center' });
+		}
+	} else {
+		const labelEvery = months.length <= 12 ? 1 : 2;
+		const last = months.length - 1;
+		let labelledYear = -1;
+		months.forEach((mo, i) => {
+			if (i !== last && (i % labelEvery !== 0 || last - i < labelEvery)) return;
+			// The year rides on the first label of each year, so a 24-month axis
+			// that skips January still says where the year turns.
+			const showYear = i === 0 || i === last || mo.y !== labelledYear;
+			labelledYear = mo.y;
+			const label = new Date(mo.y, mo.m, 1).toLocaleDateString(
+				locale,
+				showYear ? { month: 'short', year: '2-digit' } : { month: 'short' },
+			);
+			doc.text(label, (xOf(mo.start) + xEndOf(mo.end)) / 2, axisY, { align: 'center' });
+		});
+	}
+
+	// Legend — PDF_DESIGN_SPEC §14, every symbol explained.
+	const lgY = axisY + 4.6;
+	doc.setFontSize(TYPE.chartAxis);
+	doc.setTextColor(...BRAND.textMuted);
+	let lx = barX;
+	doc.setFillColor(...periodFill);
+	doc.rect(lx, lgY - 2.1, 5, 2.4, 'F');
+	doc.text(t('pdf.timeline_legend_period'), lx + 6.5, lgY);
+	lx += 6.5 + doc.getTextWidth(t('pdf.timeline_legend_period')) + 6;
+	if (hasChange) {
+		doc.setDrawColor(...acc.primary);
+		doc.setLineWidth(0.45);
+		doc.line(lx + 0.5, lgY - 2.4, lx + 0.5, lgY + 0.6);
+		doc.text(t('pdf.timeline_legend_change'), lx + 2.5, lgY);
+		lx += 2.5 + doc.getTextWidth(t('pdf.timeline_legend_change')) + 6;
+	}
+	if (hasAsNeeded) {
+		doc.setFillColor(...asNeededFill);
+		doc.setDrawColor(...asNeededEdge);
+		doc.setLineWidth(0.15);
+		doc.rect(lx, lgY - 2.1, 5, 2.4, 'FD');
+		doc.text(t('pdf.timeline_legend_as_needed'), lx + 6.5, lgY);
+	}
+	doc.setLineWidth(0.2);
+
+	return lgY + 7;
+}
+
 /** Hex `#RRGGBB` → RGB triple. Fallback to black on malformed input
  *  (caller already validated; this is just a safe parse). */
 function parseHexToRgb(hex: string): RGB {
@@ -1067,6 +1337,7 @@ function drawDailyMonthChart(
 	locale: string,
 	acc: CohortAccents,
 	cursorY: number,
+	medMarks: DayMedMark[] = [],
 ): number {
 	const { dailyTotals, dailySymptomDays, dailySymptomCounts } = aggregateDailyMonthSeries(
 		documents, year, month, daysInMonth, episodeCols,
@@ -1148,7 +1419,9 @@ function drawDailyMonthChart(
 	// episodes or symptoms is not empty, and printing "Keine Einträge diesen
 	// Monat" above a row of marks would contradict the page. Same class of
 	// error the comment above records fixing for episode-only months.
-	if (episodeTotal === 0 && symptomTotal === 0 && dayMarks.size === 0) {
+	// Medication changes join it for the same reason: the early return would
+	// otherwise drop their marks.
+	if (episodeTotal === 0 && symptomTotal === 0 && dayMarks.size === 0 && medMarks.length === 0) {
 		doc.setFont('helvetica', 'italic');
 		doc.setFontSize(TYPE.body);
 		doc.setTextColor(...BRAND.textMuted);
@@ -1256,9 +1529,47 @@ function drawDailyMonthChart(
 		}
 	}
 
+	// ── Medication change marks (dose history, 2026-09-16) ──
+	//
+	// A tick under the day a start, dose change or stop took effect, with a
+	// short label ("Lamotrigin 12 mg"). Daily axis only: on the monthly
+	// trajectory the same mark would be a per-event mark on an aggregate axis,
+	// which `feedback_chart_event_markers` rules out.
+	//
+	// A MARKER, never a comparison. Nothing here — or anywhere in the PDF —
+	// states what episodes or symptoms did before or after the day.
+	//
+	// Tick + label pack into up to three rows under the axis; a mark that finds
+	// no room keeps a bare tick, and the "Medikamentenänderungen" table lists
+	// it in full.
+	let medRowsH = 0;
+	if (medMarks.length > 0) {
+		const rowTop = cursorY + chartH + (dayMarks.size > 0 ? 8.4 : 4.4);
+		const rowPitch = 2.8;
+		const texts = medMarks.map((m) => m.labels.join(', '));
+		const xs = medMarks.map((m) => chartX + ((m.day - 1) / Math.max(1, daysInMonth - 1)) * chartW);
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.chartAxisMicro);
+		const placed = layoutTickLabels(
+			xs.map((x, i) => ({ x, width: doc.getTextWidth(texts[i]) })),
+			chartX,
+			chartX + chartW,
+			3,
+		);
+		doc.setDrawColor(...BRAND.textSecondary);
+		doc.setLineWidth(0.3);
+		doc.setTextColor(...BRAND.textSecondary);
+		placed.forEach((p, i) => {
+			const baseline = rowTop + 2 + p.row * rowPitch;
+			doc.line(xs[i], baseline - 2, xs[i], baseline + 0.3);
+			if (p.labelled) doc.text(texts[i], p.x0, baseline);
+		});
+		medRowsH = (1 + Math.max(...placed.map((p) => p.row))) * rowPitch + 0.8;
+	}
+
 	// Legend — episode line + symptom-day dot.
 	{
-		const lgY = cursorY + chartH + (dayMarks.size > 0 ? 11.5 : 8);
+		const lgY = cursorY + chartH + (dayMarks.size > 0 ? 11.5 : 8) + medRowsH;
 		doc.setFont('helvetica', 'normal');
 		doc.setFontSize(TYPE.chartAxis);
 		doc.setTextColor(...BRAND.textMuted);
@@ -1284,11 +1595,18 @@ function drawDailyMonthChart(
 			doc.setLineWidth(0.4);
 			doc.lines([[1.1, 1.1], [-1.1, 1.1], [-1.1, -1.1], [1.1, -1.1]], lx + 1.1, lgY - 1.9);
 			doc.text(t('pdf.legend_note_marker_day'), lx + 4.2, lgY);
+			lx += 4.2 + doc.getTextWidth(t('pdf.legend_note_marker_day')) + 8;
+		}
+		if (medMarks.length > 0) {
+			doc.setDrawColor(...BRAND.textSecondary);
+			doc.setLineWidth(0.3);
+			doc.line(lx + 0.5, lgY - 2.3, lx + 0.5, lgY + 0.3);
+			doc.text(t('pdf.legend_med_change_day'), lx + 2.5, lgY);
 		}
 		doc.setLineWidth(0.2);
 	}
 
-	return cursorY + chartH + (dayMarks.size > 0 ? 15.5 : 12);
+	return cursorY + chartH + (dayMarks.size > 0 ? 15.5 : 12) + medRowsH;
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -2470,6 +2788,7 @@ export function generateDoctorPdf(
 			locale,
 			acc,
 			cursorY,
+			medChangeMarksForMonth(blueprint.medications ?? [], year, month, focusDaysInMonth, t),
 		);
 	}
 	if (scope !== 'month') {
@@ -3598,8 +3917,36 @@ export function generateDoctorPdf(
 		cursorY += 6;
 	}
 
-	// ── Medication adherence ──
-	if (blueprint.medications.length > 0) {
+	// ── Medication ──
+	//
+	// Dose history (2026-09-16). A medication carries dated dose periods, and
+	// every reader below asks what applied on the days it covers: a titration
+	// inside the window is two adherence rows, each dose with its own days,
+	// and a stopped medication keeps its rows for the days it was taken.
+	//
+	// MARKERS ONLY. The timeline and the changes table say when the regimen
+	// changed and to what. Nothing here — and nothing may — sets a change
+	// beside what symptoms or episodes did before and after it.
+	const medWindow: DateWindow = { from: scopeStartISO, to: scopeEndISO };
+	const reportMeds = blueprint.medications ?? [];
+	const medChangeRows = medicationChangeRows(reportMeds, medWindow, t);
+	const adherenceRows = adherenceRowsForWindow(reportMeds, monthDocs, medWindow);
+
+	if (medChangeRows.length > 0) {
+		cursorY = drawMedicationTimeline(
+			doc,
+			medicationTimeline(reportMeds, medWindow),
+			medWindow,
+			t,
+			locale,
+			acc,
+			windowLabel,
+			cursorY,
+		);
+	}
+
+	// ── Medication adherence — one row per dose period ──
+	if (adherenceRows.length > 0) {
 		cursorY = reserveSpace(doc, cursorY, BREAK.sectionHead + BREAK.tableHeader);
 
 		doc.setFont('helvetica', 'bold');
@@ -3608,12 +3955,21 @@ export function generateDoctorPdf(
 		doc.text(t('pdf.medication_adherence'), 14, cursorY);
 		cursorY += 2;
 
-		const medRows = blueprint.medications.map((med) => {
-			// Assume-taken model for scheduled meds, taken-toggle for as-needed.
-			// See medAdherence() for the two models + back-compat note.
-			const { taken, total, pct } = medAdherence(med, monthDocs);
-			return [`${med.name} ${med.dose}`, med.schedule, `${taken} / ${total}`, `${pct}%`];
-		});
+		// Assume-taken model for scheduled meds, taken-toggle for as-needed —
+		// see medAdherence() for the two models + back-compat note. The period's
+		// dates, clipped to the window, print as a muted second line under the
+		// name so each dose states the days its numbers cover.
+		const periodRanges = adherenceRows.map((r) =>
+			periodRangeText(r.from, r.to, (iso) => formatISODateChoice(iso, blueprint.dateFormat)),
+		);
+		const medRows = adherenceRows.map((r, i) => [
+			`${`${r.med.name} ${r.period.dose}`.trim()}\n${periodRanges[i]}`,
+			r.period.schedule,
+			`${r.taken} / ${r.total}`,
+			// A period without a logged day has no adherence to state. "0%" in
+			// brick would claim every dose was missed.
+			r.total > 0 ? `${r.pct}%` : '—',
+		]);
 
 		autoTable(doc, {
 			// Full content width — see the duration table above.
@@ -3622,6 +3978,7 @@ export function generateDoctorPdf(
 			head: [[t('pdf.medication'), t('pdf.schedule'), t('pdf.taken'), t('pdf.adherence')]],
 			body: medRows,
 			theme: 'plain',
+			rowPageBreak: 'avoid',
 			styles: {
 				fontSize: TYPE.table,
 				cellPadding: 2,
@@ -3639,13 +3996,16 @@ export function generateDoctorPdf(
 				fillColor: [252, 250, 248] as any,
 			},
 			columnStyles: {
-				2: { halign: 'center' },
-				3: { halign: 'center' },
+				0: { cellWidth: 72 },
+				2: { halign: 'center', cellWidth: 30 },
+				3: { halign: 'center', cellWidth: 26 },
 			},
 			didParseCell: (data: any) => {
 				if (data.section === 'body' && data.column.index === 3) {
 					const pct = parseInt(data.cell.raw as string);
-					if (pct < 80) {
+					if (Number.isNaN(pct)) {
+						data.cell.styles.textColor = BRAND.textMuted as any;
+					} else if (pct < 80) {
 						data.cell.styles.textColor = BRAND.brick as any;
 						data.cell.styles.fontStyle = 'bold';
 					} else {
@@ -3654,8 +4014,93 @@ export function generateDoctorPdf(
 					}
 				}
 			},
-			didDrawCell: continuationLabelHook(t('pdf.table_continued')),
+			willDrawCell: (data: any) => {
+				// Lift the date line out of the cell text; didDrawCell prints it
+				// muted in the space the row already reserved for it.
+				if (data.section !== 'body' || data.column.index !== 0) return;
+				const lines = data.cell.text as string[];
+				if (lines.length > 1 && lines[lines.length - 1] === periodRanges[data.row.index]) {
+					data.cell.text = lines.slice(0, -1);
+				}
+			},
+			didDrawCell: (data: any) => {
+				continuationLabelHook(t('pdf.table_continued'))(data);
+				if (data.section !== 'body' || data.column.index !== 0) return;
+				const range = periodRanges[data.row.index];
+				if (!range) return;
+				const cell = data.cell;
+				const fs = cell.styles.fontSize / doc.internal.scaleFactor;
+				const pos = cell.getTextPos();
+				const baseline = pos.y + fs * 0.85 + (cell.text as string[]).length * fs * doc.getLineHeightFactor();
+				doc.setFont('helvetica', 'normal');
+				doc.setFontSize(TYPE.compact);
+				doc.setTextColor(...BRAND.textMuted);
+				doc.text(range, pos.x, baseline);
+			},
 		});
+		cursorY = ((doc as any).lastAutoTable?.finalY ?? cursorY + 10) + 6;
+	}
+
+	// ── Medication changes ──
+	//
+	// Every start, dose change and stop taking effect inside the window, oldest
+	// first, in neutral wording. Dates follow the user's date format, like the
+	// note-marker list. The provenance line says who recorded it: this is the
+	// patient's own medication list, not a prescription record, and the reason
+	// column is their own words.
+	if (medChangeRows.length > 0) {
+		cursorY = reserveSpace(doc, cursorY, BREAK.sectionHead + BREAK.tableHeader);
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(TYPE.head);
+		doc.setTextColor(...BRAND.textPrimary);
+		doc.text(t('pdf.medication_changes'), 14, cursorY);
+		cursorY += 4;
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.compact);
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(t('pdf.med_changes_provenance'), 14, cursorY);
+		cursorY += 3;
+
+		const arrows = vectorArrowHooks();
+		autoTable(doc, {
+			startY: cursorY,
+			margin: { left: 14, right: 14 },
+			head: [[t('pdf.date'), t('pdf.medication'), t('pdf.med_change_col'), t('pdf.med_reason_col')]],
+			body: medChangeRows.map((c) => [
+				formatISODateChoice(c.date, blueprint.dateFormat),
+				c.name,
+				c.change,
+				c.reason,
+			]),
+			theme: 'plain',
+			rowPageBreak: 'avoid',
+			styles: {
+				fontSize: TYPE.table,
+				cellPadding: 1.6,
+				lineColor: BRAND.borderSubtle as any,
+				lineWidth: 0.1,
+				textColor: BRAND.textPrimary as any,
+				overflow: 'linebreak',
+			},
+			headStyles: {
+				fillColor: BRAND.paperInset as any,
+				textColor: BRAND.textPrimary as any,
+				fontStyle: 'bold',
+				fontSize: TYPE.table,
+			},
+			columnStyles: {
+				0: { cellWidth: 24, textColor: BRAND.textSecondary as any },
+				1: { cellWidth: 38 },
+				2: { cellWidth: 70 },
+				3: { cellWidth: 'auto', textColor: BRAND.textSecondary as any },
+			},
+			willDrawCell: arrows.willDrawCell,
+			didDrawCell: (data: any) => {
+				continuationLabelHook(t('pdf.table_continued'))(data);
+				arrows.didDrawCell(data);
+			},
+		});
+		cursorY = ((doc as any).lastAutoTable?.finalY ?? cursorY + 10) + 6;
 	}
 
 	for (const gm of gridMonths) {
@@ -4074,6 +4519,18 @@ export function exportCsv(
 		id: m.id,
 		label: `${m.label}${m.unit ? ` (${m.unit})` : ''}`,
 	}));
+	// Dose history (2026-09-16) — one column per SCHEDULED medication taken on
+	// any day of the export, holding the dose that applied that day, so a
+	// titration reads as a step down the column. Empty on days the medication
+	// was not part of the regimen; the app's "missed" word when that day's
+	// entry marks the dose as missed. As-needed medications keep their
+	// intake-count columns above. See csvDoseCell().
+	const doseCols = csvDoseMedications(blueprint.medications ?? [], { from: startISO, to: endISO }).map((m) => ({
+		med: m,
+		label: `${m.name} — ${t('pdf.csv_dose_col')}`,
+	}));
+	const missedWord = t('protocol.meds_missed_tag');
+	const takenWord = t('pdf.taken');
 
 	const headers = [
 		'date',
@@ -4082,6 +4539,7 @@ export function exportCsv(
 		...episodeDetailCols.map((c) => c.label),
 		...triggerCols.map((c) => c.label),
 		...vitalCols.map((c) => c.label),
+		...doseCols.map((c) => c.label),
 		...rescueMedCols.map((c) => c.label),
 		// No Notes column — same reason the doctor PDF dropped it (see
 		// drawGridSection): `entry.notes` is free-text on a separate stream that
@@ -4138,6 +4596,12 @@ export function exportCsv(
 		for (const col of vitalCols) {
 			const val = dayDoc?.data?.vitals?.[col.id];
 			row.push(val != null ? String(val) : '');
+		}
+		if (doseCols.length > 0) {
+			const dayEntries = dayDoc ? [dayDoc, ...dayEpDocs] : dayEpDocs;
+			for (const col of doseCols) {
+				row.push(csvDoseCell(col.med, dayStr, dayEntries, missedWord, takenWord));
+			}
 		}
 		// CIPH-881b — count rescue-med events for this day per medication id.
 		for (const col of rescueMedCols) {
