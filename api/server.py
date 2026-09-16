@@ -2355,6 +2355,13 @@ def _fake_grant_id(seed: bytes, max_grant_id: int) -> int:
     invitation anywhere on the server would be its own tell. This one moves
     only when the grant count crosses a power of two, and never exceeds an id
     an attacker could learn by creating a grant of their own.
+
+    A decoy can therefore EQUAL a real grant's id (a negative one never
+    could). That discloses nothing: claiming it needs that grant's proof,
+    which a decoy-holder does not have, and a wrong proof answers exactly
+    like an unknown id (401). The proof check is a constant-time compare of
+    two SHA-256 digests, so the found-vs-not-found timing difference is far
+    below network jitter — and it predates the change.
     """
     span = 1 << (max_grant_id.bit_length() - 1) if max_grant_id > 0 else 1
     return 1 + int.from_bytes(seed[:4], 'big') % span
