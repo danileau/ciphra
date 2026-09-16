@@ -70,8 +70,21 @@
 	export let existingDoc: CiphraDocument | null;
 	export let previousDoc: CiphraDocument | null;
 	export let isToday: boolean;
-	export let onSave: (data: EntryData) => Promise<void>;
-	export let onDelete: () => Promise<void>;
+	// Resolve `false` when the write did not happen: the form keeps the input
+	// and says so instead of flashing "saved". (A write queued offline is a
+	// success — the shell's "saved offline" notice covers it.) `void` is the
+	// old contract and still means success.
+	export let onSave: (data: EntryData) => Promise<boolean | void>;
+	export let onDelete: () => Promise<boolean | void>;
+	// Told whenever the form gains or loses edits the user made and has not
+	// saved, so the route can guard navigation. Carryover pre-fills are not
+	// edits — see `userEdited`.
+	export let onDirtyChange: ((dirty: boolean) => void) | undefined = undefined;
+	// False in a linked (someone else's) vault. The server files a
+	// caregiver's writes as shareable whatever the entry says, and the
+	// caregiver's own view drops locked entries — a day locked there vanished
+	// for the caregiver on reload while other caregivers could still read it.
+	export let allowPrivate = true;
 	export let onDateChange: (delta: number) => void;
 	export let onJumpToToday: () => void;
 	// `density` prop is reserved for PI v13 FAB quick-add consolidation.
@@ -187,7 +200,10 @@
 		if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 		if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 			e.preventDefault();
-			saveEntry();
+			// Same gate as the Save button. Ctrl+S used to bypass it: a
+			// second press during a save wrote the day twice, and a press on
+			// an untouched new day saved an empty entry.
+			if (!saving && hasChanges) saveEntry();
 		}
 		if (e.key === 'ArrowLeft') onDateChange(-1);
 		if (e.key === 'ArrowRight') onDateChange(1);
@@ -195,6 +211,10 @@
 
 	let saving = false;
 	let saved = false;
+	// The last save / delete did not go through. Shown in the save bar until
+	// the next attempt; the form keeps everything the user entered.
+	let saveFailed = false;
+	let deleteFailed = false;
 	let confirmDelete = false;
 	let deleting = false;
 	// CIPH-905 — autosave removed. The 3 s debounced background save
@@ -202,6 +222,11 @@
 	// when they were "done." The Save button is now the explicit
 	// contract; `hasChanges` drives its enabled/disabled state.
 	let hasChanges = false;
+	// Whether any of those changes came from the user. Phase carryover
+	// enables Save on a new day without the user touching anything; leaving
+	// that page must not ask "discard your changes?".
+	let userEdited = false;
+	$: onDirtyChange?.(hasChanges && userEdited);
 	// CIPH-904 — Persistent save timestamp. The 2.5 s saved-flash gave
 	// users no signal that the form was still saved after the asterisk
 	// pulse faded. Now we keep the time visible until the user starts
@@ -336,6 +361,7 @@
 		// "Gespeichert · 14:32" stamp + the Save button's enabled state
 		// are the affordances that replace the silent debounce.
 		hasChanges = true;
+		userEdited = true;
 	}
 
 	function copyPreviousDay() {
@@ -532,7 +558,10 @@
 	}
 
 	async function saveEntry() {
+		if (saving) return;
 		saving = true;
+		saveFailed = false;
+		deleteFailed = false;
 		// Reconcile the counted episodes' state from `episodeInstances`, then
 		// mirror the derived count + first-occurrence time/duration and joined
 		// notes back onto the legacy maps. This keeps every existing reader
@@ -575,13 +604,25 @@
 				return ids.length > 0 ? ids : undefined;
 			})(),
 			notes,
-			private: isPrivate ? true : undefined,
+			private: allowPrivate && isPrivate ? true : undefined,
 			phaseOverride: phaseOverride || undefined,
 		};
-		await onSave(data);
+		let ok: boolean | void;
+		try {
+			ok = await onSave(data);
+		} catch {
+			ok = false;
+		}
 		saving = false;
+		if (ok === false) {
+			// Not saved. Nothing is reset: the edits stay in the form, Save
+			// stays enabled, and the bar says it did not work.
+			saveFailed = true;
+			return;
+		}
 		saved = true;
 		hasChanges = false;
+		userEdited = false;
 		lastSavedAt = new Date();
 		setTimeout(() => { saved = false; }, 2500);
 	}
@@ -592,10 +633,19 @@
 		: '';
 
 	async function handleDeleteConfirmed() {
+		if (deleting) return;
 		deleting = true;
-		await onDelete();
+		saveFailed = false;
+		deleteFailed = false;
+		let ok: boolean | void;
+		try {
+			ok = await onDelete();
+		} catch {
+			ok = false;
+		}
 		deleting = false;
 		confirmDelete = false;
+		if (ok === false) deleteFailed = true;
 	}
 
 	function formatDisplayDate(dateStr: string): string {
@@ -724,7 +774,9 @@
 					<span class="log-today-badge">{$t('common.today')}</span>
 				{/if}
 				<!-- CIPH-713 — per-entry private toggle. Locked entries are
-					 hard-excluded from every export (PDF/CSV/reports/share). -->
+					 hard-excluded from every export (PDF/CSV/reports/share).
+					 Not offered in someone else's vault: see `allowPrivate`. -->
+				{#if allowPrivate}
 				<button
 					type="button"
 					on:click={() => { isPrivate = !isPrivate; markChanged(); }}
@@ -747,6 +799,7 @@
 					{/if}
 					<span>{isPrivate ? $t('private.state_private') : $t('private.state_public')}</span>
 				</button>
+				{/if}
 			</div>
 
 			<button on:click={() => onDateChange(1)} class="log-nav-btn" aria-label={$t("common.next_day")}>
@@ -1330,6 +1383,13 @@
 
 <!-- ─── Sticky save bar ─── -->
 <div class="log-save-bar">
+	{#if saveFailed || deleteFailed}
+		<!-- The write did not happen. Everything entered is still in the form;
+			 Save stays enabled to try again. -->
+		<p class="log-save-error" role="alert" data-testid="entry-save-error">
+			{saveFailed ? $t('protocol.save_failed') : $t('protocol.delete_failed')}
+		</p>
+	{/if}
 	<div class="log-save-inner">
 		{#if existingDoc}
 			{#if confirmDelete}
@@ -2018,6 +2078,15 @@
 		margin: 0 auto;
 		display: flex;
 		gap: 8px;
+	}
+	.log-save-error {
+		max-width: 768px;
+		margin: 0 auto 8px;
+		font-size: 13px;
+		font-weight: 500;
+		line-height: 1.4;
+		text-align: center;
+		color: var(--danger);
 	}
 	.log-btn-save {
 		flex: 1;

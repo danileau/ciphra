@@ -9,7 +9,7 @@ production deploy stack (`golive/`) and how each is bounded.
 If you only have time for one, read `SECURITY_MODEL.md` first. This document
 assumes you've read it.
 
-**Last updated:** 2026-08-30
+**Last updated:** 2026-09-16
 **Deploy stack reviewed:** `golive/` + CI/CD revision 2026-08-30
 (pull-based CD, cosign-signed images, scanner edge-blocking, daily edge-drift
 monitor, weekly posture digest, recorded schema migrations)
@@ -224,7 +224,7 @@ itself. The master key never leaves the BROWSER layer.
 |---|---|---|---|
 | Login bruteforce | API /login | E (network) | ✅ Per-account lockout (5/15min) + Cloudflare rate-limit |
 | Recovery bruteforce | API /recover | E | ✅ Per-account lockout (3/15min) |
-| Account enumeration | API /login, /recover, /family/claim | E | ✅ Deterministic fake-params on unknown users |
+| Account enumeration | API /login, /recover, /register, /family/claim | E | ⚠️ Fake params / decoy grants on `/login/init`, `/recover/init`, `/family/grants/claim/init`. Residual, accepted: `/register` 409 on a taken name (inherent; 3/min), a 429 lockout only a real account can reach, and a claim-init list longer than the decoy's one entry. SECURITY_MODEL.md → Hardening |
 | XSS → key theft | Frontend | E + B+C compromise paths | ✅ CSP strict (SvelteKit hash mode) + no inline script; only `'wasm-unsafe-eval'` for Argon2 WASM, no `unsafe-eval` |
 | CSRF | API mutating endpoints | E | ✅ JWT-bearer auth (not cookie) → no automatic credential attachment |
 | SQL injection | API/Postgres | E | ✅ Parameterized queries (psycopg) |

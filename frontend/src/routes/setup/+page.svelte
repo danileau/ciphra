@@ -4,9 +4,9 @@
 	 *
 	 * Design decision (spec): the blueprint is kept STOCK for now. Screen 2 + 3
 	 * collect informational overrides (`setupOverrides`) that are NOT persisted
-	 * to the blueprint — they're session-only hints for onboarding. The only
-	 * persisted output is `ciphra_vital_targets:<username>` in localStorage,
-	 * which `generateDoctorPdf` reads as an override for `referenceLine.value`.
+	 * to the blueprint — they're session-only hints for onboarding. Vital
+	 * targets are persisted on the blueprint (`vitalTargets`), which
+	 * `generateDoctorPdf` reads as an override for `referenceLine.value`.
 	 * Full blueprint customisation remains reachable via /settings (old 7-step
 	 * wizard — not replaced here).
 	 */
@@ -24,6 +24,7 @@
 		VitalField,
 	} from '$lib/blueprint';
 	import type { PresetInfo, CustomKind } from '$lib/blueprint';
+	import { clearLegacyVitalTargets, effectiveVitalTargets } from '$lib/blueprint/vitalTargets';
 	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
@@ -214,6 +215,10 @@
 		// reach screen 3 and hit "Complete".
 		if (existing) {
 			working = JSON.parse(JSON.stringify(existing));
+			// Pre-seed targets from the blueprint (or a not-yet-migrated legacy
+			// key) so re-entering the wizard shows — and keeps — what is set.
+			const targets = effectiveVitalTargets(working!, $auth.username || '');
+			if (targets) vitalTargets = Object.fromEntries(Object.entries(targets).map(([k, v]) => [k, String(v)]));
 			// CIPH-301b — pre-seed toggle state from any prior customizations.
 			// A symptom group is "on" iff none of its items are hidden.
 			const cz = working!.customizations || {};
@@ -329,21 +334,21 @@
 			};
 		}
 
-		await blueprint.save(working);
-		// Persist per-user vital target overrides (spec: CIPH-301 screen 3).
-		const username = $auth.username || '';
-		if (username) {
-			const parsed: Record<string, number> = {};
-			for (const [vid, raw] of Object.entries(vitalTargets)) {
-				const n = Number(raw);
-				if (!isNaN(n) && n !== 0 && raw.trim() !== '') parsed[vid] = n;
-			}
-			try {
-				if (Object.keys(parsed).length > 0) {
-					localStorage.setItem(`ciphra_vital_targets:${username}`, JSON.stringify(parsed));
-				}
-			} catch { /* private-mode or quota — non-fatal */ }
+		// Personal vital targets (CIPH-301 screen 3) ride the encrypted
+		// blueprint — see lib/blueprint/vitalTargets.ts for why they left
+		// localStorage.
+		const parsedTargets: Record<string, number> = {};
+		for (const [vid, raw] of Object.entries(vitalTargets)) {
+			const n = Number(raw);
+			if (!isNaN(n) && n !== 0 && String(raw).trim() !== '') parsedTargets[vid] = n;
 		}
+		if (Object.keys(parsedTargets).length > 0) working.vitalTargets = parsedTargets;
+		else delete working.vitalTargets;
+
+		const saved = await blueprint.save(working);
+		// The legacy key was folded into the targets above; drop it once the
+		// encrypted copy is saved.
+		if (saved) clearLegacyVitalTargets($auth.username);
 		// Blueprint saved — clear the skip flag so the dashboard redirect
 		// behaves normally going forward.
 		clearSetupSkipped();

@@ -44,6 +44,27 @@ const emptyState = (ready: boolean): AuthState => ({
 const LS_KEY = 'ciphra_auth';
 const SS_MASTER_KEY = 'ciphra_master_key';
 
+// Plaintext localStorage values derived from the user's health data: the
+// episode type quick-add last used (its id names the condition). Not session
+// state, but it outlived logout and was readable by the next person on the
+// device. Removed on logout — see docs/SECURITY_MODEL.md "Small preference +
+// bookkeeping keys".
+//
+// NOT here: the legacy `ciphra_vital_targets:<username>` key. Vital targets
+// moved into the encrypted blueprint; the layout folds the old key in and
+// removes it after that save succeeds (lib/blueprint/vitalTargets.ts). Wiping
+// it on logout would destroy targets that were never migrated — logout also
+// runs when a closed browser is reopened, BEFORE the user can log in again.
+export const HEALTH_PREF_KEYS = ['ciphra_quickadd_last_episode'] as const;
+
+function clearHealthPreferences() {
+	try {
+		for (const k of HEALTH_PREF_KEYS) localStorage.removeItem(k);
+	} catch {
+		// Storage blocked (private mode) — nothing was persisted either.
+	}
+}
+
 function loadFromStorage(): AuthState {
 	if (!browser) return emptyState(false);
 	try {
@@ -152,6 +173,7 @@ function createAuthStore() {
 			// the next user on this browser must not inherit a previous
 			// session's "skip the setup wizard" decision.
 			try { localStorage.removeItem('ciphra_setup_skipped'); } catch {}
+			clearHealthPreferences();
 			try {
 				const m = await import('$lib/idb');
 				await m.clearAllPartitions();

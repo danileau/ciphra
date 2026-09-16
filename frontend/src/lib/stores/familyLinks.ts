@@ -152,6 +152,18 @@ function createActive() {
 export const activeVault = createActive();
 
 /**
+ * Whether the active vault can be read yet: always for the own vault, and for
+ * a linked one once its link (which holds the patient's key) is loaded. After
+ * a reload inside a linked vault this is false until the links arrive — the
+ * documents store refuses to load then rather than fall back to the own
+ * vault, so screens show their loading state instead of an empty account.
+ */
+export const activeVaultReady = derived(
+	[familyLinks, activeVault],
+	([$links, $active]) => $active === null || $links.some((l) => l.sourceUserId === $active),
+);
+
+/**
  * The (masterKey, context) pair the app should currently read/write with.
  * `context: null` → own account (use /api/documents).
  * `context: { sourceUserId, … }` → linked account (use /api/family/documents).

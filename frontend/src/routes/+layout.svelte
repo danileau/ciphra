@@ -3,17 +3,18 @@
 	import { isAuthenticated, authReady, auth, needsUnlock } from '$lib/stores/auth';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import { t } from '$lib/i18n';
-	import { todayISO } from '$lib/date';
+	import { todayISO, toLocalISODate } from '$lib/date';
 	import type { Locale } from '$lib/i18n';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import { documents, documentsError, caregiverHiddenCount } from '$lib/stores/documents';
 	import { pendingCount } from '$lib/outbox';
 	import { get } from 'svelte/store';
 	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem, hasBedarfMeds, bedarfMedsForPicker, foldRescueMedications } from '$lib/blueprint';
 	import { cohortOf } from '$lib/blueprint/cohort';
+	import { clearLegacyVitalTargets, migrateLegacyVitalTargets } from '$lib/blueprint/vitalTargets';
 	import { pathToRoute } from '$lib/cohortPalette';
 	import { conditionAccent } from '$lib/conditionAccent';
 	import { resolvedTheme } from '$lib/stores/theme';
@@ -65,6 +66,81 @@
 	let quickAddDose = '';
 	// CIPH-713 — private toggle on quick-add log/event flow.
 	let quickAddPrivate = false;
+	// In a linked vault the caregiver writes into someone else's account. The
+	// server files those writes as shareable whatever they say, while the
+	// caregiver's own view drops private plaintext — so a diary note or a
+	// locked entry written there vanished for its author on reload, and every
+	// other caregiver of that account could read it. Neither is offered there.
+	$: quickAddLinked = $activeVault !== null;
+	$: if (quickAddLinked && quickAddMode === 'diary') quickAddMode = 'log';
+	$: if (quickAddLinked && quickAddPrivate) quickAddPrivate = false;
+
+	// Quick-add sheet as a modal dialog: focus moves in when it opens, Tab
+	// stays inside, Escape closes, and focus returns to what opened it (the
+	// FAB). It had none of this — keyboard and screen-reader users tabbed
+	// into the page behind it. BottomSheet.svelte has the same behaviour but
+	// not the stacking: its backdrop shares z-50 with BottomNav, which comes
+	// later in the DOM and would stay live above it.
+	let quickAddSheetEl: HTMLDivElement | null = null;
+	let quickAddReturnFocus: HTMLElement | null = null;
+	let quickAddWasOpen = false;
+
+	function quickAddFocusables(): HTMLElement[] {
+		if (!quickAddSheetEl) return [];
+		const sel =
+			'a[href], button:not([disabled]), input:not([disabled]), ' +
+			'select:not([disabled]), textarea:not([disabled]), ' +
+			'[tabindex]:not([tabindex="-1"])';
+		return Array.from(quickAddSheetEl.querySelectorAll<HTMLElement>(sel)).filter(
+			(el) => el.offsetParent !== null || getComputedStyle(el).position === 'fixed',
+		);
+	}
+
+	$: if (browser && showQuickAdd !== quickAddWasOpen) {
+		quickAddWasOpen = showQuickAdd;
+		if (showQuickAdd) {
+			quickAddReturnFocus = document.activeElement as HTMLElement | null;
+			tick().then(() => {
+				const f = quickAddFocusables();
+				(f[0] ?? quickAddSheetEl)?.focus();
+			});
+		} else if (quickAddReturnFocus) {
+			try { quickAddReturnFocus.focus(); } catch { /* element may be gone */ }
+			quickAddReturnFocus = null;
+		}
+	}
+
+	function onQuickAddKeydown(e: KeyboardEvent) {
+		if (!showQuickAdd || !quickAddSheetEl) return;
+		if (e.key === 'Escape') {
+			// A date/time picker open inside the sheet closes itself on the
+			// same key; only its popover goes, not the whole sheet.
+			if (quickAddSheetEl.querySelector('[aria-expanded="true"]')) return;
+			e.preventDefault();
+			quickAddReset();
+			return;
+		}
+		if (e.key !== 'Tab') return;
+		const f = quickAddFocusables();
+		if (f.length === 0) {
+			e.preventDefault();
+			quickAddSheetEl.focus();
+			return;
+		}
+		const first = f[0];
+		const last = f[f.length - 1];
+		const active = document.activeElement as HTMLElement | null;
+		if (!active || !quickAddSheetEl.contains(active)) {
+			e.preventDefault();
+			first.focus();
+		} else if (e.shiftKey && active === first) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && active === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
 
 	// FAB onboarding (CIPH-102): pulse + tooltip for the first 3 sessions so
 	// the quick-add affordance isn't invisible. Klara missed it for 3 min in
@@ -148,6 +224,8 @@
 	let queuedToastKey = 0;
 	let revokedToastShow = false;
 	let revokedToastKey = 0;
+	let quotaToastShow = false;
+	let quotaToastKey = 0;
 	// Generic confirmation toast — any screen can fire a `ciphra:toast` window
 	// event with `detail.message` to confirm an action (e.g. saving a custom
 	// episode type in Settings, which previously closed with no feedback).
@@ -252,6 +330,16 @@
 		};
 		window.addEventListener('ciphra:toast', onToast as EventListener);
 
+		// The outbox set a vault's queued writes aside because its owner is
+		// at the document cap (documents.ts drainOutbox). They stay queued —
+		// say why the pending pill is not going away.
+		const onSyncBlocked = () => {
+			quotaToastKey += 1;
+			quotaToastShow = true;
+			setTimeout(() => { quotaToastShow = false; }, 6000);
+		};
+		window.addEventListener('ciphra:sync-blocked', onSyncBlocked);
+
 		const onOnline = () => { documents.flushOutbox(); };
 		window.addEventListener('online', onOnline);
 		const onVisible = () => {
@@ -291,6 +379,7 @@
 			window.removeEventListener('storage', onStorage);
 			window.removeEventListener('ciphra:family-revoked', onFamilyRevoked);
 			window.removeEventListener('ciphra:toast', onToast as EventListener);
+			window.removeEventListener('ciphra:sync-blocked', onSyncBlocked);
 			window.removeEventListener('online', onOnline);
 			document.removeEventListener('visibilitychange', onVisible);
 			window.removeEventListener('beforeinstallprompt', onBeforeInstall as EventListener);
@@ -350,68 +439,94 @@
 		}
 	}
 
+	// The last quick-add did not reach the vault (not even the offline
+	// queue). The sheet stays open with everything still filled in.
+	let quickAddError = false;
+
+	// A save that did not happen must not flash "saved" and close the sheet
+	// with the input gone. `reset` runs only on success.
+	function quickAddFinish(ok: boolean, reset: () => void) {
+		quickAddSaving = false;
+		if (!ok) {
+			quickAddError = true;
+			return;
+		}
+		quickAddError = false;
+		quickAddSaved = true;
+		setTimeout(() => {
+			quickAddSaved = false;
+			reset();
+			showQuickAdd = false;
+			quickAddOpen.set(false);
+		}, 1200);
+	}
+
 	async function quickAddSave() {
+		// Enter in the note field reached here without the Save button's
+		// disabled gate — a double press minted two entries for the day.
+		if (quickAddSaving) return;
 		const now = new Date();
-		const todayStr = now.toISOString().slice(0, 10);
+		// LOCAL date, like the time next to it. The UTC date put everything
+		// logged between midnight and ~02:00 Swiss time on yesterday — and
+		// merged it into yesterday's entry.
+		const todayStr = toLocalISODate(now);
+		// In someone else's vault the server files every write as shareable,
+		// and a private flag would only hide the entry from the caregiver who
+		// wrote it (see quickAddLinked).
+		const privateFlag = !quickAddLinked && quickAddPrivate ? true : undefined;
 
 		// CIPH-881 — rescue medication writes a `type:'event' kind:'medication'`
 		// doc, distinct from the freeform note-marker event used by the log mode.
 		if (quickAddMode === 'med') {
 			if (!quickAddSelectedMedId) return;
 			quickAddSaving = true;
+			quickAddError = false;
 			const nowTime = now.toTimeString().slice(0, 5);
 			const med = bedarfMedsForPicker(bp).find((m) => m.id === quickAddSelectedMedId);
 			const dose = quickAddDose.trim() || med?.dose || undefined;
-			await documents.save({
+			const ok = await documents.save({
 				type: 'event',
 				kind: 'medication',
 				date: todayStr,
 				time: nowTime,
 				medicationId: quickAddSelectedMedId,
 				dose,
-				private: quickAddPrivate || undefined,
+				private: privateFlag,
 			});
-			quickAddSaving = false;
-			quickAddSaved = true;
-			setTimeout(() => {
-				quickAddSaved = false;
+			quickAddFinish(ok, () => {
 				quickAddSelectedMedId = null;
 				quickAddDose = '';
 				quickAddMode = 'log';
-				showQuickAdd = false;
-				quickAddOpen.set(false);
-			}, 1200);
+			});
 			return;
 		}
 
 		// CIPH-710 — diary mode writes a `type: 'diary'` doc that is hard-
 		// excluded from every export surface (PDF/CSV/reports/share).
 		if (quickAddMode === 'diary') {
-			if (!diaryText.trim()) return;
+			if (!diaryText.trim() || quickAddLinked) return;
 			quickAddSaving = true;
-			await documents.save({
+			quickAddError = false;
+			const ok = await documents.save({
 				type: 'diary',
 				date: diaryDate || todayStr,
 				time: diaryTime || undefined,
 				text: diaryText.trim(),
 				private: true,
 			});
-			quickAddSaving = false;
-			quickAddSaved = true;
-			setTimeout(() => {
-				quickAddSaved = false;
+			quickAddFinish(ok, () => {
 				diaryDate = '';
 				diaryTime = '';
 				diaryText = '';
 				quickAddMode = 'log';
-				showQuickAdd = false;
-				quickAddOpen.set(false);
-			}, 1200);
+			});
 			return;
 		}
 
 		if (!quickAddSelectedEpisode && !quickAddNote.trim()) return;
 		quickAddSaving = true;
+		quickAddError = false;
+		let ok = false;
 
 		if (quickAddSelectedEpisode) {
 			// Merge into today's existing `type:'entry'` if one exists — otherwise
@@ -442,7 +557,7 @@
 							? { time: cur.episodeTimes?.[epId] || '', note: cur.episodeNotes?.[epId] || '' }
 							: {});
 				const nextInstances = [...prevInstances, { time: nowTime, ...(note ? { note } : {}) }];
-				await documents.updateDoc(existing.id, {
+				ok = await documents.updateDoc(existing.id, {
 					...cur,
 					episodes: { ...(cur.episodes || {}), [quickAddSelectedEpisode]: prevCount + 1 },
 					episodeInstances: { ...(cur.episodeInstances || {}), [quickAddSelectedEpisode]: nextInstances },
@@ -456,7 +571,7 @@
 					},
 				});
 			} else {
-				await documents.save({
+				ok = await documents.save({
 					type: 'entry',
 					date: todayStr,
 					episodeType: quickAddSelectedEpisode,
@@ -465,28 +580,23 @@
 					episodeInstances: { [quickAddSelectedEpisode]: [{ time: nowTime, ...(note ? { note } : {}) }] },
 					episodeTimes: { [quickAddSelectedEpisode]: nowTime },
 					episodeNotes: note ? { [quickAddSelectedEpisode]: `${nowTime}: ${note}` } : undefined,
-					private: quickAddPrivate || undefined,
+					private: privateFlag,
 				});
 			}
 		} else if (quickAddNote.trim()) {
-			await documents.save({
+			ok = await documents.save({
 				type: 'event',
 				date: todayStr,
 				notes: quickAddNote.trim(),
-				private: quickAddPrivate || undefined,
+				private: privateFlag,
 			});
 		}
 
-		quickAddSaving = false;
-		quickAddSaved = true;
-		setTimeout(() => {
-			quickAddSaved = false;
+		quickAddFinish(ok, () => {
 			quickAddSelectedEpisode = null;
 			quickAddNote = '';
 			quickAddPrivate = false;
-			showQuickAdd = false;
-			quickAddOpen.set(false);
-		}, 1200);
+		});
 	}
 
 	function quickAddReset() {
@@ -501,6 +611,7 @@
 		quickAddPrivate = false;
 		quickAddSelectedMedId = null;
 		quickAddDose = '';
+		quickAddError = false;
 	}
 
 	// Load documents and blueprint when authenticated
@@ -519,24 +630,66 @@
 	// below bounced a fully-set-up returning user onto the wizard — until they
 	// manually refreshed and the second fetch happened to work. We now do that
 	// refresh automatically instead of stranding them.
+	//
+	// A reload inside a linked vault restores `activeVault` from
+	// sessionStorage, but the patient's key lives in the family links. Loading
+	// both in parallel used to let the documents load win the race, fall back
+	// to the caregiver's OWN vault, and render it under the patient's banner.
+	// With a vault active, the links load first; a vault they do not know is
+	// dropped back to "own" before any document is read.
 	async function loadInitialDocs(attempt = 1): Promise<void> {
-		const [docsOk, linksOk] = await Promise.all([
-			documents.load(),
-			familyLinks.load(),
-		]);
+		const seq = ++vaultLoadSeq;
+		let docsOk: boolean;
+		let linksOk: boolean;
+		let vault = get(activeVault);
+		if (vault !== null) {
+			linksOk = await familyLinks.load();
+			if (linksOk) {
+				linksLoaded = true;
+				snapToKnownVault();
+			}
+			vault = get(activeVault);
+			docsOk = await documents.load();
+		} else {
+			[docsOk, linksOk] = await Promise.all([documents.load(), familyLinks.load()]);
+			if (linksOk) linksLoaded = true;
+		}
+		// Superseded by a newer (re)load — a Retry, or a scheduled attempt.
+		if (seq !== vaultLoadSeq) return;
+		// The vault changed while that was on the wire (the switcher, a
+		// revoke snap-back): those documents are for a vault nobody is
+		// looking at. Start over for the one that is active now.
+		if (get(activeVault) !== vault) {
+			documents.clear();
+			blueprint.clear();
+			return loadInitialDocs(attempt);
+		}
 		blueprint.loadFromDocuments();
 		// Require BOTH loads: a docs-success / links-failure combo would leave
 		// `$familyLinks` empty and wrongly bounce a caregiver-only user to /setup.
 		if (docsOk && linksOk) {
 			docsLoading = false;
 			docsLoaded = true;
+			initialLoadOk = true;
+			initialLoadSettled = true;
 			// One-time single-source migration: fold any legacy preset
 			// `rescueMedications` into the editable `medications` list so the
 			// FAB + Settings read one source. No-op for blueprints already in
 			// the new shape (incl. all new presets). Persist once; subsequent
 			// loads find nothing to fold.
-			const migrated = foldRescueMedications(get(blueprint), $t);
-			if (migrated) blueprint.save(migrated);
+			let migrated = foldRescueMedications(get(blueprint), $t);
+			// One-time: vital targets move from plaintext localStorage into the
+			// encrypted blueprint. Own vault only — a device's legacy targets
+			// belong to the logged-in user, never to a linked patient. The key
+			// is removed only once the blueprint carrying them is saved.
+			const legacyTargetsFor = get(activeVault) === null ? get(auth).username : null;
+			const withTargets = migrateLegacyVitalTargets(migrated ?? get(blueprint), legacyTargetsFor);
+			if (withTargets) migrated = withTargets;
+			if (migrated) {
+				blueprint.save(migrated).then((ok) => {
+					if (ok && withTargets) clearLegacyVitalTargets(legacyTargetsFor);
+				});
+			}
 			// Replay anything queued while offline in a previous session.
 			documents.flushOutbox();
 		} else if (attempt < 4) {
@@ -547,7 +700,71 @@
 			// redirect never fires; the $documentsError banner + manual retry
 			// button (below) stay visible for the user to act on.
 			docsLoading = false;
+			initialLoadSettled = true;
 		}
+	}
+
+	// The first-load sequence has run to an end (loaded, or gave up). Vault
+	// switches before that are handled by loadInitialDocs itself.
+	let initialLoadSettled = false;
+	// ...and it actually loaded. Until then a "reload" means the whole
+	// sequence, links included.
+	let initialLoadOk = false;
+	// A family-links load has succeeded this session, so "no link for the
+	// active vault" is a fact rather than "not loaded yet".
+	let linksLoaded = false;
+	// Bumped by every (re)load; one that finds it moved was superseded and
+	// must not touch the blueprint or `docsLoaded`.
+	let vaultLoadSeq = 0;
+
+	/** Drop an active vault the loaded links do not (or no longer) grant. */
+	function snapToKnownVault() {
+		const v = get(activeVault);
+		if (v !== null && !get(familyLinks).some((l) => l.sourceUserId === v && !l.revoked)) {
+			activeVault.set(null);
+		}
+	}
+
+	/**
+	 * Load the active vault's documents + blueprint. Every call supersedes
+	 * the previous one, so however fast the switcher is clicked — A→B→C, or
+	 * a 403 snap-back mid-load — the vault that ends up loaded is the one
+	 * that is active. `keepShown` (Retry) leaves the current view in place
+	 * while the reload runs.
+	 */
+	async function reloadVault(opts: { keepShown?: boolean } = {}): Promise<void> {
+		if (!initialLoadOk) {
+			if (!initialLoadSettled) return; // the first load is still retrying
+			initialLoadSettled = false;
+			docsLoading = true;
+			return loadInitialDocs();
+		}
+		const seq = ++vaultLoadSeq;
+		docsLoaded = false;
+		if (!opts.keepShown) {
+			documents.clear();
+			blueprint.clear();
+		}
+		const ok = await documents.load();
+		if (seq !== vaultLoadSeq) return;
+		blueprint.loadFromDocuments();
+		// Only commit docsLoaded on a genuine fetch success — a failed
+		// switch (offline / transient / revoked 403) must not flip to an
+		// authoritative empty state for the linked vault. The
+		// $documentsError banner + retry button stay visible instead.
+		if (ok) docsLoaded = true;
+	}
+
+	function resetLoadState() {
+		docsLoadStarted = false;
+		docsLoaded = false;
+		initialLoadSettled = false;
+		initialLoadOk = false;
+		linksLoaded = false;
+		vaultLoadSeq++;
+		// auth.logout() removed the stored copy; drop the in-memory one too so
+		// the next account on this tab does not see it floated first.
+		lastEpisodeId = null;
 	}
 
 	// Redirect to setup when authenticated but no blueprint, only for
@@ -586,8 +803,7 @@
 		// purge has finished before any subsequent navigation could repopulate
 		// caches. UI already flipped (logout sets empty state synchronously).
 		await auth.logout();
-		docsLoadStarted = false;
-		docsLoaded = false;
+		resetLoadState();
 		blueprint.clear();
 		documents.clear();
 		familyLinks.clear();
@@ -605,8 +821,7 @@
 		if (handlingUnauthorized) return; // dedupe concurrent 401s
 		handlingUnauthorized = true;
 		await auth.logout();
-		docsLoadStarted = false;
-		docsLoaded = false;
+		resetLoadState();
 		blueprint.clear();
 		documents.clear();
 		familyLinks.clear();
@@ -618,21 +833,17 @@
 	// When the caregiver switches vault, clear cached docs + blueprint and
 	// reload from the new vault. `lastVault` lets us detect real changes and
 	// skip the initial render that fires while the store hydrates.
+	//
+	// This used to act only when `docsLoaded` was true, while always
+	// recording `lastVault` — so a switch that arrived during a load was
+	// dropped: A→B→C showed B's data under C's banner, and a 403 snap-back
+	// mid-load left the revoked vault's view in place. Every change now
+	// reloads; reloadVault makes the newest one win.
 	let lastVault: number | null | undefined = undefined;
 	$: {
 		const v = $activeVault;
-		if (browser && lastVault !== undefined && v !== lastVault && docsLoaded) {
-			docsLoaded = false;
-			documents.clear();
-			blueprint.clear();
-			documents.load().then((ok) => {
-				blueprint.loadFromDocuments();
-				// Only commit docsLoaded on a genuine fetch success — a failed
-				// switch (offline / transient / revoked 403) must not flip to an
-				// authoritative empty state for the linked vault. The
-				// $documentsError banner + retry button stay visible instead.
-				if (ok) docsLoaded = true;
-			});
+		if (browser && lastVault !== undefined && v !== lastVault && initialLoadSettled) {
+			void reloadVault();
 		}
 		lastVault = v;
 	}
@@ -640,7 +851,13 @@
 	// If the currently-selected vault has been revoked server-side (patient
 	// clicked their panic button), snap the switcher back to the caregiver's
 	// own view so they don't sit staring at a broken /family/documents 403.
-	$: if (browser && $activeVault !== null && $familyLinks.some(l => l.sourceUserId === $activeVault && l.revoked)) {
+	// Same once the links are known to hold no link for it at all (removed
+	// in another tab, or a stale sessionStorage value): without a link there
+	// is no key, and nothing in that vault can be read or written.
+	$: if (browser && $activeVault !== null && (
+		$familyLinks.some(l => l.sourceUserId === $activeVault && l.revoked)
+		|| (linksLoaded && !$familyLinks.some(l => l.sourceUserId === $activeVault))
+	)) {
 		activeVault.set(null);
 	}
 
@@ -721,6 +938,8 @@
 	}
 
 </script>
+
+<svelte:window on:keydown={onQuickAddKeydown} />
 
 {#if secureContextMissing}
 	<div class="min-h-screen flex items-center justify-center p-6" style="background: var(--surface)">
@@ -937,8 +1156,13 @@
 	{#if $documentsError}
 		<div class="mx-4 mt-2 p-3 rounded-xl flex items-center gap-3" style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)">
 			<svg class="w-5 h-5 shrink-0" style="color: var(--danger)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke-width="2" stroke-linecap="round"/></svg>
-			<p class="text-sm" style="color: var(--danger)">{$documentsError}</p>
-			<button on:click={() => { documentsError.set(null); documents.load(); }} class="ml-auto text-xs font-medium min-h-[44px] px-2" style="color: var(--danger)">{$t('common.retry')}</button>
+			<p class="text-sm" style="color: var(--danger)">
+				{#if $documentsError === 'load'}{$t('sync.error_load')}{:else if $documentsError === 'update'}{$t('sync.error_update')}{:else}{$t('sync.error_save')}{/if}
+			</p>
+			<!-- Reloads documents AND the blueprint (and the links, if the first
+				 load never got through) — a documents-only reload left a vault
+				 switch that had failed without its blueprint. -->
+			<button on:click={() => { documentsError.set(null); void reloadVault({ keepShown: true }); }} class="ml-auto text-xs font-medium min-h-[44px] px-2" style="color: var(--danger)">{$t('common.retry')}</button>
 		</div>
 	{/if}
 
@@ -970,16 +1194,27 @@
 		 already has day-cell click → /log/{date} as its add path. -->
 	{#if bp && $hasBlueprint && currentPath !== '/login' && currentPath !== '/setup'}
 		{#if showQuickAdd}
+			<!-- primitive-exempt: Modal — the quick-add bottom sheet carries its
+				 own dialog semantics, focus trap and Escape (onQuickAddKeydown);
+				 neither Modal (centred) nor BottomSheet (z-50, under BottomNav)
+				 fits its stacking. -->
 			<button
 				class="fixed inset-0 z-[55] bg-black/40 backdrop-blur-sm"
 				on:click={quickAddReset}
 				transition:fade={{ duration: 200 }}
 				aria-label={$t('common.close')}
+				tabindex="-1"
 			></button>
 
 			<div
-				class="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto"
+				bind:this={quickAddSheetEl}
+				class="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto focus:outline-none"
 				style="border-top: 1px solid var(--border)"
+				role="dialog"
+				aria-modal="true"
+				aria-label={$t('quickadd.title')}
+				tabindex="-1"
+				data-testid="quickadd-sheet"
 				transition:fly={{ y: 300, duration: 300 }}
 			>
 				<div class="p-5 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto">
@@ -998,6 +1233,12 @@
 						<h3 class="text-lg font-semibold mb-1" style="color: var(--text-primary)">{$t('quickadd.title')}</h3>
 						<p class="text-sm mb-4" style="color: var(--text-muted)">{$t('quickadd.what_happened')}</p>
 
+						{#if quickAddError}
+							<!-- Not saved — not even queued offline. Everything entered is
+								 still below; Save tries again. -->
+							<p class="text-sm mb-4" style="color: var(--danger)" role="alert" data-testid="quickadd-error">{$t('quickadd.save_failed')}</p>
+						{/if}
+
 						<!-- CIPH-710 — top-level mode switch: log entry vs private diary.
 							 CIPH-881 — third "med" chip surfaced only when the active
 							 blueprint declares rescueMedications. -->
@@ -1009,6 +1250,7 @@
 								class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px]"
 								style="background: {quickAddMode === 'log' ? 'var(--surface-card)' : 'transparent'}; color: {quickAddMode === 'log' ? 'var(--text-primary)' : 'var(--text-muted)'}"
 							>{$t('quickadd.mode_entry')} / {$t('quickadd.mode_event')}</button>
+							{#if !quickAddLinked}
 							<button
 								type="button"
 								on:click={() => { quickAddMode = 'diary'; if (!diaryDate) diaryDate = todayISO(); }}
@@ -1022,6 +1264,7 @@
 								</svg>
 								{$t('quickadd.mode_diary')}
 							</button>
+							{/if}
 							{#if bedarfMeds.length > 0}
 								<button
 									type="button"
@@ -1164,11 +1407,17 @@
 								data-testid="quickadd-note"
 								class="input"
 								on:input={() => { if (fabShowTooltip) dismissFabTooltip(); }}
-								on:keydown={(e) => { if (e.key === 'Enter' && (quickAddSelectedEpisode || quickAddNote.trim())) quickAddSave(); }}
+								on:keydown={(e) => { if (e.key === 'Enter' && !quickAddSaving && (quickAddSelectedEpisode || quickAddNote.trim())) quickAddSave(); }}
 							/>
 						</div>
 
-						<!-- CIPH-713 / CIPH-783 — private toggle with semantic lock state -->
+						<!-- CIPH-713 / CIPH-783 — private toggle with semantic lock state.
+							 Not in someone else's vault: see quickAddLinked. -->
+						{#if quickAddLinked}
+							<p class="text-[11px] mb-3" style="color: var(--text-muted)" data-testid="quickadd-linked-hint">
+								{$t('quickadd.linked_hint', { user: $familyLinks.find((l) => l.sourceUserId === $activeVault)?.sourceUsername ?? '' })}
+							</p>
+						{:else}
 						<label class="flex items-center gap-2 text-xs mb-3" style="color: var(--text-secondary)"
 							aria-label={quickAddPrivate ? $t('private.toggle_to_public') : $t('private.toggle_to_private')}>
 							<input type="checkbox" bind:checked={quickAddPrivate} class="w-4 h-4" />
@@ -1192,6 +1441,7 @@
 							     fact printed verbatim on the doctor PDF. -->
 							<span style="color: var(--text-muted)">— {quickAddPrivate ? $t('private.tooltip') : $t('private.state_public_hint')}</span>
 						</label>
+						{/if}
 
 						<!-- Save button -->
 						<button
@@ -1235,6 +1485,11 @@
 	<!-- A linked vault was revoked while viewing it — snapped back to own vault. -->
 	{#key revokedToastKey}
 		<Toast message={revokedToastShow ? $t('family.access_removed') : ''} duration={3000} show={revokedToastShow} />
+	{/key}
+
+	<!-- Offline writes held back because the vault is at its document cap. -->
+	{#key quotaToastKey}
+		<Toast message={quotaToastShow ? $t('sync.quota_exceeded') : ''} duration={6000} show={quotaToastShow} />
 	{/key}
 
 	<!-- Generic confirmation toast (ciphra:toast event, e.g. custom-item save). -->

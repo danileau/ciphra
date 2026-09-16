@@ -11,37 +11,110 @@ app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
-### Added
-- **Medication changes now have a history.** When a dose changes — say from
-  2× 10 mg to 2× 12 mg starting tomorrow — choose *Change* on the medication,
-  say what is changing and from when, and ciphra shows you exactly how it will
-  be recorded before it saves anything. Days before the change keep the dose
-  you actually took; days after it show the new one. You can also record that
-  you stopped a medication, or switched to a different one, the same way.
-- Stopped medications no longer disappear. They move to their own list in
-  Settings, stay in your history, and can be taken up again.
-- **Dose changes show up wherever your data does.** The day view shows the dose
-  that applied that day; the calendar marks the day a medication started,
-  changed or stopped; the reports page shows a medication timeline next to your
-  trend chart; and the PDF for your doctor lists adherence per dose, the changes
-  in the report period, and a timeline. The CSV export gets a dose-of-the-day
-  column per daily medication. ciphra shows *when* a dose changed — it does not
-  compare how you were before and after. The reason you type for a change stays
-  in the app and is not printed in the PDF.
+### Fixed
+- When the server was briefly unreachable and the connection answered with an
+  error page instead, saving an entry failed. It is now kept on your device and
+  synced once the server is back, the same as when you are offline.
+- **An entry you locked while offline could still be shown to a family member
+  after it synced.** It now syncs as private. The next time you open ciphra it
+  also corrects any entry whose sharing no longer matches how you marked it.
+- Coming back online could save an entry you wrote offline twice.
+- If someone removed your access to their account while you still had unsynced
+  changes for it, none of your other offline changes synced any more. Your own
+  entries now sync regardless; the changes for the account you can no longer
+  open are discarded. If an account is full, its offline entries now wait
+  without holding up anything else, and ciphra tells you why.
+- Editing an entry online right after an offline edit of it could later be
+  overwritten by the older offline version.
+- Importing a long history with large diary entries could be rejected as too big
+  and fall back to a slow one-by-one import.
+- Error messages about loading or saving entries were shown in English whatever
+  your language.
+- **Reloading the page while viewing someone else's account could show your own
+  entries under their name** — and a new entry could then be saved to the wrong
+  account. Switching between accounts quickly could also leave the previous
+  account's entries on screen. The account named in the banner is now always
+  the one you see and write to — until it has loaded you see the loading
+  indicator — and "Retry" reloads everything that account needs.
+- **A save that failed could still say "Saved".** The day view, the quick-add
+  sheet and deleting an entry now tell you when something did not go through,
+  and keep what you typed so you can try again. (Saving while offline still
+  counts as saved — it syncs later, as before.)
+- Pressing Enter or Ctrl+S twice in a row could save the same entry twice, and
+  Ctrl+S on an empty day saved an empty entry.
+- Leaving a day with unsaved changes — including with the arrow keys — threw the
+  changes away without asking. ciphra now asks first.
+- In someone else's account, the quick-add sheet and the day view offered a
+  diary entry and a "private" switch. Those entries disappeared from your view
+  after a reload while staying visible to others with access. Both options are
+  now only offered in your own account.
+- Entries added with the quick-add button between midnight and about 2 a.m.
+  were filed under the previous day. The reports page, the journal's time filter
+  and the "top triggers" card could be off by a day in the same hours.
+- Changing an episode count with + / − in the reports table could be undone the
+  next time you saved that day, and clicking quickly could lose clicks or create
+  a second entry for the same day.
+- Your vital targets from the setup wizard (a blood-pressure goal, say) were
+  kept unencrypted in the browser and only on that one device. They are now
+  stored encrypted with the rest of your profile, so they follow you to other
+  devices; the old unencrypted copy is removed the next time you sign in.
+  Logging out also removes the episode type you last picked in quick-add. The
+  security documentation now lists every setting ciphra keeps in the browser.
+- A doctor PDF exported for someone else's account drew their charts against
+  your own vital targets. It now uses theirs.
+- **"Revoke all" could fail without telling you** — and so could revoking a
+  single invitation. You now see clearly when access was not removed, so you can
+  try again. Creating an invitation or changing what it may see also reports a
+  failure instead of silently stopping, and if your invitations cannot be
+  loaded, ciphra says so rather than showing that there are none.
+- Some error messages in Settings and in family sharing were shown in English
+  whatever your language, and "last seen" used English abbreviations.
+- The quick-add sheet now works with a keyboard and screen readers: it is
+  announced as a dialog, keeps focus inside while open, closes with Escape, and
+  returns you to the button that opened it.
+### Security
+- **A deleted account's sign-ins stop working straight away, on every device.**
+  They could still be accepted until they expired, up to a day later. Taking away
+  admin rights now also takes effect on the next click rather than the next
+  sign-in.
+- **If ciphra's database briefly can't be reached, requests are refused, not
+  waved through, and you stay signed in.** The server used to skip its sign-in
+  check during such an outage — and signed out anyone who had ever changed or
+  reset their password. The app now treats it like being offline.
+- **An account suspended by an administrator stays suspended.** Signing in with
+  the right password, or resetting it with the recovery code, used to lift the
+  suspension; it now doesn't, and suspending an account also signs it out on
+  every device. The automatic 15-minute lock after too many wrong passwords is
+  unchanged: the right password still gets you in.
+- **After a lockout has run out, one typo no longer locks you out again.** The
+  failed-attempt count used to stay at its maximum, so the very next mistake
+  started another 15 minutes. Several wrong attempts at the same moment are now
+  also all counted.
+- **If someone you share with deletes their ciphra account, their access is
+  revoked** instead of the invitation becoming claimable again with the same
+  code. Invite them again if they come back.
+- **Two people using the same invitation at the same moment** can no longer
+  both be told it worked. One gets it; the other is told it is already taken.
+- If someone holds two of your invitations with different scopes, the narrower
+  one now always applies, rather than whichever the server happened to read.
+- Looking up a username's family invitations no longer gives away, through the
+  reply alone, whether that person has any. The security model now says plainly
+  what can still be learned about whether an account exists: registration tells
+  you a name is taken, and a lockout tells you the account is real.
+- IP addresses in the audit log are now shortened after 30 days and the entries
+  deleted after 90 even while the server keeps running — this used to happen
+  only when it restarted. IPv6 addresses are now shortened correctly; some used
+  to be garbled instead. The security model also now spells out that the audit
+  log records when documents are created, changed and deleted (never their
+  content).
+- Malformed requests that used to crash the server are refused cleanly, and one
+  bad entry in a bulk import no longer fails the whole import.
 
 ### Fixed
-- Editing a medication's dose used to rewrite every day you had already
-  logged, as if you had always taken the new dose. Existing days now keep what
-  was recorded for them; a genuine typo can still be corrected, and the app
-  tells you that a correction applies to every day with that dose.
-- Deleting a medication you had already logged against removed it from your
-  reports and the PDF for your doctor. ciphra now offers to stop it instead,
-  and says how many days would lose the name before you delete it anyway.
-- A newly added daily medication counted as "taken" on every logged day of the
-  report, including days before you started it. Adherence now only counts days
-  on which the medication was part of your regimen.
-- On a phone, a dialog taller than the screen was cut off at the top and bottom
-  and could not be scrolled, and the bottom navigation bar covered its buttons.
+- Mistyping your current password when changing your password or deleting your
+  account signed you out of ciphra. It now just says the password is wrong.
+- Signing in to a suspended account now says the account is suspended, instead
+  of claiming the password is wrong.
 
 ## [1.3.0] — 2026-08-30
 

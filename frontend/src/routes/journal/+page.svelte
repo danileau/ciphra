@@ -25,7 +25,7 @@
 -->
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
-	import { todayISO } from '$lib/date';
+	import { todayISO, toLocalISODate } from '$lib/date';
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
@@ -64,7 +64,9 @@
 		if (!rangeMonths) return undefined;
 		const d = new Date();
 		d.setMonth(d.getMonth() - rangeMonths);
-		return d.toISOString().slice(0, 10);
+		// Local day: entry dates are local, and the UTC date is yesterday's
+		// for the first hours after midnight here.
+		return toLocalISODate(d);
 	})();
 	let searchOpen = false;
 	let searchInputEl: HTMLInputElement | null = null;
