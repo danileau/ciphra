@@ -51,6 +51,9 @@ app at **/docs → Changelog** and here on the public repo.
 - Entries added with the quick-add button between midnight and about 2 a.m.
   were filed under the previous day. The reports page, the journal's time filter
   and the "top triggers" card could be off by a day in the same hours.
+- Changing an episode count with + / − in the reports table could be undone the
+  next time you saved that day, and clicking quickly could lose clicks or create
+  a second entry for the same day.
 
 ## [1.3.0] — 2026-08-30
 

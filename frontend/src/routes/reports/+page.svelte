@@ -31,7 +31,8 @@
 	async function loadPdfLib() {
 		return await import('$lib/pdf');
 	}
-	import { isEpisodeBearing } from '$lib/utils/episodeCounts';
+	import { isEpisodeBearing, withEpisodeCountChanged } from '$lib/utils/episodeCounts';
+	import { createKeyedQueue } from '$lib/utils/keyedQueue';
 	import { isExportable } from '$lib/utils/exportable';
 	import ExportPeriodPopover from '$lib/components/ExportPeriodPopover.svelte';
 	import ExportNoteReview from '$lib/components/ExportNoteReview.svelte';
@@ -1087,56 +1088,69 @@
 		return d.toLocaleDateString($locale, { month: 'short' });
 	}
 
-	async function toggleGridSymptom(dayStr: string, symptomId: string) {
-		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
-		if (existing) {
-			const symptoms = { ...existing.data.symptoms, [symptomId]: !existing.data.symptoms?.[symptomId] };
-			await documents.updateDoc(existing.id, { ...existing.data, symptoms });
-		} else {
-			const data: any = { type: 'entry', date: dayStr, symptoms: { [symptomId]: true }, episodes: {}, triggers: {}, vitals: {}, medications: {}, notes: '' };
-			await documents.save(data);
-		}
+	// Grid edits run one at a time per day. Each handler reads the day's
+	// entry, changes it and writes it back; rapid clicks all read the same
+	// stale copy, so the second "+" overwrote the first, and on an empty day
+	// every click minted its own entry. Queued, each edit reads what the
+	// previous one wrote (the store is updated before a write resolves).
+	const onGridDay = createKeyedQueue();
+
+	function toggleGridSymptom(dayStr: string, symptomId: string) {
+		return onGridDay(dayStr, async () => {
+			const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
+			if (existing) {
+				const symptoms = { ...existing.data.symptoms, [symptomId]: !existing.data.symptoms?.[symptomId] };
+				await documents.updateDoc(existing.id, { ...existing.data, symptoms });
+			} else {
+				const data: any = { type: 'entry', date: dayStr, symptoms: { [symptomId]: true }, episodes: {}, triggers: {}, vitals: {}, medications: {}, notes: '' };
+				await documents.save(data);
+			}
+		});
 	}
 
-	async function toggleGridTrigger(dayStr: string, triggerId: string) {
-		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
-		if (existing) {
-			// Normalize legacy array-shaped triggers to an object before toggling.
-			const cur = existing.data.triggers;
-			const obj: Record<string, boolean> = Array.isArray(cur)
-				? Object.fromEntries((cur as string[]).map((id) => [id, true]))
-				: { ...(cur || {}) };
-			obj[triggerId] = !obj[triggerId];
-			await documents.updateDoc(existing.id, { ...existing.data, triggers: obj });
-		} else {
-			const data: any = { type: 'entry', date: dayStr, symptoms: {}, episodes: {}, triggers: { [triggerId]: true }, vitals: {}, medications: {}, notes: '' };
-			await documents.save(data);
-		}
+	function toggleGridTrigger(dayStr: string, triggerId: string) {
+		return onGridDay(dayStr, async () => {
+			const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
+			if (existing) {
+				// Normalize legacy array-shaped triggers to an object before toggling.
+				const cur = existing.data.triggers;
+				const obj: Record<string, boolean> = Array.isArray(cur)
+					? Object.fromEntries((cur as string[]).map((id) => [id, true]))
+					: { ...(cur || {}) };
+				obj[triggerId] = !obj[triggerId];
+				await documents.updateDoc(existing.id, { ...existing.data, triggers: obj });
+			} else {
+				const data: any = { type: 'entry', date: dayStr, symptoms: {}, episodes: {}, triggers: { [triggerId]: true }, vitals: {}, medications: {}, notes: '' };
+				await documents.save(data);
+			}
+		});
 	}
 
-	async function incrementGridEpisode(dayStr: string, episodeId: string) {
-		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
-		if (existing) {
-			const episodes = { ...existing.data.episodes, [episodeId]: (existing.data.episodes?.[episodeId] || 0) + 1 };
-			await documents.updateDoc(existing.id, { ...existing.data, episodes });
-		} else {
-			const data: any = { type: 'entry', date: dayStr, symptoms: {}, episodes: { [episodeId]: 1 }, triggers: {}, vitals: {}, medications: {}, notes: '' };
-			await documents.save(data);
-		}
+	// Count and per-occurrence rows move together (withEpisodeCountChanged):
+	// /log prefers the rows, so changing only the count was reverted by the
+	// next save of that day.
+	function incrementGridEpisode(dayStr: string, episodeId: string) {
+		return onGridDay(dayStr, async () => {
+			const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
+			if (existing) {
+				await documents.updateDoc(existing.id, withEpisodeCountChanged(existing.data, episodeId, 1));
+			} else {
+				const data: any = { type: 'entry', date: dayStr, symptoms: {}, episodes: { [episodeId]: 1 }, triggers: {}, vitals: {}, medications: {}, notes: '' };
+				await documents.save(data);
+			}
+		});
 	}
 	// CIPH-915 — Decrement episode count from the grid table. Mirrors
 	// increment but goes the other way; deletes the key entirely when
 	// the count would hit 0 so re-encryption diffs stay minimal.
-	async function decrementGridEpisode(dayStr: string, episodeId: string) {
-		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
-		if (!existing) return;
-		const cur = Number(existing.data.episodes?.[episodeId] || 0);
-		if (cur <= 0) return;
-		const next = cur - 1;
-		const episodes = { ...(existing.data.episodes || {}) };
-		if (next > 0) episodes[episodeId] = next;
-		else delete episodes[episodeId];
-		await documents.updateDoc(existing.id, { ...existing.data, episodes });
+	function decrementGridEpisode(dayStr: string, episodeId: string) {
+		return onGridDay(dayStr, async () => {
+			const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === dayStr);
+			if (!existing) return;
+			const next = withEpisodeCountChanged(existing.data, episodeId, -1);
+			if (!next) return;
+			await documents.updateDoc(existing.id, next);
+		});
 	}
 
 	function getFirstDayOfWeek(year: number, month: number): number {
