@@ -14,7 +14,7 @@
 	// CIPH-764 reverted post senior review — country-specific helplines
 	// without explicit user country selection conflict with zero-knowledge.
 	// Replaced by CIPH-790 (settings-based opt-in help section).
-	import { familyLinks } from '$lib/stores/familyLinks';
+	import { familyLinks, activeVaultReady } from '$lib/stores/familyLinks';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import {
 		resolvePrimaryDashboardCard,
@@ -536,7 +536,7 @@
 	}
 </script>
 
-{#if !loaded || $documentsError || (!bp && $documents.some(d => d.data?.type === 'blueprint'))}
+{#if !loaded || !$activeVaultReady || $documentsError || (!bp && $documents.some(d => d.data?.type === 'blueprint'))}
 	<!-- ── Loading state (CIPH-204): the asterisk *is* the loading state.
 	     The second condition prevents the caregiver-empty flash on hard
 	     refresh: documents.load() can finish (loaded=true) before the
@@ -548,7 +548,10 @@
 	     layout auto-retries a failed initial load (cacheless-device fetch
 	     hiccup) — otherwise an authed returning user would flash the
 	     caregiver-empty screen on top of the error banner. When the retry
-	     succeeds the error clears and $documents/$blueprint populate. -->
+	     succeeds the error clears and $documents/$blueprint populate.
+	     $activeVaultReady: after a reload inside a linked vault the documents
+	     load waits for the family links (it no longer falls back to the own
+	     vault), so load() resolves before there is anything to show. -->
 	<div class="max-w-3xl mx-auto px-4 py-20 flex flex-col items-center justify-center">
 		<Asterisk size={56} mode="loading" color="brand" />
 		<p class="mt-4 text-sm" style="color: var(--text-muted)">{$t('common.loading')}</p>

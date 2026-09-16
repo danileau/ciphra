@@ -7,7 +7,7 @@
 	import { todayISO } from '$lib/date';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem, prettifyCustomId, resolveMedDisplay } from '$lib/blueprint';
-	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
+	import { familyLinks, activeVault, activeVaultReady } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
@@ -1165,7 +1165,7 @@
 	}
 </script>
 
-{#if !bp && !initialLoadDone}
+{#if !bp && (!initialLoadDone || !$activeVaultReady)}
 	<!-- Genuine loading state — we're still fetching/decrypting documents. -->
 	<div class="layout-data-wide py-12 text-center">
 		<Asterisk size={32} spin color="muted" />

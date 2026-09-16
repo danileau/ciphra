@@ -34,8 +34,8 @@ app at **/docs → Changelog** and here on the public repo.
   entries under their name** — and a new entry could then be saved to the wrong
   account. Switching between accounts quickly could also leave the previous
   account's entries on screen. The account named in the banner is now always
-  the one you see and write to, and "Retry" reloads everything that account
-  needs.
+  the one you see and write to — until it has loaded you see the loading
+  indicator — and "Retry" reloads everything that account needs.
 - **A save that failed could still say "Saved".** The day view, the quick-add
   sheet and deleting an entry now tell you when something did not go through,
   and keep what you typed so you can try again. (Saving while offline still
