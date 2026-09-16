@@ -170,14 +170,28 @@ If you want plaintext gone right now without losing your session, log out — th
 
 Same wipe contract as IndexedDB on logout — every cache whose key starts with `ciphra-` is deleted. SvelteKit currently ships render-only HTML shells via the SW, so today there is no patient data sitting in this cache; the wipe is defensive against future loader-injected content. Code: `frontend/src/lib/stores/auth.ts:142-149`.
 
-### 5. Small preference + bookkeeping keys (no health data)
+### 5. Small preference + bookkeeping keys
 
-A handful of plain-string keys that hold UI state, not patient data, and are not part of the wipe contract above:
+A handful of plain-string keys that hold UI state. None of them holds entry content. One is **derived from your health data** and is removed on logout; the rest carry nothing about your health and are not part of the wipe contract above.
 
-- `localStorage.ciphra_theme` — `light` / `dark` / `system` display preference.
-- `localStorage.ciphra_welcome_web_seen`, `ciphra_welcome_migrate_seen`, `ciphra_migrate_tour_seen` — one-shot "already saw this intro" flags (`1`).
+Removed on logout (`clearHealthPreferences` in `frontend/src/lib/stores/auth.ts`, called from `logout()` — which also runs when a session expires, when the browser was closed and the vault has to be unlocked again, and after account deletion). It is *not* touched by the "Cache jetzt leeren" button, which by contract keeps everything in `localStorage`:
+
+- `localStorage.ciphra_quickadd_last_episode` — the id of the episode type you last picked in quick-add, so it is offered first. Episode type ids name the condition (e.g. a seizure type).
+
+Migrated away:
+
+- `localStorage.ciphra_vital_targets:<username>` — where the personal vital targets from the setup wizard (e.g. a blood-pressure goal) used to be kept, in plaintext. A target says something about what is being treated, so targets now live inside your encrypted blueprint instead. On the first sign-in after the change, an existing key is copied into the blueprint and **removed once that encrypted copy is saved**. It is deliberately not removed on logout: logout also runs when a closed browser is reopened, before you can sign in again, and removing it then would lose targets that were never copied. A caregiver's device-local targets are never applied to a linked patient.
+
+Kept (no health data):
+
+- `localStorage.ciphra_theme` — `light` / `dark` / `system` display preference. `localStorage.ciphra_locale` — interface language.
+- `localStorage.ciphra_welcome_web_seen`, `ciphra_welcome_migrate_seen`, `ciphra_migrate_tour_seen`, `ciphra_fab_seen_count`, `ciphra_fab_tooltip_dismissed`, `ciphra_event_line_tooltip_seen`, `ciphra_tagebuch_views`, `ciphra_pwa_install_dismissed_at`, `ciphra_legacy_swept_v1` — one-shot "already saw this" flags and counters.
+- `localStorage.ciphra_quickadd_last_mode` — which quick-add tab (`log` / `diary` / `med`) a long-press opens.
+- `localStorage.ciphra_setup_skipped` — "set up my own tracking later"; also cleared on every login and logout.
 - `localStorage.ciphra_migrate_done:<source>:<token>` — migration resume checkpoint: the list of already-imported document ids for a given import run, so an interrupted migration can continue without duplicates. Contains document *ids* and the one-time export token, no entry content; removed when the import completes.
 - `sessionStorage.ciphra_focus_month` — the `YYYY-MM` month you were last browsing, so calendar and reports stay on the same month within a tab.
+- `sessionStorage.ciphra_active_vault` — the numeric id of the linked account you are viewing, so a reload stays in it. Tab-scoped; reset to your own account on logout.
+- `sessionStorage.ciphra_pending_family_claim` — an invitation link opened before logging in: the grant id and family code, held until you have logged in and are sent on to the claim (then removed), or until the tab closes.
 
 ### What this means in practice
 

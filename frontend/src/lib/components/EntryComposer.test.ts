@@ -137,9 +137,99 @@ describe('CIPH-850 EntryComposer contract', () => {
 
 	it('Ctrl+S triggers immediate save', async () => {
 		const props = baseProps();
-		render(EntryComposer, { props });
+		const { container } = render(EntryComposer, { props });
+		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
+		await fireEvent.input(ta, { target: { value: 'something to save' } });
 		await fireEvent.keyDown(window, { key: 's', ctrlKey: true });
 		await waitFor(() => expect(props.onSave).toHaveBeenCalledTimes(1));
+	});
+
+	// Ctrl+S used to bypass the Save button's disabled gate.
+	it('Ctrl+S on an untouched form saves nothing (the Save button is disabled too)', async () => {
+		const props = baseProps();
+		render(EntryComposer, { props });
+		await fireEvent.keyDown(window, { key: 's', ctrlKey: true });
+		await new Promise((r) => setTimeout(r, 0));
+		expect(props.onSave).not.toHaveBeenCalled();
+	});
+
+	it('a second Ctrl+S while the first save is running does not save twice', async () => {
+		let finish!: (ok: boolean) => void;
+		const props = { ...baseProps(), onSave: vi.fn(() => new Promise<boolean>((r) => { finish = r; })) };
+		const { container } = render(EntryComposer, { props });
+		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
+		await fireEvent.input(ta, { target: { value: 'once' } });
+		await fireEvent.keyDown(window, { key: 's', ctrlKey: true });
+		await fireEvent.keyDown(window, { key: 's', ctrlKey: true });
+		await fireEvent.keyDown(window, { key: 's', ctrlKey: true });
+		expect(props.onSave).toHaveBeenCalledTimes(1);
+		finish(true);
+	});
+
+	it('a failed save says so and keeps the input — no "saved" flash', async () => {
+		const props = { ...baseProps(), onSave: vi.fn().mockResolvedValue(false) };
+		const { container } = render(EntryComposer, { props });
+		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
+		await fireEvent.input(ta, { target: { value: 'do not lose me' } });
+		await fireEvent.click(container.querySelector('.log-btn-save') as HTMLButtonElement);
+		await waitFor(() => expect(container.querySelector('[data-testid="entry-save-error"]')).toBeTruthy());
+		expect(container.querySelector('.log-saved-feedback')).toBeNull();
+		expect((container.querySelector('textarea') as HTMLTextAreaElement).value).toBe('do not lose me');
+		// Still dirty: Save stays enabled for another try.
+		expect((container.querySelector('.log-btn-save') as HTMLButtonElement).disabled).toBe(false);
+	});
+
+	it('a save that throws is treated as not saved', async () => {
+		const props = { ...baseProps(), onSave: vi.fn().mockRejectedValue(new Error('boom')) };
+		const { container } = render(EntryComposer, { props });
+		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
+		await fireEvent.input(ta, { target: { value: 'x' } });
+		await fireEvent.click(container.querySelector('.log-btn-save') as HTMLButtonElement);
+		await waitFor(() => expect(container.querySelector('[data-testid="entry-save-error"]')).toBeTruthy());
+	});
+
+	it('a failed delete says so', async () => {
+		const props = {
+			...baseProps(),
+			existingDoc: makeDoc({ type: 'entry', date: '2026-04-27' }),
+			onDelete: vi.fn().mockResolvedValue(false),
+		};
+		const { container } = render(EntryComposer, { props });
+		await fireEvent.click(container.querySelector('.log-btn-delete') as HTMLButtonElement);
+		await waitFor(() => expect(container.querySelector('.log-btn-danger')).toBeTruthy());
+		await fireEvent.click(container.querySelector('.log-btn-danger') as HTMLButtonElement);
+		await waitFor(() => expect(container.querySelector('[data-testid="entry-save-error"]')).toBeTruthy());
+	});
+
+	it('onDirtyChange reports the user\'s unsaved edits, and clears after a save', async () => {
+		const onDirtyChange = vi.fn();
+		const props = { ...baseProps(), onSave: vi.fn().mockResolvedValue(true), onDirtyChange };
+		const { container } = render(EntryComposer, { props });
+		expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
+		await fireEvent.input(ta, { target: { value: 'edit' } });
+		await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(true));
+		await fireEvent.click(container.querySelector('.log-btn-save') as HTMLButtonElement);
+		await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(false));
+	});
+
+	it('a phase carried over from yesterday is not an unsaved edit', async () => {
+		const onDirtyChange = vi.fn();
+		const props = {
+			...baseProps(),
+			bp: makeBp({
+				episodeTypes: [{ id: 'flare', label: 'ep.flare', color: '#f00', multiDay: true }],
+			}),
+			previousDoc: makeDoc({ type: 'entry', date: '2026-04-26', episodes: { flare: 1 } }),
+			onDirtyChange,
+		};
+		const { container } = render(EntryComposer, { props });
+		// Save is enabled for the carried-over phase...
+		await waitFor(() =>
+			expect((container.querySelector('.log-btn-save') as HTMLButtonElement).disabled).toBe(false),
+		);
+		// ...but leaving without touching anything must not prompt.
+		expect(onDirtyChange).not.toHaveBeenCalledWith(true);
 	});
 
 	it('ArrowLeft / ArrowRight emit onDateChange', async () => {
@@ -330,6 +420,23 @@ describe('CIPH-850 EntryComposer contract', () => {
 		await fireEvent.click(container.querySelector('.log-btn-save') as HTMLButtonElement);
 		await waitFor(() => expect(props.onSave).toHaveBeenCalledTimes(2));
 		expect(props.onSave.mock.calls[1][0].private).toBeUndefined();
+	});
+
+	it('in someone else\'s vault (allowPrivate=false) there is no private toggle and nothing saves as private', async () => {
+		const props = {
+			...baseProps(),
+			allowPrivate: false,
+			existingDoc: makeDoc({ type: 'entry', date: '2026-04-27', private: true, notes: 'x' }),
+		};
+		const { container } = render(EntryComposer, { props });
+		// The private toggle is the date header's pressed-state button (symptom
+		// chips are pressed-state buttons too, further down).
+		expect(container.querySelector('.log-date-center button[aria-pressed]')).toBeNull();
+		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
+		await fireEvent.input(ta, { target: { value: 'edited by carer' } });
+		await fireEvent.click(container.querySelector('.log-btn-save') as HTMLButtonElement);
+		await waitFor(() => expect(props.onSave).toHaveBeenCalled());
+		expect(props.onSave.mock.calls[0][0].private).toBeUndefined();
 	});
 
 	it('copy-previous-day merges previousDoc fields into form state', async () => {

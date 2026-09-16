@@ -39,16 +39,48 @@ async function request(
 		window.dispatchEvent(new CustomEvent('ciphra:unauthorized'));
 	}
 
+	// The API always answers in JSON; the things in front of it do not. An
+	// nginx or Cloudflare 502/503/504 is an HTML page, and `res.json()` threw
+	// a SyntaxError on it — which is not a network error, so an offline-
+	// capable write FAILED instead of queueing, and a batch reported status 0.
+	// Keep the status so the callers' retry/queue logic sees what happened.
+	// A 2xx that is not JSON did not come from the API either (captive
+	// portal, proxy page): report it as "no response", never as success —
+	// an empty `documents` list read as authoritative would wipe the cache.
+	const body = await readJson(res);
+	if (body === NOT_JSON) {
+		return { ok: false, status: res.ok ? 0 : res.status, data: {} };
+	}
+
 	// A 403 on a linked patient's vault means the grant was revoked while the
 	// caregiver was viewing it. Distinct from 401 (own session is fine) — tell
 	// the shell to reconcile family links + snap back to the caregiver's own
 	// vault, instead of leaving a stuck switcher + generic "load failed" error.
+	// Only the API's own (JSON) 403 counts: an HTML block page from a WAF in
+	// front of it says nothing about the grant.
 	if (res.status === 403 && token && path.startsWith('/family/documents') && typeof window !== 'undefined') {
 		window.dispatchEvent(new CustomEvent('ciphra:family-revoked'));
 	}
 
-	const data = await res.json();
-	return { ok: res.ok, status: res.status, data };
+	return { ok: res.ok, status: res.status, data: body };
+}
+
+const NOT_JSON = Symbol('not-json');
+
+async function readJson(res: Response): Promise<Record<string, unknown> | typeof NOT_JSON> {
+	let text: string;
+	try {
+		text = await res.text();
+	} catch {
+		return NOT_JSON;
+	}
+	if (text.trim() === '') return {};
+	try {
+		const parsed = JSON.parse(text);
+		return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : NOT_JSON;
+	} catch {
+		return NOT_JSON;
+	}
 }
 
 import type { RegistrationBundle } from './crypto';

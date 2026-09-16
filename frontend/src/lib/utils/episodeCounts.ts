@@ -62,3 +62,75 @@ export function daysWithEpisodes(
 	}
 	return days;
 }
+
+type EpisodeInstanceLike = { time?: string; duration?: string; note?: string };
+
+/**
+ * A day entry with one more (`+1`) or one fewer (`-1`) occurrence of
+ * `episodeId`, or `null` when there is nothing to remove.
+ *
+ * The count (`episodes[id]`) and the per-occurrence rows
+ * (`episodeInstances[id]`) have to move together. EntryComposer PREFERS the
+ * rows whenever an entry has any, so the /reports grid bumping only the count
+ * was undone by the next save of that day in /log. The rules mirror the
+ * composer's own save (see EntryComposer `saveEntry` /
+ * `synthesizeEpisodeInstances`):
+ *
+ * - An entry with rows: `+1` appends an untimed row; `-1` removes the last
+ *   untimed row, or the last row if every row has a time. The count is the
+ *   row count. The first-occurrence time/duration mirrors are refreshed when
+ *   the first row went, the joined note when a noted row went.
+ * - A count-only entry (saved before rows existed) stays count-only; the
+ *   composer synthesises its rows from the count.
+ *
+ * A legacy `seizures` map is carried into `episodes` whole, so no other
+ * episode's count is lost when the entry is rewritten.
+ */
+export function withEpisodeCountChanged(data: any, episodeId: string, delta: 1 | -1): any | null {
+	const counts: Record<string, number> = { ...(data?.episodes || data?.seizures || {}) };
+	const stored = data?.episodeInstances?.[episodeId];
+	const rows: EpisodeInstanceLike[] | null = Array.isArray(stored) && stored.length > 0 ? [...stored] : null;
+
+	if (!rows) {
+		const current = Number(counts[episodeId] || 0) || 0;
+		if (delta < 0 && current <= 0) return null;
+		const next = current + delta;
+		if (next > 0) counts[episodeId] = next;
+		else delete counts[episodeId];
+		return { ...data, episodes: counts };
+	}
+
+	const next: any = { ...data };
+	if (delta > 0) {
+		rows.push({});
+	} else {
+		let idx = -1;
+		for (let i = rows.length - 1; i >= 0; i--) {
+			if (!rows[i]?.time) { idx = i; break; }
+		}
+		if (idx < 0) idx = rows.length - 1;
+		const [removed] = rows.splice(idx, 1);
+		if (idx === 0) {
+			next.episodeTimes = { ...(data.episodeTimes || {}), [episodeId]: rows[0]?.time || '' };
+			next.episodeDurations = { ...(data.episodeDurations || {}), [episodeId]: rows[0]?.duration || '' };
+		}
+		if (removed?.note) {
+			next.episodeNotes = {
+				...(data.episodeNotes || {}),
+				[episodeId]: rows.map((r) => r.note).filter(Boolean).join(' · '),
+			};
+		}
+	}
+
+	const instances = { ...(data.episodeInstances || {}) };
+	if (rows.length > 0) {
+		instances[episodeId] = rows;
+		counts[episodeId] = rows.length;
+	} else {
+		delete instances[episodeId];
+		delete counts[episodeId];
+	}
+	next.episodeInstances = instances;
+	next.episodes = counts;
+	return next;
+}

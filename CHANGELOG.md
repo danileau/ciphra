@@ -11,6 +11,67 @@ app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
+### Fixed
+- When the server was briefly unreachable and the connection answered with an
+  error page instead, saving an entry failed. It is now kept on your device and
+  synced once the server is back, the same as when you are offline.
+- **An entry you locked while offline could still be shown to a family member
+  after it synced.** It now syncs as private. The next time you open ciphra it
+  also corrects any entry whose sharing no longer matches how you marked it.
+- Coming back online could save an entry you wrote offline twice.
+- If someone removed your access to their account while you still had unsynced
+  changes for it, none of your other offline changes synced any more. Your own
+  entries now sync regardless; the changes for the account you can no longer
+  open are discarded. If an account is full, its offline entries now wait
+  without holding up anything else, and ciphra tells you why.
+- Editing an entry online right after an offline edit of it could later be
+  overwritten by the older offline version.
+- Importing a long history with large diary entries could be rejected as too big
+  and fall back to a slow one-by-one import.
+- Error messages about loading or saving entries were shown in English whatever
+  your language.
+- **Reloading the page while viewing someone else's account could show your own
+  entries under their name** — and a new entry could then be saved to the wrong
+  account. Switching between accounts quickly could also leave the previous
+  account's entries on screen. The account named in the banner is now always
+  the one you see and write to — until it has loaded you see the loading
+  indicator — and "Retry" reloads everything that account needs.
+- **A save that failed could still say "Saved".** The day view, the quick-add
+  sheet and deleting an entry now tell you when something did not go through,
+  and keep what you typed so you can try again. (Saving while offline still
+  counts as saved — it syncs later, as before.)
+- Pressing Enter or Ctrl+S twice in a row could save the same entry twice, and
+  Ctrl+S on an empty day saved an empty entry.
+- Leaving a day with unsaved changes — including with the arrow keys — threw the
+  changes away without asking. ciphra now asks first.
+- In someone else's account, the quick-add sheet and the day view offered a
+  diary entry and a "private" switch. Those entries disappeared from your view
+  after a reload while staying visible to others with access. Both options are
+  now only offered in your own account.
+- Entries added with the quick-add button between midnight and about 2 a.m.
+  were filed under the previous day. The reports page, the journal's time filter
+  and the "top triggers" card could be off by a day in the same hours.
+- Changing an episode count with + / − in the reports table could be undone the
+  next time you saved that day, and clicking quickly could lose clicks or create
+  a second entry for the same day.
+- Your vital targets from the setup wizard (a blood-pressure goal, say) were
+  kept unencrypted in the browser and only on that one device. They are now
+  stored encrypted with the rest of your profile, so they follow you to other
+  devices; the old unencrypted copy is removed the next time you sign in.
+  Logging out also removes the episode type you last picked in quick-add. The
+  security documentation now lists every setting ciphra keeps in the browser.
+- A doctor PDF exported for someone else's account drew their charts against
+  your own vital targets. It now uses theirs.
+- **"Revoke all" could fail without telling you** — and so could revoking a
+  single invitation. You now see clearly when access was not removed, so you can
+  try again. Creating an invitation or changing what it may see also reports a
+  failure instead of silently stopping, and if your invitations cannot be
+  loaded, ciphra says so rather than showing that there are none.
+- Some error messages in Settings and in family sharing were shown in English
+  whatever your language, and "last seen" used English abbreviations.
+- The quick-add sheet now works with a keyboard and screen readers: it is
+  announced as a dialog, keeps focus inside while open, closes with Escape, and
+  returns you to the button that opened it.
 ### Security
 - **A deleted account's sign-ins stop working straight away, on every device.**
   They could still be accepted until they expired, up to a day later. Taking away

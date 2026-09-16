@@ -15,7 +15,12 @@ import {
 	type OutboxRecord,
 } from '$lib/outbox';
 
-export const documentsError = writable<string | null>(null);
+/**
+ * What the last load/save failed at, as a code — the shell translates it.
+ * These used to be English literals rendered raw in every locale.
+ */
+export type DocumentsError = 'load' | 'save' | 'update';
+export const documentsError = writable<DocumentsError | null>(null);
 
 /**
  * How many of the patient's documents the current linked-vault view is
@@ -57,7 +62,14 @@ function resolveVault(): VaultCtx {
 	}
 	const link = get(familyLinks).find(l => l.sourceUserId === active);
 	if (!link) {
-		return { masterKey, sourceUserId: null, cacheKey: `${uname}:self`, username: uname };
+		// The active vault's link is not loaded (a reload restores
+		// `activeVault` from sessionStorage before the links arrive) or no
+		// longer exists. This used to fall back to the user's OWN vault: the
+		// caregiver's data rendered under the patient's banner, and the next
+		// write went to the wrong account. No key instead — reads and writes
+		// refuse until the links load, and the shell snaps an unknown vault
+		// back to "own" once it knows.
+		return { masterKey: null, sourceUserId: active, cacheKey: `${uname}:linked:${active}`, username: uname };
 	}
 	return {
 		masterKey: link.patientMasterKey,
@@ -87,6 +99,76 @@ function isOfflineStatus(status: number): boolean {
 /** Status codes during flush that mean "stop and retry on the next trigger". */
 function isRetryableStatus(status: number): boolean {
 	return status === 401 || status === 403 || isOfflineStatus(status);
+}
+
+/** The partition key the store is meant to show right now. */
+function currentCacheKey(): string {
+	const uname = get(auth).username ?? '';
+	const active = get(activeVault);
+	return active ? `${uname}:linked:${active}` : `${uname}:self`;
+}
+
+// --- Batch sizing ---------------------------------------------------------
+//
+// The server caps a batch at 100 documents AND Flask refuses any body over
+// 2 MiB with a 413. Chunking by count alone meant a migration of long diary
+// entries 413'd, and the caller's fallback turned one request into a hundred.
+// 1.5 MiB leaves room for headers and the JSON envelope.
+export const BATCH_MAX_DOCS = 100;
+export const BATCH_MAX_BYTES = 1.5 * 1024 * 1024;
+
+/**
+ * Split `items` into runs of at most `maxCount` whose serialised JSON array
+ * stays within `maxBytes`. An item that is too big on its own still gets a
+ * run of its own — the server is the one to refuse it, not this function.
+ */
+export function chunkForBatch<T>(items: T[], maxCount = BATCH_MAX_DOCS, maxBytes = BATCH_MAX_BYTES): T[][] {
+	// `{"documents":[]}` around the array, and a comma between items.
+	const ENVELOPE = 16;
+	const encoder = new TextEncoder();
+	const chunks: T[][] = [];
+	let current: T[] = [];
+	let bytes = ENVELOPE;
+	for (const item of items) {
+		const size = encoder.encode(JSON.stringify(item)).length + 1;
+		if (current.length > 0 && (current.length >= maxCount || bytes + size > maxBytes)) {
+			chunks.push(current);
+			current = [];
+			bytes = ENVELOPE;
+		}
+		current.push(item);
+		bytes += size;
+	}
+	if (current.length > 0) chunks.push(current);
+	return chunks;
+}
+
+// --- Own-vault write tracking ---------------------------------------------
+//
+// The share-class reconcile after a load (see reconcileShareClasses) decides
+// from a snapshot. If an owner write lands between the snapshot and the
+// reconcile, the reconcile would stamp the OLD plaintext's class over the
+// new one — the privacy-relevant case being "just marked private, then
+// reclassified shareable". So: writes to the own vault are counted, a
+// reconcile only runs when none started since the snapshot was taken, and a
+// write that starts while a reconcile call is on the wire waits for it.
+let ownWriteSeq = 0;
+let ownWritesInFlight = 0;
+let classifying: Promise<unknown> | null = null;
+
+async function ownWrite<T>(sourceUserId: number | null | undefined, send: () => Promise<T>): Promise<T> {
+	// A caregiver's write never carries a class — the server forces it.
+	if (sourceUserId != null) return send();
+	ownWriteSeq++;
+	ownWritesInFlight++;
+	try {
+		if (classifying) {
+			try { await classifying; } catch { /* a failed reconcile blocks nothing */ }
+		}
+		return await send();
+	} finally {
+		ownWritesInFlight--;
+	}
 }
 
 // Optimistic docs render with negative ids so they never collide with real
@@ -256,35 +338,49 @@ function createDocStore() {
 	}
 
 	/**
-	 * Classify documents the server holds without a `share_class`.
+	 * Bring the server's `share_class` in line with the plaintext.
 	 *
-	 * Everything written before the sharing scope existed carries NULL, and
-	 * the server reads NULL as not-shareable — the safe direction, but it
-	 * means a caregiver sees less until the owner's client says which is
-	 * which. Only the owner can do this: the class comes from the plaintext,
+	 * Two ways they drift. Everything written before the sharing scope
+	 * existed carries NULL, which the server reads as not-shareable. And a
+	 * write that did not carry the class — an offline edit queued by an
+	 * older build, or a caregiver editing an entry — leaves the old class in
+	 * place (the PUT keeps it via COALESCE): an entry locked while offline
+	 * synced still SHAREABLE and was served to a narrow-scope caregiver.
+	 * Only the owner can repair either: the class comes from the plaintext,
 	 * and only the owner's session holds the key.
 	 *
-	 * Runs after the owner's own load, never on a linked vault. Failures are
-	 * swallowed: it is a repair pass, and the next load tries again.
+	 * `seqAtFetch` is the own-write generation when the GET went out, or -1
+	 * if a write was already in flight then (the snapshot may be stale). The
+	 * pass stops the moment an owner write has started since — see
+	 * `ownWrite`. Runs after the owner's own load, never on a linked vault.
+	 * Failures are swallowed: it is a repair pass, and the next load retries.
 	 */
-	async function backfillShareClasses(rawDocs: RawDoc[], docs: CiphraDocument[]): Promise<void> {
+	async function reconcileShareClasses(rawDocs: RawDoc[], docs: CiphraDocument[], seqAtFetch: number): Promise<void> {
 		const byId = new Map(docs.map((d) => [d.id, d]));
 		const pending: { id: number; share_class: number }[] = [];
 		for (const raw of rawDocs) {
-			if (raw.share_class !== null && raw.share_class !== undefined) continue;
 			const doc = byId.get(raw.id);
-			if (!doc?.data) continue; // undecryptable — leave it alone
-			pending.push({ id: raw.id, share_class: shareClassOf(doc.data) });
+			if (!doc?.data) continue; // undecryptable or family_link — leave it alone
+			const wanted = shareClassOf(doc.data);
+			if (raw.share_class === wanted) continue;
+			pending.push({ id: raw.id, share_class: wanted });
 		}
 		if (pending.length === 0) return;
 		// The server caps a call; send in chunks so a long history still
 		// classifies in one pass rather than silently dropping the tail.
-		const CHUNK = 100;
-		for (let i = 0; i < pending.length; i += CHUNK) {
+		for (let i = 0; i < pending.length; i += BATCH_MAX_DOCS) {
+			// Checked and claimed in the same tick: a write that starts after
+			// this line waits for the call below instead of racing it.
+			if (seqAtFetch !== ownWriteSeq || ownWritesInFlight > 0) return;
+			let call: Promise<unknown> | null = null;
 			try {
-				await api.classifyDocuments(pending.slice(i, i + CHUNK));
+				call = api.classifyDocuments(pending.slice(i, i + BATCH_MAX_DOCS));
+				classifying = call;
+				await call;
 			} catch {
 				return; // offline or refused — the next load retries
+			} finally {
+				if (classifying === call) classifying = null;
 			}
 		}
 	}
@@ -300,6 +396,16 @@ function createDocStore() {
 		}
 	}
 
+	/**
+	 * The class a queued write must replay with. Own vault only: the flush
+	 * has only ciphertext, and a PUT without a class keeps the server's old
+	 * one. A caregiver's write never carries a class — the server forces
+	 * those shareable and would ignore it anyway.
+	 */
+	function queuedShareClass(data: any, ctx: VaultCtx): number | undefined {
+		return ctx.sourceUserId == null ? shareClassOf(data) : undefined;
+	}
+
 	async function queueCreate(encrypted: string, data: any, ctx: VaultCtx): Promise<boolean> {
 		const tempId = await outboxEnqueue({
 			cacheKey: ctx.cacheKey,
@@ -307,7 +413,7 @@ function createDocStore() {
 			sourceUserId: ctx.sourceUserId,
 			op: 'create',
 			ciphertext: encrypted,
-			shareClass: shareClassOf(data),
+			shareClass: queuedShareClass(data, ctx),
 		});
 		update((docs) => [
 			{
@@ -333,6 +439,10 @@ function createDocStore() {
 			op: 'update',
 			serverId: id,
 			ciphertext: encrypted,
+			// Without this an entry locked while offline replayed with no
+			// class, the server kept SHAREABLE, and a narrow-scope caregiver
+			// was served it.
+			shareClass: queuedShareClass(data, ctx),
 		});
 		update((docs) => docs.map((d) => (d.id === id ? { ...d, data, _pending: true } : d)));
 		documentsError.set(null);
@@ -363,6 +473,142 @@ function createDocStore() {
 	async function reloadAfterWrite(): Promise<boolean> {
 		if (loading && inFlight) { try { await inFlight; } catch { /* ignore */ } }
 		return store.load();
+	}
+
+	/**
+	 * An online update just landed; queued offline updates of the same
+	 * document are older by definition. Replaying them later would put the
+	 * stale version back over the one the user just saved.
+	 */
+	async function dropSupersededUpdates(ctx: VaultCtx, id: number): Promise<void> {
+		if (!browser) return;
+		try {
+			const stale = (await outboxGetPending(ctx.username)).filter(
+				(r) => r.op === 'update' && r.serverId === id && r.cacheKey === ctx.cacheKey,
+			);
+			if (stale.length === 0) return;
+			for (const r of stale) await outboxDequeue(r.tempId);
+			await refreshPendingCount(ctx.username);
+		} catch {
+			// Best effort — the worst case is the old behaviour.
+		}
+	}
+
+	let flushing: Promise<void> | null = null;
+	let flushAgain = false;
+
+	/** Vault identity of a queued record: records of different vaults are independent. */
+	function vaultOf(rec: OutboxRecord): string {
+		return rec.sourceUserId != null ? `linked:${rec.sourceUserId}` : 'self';
+	}
+
+	function sendQueued(rec: OutboxRecord): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
+		const src = rec.sourceUserId;
+		if (rec.op === 'create') {
+			return ownWrite(src, () => src
+				? api.familyDocumentCreate(src, rec.ciphertext as string)
+				: api.storeDocument(rec.ciphertext as string, rec.shareClass));
+		}
+		if (rec.op === 'update') {
+			return ownWrite(src, () => src
+				? api.familyDocumentUpdate(src, rec.serverId as number, rec.ciphertext as string)
+				: api.updateDocument(rec.serverId as number, rec.ciphertext as string, rec.shareClass));
+		}
+		return src
+			? api.familyDocumentDelete(src, rec.serverId as number)
+			: api.deleteDocument(rec.serverId as number);
+	}
+
+	/**
+	 * One pass over the outbox. Order is kept WITHIN a vault; a vault that
+	 * cannot make progress is set aside for this pass and the others carry
+	 * on. Strict oldest-first across everything meant one caregiver write
+	 * into a revoked vault blocked every later write to the user's own vault
+	 * for good.
+	 *
+	 * - 403 from a linked vault's API: the grant is gone and will not come
+	 *   back. That vault's queued writes are dropped (they can never be
+	 *   written), and api.ts has already told the shell, which snaps the
+	 *   switcher back and says access was removed.
+	 * - 429 `quota_exceeded`: the vault owner is at the document cap. Kept
+	 *   queued — dropping someone's entries is not ours to decide — set
+	 *   aside, and announced once.
+	 * - Anything else retryable: that vault waits for the next trigger.
+	 * - No response at all, or a 401: the network or the session is gone for
+	 *   every vault. Stop.
+	 * - A permanent client error: drop the record so it cannot wedge its vault.
+	 */
+	async function drainOutbox(): Promise<void> {
+		const { username } = get(auth);
+		if (!username) return;
+		let records: OutboxRecord[];
+		try {
+			records = await outboxGetPending(username);
+		} catch {
+			return;
+		}
+		if (records.length === 0) return;
+
+		let changed = 0;
+		let synced = 0;
+		let quotaHit = false;
+		const setAside = new Set<string>();
+		for (const rec of records) {
+			const vault = vaultOf(rec);
+			if (setAside.has(vault)) continue;
+			let res: { ok: boolean; status: number; data: Record<string, unknown> };
+			try {
+				res = await sendQueued(rec);
+			} catch {
+				break; // network dropped mid-drain, or unexpected — retry on the next trigger
+			}
+			try {
+				// A remove whose target is already gone is a success.
+				if (res.ok || (rec.op === 'remove' && res.status === 404)) {
+					await outboxDequeue(rec.tempId);
+					changed++;
+					synced++;
+					continue;
+				}
+				if (res.status === 0 || res.status === 401) break;
+				// The API's own JSON 403, not an HTML one from a WAF in front of it.
+				if (res.status === 403 && rec.sourceUserId != null && typeof res.data?.error === 'string') {
+					for (const r of records) {
+						if (vaultOf(r) === vault) await outboxDequeue(r.tempId);
+					}
+					setAside.add(vault);
+					changed++;
+					continue;
+				}
+				if (res.status === 429 && res.data?.error === 'quota_exceeded') {
+					setAside.add(vault);
+					quotaHit = true;
+					continue;
+				}
+				if (isRetryableStatus(res.status)) {
+					setAside.add(vault);
+					continue;
+				}
+				// Permanent client error: drop so it can't wedge the queue.
+				await outboxDequeue(rec.tempId);
+				changed++;
+			} catch {
+				break; // the outbox itself failed — stop, retry on the next trigger
+			}
+		}
+
+		await refreshPendingCount(username);
+		if (quotaHit) {
+			try {
+				window.dispatchEvent(new CustomEvent('ciphra:sync-blocked', { detail: { reason: 'quota' } }));
+			} catch { /* ignore */ }
+		}
+		if (changed > 0) {
+			await reloadAfterWrite();
+			if (synced > 0) {
+				try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch {}
+			}
+		}
 	}
 
 	const store = {
@@ -418,11 +664,14 @@ function createDocStore() {
 						// them out of the render; the server pass below rewrites the
 						// partition without them.
 						const shown = await applyOutbox(instant, masterKey, cacheKey, username, linked, shareMask);
+						if (currentCacheKey() !== cacheKey) return false;
 						caregiverHiddenCount.set(linked ? instant.length - shown.length : 0);
 						set(shown);
 					} else {
 						// No cache yet, but queued offline writes may still exist.
-						set(await applyOutbox([], masterKey, cacheKey, username, linked, shareMask));
+						const shown = await applyOutbox([], masterKey, cacheKey, username, linked, shareMask);
+						if (currentCacheKey() !== cacheKey) return false;
+						set(shown);
 					}
 				} catch {
 					// cache miss is fine
@@ -430,6 +679,10 @@ function createDocStore() {
 			}
 			const tCache = performance.now();
 
+			// Own-write generation as of the GET, for the share-class
+			// reconcile. -1 when a write is already on the wire: the response
+			// may predate it, so the snapshot must not drive a reclassify.
+			const seqAtFetch = ownWritesInFlight === 0 ? ownWriteSeq : -1;
 			try {
 				const res = sourceUserId
 					? await api.familyDocuments(sourceUserId)
@@ -455,8 +708,14 @@ function createDocStore() {
 					caregiverHiddenCount.set(
 						linked && typeof withheld === 'number' ? (withheld as number) : hidden,
 					);
-					set(await applyOutbox(docs, masterKey, cacheKey, username, linked, shareMask));
-					if (!linked) void backfillShareClasses(rawDocs, docs);
+					const shown = await applyOutbox(docs, masterKey, cacheKey, username, linked, shareMask);
+					// The user switched vault while this was on the wire. Its
+					// documents belong to a vault nobody is looking at any
+					// more; rendering them would put one account's data under
+					// another's banner.
+					if (currentCacheKey() !== cacheKey) return false;
+					set(shown);
+					if (!linked) void reconcileShareClasses(rawDocs, docs, seqAtFetch);
 					if (browser && cacheKey) {
 						try {
 							await putDocs(cacheKey, freshCache);
@@ -477,11 +736,11 @@ function createDocStore() {
 					}
 					return true;
 				} else {
-					documentsError.set('Failed to load documents');
+					documentsError.set('load');
 					return false;
 				}
 			} catch {
-				documentsError.set('Failed to load documents');
+				documentsError.set('load');
 				return false;
 			}
 			})();
@@ -510,13 +769,13 @@ function createDocStore() {
 			try {
 				encrypted = await encryptDocument(data, ctx.masterKey);
 			} catch {
-				documentsError.set('Failed to save document');
+				documentsError.set('save');
 				return false;
 			}
 			try {
-				const res = ctx.sourceUserId
-					? await api.familyDocumentCreate(ctx.sourceUserId, encrypted)
-					: await api.storeDocument(encrypted, shareClassOf(data));
+				const res = await ownWrite(ctx.sourceUserId, () => ctx.sourceUserId
+					? api.familyDocumentCreate(ctx.sourceUserId, encrypted)
+					: api.storeDocument(encrypted, shareClassOf(data)));
 				if (res.ok) {
 					documentsError.set(null);
 					// CIPH-767e — sync indicator: notify the UI that a successful
@@ -529,11 +788,11 @@ function createDocStore() {
 					return true;
 				}
 				if (isOfflineStatus(res.status)) return queueCreate(encrypted, data, ctx);
-				documentsError.set('Failed to save document');
+				documentsError.set('save');
 				return false;
 			} catch (e) {
 				if (isNetworkError(e)) return queueCreate(encrypted, data, ctx);
-				documentsError.set('Failed to save document');
+				documentsError.set('save');
 				return false;
 			}
 		},
@@ -551,6 +810,11 @@ function createDocStore() {
 		 * opposite responses, and treating the first like the second is what
 		 * made a single 503 escalate into 37 individual retries.
 		 * `status` is 0 when the request never produced a response.
+		 *
+		 * The items go out in as many requests as the server's limits need
+		 * (see chunkForBatch). If one of them fails the whole call reports
+		 * that failure: a retry re-sends everything, and the client keys make
+		 * the already-stored part come back `skipped`.
 		 */
 		async saveBatch(
 			items: { data: any; clientKey?: string }[]
@@ -567,25 +831,31 @@ function createDocStore() {
 						: { encrypted_data: enc, share_class });
 				}
 			} catch {
-				documentsError.set('Failed to save document');
+				documentsError.set('save');
 				return { ok: false, status: 0, results: [] };
 			}
+			const results: Array<{ client_key?: string; status: string; id?: number; error?: string }> = [];
+			let status = 0;
 			try {
-				const res = await api.storeDocumentsBatch(payload);
-				if (res.ok) {
-					documentsError.set(null);
-					if (browser) { try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch { /* ignore */ } }
-					await reloadAfterWrite();
-					return { ok: true, status: res.status, results: (res.data.results as any[]) || [] };
+				for (const chunk of chunkForBatch(payload)) {
+					const res = await ownWrite(null, () => api.storeDocumentsBatch(chunk));
+					status = res.status;
+					if (!res.ok) {
+						// Don't shout "failed to save" at the user for a retryable
+						// overload — the caller decides, and it will simply wait.
+						if (!isRetryableStatus(res.status)) documentsError.set('save');
+						return { ok: false, status: res.status, results: [] };
+					}
+					results.push(...(((res.data.results as any[]) || [])));
 				}
-				// Don't shout "failed to save" at the user for a retryable
-				// overload — the caller decides, and it will simply wait.
-				if (!isRetryableStatus(res.status)) documentsError.set('Failed to save document');
-				return { ok: false, status: res.status, results: [] };
 			} catch {
-				documentsError.set('Failed to save document');
+				documentsError.set('save');
 				return { ok: false, status: 0, results: [] };
 			}
+			documentsError.set(null);
+			if (browser) { try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch { /* ignore */ } }
+			await reloadAfterWrite();
+			return { ok: true, status, results };
 		},
 		async updateDoc(id: number, data: any): Promise<boolean> {
 			const ctx = resolveVault();
@@ -594,15 +864,17 @@ function createDocStore() {
 			try {
 				encrypted = await encryptDocument(data, ctx.masterKey);
 			} catch {
-				documentsError.set('Failed to update document');
+				documentsError.set('update');
 				return false;
 			}
 			// Editing a not-yet-synced offline create: mutate its queued
 			// ciphertext in place rather than hitting the server with a temp id.
+			// The class travels with it — the create replays with whatever the
+			// record says, and "locked it before it synced" must stick.
 			if (id < 0) {
 				const tempId = tempIdOf(id);
 				if (tempId) {
-					try { await outboxUpdateCiphertext(tempId, encrypted); } catch {}
+					try { await outboxUpdateCiphertext(tempId, encrypted, queuedShareClass(data, ctx)); } catch {}
 					update((docs) => docs.map((d) => (d.id === id ? { ...d, data } : d)));
 					documentsError.set(null);
 					await refreshPendingCount(ctx.username);
@@ -610,20 +882,21 @@ function createDocStore() {
 				}
 			}
 			try {
-				const res = ctx.sourceUserId
-					? await api.familyDocumentUpdate(ctx.sourceUserId, id, encrypted)
-					: await api.updateDocument(id, encrypted, shareClassOf(data));
+				const res = await ownWrite(ctx.sourceUserId, () => ctx.sourceUserId
+					? api.familyDocumentUpdate(ctx.sourceUserId, id, encrypted)
+					: api.updateDocument(id, encrypted, shareClassOf(data)));
 				if (res.ok) {
 					documentsError.set(null);
+					await dropSupersededUpdates(ctx, id);
 					await reloadAfterWrite();
 					return true;
 				}
 				if (isOfflineStatus(res.status)) return queueUpdate(id, encrypted, data, ctx);
-				documentsError.set('Failed to update document');
+				documentsError.set('update');
 				return false;
 			} catch (e) {
 				if (isNetworkError(e)) return queueUpdate(id, encrypted, data, ctx);
-				documentsError.set('Failed to update document');
+				documentsError.set('update');
 				return false;
 			}
 		},
@@ -639,6 +912,9 @@ function createDocStore() {
 				await refreshPendingCount(ctx.username);
 				return true;
 			}
+			// Same refusal as save/updateDoc: an unresolved vault must not
+			// turn into a delete against the user's own account.
+			if (!ctx.masterKey) return false;
 			try {
 				const res = ctx.sourceUserId
 					? await api.familyDocumentDelete(ctx.sourceUserId, id)
@@ -656,64 +932,34 @@ function createDocStore() {
 			}
 		},
 		/**
-		 * Replay every queued write for the logged-in user, oldest first.
-		 * Triggered on reconnect, tab-focus, and once after login. Drops a
-		 * record only on permanent client errors (to avoid a poison queue);
-		 * a transient/offline status stops the drain so the rest retries
-		 * later. Reconciles via a full reload and fires `ciphra:synced`.
+		 * Replay every queued write for the logged-in user, oldest first
+		 * within each vault. Triggered on reconnect, tab-focus, and once after
+		 * login.
+		 *
+		 * Single-flight: `online` and `visibilitychange` fire together when a
+		 * phone wakes, and two overlapping drains each POSTed the same queued
+		 * create — a duplicate document per offline entry. A call that arrives
+		 * mid-drain shares the running promise and earns one more pass after
+		 * it, so a write queued in the meantime is not left waiting for the
+		 * next trigger.
 		 */
 		async flushOutbox(): Promise<void> {
 			if (!browser) return;
-			const { username } = get(auth);
-			if (!username) return;
-			let records: OutboxRecord[];
-			try {
-				records = await outboxGetPending(username);
-			} catch {
-				return;
+			if (flushing) {
+				flushAgain = true;
+				return flushing;
 			}
-			if (records.length === 0) return;
-
-			let flushed = 0;
-			for (const rec of records) {
+			flushing = (async () => {
 				try {
-					let res: { ok: boolean; status: number };
-					if (rec.op === 'create') {
-						res = rec.sourceUserId
-							? await api.familyDocumentCreate(rec.sourceUserId, rec.ciphertext as string)
-							: await api.storeDocument(rec.ciphertext as string, rec.shareClass);
-					} else if (rec.op === 'update') {
-						res = rec.sourceUserId
-							? await api.familyDocumentUpdate(rec.sourceUserId, rec.serverId as number, rec.ciphertext as string)
-							: await api.updateDocument(rec.serverId as number, rec.ciphertext as string, rec.shareClass);
-					} else {
-						res = rec.sourceUserId
-							? await api.familyDocumentDelete(rec.sourceUserId, rec.serverId as number)
-							: await api.deleteDocument(rec.serverId as number);
-					}
-					// A remove whose target is already gone is a success.
-					if (res.ok || (rec.op === 'remove' && res.status === 404)) {
-						await outboxDequeue(rec.tempId);
-						flushed++;
-						continue;
-					}
-					if (isRetryableStatus(res.status)) break; // still offline / auth — retry later
-					// Permanent client error: drop so it can't wedge the queue.
-					await outboxDequeue(rec.tempId);
-					flushed++;
-				} catch (e) {
-					if (isNetworkError(e)) break; // network dropped mid-drain
-					break; // unexpected — stop, retry on next trigger
+					do {
+						flushAgain = false;
+						await drainOutbox();
+					} while (flushAgain);
+				} finally {
+					flushing = null;
 				}
-			}
-
-			await refreshPendingCount(username);
-			if (flushed > 0) {
-				await reloadAfterWrite();
-				if (browser) {
-					try { window.dispatchEvent(new CustomEvent('ciphra:synced')); } catch {}
-				}
-			}
+			})();
+			return flushing;
 		},
 		// In-memory reset only. On logout/delete, auth.logout() wipes ALL
 		// on-disk partitions via clearAllPartitions(); on vault switch we WANT

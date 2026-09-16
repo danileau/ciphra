@@ -9,7 +9,7 @@
 	 * notebook by default.
 	 */
 	import { onMount } from 'svelte';
-	import { t } from '$lib/i18n';
+	import { t, plural, type Locale } from '$lib/i18n';
 	import { auth } from '$lib/stores/auth';
 	import { get } from 'svelte/store';
 	import { createFamilyGrant, encryptData, decryptData } from '$lib/crypto';
@@ -30,23 +30,32 @@
 		share_mask?: number;
 	}
 
-	function timeAgo(iso: string | null, locale: string): string {
+	// Fills the {ago} of `family.last_seen`. The units were hard-coded
+	// English abbreviations ("5 min", "3 h", "2 d") in every language.
+	function timeAgo(iso: string | null, locale: Locale): string {
 		if (!iso) return '';
 		const diff = Date.now() - new Date(iso).getTime();
 		if (diff < 0) return new Date(iso).toLocaleString(locale);
 		const mins = Math.floor(diff / 60_000);
-		if (mins < 1) return '<1 min';
-		if (mins < 60) return `${mins} min`;
+		if (mins < 1) return $t('family.ago_under_minute');
+		if (mins < 60) return plural($t, locale, 'family.ago_minutes', mins);
 		const hours = Math.floor(mins / 60);
-		if (hours < 24) return `${hours} h`;
+		if (hours < 24) return plural($t, locale, 'family.ago_hours', hours);
 		const days = Math.floor(hours / 24);
-		if (days < 30) return `${days} d`;
+		if (days < 30) return plural($t, locale, 'family.ago_days', days);
 		return new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 
 	let grants: Grant[] = [];
 	let loading = false;
 	let errorMsg = '';
+	// The grant list could not be fetched. Without this the section read
+	// "no invitations" — and hid the revoke buttons — while grants existed.
+	let loadFailed = false;
+	// A revoke that did not go through. Shown next to the revoke buttons:
+	// "revoke all" is the panic button, and it used to fail in silence.
+	let revokeError = '';
+	let revoking = false;
 
 	// Create-invite state
 	let showCreate = false;
@@ -84,8 +93,16 @@
 
 	async function load() {
 		loading = true;
-		const res = await api.familyGrantList();
+		let res: Awaited<ReturnType<typeof api.familyGrantList>>;
+		try {
+			res = await api.familyGrantList();
+		} catch {
+			loading = false;
+			loadFailed = true;
+			return;
+		}
 		loading = false;
+		loadFailed = !res.ok;
 		if (!res.ok) return;
 		const raw = (res.data.grants as Grant[]) || [];
 		const state = get(auth);
@@ -119,7 +136,8 @@
 				share_mask: newShareMask,
 			});
 			if (!res.ok) {
-				errorMsg = (res.data.error as string) || 'Failed';
+				// Never the server's own (English) text.
+				errorMsg = $t('family.error_create');
 				return;
 			}
 			createdCode = bundle.family_code;
@@ -131,6 +149,10 @@
 			showCreate = false;
 			revealed = false;
 			await load();
+		} catch {
+			// Offline, or the key derivation failed — the button used to just
+			// stop spinning.
+			errorMsg = $t('family.error_create');
 		} finally {
 			creating = false;
 		}
@@ -164,11 +186,13 @@
 		try {
 			const res = await api.familyGrantRescope(g.id, editingMask);
 			if (!res.ok) {
-				errorMsg = (res.data.error as string) || 'Failed';
+				errorMsg = $t('family.error_scope');
 				return;
 			}
 			editingId = null;
 			await load();
+		} catch {
+			errorMsg = $t('family.error_scope');
 		} finally {
 			savingScope = false;
 		}
@@ -176,14 +200,34 @@
 
 	async function revoke(id: number) {
 		if (!confirm($t('family.confirm_revoke'))) return;
-		const res = await api.familyGrantRevoke(id);
-		if (res.ok) await load();
+		await runRevoke(() => api.familyGrantRevoke(id), $t('family.error_revoke'));
 	}
 
 	async function revokeAll() {
 		if (!confirm($t('family.confirm_revoke_all'))) return;
-		const res = await api.familyGrantRevokeAll();
-		if (res.ok) await load();
+		await runRevoke(() => api.familyGrantRevokeAll(), $t('family.error_revoke_all'));
+	}
+
+	// Both revokes ignored `!res.ok` — including the panic button. A failure
+	// now says plainly that access was NOT removed.
+	async function runRevoke(
+		send: () => Promise<{ ok: boolean }>,
+		failMessage: string,
+	) {
+		revokeError = '';
+		revoking = true;
+		try {
+			const res = await send();
+			if (!res.ok) {
+				revokeError = failMessage;
+				return;
+			}
+			await load();
+		} catch {
+			revokeError = failMessage;
+		} finally {
+			revoking = false;
+		}
 	}
 
 	async function copyLink() {
@@ -320,6 +364,11 @@
 
 	{#if loading}
 		<p class="text-sm" style="color: var(--text-muted)">{$t('common.loading')}</p>
+	{:else if loadFailed}
+		<div class="rounded-xl p-3" style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)" role="alert">
+			<p class="text-sm" style="color: var(--danger)">{$t('family.error_load')}</p>
+			<button type="button" on:click={load} class="text-xs font-medium min-h-[44px] px-2" style="color: var(--danger)">{$t('common.retry')}</button>
+		</div>
 	{:else if grants.length === 0}
 		<p class="text-sm" style="color: var(--text-muted)">{$t('family.no_grants')}</p>
 	{:else}
@@ -366,6 +415,7 @@
 					<button
 						type="button"
 						on:click={() => revoke(g.id)}
+						disabled={revoking}
 						class="text-xs px-3 py-1.5 rounded-lg min-h-[36px] ml-2"
 						style="background: rgba(220,38,38,0.06); color: var(--danger)"
 					>
@@ -404,10 +454,14 @@
 			{/each}
 		</ul>
 		<div class="mt-4 pt-3" style="border-top: 1px solid var(--border)">
+			{#if revokeError}
+				<p class="text-sm mb-2" style="color: var(--danger)" role="alert" data-testid="family-revoke-error">{revokeError}</p>
+			{/if}
 			<p class="text-xs mb-2" style="color: var(--text-muted)">{$t('family.revoke_caveat')}</p>
 			<button
 				type="button"
 				on:click={revokeAll}
+				disabled={revoking}
 				class="text-xs font-medium px-3 py-1.5 rounded-lg min-h-[36px]"
 				style="background: rgba(220,38,38,0.1); color: var(--danger); border: 1px solid rgba(220,38,38,0.3)"
 			>

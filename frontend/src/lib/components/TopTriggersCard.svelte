@@ -24,6 +24,7 @@
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import type { Blueprint } from '$lib/blueprint/types';
 	import { isCustomItem } from '$lib/blueprint';
+	import { toLocalISODate } from '$lib/date';
 
 	export let docs: CiphraDocument[];
 	export let bp: Blueprint | null = null;
@@ -48,7 +49,8 @@
 		if (!bp) return [] as { id: string; label: string; count: number }[];
 		const cutoff = new Date();
 		cutoff.setMonth(cutoff.getMonth() - windowMonths);
-		const cutoffStr = cutoff.toISOString().slice(0, 10);
+		// Local day, like the entry dates it is compared with.
+		const cutoffStr = toLocalISODate(cutoff);
 		const counts = new Map<string, number>();
 		const blueprintIds = new Set<string>(triggerLabels.keys());
 		for (const d of docs) {
