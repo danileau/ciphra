@@ -7,7 +7,7 @@
 	import type { Locale } from '$lib/i18n';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import { documents, documentsError, caregiverHiddenCount } from '$lib/stores/documents';
 	import { pendingCount } from '$lib/outbox';
@@ -73,6 +73,73 @@
 	$: quickAddLinked = $activeVault !== null;
 	$: if (quickAddLinked && quickAddMode === 'diary') quickAddMode = 'log';
 	$: if (quickAddLinked && quickAddPrivate) quickAddPrivate = false;
+
+	// Quick-add sheet as a modal dialog: focus moves in when it opens, Tab
+	// stays inside, Escape closes, and focus returns to what opened it (the
+	// FAB). It had none of this — keyboard and screen-reader users tabbed
+	// into the page behind it. BottomSheet.svelte has the same behaviour but
+	// not the stacking: its backdrop shares z-50 with BottomNav, which comes
+	// later in the DOM and would stay live above it.
+	let quickAddSheetEl: HTMLDivElement | null = null;
+	let quickAddReturnFocus: HTMLElement | null = null;
+	let quickAddWasOpen = false;
+
+	function quickAddFocusables(): HTMLElement[] {
+		if (!quickAddSheetEl) return [];
+		const sel =
+			'a[href], button:not([disabled]), input:not([disabled]), ' +
+			'select:not([disabled]), textarea:not([disabled]), ' +
+			'[tabindex]:not([tabindex="-1"])';
+		return Array.from(quickAddSheetEl.querySelectorAll<HTMLElement>(sel)).filter(
+			(el) => el.offsetParent !== null || getComputedStyle(el).position === 'fixed',
+		);
+	}
+
+	$: if (browser && showQuickAdd !== quickAddWasOpen) {
+		quickAddWasOpen = showQuickAdd;
+		if (showQuickAdd) {
+			quickAddReturnFocus = document.activeElement as HTMLElement | null;
+			tick().then(() => {
+				const f = quickAddFocusables();
+				(f[0] ?? quickAddSheetEl)?.focus();
+			});
+		} else if (quickAddReturnFocus) {
+			try { quickAddReturnFocus.focus(); } catch { /* element may be gone */ }
+			quickAddReturnFocus = null;
+		}
+	}
+
+	function onQuickAddKeydown(e: KeyboardEvent) {
+		if (!showQuickAdd || !quickAddSheetEl) return;
+		if (e.key === 'Escape') {
+			// A date/time picker open inside the sheet closes itself on the
+			// same key; only its popover goes, not the whole sheet.
+			if (quickAddSheetEl.querySelector('[aria-expanded="true"]')) return;
+			e.preventDefault();
+			quickAddReset();
+			return;
+		}
+		if (e.key !== 'Tab') return;
+		const f = quickAddFocusables();
+		if (f.length === 0) {
+			e.preventDefault();
+			quickAddSheetEl.focus();
+			return;
+		}
+		const first = f[0];
+		const last = f[f.length - 1];
+		const active = document.activeElement as HTMLElement | null;
+		if (!active || !quickAddSheetEl.contains(active)) {
+			e.preventDefault();
+			first.focus();
+		} else if (e.shiftKey && active === first) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && active === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
 
 	// FAB onboarding (CIPH-102): pulse + tooltip for the first 3 sessions so
 	// the quick-add affordance isn't invisible. Klara missed it for 3 min in
@@ -860,6 +927,8 @@
 
 </script>
 
+<svelte:window on:keydown={onQuickAddKeydown} />
+
 {#if secureContextMissing}
 	<div class="min-h-screen flex items-center justify-center p-6" style="background: var(--surface)">
 		<div class="max-w-md w-full rounded-2xl p-6" style="background: var(--surface-card); border: 1px solid rgba(220,38,38,0.3)">
@@ -1113,16 +1182,27 @@
 		 already has day-cell click → /log/{date} as its add path. -->
 	{#if bp && $hasBlueprint && currentPath !== '/login' && currentPath !== '/setup'}
 		{#if showQuickAdd}
+			<!-- primitive-exempt: Modal — the quick-add bottom sheet carries its
+				 own dialog semantics, focus trap and Escape (onQuickAddKeydown);
+				 neither Modal (centred) nor BottomSheet (z-50, under BottomNav)
+				 fits its stacking. -->
 			<button
 				class="fixed inset-0 z-[55] bg-black/40 backdrop-blur-sm"
 				on:click={quickAddReset}
 				transition:fade={{ duration: 200 }}
 				aria-label={$t('common.close')}
+				tabindex="-1"
 			></button>
 
 			<div
-				class="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto"
+				bind:this={quickAddSheetEl}
+				class="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto focus:outline-none"
 				style="border-top: 1px solid var(--border)"
+				role="dialog"
+				aria-modal="true"
+				aria-label={$t('quickadd.title')}
+				tabindex="-1"
+				data-testid="quickadd-sheet"
 				transition:fly={{ y: 300, duration: 300 }}
 			>
 				<div class="p-5 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] max-w-lg mx-auto">

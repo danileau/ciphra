@@ -61,6 +61,28 @@ describe('quick-add in someone else\'s vault', () => {
 	});
 });
 
+describe('quick-add sheet accessibility', () => {
+	it('is a labelled modal dialog', () => {
+		const sheet = LAYOUT.slice(LAYOUT.indexOf('bind:this={quickAddSheetEl}') - 20, LAYOUT.indexOf('data-testid="quickadd-sheet"'));
+		expect(sheet).toMatch(/role="dialog"/);
+		expect(sheet).toMatch(/aria-modal="true"/);
+		expect(sheet).toMatch(/aria-label=\{\$t\('quickadd\.title'\)\}/);
+	});
+
+	it('Escape closes it (unless a picker inside handles the key), Tab is trapped', () => {
+		const fn = LAYOUT.slice(LAYOUT.indexOf('function onQuickAddKeydown('), LAYOUT.indexOf('// FAB onboarding (CIPH-102)'));
+		expect(fn).toMatch(/e\.key === 'Escape'[\s\S]{0,300}\[aria-expanded="true"\][\s\S]{0,120}quickAddReset\(\)/);
+		expect(fn).toMatch(/e\.shiftKey && active === first[\s\S]{0,80}last\.focus\(\)/);
+		expect(fn).toMatch(/active === last[\s\S]{0,80}first\.focus\(\)/);
+		expect(LAYOUT).toMatch(/<svelte:window on:keydown=\{onQuickAddKeydown\} \/>/);
+	});
+
+	it('moves focus in on open and back to the opener on close', () => {
+		expect(LAYOUT).toMatch(/quickAddReturnFocus = document\.activeElement/);
+		expect(LAYOUT).toMatch(/quickAddReturnFocus\.focus\(\)/);
+	});
+});
+
 describe('/log/[date] adapter', () => {
 	it('handleSave returns whether the write happened', () => {
 		expect(LOG).toMatch(/async function handleSave\(data: EntryData\): Promise<boolean>/);

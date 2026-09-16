@@ -68,6 +68,9 @@ app at **/docs → Changelog** and here on the public repo.
   loaded, ciphra says so rather than showing that there are none.
 - Some error messages in Settings and in family sharing were shown in English
   whatever your language, and "last seen" used English abbreviations.
+- The quick-add sheet now works with a keyboard and screen readers: it is
+  announced as a dialog, keeps focus inside while open, closes with Escape, and
+  returns you to the button that opened it.
 
 ## [1.3.0] — 2026-08-30
 
