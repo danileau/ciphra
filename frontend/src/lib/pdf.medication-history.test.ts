@@ -9,9 +9,11 @@
  * Three product rules are pinned here:
  *   1. A change is a step in time: every surface reads the dose of the day.
  *   2. Stopped medications stay in the record for the days they were taken.
- *   3. Markers only. The PDF places a change on the time axis; it never sets
- *      symptoms or episodes before a change beside those after it. Per-event
- *      marks go on the DAILY chart only, never on the monthly trajectory.
+ *   3. Structure, never numbers or verdicts. The PDF places a change on the
+ *      time axis — and, since 2026-09-17, shades the dose periods behind the
+ *      charts (pdf.medication-structure.test.ts) — but never counts or
+ *      compares symptoms or episodes before and after it. Per-event tick
+ *      marks go on the DAILY chart only; the monthly trajectory gets periods.
  *
  * The behavioural half drives the real `generateDoctorPdf` / `exportCsv` with
  * jsPDF's `save` intercepted, and reads the text operators out of the
@@ -156,8 +158,10 @@ describe('adherence splits by dose period', () => {
 		}
 		expect(texts).toContain('01.09.2026 – 09.09.2026');
 		expect(texts).toContain('10.09.2026 – 23.09.2026');
-		// Each dose sits directly above its own dates.
-		expect(texts.indexOf('01.09.2026 – 09.09.2026')).toBe(texts.indexOf('Lamotrigin 50 mg') + 1);
+		// Each dose sits directly above its own dates. (Looked up from the
+		// dates: "Lamotrigin 50 mg" is also the first dose-band label on the
+		// daily chart.)
+		expect(texts[texts.indexOf('01.09.2026 – 09.09.2026') - 1]).toBe('Lamotrigin 50 mg');
 		// A medication stopped in 2024 is not in a September 2026 report.
 		expect(texts.some((s) => s.startsWith('Valproat'))).toBe(false);
 	});
@@ -279,6 +283,9 @@ describe('change marks on the daily chart', () => {
 		for (const sym of ['medChangeMarksForMonth', 'layoutTickLabels', 'medicationChanges', 'legend_med_change_day']) {
 			expect(aggregate, `${sym} on an aggregate axis`).not.toContain(sym);
 		}
+		// What the aggregate axis does carry (2026-09-17): dose PERIODS, which
+		// span months and so stay legible at any width.
+		expect(aggregate).toContain('doseBandLayer(reportMeds, trendBins, t)');
 		// And the year export prints no chart label or legend for a change.
 		const { texts } = doctorPdf('year', 8, SEPTEMBER);
 		expect(texts).not.toContain(t('pdf.legend_med_change_day'));
@@ -397,6 +404,9 @@ describe('markers only — no before/after reading', () => {
 		'pdf.med_change_col', 'pdf.med_change_dose', 'pdf.med_change_start',
 		'pdf.med_change_start_switch', 'pdf.med_change_stop', 'pdf.med_change_stop_switch',
 		'pdf.med_mark_stop', 'pdf.legend_med_change_day', 'pdf.csv_dose_col',
+		// Before/after structure (2026-09-17).
+		'pdf.dose_band_caption', 'pdf.dose_band_stopped', 'pdf.meds_on_date',
+		'pdf.med_now_since', 'pdf.med_now_before', 'pdf.med_now_stopped', 'pdf.med_now_as_needed',
 	];
 	const EVALUATIVE = /besser|schlechter|wirk|erfolg|verbesser|verschlechter|better|worse|improv|effect|success|mieux|pire|amélior|efficac|miglior|peggior|effic/i;
 	for (const [name, dict] of DICTS) {

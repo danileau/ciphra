@@ -9,14 +9,16 @@
  * step in time. Days before it keep the dose they had, and a medication that
  * was stopped stays in the record for the days it was taken.
  *
- * MARKERS ONLY. Nothing here compares symptoms or episodes before and after a
- * change, and nothing may. Placing a change on the time axis documents what
- * was recorded; stating what happened around it would be an assessment — the
- * line `pdf.no-assessment.test.ts` holds for the whole document.
+ * STRUCTURE ONLY. Nothing here compares symptoms or episodes before and after
+ * a change, and nothing may. Placing a change on the time axis — and shading
+ * the dose periods behind a chart (2026-09-17) — documents what was recorded;
+ * stating what happened around it would be an assessment — the line
+ * `pdf.no-assessment.test.ts` holds for the whole document.
  */
-import type { MedicationSlot } from '$lib/blueprint/types';
+import type { MedicationPeriod, MedicationSlot } from '$lib/blueprint/types';
 import { addDaysISO, medIds, medicationChanges, medPeriods, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
 import { medAdherenceByPeriod, type MedPeriodAdherence } from '$lib/blueprint/medications';
+import { doseBands, medsChangedIn, type AxisBin, type DoseBand, type DoseBoundary } from '$lib/reports/doseBands';
 
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 type DayDoc = { data?: Record<string, unknown> };
@@ -136,15 +138,24 @@ export interface DayMedMark {
 	labels: string[];
 }
 
+/** The short form of a regimen: its dose — or its schedule when `other`
+ *  carries the same dose, since the dose alone would read as no change. */
+function regimenDetail(
+	p: { dose?: string; schedule?: string } | undefined,
+	other?: { dose?: string; schedule?: string } | null,
+): string {
+	const dose = (p?.dose ?? '').trim();
+	const schedule = (p?.schedule ?? '').trim();
+	if (other && (other.dose ?? '').trim() === dose) return schedule || dose;
+	return dose || schedule;
+}
+
 /** The short on-chart label for one change: the medication and what applies
  *  from that day. A schedule-only change shows the schedule, since the dose
  *  alone would read as no change at all. */
 export function medMarkLabel(c: MedChange, t: TranslateFn): string {
 	if (c.kind === 'stop') return t('pdf.med_mark_stop', { name: c.name });
-	const after = c.after ?? { dose: '', schedule: '' };
-	const detail = c.kind === 'change' && c.before && c.before.dose.trim() === after.dose.trim()
-		? after.schedule.trim() || after.dose.trim()
-		: after.dose.trim() || after.schedule.trim();
+	const detail = regimenDetail(c.after, c.kind === 'change' ? c.before : null);
 	return detail ? `${c.name} ${detail}` : c.name;
 }
 
@@ -219,6 +230,47 @@ export function layoutTickLabels(
 		out.push({ row: tickRow, x0, labelled: false });
 	}
 	return out;
+}
+
+/* ─── 3b. Change rows in the day-by-day grid ──────────────────────────── */
+
+/** The grid's label for one change: "Lamotrigin: 50 mg → 75 mg",
+ *  "Brivaracetam: Beginn · 50 mg", "Levetiracetam: Abgesetzt". Short forms —
+ *  the changes table carries the full regimen. The arrow is the one the
+ *  changes table draws as a vector (pdf.ts `vectorArrowHooks`). */
+export function gridChangeLabel(c: MedChange, meds: MedicationSlot[], t: TranslateFn): string {
+	let text: string;
+	if (c.kind === 'change') {
+		text = t('pdf.med_change_dose', {
+			before: regimenDetail(c.before, c.after) || '—',
+			after: regimenDetail(c.after, c.before) || '—',
+		});
+	} else if (c.kind === 'start') {
+		text = t('pdf.med_change_start', { regimen: regimenDetail(c.after) || '—' });
+	} else {
+		const next = c.switchedTo ? meds.find((m) => m.id === c.switchedTo)?.name : '';
+		text = next ? t('pdf.med_change_stop_switch', { name: next }) : t('pdf.med_change_stop');
+	}
+	return `${c.name}: ${text}`;
+}
+
+/** One entry per DAY of the month that holds a start, change or stop, with
+ *  the grid label of each change that day (a switch lists both halves). */
+export function gridChangeMarksForMonth(
+	meds: MedicationSlot[],
+	year: number,
+	month: number, // 0-based
+	daysInMonth: number,
+	t: TranslateFn,
+): DayMedMark[] {
+	const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+	const win = { from: `${prefix}-01`, to: `${prefix}-${String(daysInMonth).padStart(2, '0')}` };
+	const byDay = new Map<number, string[]>();
+	for (const c of medicationChanges(meds, win)) {
+		const day = Number(c.date.slice(8, 10));
+		byDay.set(day, [...(byDay.get(day) ?? []), gridChangeLabel(c, meds, t)]);
+	}
+	return [...byDay.entries()].sort((a, b) => a[0] - b[0]).map(([day, labels]) => ({ day, labels }));
 }
 
 /* ─── 4. The timeline strip ───────────────────────────────────────────── */
@@ -296,4 +348,121 @@ export function csvDoseCell(
 	const period = periodOn(med, dayISO);
 	if (!period) return '';
 	return period.dose.trim() || period.schedule.trim() || takenWord;
+}
+
+/* ─── 6. Dose bands behind a chart ────────────────────────────────────── */
+
+export interface DoseBandLabel {
+	/** Where the labelled period (or the stop) begins, in bin units. */
+	at: number;
+	text: string;
+}
+
+export interface DoseBandLayer {
+	/** The shaded medication. */
+	med: MedicationSlot;
+	bands: DoseBand[];
+	boundaries: DoseBoundary[];
+	/** One per band, left to right, plus one per stop that leaves the rest of
+	 *  the axis unshaded. The leftmost names the medication; the rest carry
+	 *  the dose alone. */
+	labels: DoseBandLabel[];
+	/** Another medication changed on the same axis too — the chart must say
+	 *  which one its background shows. */
+	othersChanged: boolean;
+}
+
+/**
+ * The before/after structure for one chart: the dose periods of the
+ * medication that changed most recently inside the axis (`medsChangedIn`),
+ * through the shared geometry in reports/doseBands.ts. Null when no
+ * medication started, changed or stopped on the axis — that chart renders
+ * exactly as it would without dose history.
+ *
+ * STRUCTURE ONLY. The doses and dates the person recorded; nothing counted
+ * per period, nothing compared (pdf.no-assessment.test.ts).
+ */
+export function doseBandLayer(meds: MedicationSlot[], bins: AxisBin[], t: TranslateFn): DoseBandLayer | null {
+	if (bins.length === 0) return null;
+	const changed = medsChangedIn(meds, bins[0].from, bins[bins.length - 1].to);
+	const med = changed[0];
+	if (!med) return null;
+	const { bands, boundaries } = doseBands(med, bins);
+	if (bands.length === 0 && boundaries.length === 0) return null;
+
+	const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+	const items: Array<{ at: number; detail: string | null }> = bands.map((b, i) => {
+		const prev = i > 0 && near(bands[i - 1].end, b.start) ? bands[i - 1] : null;
+		return { at: b.start, detail: regimenDetail(b, prev) };
+	});
+	for (const bd of boundaries) {
+		if (bd.change.kind === 'stop' && !bands.some((b) => near(b.start, bd.at))) {
+			items.push({ at: bd.at, detail: null });
+		}
+	}
+	items.sort((a, b) => a.at - b.at);
+	const labels: DoseBandLabel[] = [];
+	items.forEach((item, i) => {
+		let text: string;
+		if (item.detail === null) {
+			text = i === 0 ? t('pdf.med_mark_stop', { name: med.name }) : t('pdf.dose_band_stopped');
+		} else {
+			text = i === 0 ? [med.name, item.detail].filter(Boolean).join(' ') : item.detail;
+		}
+		if (text) labels.push({ at: item.at, text });
+	});
+	return { med, bands, boundaries, labels, othersChanged: changed.length > 1 };
+}
+
+/* ─── 7. Page 1: the regimen on the report's end date ─────────────────── */
+
+/** The period `p` directly follows — present only when `p` began with a
+ *  change, not a start. */
+function periodBefore(med: MedicationSlot, p: MedicationPeriod): MedicationPeriod | null {
+	const periods = medPeriods(med);
+	const i = periods.findIndex((q) => q.from === p.from && q.to === p.to);
+	const prev = i > 0 ? periods[i - 1] : null;
+	return prev?.to && p.from && addDaysISO(prev.to, 1) === p.from ? prev : null;
+}
+
+/**
+ * One line per medication for page 1, as of `asOf` (the report window's end,
+ * clipped to today by the caller):
+ *   - taken that day: "Lamotrigin 100 mg · seit 24.09.2026 (vorher 75 mg)" —
+ *     "seit" only when the period's start is recorded, "vorher" only when the
+ *     period began with a change;
+ *   - stopped inside the window: "Levetiracetam · abgesetzt ab 12.09.2026".
+ * Taken first, then stopped, each in Settings order. Neutral facts only; the
+ * reason typed for a change never appears.
+ */
+export function medicationsOnDate(
+	meds: MedicationSlot[],
+	win: DateWindow,
+	asOf: string,
+	format: (iso: string) => string,
+	t: TranslateFn,
+): string[] {
+	const taken: string[] = [];
+	const stopped: string[] = [];
+	for (const med of meds) {
+		const p = periodOn(med, asOf);
+		if (p) {
+			const prev = periodBefore(med, p);
+			// A schedule-only change states the schedule on both sides.
+			const now = prev && prev.dose.trim() === p.dose.trim() ? regimenText(p) : regimenDetail(p);
+			const parts = [[med.name, now].filter(Boolean).join(' ')];
+			if (med.asNeeded) parts.push(t('pdf.med_now_as_needed'));
+			if (p.from) {
+				const since = t('pdf.med_now_since', { date: format(p.from) });
+				const before = prev ? regimenDetail(prev, p) : '';
+				parts.push(before ? `${since} ${t('pdf.med_now_before', { regimen: before })}` : since);
+			}
+			taken.push(parts.join(' · '));
+			continue;
+		}
+		const stops = medicationChanges([med], { from: win.from, to: asOf }).filter((c) => c.kind === 'stop');
+		const last = stops[stops.length - 1];
+		if (last) stopped.push(`${med.name} · ${t('pdf.med_now_stopped', { date: format(last.date) })}`);
+	}
+	return [...taken, ...stopped];
 }
