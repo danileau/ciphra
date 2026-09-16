@@ -410,6 +410,21 @@ route kind.
   a checkbox frames one as the deviation, and keeping your diary to
   yourself is not a deviation. `name` distinguishes the groups when a
   create form and an editing row are open at once.
+- **MedicationManager.svelte** — Settings → medications with dose
+  history (2026-09-16). Lists what applies *today* (dose, since when, a
+  planned change or stop), stopped medications in their own list rather
+  than gone, and each medication's recorded steps behind a disclosure.
+  Applies `MedicationChangeDialog` results to the RAW blueprint and saves
+  it — never `$resolvedBlueprint`. The add form takes an optional start
+  date; left empty, the medication reads as "since before the record".
+- **MedicationChangeDialog.svelte** — the one place a medication changes.
+  Wraps `Modal.svelte`. Asks *what* changes (dose/schedule, stopping, or
+  switching to another drug) and *from when*, and renders a preview from
+  the computed result, so what the person reads is what gets saved. Typo
+  correction is a separate, explicitly retroactive view. Delete offers
+  "stop instead" first when days are logged against the medication and
+  takes a second step to delete anyway. Pure writers live in
+  `blueprint/medicationHistory.ts`; the dialog never saves.
 - **ExportNoteReview.svelte** — pre-export opt-in for note markers.
   Freeform note markers are the only export content authored as prose,
   and people write prose: a real export carried a third party's name,

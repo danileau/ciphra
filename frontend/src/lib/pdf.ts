@@ -3611,7 +3611,7 @@ export function generateDoctorPdf(
 		const medRows = blueprint.medications.map((med) => {
 			// Assume-taken model for scheduled meds, taken-toggle for as-needed.
 			// See medAdherence() for the two models + back-compat note.
-			const { taken, total, pct } = medAdherence(med, monthDocs, daysLogged);
+			const { taken, total, pct } = medAdherence(med, monthDocs);
 			return [`${med.name} ${med.dose}`, med.schedule, `${taken} / ${total}`, `${pct}%`];
 		});
 

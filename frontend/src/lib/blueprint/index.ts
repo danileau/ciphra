@@ -6,6 +6,7 @@ export type {
 	EpisodeType,
 	VitalField,
 	MedicationSlot,
+	MedicationPeriod,
 	RescueMedication,
 } from './types';
 export { blueprint, hasBlueprint, resolvedBlueprint } from './store';
@@ -29,5 +30,28 @@ export {
 	bedarfMedColumns,
 	foldRescueMedications,
 	medAdherence,
+	medAdherenceByPeriod,
 } from './medications';
-export type { MedDisplay, MedAdherence } from './medications';
+export type { MedDisplay, MedAdherence, MedPeriodAdherence } from './medications';
+export {
+	addDaysISO,
+	applyCorrection,
+	applyDoseChange,
+	applyStop,
+	applySwitch,
+	createMedication,
+	docReferencesMed,
+	earliestChangeDate,
+	isActiveOn,
+	isUnbounded,
+	medHistoryDays,
+	medicationChanges,
+	medPeriods,
+	medStartDate,
+	medStatusOn,
+	newMedicationId,
+	periodOn,
+	plannedChange,
+	undoLastChange,
+} from './medicationHistory';
+export type { DoseChange, MedChange, MedChangeKind, MedStatus, NewMedication, PlannedChange } from './medicationHistory';

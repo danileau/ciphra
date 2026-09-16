@@ -11,7 +11,27 @@ app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
-<!-- Nothing yet. Add lines here as you work; they become the next release. -->
+### Added
+- **Medication changes now have a history.** When a dose changes — say from
+  2× 10 mg to 2× 12 mg starting tomorrow — choose *Change* on the medication,
+  say what is changing and from when, and ciphra shows you exactly how it will
+  be recorded before it saves anything. Days before the change keep the dose
+  you actually took; days after it show the new one. You can also record that
+  you stopped a medication, or switched to a different one, the same way.
+- Stopped medications no longer disappear. They move to their own list in
+  Settings, stay in your history, and can be taken up again.
+
+### Fixed
+- Editing a medication's dose used to rewrite every day you had already
+  logged, as if you had always taken the new dose. Existing days now keep what
+  was recorded for them; a genuine typo can still be corrected, and the app
+  tells you that a correction applies to every day with that dose.
+- Deleting a medication you had already logged against removed it from your
+  reports and the PDF for your doctor. ciphra now offers to stop it instead,
+  and says how many days would lose the name before you delete it anyway.
+- A newly added daily medication counted as "taken" on every logged day of the
+  report, including days before you started it. Adherence now only counts days
+  on which the medication was part of your regimen.
 
 ## [1.3.0] — 2026-08-30
 
