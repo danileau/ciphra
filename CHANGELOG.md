@@ -11,6 +11,24 @@ app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
+### Added
+- **Medication changes now have a history.** When a dose changes — say from
+  2× 10 mg to 2× 12 mg starting tomorrow — choose *Change* on the medication,
+  say what is changing and from when, and ciphra shows you exactly how it will
+  be recorded before it saves anything. Days before the change keep the dose
+  you actually took; days after it show the new one. You can also record that
+  you stopped a medication, or switched to a different one, the same way.
+- Stopped medications no longer disappear. They move to their own list in
+  Settings, stay in your history, and can be taken up again.
+- **Dose changes show up wherever your data does.** The day view shows the dose
+  that applied that day; the calendar marks the day a medication started,
+  changed or stopped; the reports page shows a medication timeline next to your
+  trend chart; and the PDF for your doctor lists adherence per dose, the changes
+  in the report period, and a timeline. The CSV export gets a dose-of-the-day
+  column per daily medication. ciphra shows *when* a dose changed — it does not
+  compare how you were before and after. The reason you type for a change stays
+  in the app and is not printed in the PDF.
+
 ### Fixed
 - When the server was briefly unreachable and the connection answered with an
   error page instead, saving an entry failed. It is now kept on your device and
@@ -72,6 +90,23 @@ app at **/docs → Changelog** and here on the public repo.
 - The quick-add sheet now works with a keyboard and screen readers: it is
   announced as a dialog, keeps focus inside while open, closes with Escape, and
   returns you to the button that opened it.
+- Mistyping your current password when changing your password or deleting your
+  account signed you out of ciphra. It now just says the password is wrong.
+- Signing in to a suspended account now says the account is suspended, instead
+  of claiming the password is wrong.
+- Editing a medication's dose used to rewrite every day you had already
+  logged, as if you had always taken the new dose. Existing days now keep what
+  was recorded for them; a genuine typo can still be corrected, and the app
+  tells you that a correction applies to every day with that dose.
+- Deleting a medication you had already logged against removed it from your
+  reports and the PDF for your doctor. ciphra now offers to stop it instead,
+  and says how many days would lose the name before you delete it anyway.
+- A newly added daily medication counted as "taken" on every logged day of the
+  report, including days before you started it. Adherence now only counts days
+  on which the medication was part of your regimen.
+- On a phone, a dialog taller than the screen was cut off at the top and bottom
+  and could not be scrolled, and the bottom navigation bar covered its buttons.
+
 ### Security
 - **A deleted account's sign-ins stop working straight away, on every device.**
   They could still be accepted until they expired, up to a day later. Taking away
@@ -109,12 +144,6 @@ app at **/docs → Changelog** and here on the public repo.
   content).
 - Malformed requests that used to crash the server are refused cleanly, and one
   bad entry in a bulk import no longer fails the whole import.
-
-### Fixed
-- Mistyping your current password when changing your password or deleting your
-  account signed you out of ciphra. It now just says the password is wrong.
-- Signing in to a suspended account now says the account is suspended, instead
-  of claiming the password is wrong.
 
 ## [1.3.0] — 2026-08-30
 
