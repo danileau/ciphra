@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { t, locale, plural } from '$lib/i18n';
-	import { formatDateChoice } from '$lib/blueprint/preferences';
+	import { formatDateChoice, formatISODateChoice } from '$lib/blueprint/preferences';
 	import { rememberFocusMonth, recallFocusMonth } from '$lib/stores/focusMonth';
 	import { anyPhaseDayCount } from '$lib/monthAggregates';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, isCustomItem, prettifyCustomId, resolveMedDisplay } from '$lib/blueprint';
+	import { resolvedBlueprint, isCustomItem, prettifyCustomId, resolveMedDisplay, medicationChanges } from '$lib/blueprint';
+	import { toLocalISODate } from '$lib/date';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import Asterisk from '$lib/components/Asterisk.svelte';
 	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import VitalTrendReportsCard from '$lib/components/VitalTrendReportsCard.svelte';
+	import MedicationTimeline from '$lib/components/MedicationTimeline.svelte';
 	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
 	import { cohortPalette } from '$lib/cohortPalette';
 	import { conditionColorOf } from '$lib/conditionAccent';
@@ -915,6 +917,47 @@
 		}
 		return out;
 	})();
+	// Dose history — the window the trend chart covers (the visible month, or
+	// the 24 months ending at trendAnchor), shared with the medication timeline
+	// card so the two read against the same dates.
+	$: medWindow = (() => {
+		if (viewMode === 'month') {
+			const d = new Date(currentDate + 'T12:00:00');
+			return {
+				from: toLocalISODate(new Date(d.getFullYear(), d.getMonth(), 1)),
+				to: toLocalISODate(new Date(d.getFullYear(), d.getMonth() + 1, 0)),
+			};
+		}
+		return {
+			from: toLocalISODate(new Date(trendAnchor.getFullYear(), trendAnchor.getMonth() - 23, 1)),
+			to: toLocalISODate(new Date(trendAnchor.getFullYear(), trendAnchor.getMonth() + 1, 0)),
+		};
+	})();
+	$: medChangesInWindow = medicationChanges(bp?.medications ?? [], medWindow);
+	// Per chart bin (day in month view, month in year view): one tooltip line
+	// per medication change. Tooltip, not a mark on the chart — the rule for
+	// aggregate-axis charts (see MedicationTimeline.svelte).
+	$: medChangeLinesByBin = (() => {
+		if (!trendChartData || medChangesInWindow.length === 0) return [] as string[][];
+		const bins: string[][] = trendBinDates.map(() => []);
+		for (const c of medChangesInWindow) {
+			const idx = viewMode === 'month'
+				? Number(c.date.slice(8, 10)) - 1
+				: trendBinDates.findIndex((d) => toLocalISODate(d).slice(0, 7) === c.date.slice(0, 7));
+			if (idx < 0 || idx >= bins.length) continue;
+			const date = formatISODateChoice(c.date, bp?.dateFormat);
+			if (c.kind === 'change') {
+				bins[idx].push($t('reports.tooltip_med_change', { date, name: c.name, before: c.before?.dose ?? '', after: c.after?.dose ?? '' }));
+			} else if (c.kind === 'start') {
+				bins[idx].push($t('reports.tooltip_med_start', { date, name: c.name, dose: c.after?.dose ?? '' }));
+			} else {
+				bins[idx].push($t('reports.tooltip_med_stop', { date, name: c.name }));
+			}
+		}
+		return bins;
+	})();
+	$: medChangeSig = medChangeLinesByBin.map((b) => b.join('|')).join('||');
+
 	// Cheap signature so the trendChartOptions memo (below) busts when the
 	// trigger window changes — sum is enough to detect any user-visible
 	// change without an O(n) JSON.stringify on each tick.
@@ -959,6 +1002,7 @@
 	let _prevAccent = '';
 	let _prevNeutral = '';
 	let _prevTrigSig = '';
+	let _prevMedSig = '';
 	let _prevLocale = '';
 	let _prevViewMode = '';
 	let _prevDateFmt = '';
@@ -969,6 +1013,7 @@
 			trendAccentHex === _prevAccent &&
 			trendNeutralHex === _prevNeutral &&
 			trendTriggerSig === _prevTrigSig &&
+			medChangeSig === _prevMedSig &&
 			$locale === _prevLocale &&
 			viewMode === _prevViewMode &&
 			dateFmt === _prevDateFmt &&
@@ -979,6 +1024,7 @@
 		_prevAccent = trendAccentHex;
 		_prevNeutral = trendNeutralHex;
 		_prevTrigSig = trendTriggerSig;
+		_prevMedSig = medChangeSig;
 		_prevLocale = $locale;
 		_prevViewMode = viewMode;
 		_prevDateFmt = dateFmt;
@@ -986,6 +1032,7 @@
 		// own snapshot of trigger counts AND its own ($t, $locale) view —
 		// when any dep changes, the memo rebuilds and grabs fresh snapshots.
 		const triggerSnapshot = trendTriggerByBin;
+		const medChangeSnapshot = medChangeLinesByBin;
 		const binDates = trendBinDates;
 		const view = viewMode;
 		const fmt = bp?.dateFormat;
@@ -1016,10 +1063,13 @@
 						// blueprint declares triggers and the bin has at
 						// least one.
 						afterBody: (items: Array<{ dataIndex: number }>) => {
-							if (!items.length || triggerSnapshot.length === 0) return [];
+							if (!items.length) return [];
+							const lines: string[] = [];
 							const n = triggerSnapshot[items[0].dataIndex] || 0;
-							if (n === 0) return [];
-							return [plural(tt, lc, 'companion.tooltip_trigger_days', n)];
+							if (n > 0) lines.push(plural(tt, lc, 'companion.tooltip_trigger_days', n));
+							// Dose history — name the medication change(s) in this bin.
+							lines.push(...(medChangeSnapshot[items[0].dataIndex] ?? []));
+							return lines;
 						},
 					},
 				},
@@ -1341,6 +1391,12 @@
 	{/if}
 	<!-- reportsPrimarySpec === null → render nothing (day-1, no data,
 	     no nag). The KPI block and stats above stand on their own. -->
+
+	<!-- Dose history — only when a medication started, changed or stopped
+	     inside the window; a regimen that did not move adds nothing here. -->
+	{#if bp && medChangesInWindow.length > 0}
+		<MedicationTimeline meds={bp.medications} from={medWindow.from} to={medWindow.to} dateFormat={bp.dateFormat} />
+	{/if}
 
 	<!-- Recent note-marker events — closes the visibility gap. Users who
 		 create "Treatment adjusted" style markers couldn't see them anywhere

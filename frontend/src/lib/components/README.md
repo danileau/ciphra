@@ -425,6 +425,15 @@ route kind.
   "stop instead" first when days are logged against the medication and
   takes a second step to delete anyway. Pure writers live in
   `blueprint/medicationHistory.ts`; the dialog never saves.
+- **MedicationTimeline.svelte** — `/reports` dose-history card. One lane
+  per medication inside the window, a segment per dose period with a
+  visible step at each change and a gap while stopped, plus the same
+  changes as a dated list (the accessible form, and the one that still
+  reads on a narrow phone). A strip of its own rather than marks on the
+  trend chart — per-event marks on aggregate-axis charts were rejected as
+  glitch-looking; the chart's tooltip names the change instead. Rendered
+  only when something started, changed or stopped in the window.
+  Descriptive only: never a before/after comparison.
 - **ExportNoteReview.svelte** — pre-export opt-in for note markers.
   Freeform note markers are the only export content authored as prose,
   and people write prose: a real export carried a third party's name,
