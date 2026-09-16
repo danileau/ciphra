@@ -9,7 +9,7 @@
 	import { documents } from '$lib/stores/documents';
 	import { resolvedBlueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { t } from '$lib/i18n';
 	import { todayISO } from '$lib/date';
@@ -42,18 +42,36 @@
 		documents.load();
 	});
 
-	async function handleSave(data: EntryData) {
+	// Unsaved edits in the composer (reported by it — carryover pre-fills
+	// do not count). Leaving the day with them used to drop them silently:
+	// the arrow keys, the day arrows, "today", and any link all navigate.
+	let dirty = false;
+
+	beforeNavigate((nav) => {
+		if (!dirty) return;
+		// A reload / tab close: cancelling asks the browser to show its own
+		// "leave site?" prompt — a custom confirm is not allowed there.
+		if (nav.willUnload) {
+			nav.cancel();
+			return;
+		}
+		if (!confirm($t('protocol.unsaved_confirm'))) nav.cancel();
+		else dirty = false;
+	});
+
+	// Returns whether the write happened (a write queued offline counts) so
+	// the composer shows "saved" only when it is true.
+	async function handleSave(data: EntryData): Promise<boolean> {
 		const existing = $documents.find(d => d.data.type === 'entry' && d.data.date === currentDate);
 		// Detect "this is the very first daily_log" BEFORE the save completes,
 		// so we can fire a one-time onboarding event (CIPH-103) pointing the
 		// user at the quick-add FAB / event-line feature.
 		const priorDailyLogCount = $documents.filter(d => d.data.type === 'entry').length;
 		const wasFirstDailyLog = !existing && priorDailyLogCount === 0;
-		if (existing) {
-			await documents.updateDoc(existing.id, data);
-		} else {
-			await documents.save(data);
-		}
+		const ok = existing
+			? await documents.updateDoc(existing.id, data)
+			: await documents.save(data);
+		if (!ok) return false;
 		if (wasFirstDailyLog && typeof window !== 'undefined') {
 			try {
 				if (localStorage.getItem('ciphra_event_line_tooltip_seen') !== 'true') {
@@ -61,12 +79,17 @@
 				}
 			} catch {}
 		}
+		return true;
 	}
 
-	async function handleDelete() {
-		if (!existingDoc) return;
-		await documents.remove(existingDoc.id);
+	async function handleDelete(): Promise<boolean> {
+		if (!existingDoc) return false;
+		// Leaving on a failed delete told the user it was gone while the
+		// entry stayed put. Stay, and let the composer say it did not work.
+		if (!(await documents.remove(existingDoc.id))) return false;
+		dirty = false; // the day is gone; its edits are not worth a prompt
 		history.back();
+		return true;
 	}
 
 	function handleDateChange(delta: number) {
@@ -98,6 +121,7 @@
 			recentDocs={$documents}
 			onSave={handleSave}
 			onDelete={handleDelete}
+			onDirtyChange={(d) => (dirty = d)}
 			onDateChange={handleDateChange}
 			onJumpToToday={handleJumpToToday}
 		/>

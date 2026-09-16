@@ -3,7 +3,7 @@
 	import { isAuthenticated, authReady, auth, needsUnlock } from '$lib/stores/auth';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
 	import { t } from '$lib/i18n';
-	import { todayISO } from '$lib/date';
+	import { todayISO, toLocalISODate } from '$lib/date';
 	import type { Locale } from '$lib/i18n';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -65,6 +65,14 @@
 	let quickAddDose = '';
 	// CIPH-713 — private toggle on quick-add log/event flow.
 	let quickAddPrivate = false;
+	// In a linked vault the caregiver writes into someone else's account. The
+	// server files those writes as shareable whatever they say, while the
+	// caregiver's own view drops private plaintext — so a diary note or a
+	// locked entry written there vanished for its author on reload, and every
+	// other caregiver of that account could read it. Neither is offered there.
+	$: quickAddLinked = $activeVault !== null;
+	$: if (quickAddLinked && quickAddMode === 'diary') quickAddMode = 'log';
+	$: if (quickAddLinked && quickAddPrivate) quickAddPrivate = false;
 
 	// FAB onboarding (CIPH-102): pulse + tooltip for the first 3 sessions so
 	// the quick-add affordance isn't invisible. Klara missed it for 3 min in
@@ -363,68 +371,94 @@
 		}
 	}
 
+	// The last quick-add did not reach the vault (not even the offline
+	// queue). The sheet stays open with everything still filled in.
+	let quickAddError = false;
+
+	// A save that did not happen must not flash "saved" and close the sheet
+	// with the input gone. `reset` runs only on success.
+	function quickAddFinish(ok: boolean, reset: () => void) {
+		quickAddSaving = false;
+		if (!ok) {
+			quickAddError = true;
+			return;
+		}
+		quickAddError = false;
+		quickAddSaved = true;
+		setTimeout(() => {
+			quickAddSaved = false;
+			reset();
+			showQuickAdd = false;
+			quickAddOpen.set(false);
+		}, 1200);
+	}
+
 	async function quickAddSave() {
+		// Enter in the note field reached here without the Save button's
+		// disabled gate — a double press minted two entries for the day.
+		if (quickAddSaving) return;
 		const now = new Date();
-		const todayStr = now.toISOString().slice(0, 10);
+		// LOCAL date, like the time next to it. The UTC date put everything
+		// logged between midnight and ~02:00 Swiss time on yesterday — and
+		// merged it into yesterday's entry.
+		const todayStr = toLocalISODate(now);
+		// In someone else's vault the server files every write as shareable,
+		// and a private flag would only hide the entry from the caregiver who
+		// wrote it (see quickAddLinked).
+		const privateFlag = !quickAddLinked && quickAddPrivate ? true : undefined;
 
 		// CIPH-881 — rescue medication writes a `type:'event' kind:'medication'`
 		// doc, distinct from the freeform note-marker event used by the log mode.
 		if (quickAddMode === 'med') {
 			if (!quickAddSelectedMedId) return;
 			quickAddSaving = true;
+			quickAddError = false;
 			const nowTime = now.toTimeString().slice(0, 5);
 			const med = bedarfMedsForPicker(bp).find((m) => m.id === quickAddSelectedMedId);
 			const dose = quickAddDose.trim() || med?.dose || undefined;
-			await documents.save({
+			const ok = await documents.save({
 				type: 'event',
 				kind: 'medication',
 				date: todayStr,
 				time: nowTime,
 				medicationId: quickAddSelectedMedId,
 				dose,
-				private: quickAddPrivate || undefined,
+				private: privateFlag,
 			});
-			quickAddSaving = false;
-			quickAddSaved = true;
-			setTimeout(() => {
-				quickAddSaved = false;
+			quickAddFinish(ok, () => {
 				quickAddSelectedMedId = null;
 				quickAddDose = '';
 				quickAddMode = 'log';
-				showQuickAdd = false;
-				quickAddOpen.set(false);
-			}, 1200);
+			});
 			return;
 		}
 
 		// CIPH-710 — diary mode writes a `type: 'diary'` doc that is hard-
 		// excluded from every export surface (PDF/CSV/reports/share).
 		if (quickAddMode === 'diary') {
-			if (!diaryText.trim()) return;
+			if (!diaryText.trim() || quickAddLinked) return;
 			quickAddSaving = true;
-			await documents.save({
+			quickAddError = false;
+			const ok = await documents.save({
 				type: 'diary',
 				date: diaryDate || todayStr,
 				time: diaryTime || undefined,
 				text: diaryText.trim(),
 				private: true,
 			});
-			quickAddSaving = false;
-			quickAddSaved = true;
-			setTimeout(() => {
-				quickAddSaved = false;
+			quickAddFinish(ok, () => {
 				diaryDate = '';
 				diaryTime = '';
 				diaryText = '';
 				quickAddMode = 'log';
-				showQuickAdd = false;
-				quickAddOpen.set(false);
-			}, 1200);
+			});
 			return;
 		}
 
 		if (!quickAddSelectedEpisode && !quickAddNote.trim()) return;
 		quickAddSaving = true;
+		quickAddError = false;
+		let ok = false;
 
 		if (quickAddSelectedEpisode) {
 			// Merge into today's existing `type:'entry'` if one exists — otherwise
@@ -455,7 +489,7 @@
 							? { time: cur.episodeTimes?.[epId] || '', note: cur.episodeNotes?.[epId] || '' }
 							: {});
 				const nextInstances = [...prevInstances, { time: nowTime, ...(note ? { note } : {}) }];
-				await documents.updateDoc(existing.id, {
+				ok = await documents.updateDoc(existing.id, {
 					...cur,
 					episodes: { ...(cur.episodes || {}), [quickAddSelectedEpisode]: prevCount + 1 },
 					episodeInstances: { ...(cur.episodeInstances || {}), [quickAddSelectedEpisode]: nextInstances },
@@ -469,7 +503,7 @@
 					},
 				});
 			} else {
-				await documents.save({
+				ok = await documents.save({
 					type: 'entry',
 					date: todayStr,
 					episodeType: quickAddSelectedEpisode,
@@ -478,28 +512,23 @@
 					episodeInstances: { [quickAddSelectedEpisode]: [{ time: nowTime, ...(note ? { note } : {}) }] },
 					episodeTimes: { [quickAddSelectedEpisode]: nowTime },
 					episodeNotes: note ? { [quickAddSelectedEpisode]: `${nowTime}: ${note}` } : undefined,
-					private: quickAddPrivate || undefined,
+					private: privateFlag,
 				});
 			}
 		} else if (quickAddNote.trim()) {
-			await documents.save({
+			ok = await documents.save({
 				type: 'event',
 				date: todayStr,
 				notes: quickAddNote.trim(),
-				private: quickAddPrivate || undefined,
+				private: privateFlag,
 			});
 		}
 
-		quickAddSaving = false;
-		quickAddSaved = true;
-		setTimeout(() => {
-			quickAddSaved = false;
+		quickAddFinish(ok, () => {
 			quickAddSelectedEpisode = null;
 			quickAddNote = '';
 			quickAddPrivate = false;
-			showQuickAdd = false;
-			quickAddOpen.set(false);
-		}, 1200);
+		});
 	}
 
 	function quickAddReset() {
@@ -514,6 +543,7 @@
 		quickAddPrivate = false;
 		quickAddSelectedMedId = null;
 		quickAddDose = '';
+		quickAddError = false;
 	}
 
 	// Load documents and blueprint when authenticated
@@ -1108,6 +1138,12 @@
 						<h3 class="text-lg font-semibold mb-1" style="color: var(--text-primary)">{$t('quickadd.title')}</h3>
 						<p class="text-sm mb-4" style="color: var(--text-muted)">{$t('quickadd.what_happened')}</p>
 
+						{#if quickAddError}
+							<!-- Not saved — not even queued offline. Everything entered is
+								 still below; Save tries again. -->
+							<p class="text-sm mb-4" style="color: var(--danger)" role="alert" data-testid="quickadd-error">{$t('quickadd.save_failed')}</p>
+						{/if}
+
 						<!-- CIPH-710 — top-level mode switch: log entry vs private diary.
 							 CIPH-881 — third "med" chip surfaced only when the active
 							 blueprint declares rescueMedications. -->
@@ -1119,6 +1155,7 @@
 								class="flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[40px]"
 								style="background: {quickAddMode === 'log' ? 'var(--surface-card)' : 'transparent'}; color: {quickAddMode === 'log' ? 'var(--text-primary)' : 'var(--text-muted)'}"
 							>{$t('quickadd.mode_entry')} / {$t('quickadd.mode_event')}</button>
+							{#if !quickAddLinked}
 							<button
 								type="button"
 								on:click={() => { quickAddMode = 'diary'; if (!diaryDate) diaryDate = todayISO(); }}
@@ -1132,6 +1169,7 @@
 								</svg>
 								{$t('quickadd.mode_diary')}
 							</button>
+							{/if}
 							{#if bedarfMeds.length > 0}
 								<button
 									type="button"
@@ -1274,11 +1312,17 @@
 								data-testid="quickadd-note"
 								class="input"
 								on:input={() => { if (fabShowTooltip) dismissFabTooltip(); }}
-								on:keydown={(e) => { if (e.key === 'Enter' && (quickAddSelectedEpisode || quickAddNote.trim())) quickAddSave(); }}
+								on:keydown={(e) => { if (e.key === 'Enter' && !quickAddSaving && (quickAddSelectedEpisode || quickAddNote.trim())) quickAddSave(); }}
 							/>
 						</div>
 
-						<!-- CIPH-713 / CIPH-783 — private toggle with semantic lock state -->
+						<!-- CIPH-713 / CIPH-783 — private toggle with semantic lock state.
+							 Not in someone else's vault: see quickAddLinked. -->
+						{#if quickAddLinked}
+							<p class="text-[11px] mb-3" style="color: var(--text-muted)" data-testid="quickadd-linked-hint">
+								{$t('quickadd.linked_hint', { user: $familyLinks.find((l) => l.sourceUserId === $activeVault)?.sourceUsername ?? '' })}
+							</p>
+						{:else}
 						<label class="flex items-center gap-2 text-xs mb-3" style="color: var(--text-secondary)"
 							aria-label={quickAddPrivate ? $t('private.toggle_to_public') : $t('private.toggle_to_private')}>
 							<input type="checkbox" bind:checked={quickAddPrivate} class="w-4 h-4" />
@@ -1302,6 +1346,7 @@
 							     fact printed verbatim on the doctor PDF. -->
 							<span style="color: var(--text-muted)">— {quickAddPrivate ? $t('private.tooltip') : $t('private.state_public_hint')}</span>
 						</label>
+						{/if}
 
 						<!-- Save button -->
 						<button

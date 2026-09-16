@@ -36,6 +36,18 @@ app at **/docs → Changelog** and here on the public repo.
   account's entries on screen. The account named in the banner is now always
   the one you see and write to, and "Retry" reloads everything that account
   needs.
+- **A save that failed could still say "Saved".** The day view, the quick-add
+  sheet and deleting an entry now tell you when something did not go through,
+  and keep what you typed so you can try again. (Saving while offline still
+  counts as saved — it syncs later, as before.)
+- Pressing Enter or Ctrl+S twice in a row could save the same entry twice, and
+  Ctrl+S on an empty day saved an empty entry.
+- Leaving a day with unsaved changes — including with the arrow keys — threw the
+  changes away without asking. ciphra now asks first.
+- In someone else's account, the quick-add sheet offered a diary entry and a
+  "private" switch. Those entries disappeared from your view after a reload while
+  staying visible to others with access. Both options are now only offered in
+  your own account.
 
 ## [1.3.0] — 2026-08-30
 
