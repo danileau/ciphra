@@ -11,6 +11,16 @@ app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
+<!-- Nothing yet. Pending entries live in changelog.d/ — see changelog.d/README.md. -->
+
+## [1.4.0] — 2026-09-16
+
+Your medications now keep a history: a dose change, a stop or a switch to
+another medication is recorded with the day it took effect, and your reports
+and the PDF for your doctor show it. This release also tightens how sign-ins,
+account locks and family invitations are checked, and fixes several ways an
+entry saved offline, or in someone else's account, could end up wrong.
+
 ### Added
 - **Medication changes now have a history.** When a dose changes — say from
   2× 10 mg to 2× 12 mg starting tomorrow — choose *Change* on the medication,
@@ -106,6 +116,24 @@ app at **/docs → Changelog** and here on the public repo.
   on which the medication was part of your regimen.
 - On a phone, a dialog taller than the screen was cut off at the top and bottom
   and could not be scrolled, and the bottom navigation bar covered its buttons.
+- **Signing in with the right password could fail on a phone.** When you
+  tapped the eye icon to check your password, the keyboard could quietly
+  capitalize its first letter, autocorrect it or swap in curly quotes — so the
+  password ciphra received was no longer the one you typed. Password fields now
+  keep exactly what you type, and the login form tells your password manager
+  which saved login to fill.
+- A recovery or family code typed with a capital letter or a double space was
+  accepted but then rejected as wrong. Codes now work however they are
+  capitalized or spaced.
+- **If you had entered the same medication twice — once per dose, because a
+  dose change could not be recorded any other way — ciphra now offers to
+  combine the two.** Settings points them out; *Combine* asks which dose came
+  first and from which day the other one applied, shows the resulting history,
+  and keeps every day you logged against either entry. Deleting one of them
+  offers combining first.
+- Changing a medication to the dose it already had recorded a meaningless
+  "8 mg → 8 mg" step in its history. The dialog now says nothing would change,
+  and such steps already saved no longer show up.
 
 ### Security
 - **A deleted account's sign-ins stop working straight away, on every device.**
@@ -215,6 +243,7 @@ above.
   and the admin surface. (Established feature set — see
   [`docs/FEATURES.md`](docs/FEATURES.md).)
 
-[Unreleased]: https://github.com/danileau/ciphra/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/danileau/ciphra/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/danileau/ciphra/releases/tag/v1.4.0
 [1.3.0]: https://github.com/danileau/ciphra/releases/tag/v1.3.0
 [0.1.0]: https://github.com/danileau/ciphra/releases/tag/v0.1.0
