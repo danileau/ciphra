@@ -94,6 +94,10 @@ describe('/log/[date] adapter', () => {
 		expect(fn).toMatch(/if \(!\(await documents\.remove\(existingDoc\.id\)\)\) return false;[\s\S]*history\.back\(\)/);
 	});
 
+	it('offers no private toggle in someone else\'s vault', () => {
+		expect(LOG).toMatch(/allowPrivate=\{\$activeVault === null\}/);
+	});
+
 	it('asks before navigation discards unsaved edits', () => {
 		expect(LOG).toMatch(/beforeNavigate\(\(nav\) => \{[\s\S]{0,500}confirm\(\$t\('protocol\.unsaved_confirm'\)\)[\s\S]{0,40}nav\.cancel\(\)/);
 		expect(LOG).toMatch(/onDirtyChange=\{\(d\) => \(dirty = d\)\}/);

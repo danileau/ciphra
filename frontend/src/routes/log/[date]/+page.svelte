@@ -7,6 +7,7 @@
 <script lang="ts">
 	import { isAuthenticated } from '$lib/stores/auth';
 	import { documents } from '$lib/stores/documents';
+	import { activeVault } from '$lib/stores/familyLinks';
 	import { resolvedBlueprint } from '$lib/blueprint';
 	import { onMount } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
@@ -122,6 +123,7 @@
 			onSave={handleSave}
 			onDelete={handleDelete}
 			onDirtyChange={(d) => (dirty = d)}
+			allowPrivate={$activeVault === null}
 			onDateChange={handleDateChange}
 			onJumpToToday={handleJumpToToday}
 		/>

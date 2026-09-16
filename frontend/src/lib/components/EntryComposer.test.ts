@@ -422,6 +422,23 @@ describe('CIPH-850 EntryComposer contract', () => {
 		expect(props.onSave.mock.calls[1][0].private).toBeUndefined();
 	});
 
+	it('in someone else\'s vault (allowPrivate=false) there is no private toggle and nothing saves as private', async () => {
+		const props = {
+			...baseProps(),
+			allowPrivate: false,
+			existingDoc: makeDoc({ type: 'entry', date: '2026-04-27', private: true, notes: 'x' }),
+		};
+		const { container } = render(EntryComposer, { props });
+		// The private toggle is the date header's pressed-state button (symptom
+		// chips are pressed-state buttons too, further down).
+		expect(container.querySelector('.log-date-center button[aria-pressed]')).toBeNull();
+		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
+		await fireEvent.input(ta, { target: { value: 'edited by carer' } });
+		await fireEvent.click(container.querySelector('.log-btn-save') as HTMLButtonElement);
+		await waitFor(() => expect(props.onSave).toHaveBeenCalled());
+		expect(props.onSave.mock.calls[0][0].private).toBeUndefined();
+	});
+
 	it('copy-previous-day merges previousDoc fields into form state', async () => {
 		const props = {
 			...baseProps(),

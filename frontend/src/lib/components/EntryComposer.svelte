@@ -80,6 +80,11 @@
 	// saved, so the route can guard navigation. Carryover pre-fills are not
 	// edits — see `userEdited`.
 	export let onDirtyChange: ((dirty: boolean) => void) | undefined = undefined;
+	// False in a linked (someone else's) vault. The server files a
+	// caregiver's writes as shareable whatever the entry says, and the
+	// caregiver's own view drops locked entries — a day locked there vanished
+	// for the caregiver on reload while other caregivers could still read it.
+	export let allowPrivate = true;
 	export let onDateChange: (delta: number) => void;
 	export let onJumpToToday: () => void;
 	// `density` prop is reserved for PI v13 FAB quick-add consolidation.
@@ -603,7 +608,7 @@
 				return ids.length > 0 ? ids : undefined;
 			})(),
 			notes,
-			private: isPrivate ? true : undefined,
+			private: allowPrivate && isPrivate ? true : undefined,
 			phaseOverride: phaseOverride || undefined,
 		};
 		let ok: boolean | void;
@@ -773,7 +778,9 @@
 					<span class="log-today-badge">{$t('common.today')}</span>
 				{/if}
 				<!-- CIPH-713 — per-entry private toggle. Locked entries are
-					 hard-excluded from every export (PDF/CSV/reports/share). -->
+					 hard-excluded from every export (PDF/CSV/reports/share).
+					 Not offered in someone else's vault: see `allowPrivate`. -->
+				{#if allowPrivate}
 				<button
 					type="button"
 					on:click={() => { isPrivate = !isPrivate; markChanged(); }}
@@ -796,6 +803,7 @@
 					{/if}
 					<span>{isPrivate ? $t('private.state_private') : $t('private.state_public')}</span>
 				</button>
+				{/if}
 			</div>
 
 			<button on:click={() => onDateChange(1)} class="log-nav-btn" aria-label={$t("common.next_day")}>

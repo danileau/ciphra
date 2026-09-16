@@ -44,10 +44,10 @@ app at **/docs → Changelog** and here on the public repo.
   Ctrl+S on an empty day saved an empty entry.
 - Leaving a day with unsaved changes — including with the arrow keys — threw the
   changes away without asking. ciphra now asks first.
-- In someone else's account, the quick-add sheet offered a diary entry and a
-  "private" switch. Those entries disappeared from your view after a reload while
-  staying visible to others with access. Both options are now only offered in
-  your own account.
+- In someone else's account, the quick-add sheet and the day view offered a
+  diary entry and a "private" switch. Those entries disappeared from your view
+  after a reload while staying visible to others with access. Both options are
+  now only offered in your own account.
 - Entries added with the quick-add button between midnight and about 2 a.m.
   were filed under the previous day. The reports page, the journal's time filter
   and the "top triggers" card could be off by a day in the same hours.
