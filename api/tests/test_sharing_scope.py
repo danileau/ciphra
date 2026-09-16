@@ -119,6 +119,7 @@ class TestGrantScope:
             'an invitation must default closed'
 
     def test_an_invalid_mask_is_refused(self, client, mock_db, auth_token):
+        mock_db.queue({'password_version': 1, 'is_admin': False})  # token lookup
         res = client.post(
             '/api/family/grants',
             headers={'Authorization': f'Bearer {auth_token}'},
@@ -133,7 +134,8 @@ class TestGrantScope:
         assert res.status_code == 400
         assert 'share_mask' in json.loads(res.data)['error']
 
-    def test_rescope_refuses_anything_but_the_two_masks(self, client, auth_token):
+    def test_rescope_refuses_anything_but_the_two_masks(self, client, mock_db, auth_token):
+        mock_db.queue({'password_version': 1, 'is_admin': False})  # token lookup
         res = client.post(
             '/api/family/grants/1/scope',
             headers={'Authorization': f'Bearer {auth_token}'},
