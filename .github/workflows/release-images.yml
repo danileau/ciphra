@@ -74,7 +74,7 @@ jobs:
       - name: Stage docs for the ciphraDocs vite plugin
         run: |
           mkdir -p frontend/_docs-src
-          cp -r docs README.md SECURITY.md CHANGELOG.md frontend/_docs-src/
+          cp -r docs README.md SECURITY.md CHANGELOG.md changelog.d frontend/_docs-src/
       - name: Resolve tags
         id: meta
         uses: docker/metadata-action@v6

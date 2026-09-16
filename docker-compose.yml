@@ -68,6 +68,8 @@ services:
       - ./docs:/docs-src/docs:ro
       - ./README.md:/docs-src/README.md:ro
       - ./SECURITY.md:/docs-src/SECURITY.md:ro
+      - ./CHANGELOG.md:/docs-src/CHANGELOG.md:ro
+      - ./changelog.d:/docs-src/changelog.d:ro
     environment:
       - VITE_API_URL=http://api:5000
       # AGPL-3.0 §13 source offer. Unset = link to upstream (correct only for

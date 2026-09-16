@@ -46,6 +46,19 @@ jobs:
           fetch-depth: 0
       - run: scripts/test-version-next.sh
       - run: scripts/version-guard.sh
+      # Changelog fragments (changelog.d/README.md): the tooling's own suite,
+      # every fragment parses, and a PR that earns an entry carries one.
+      - run: scripts/test-changelog.sh
+      - run: node scripts/changelog.mjs check
+      - name: Changelog fragment for feat/fix PRs
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: >-
+          scripts/changelog-guard.sh
+          ${{ github.event.pull_request.base.sha }}
+          ${{ github.event.pull_request.head.sha }}
 
   frontend:
     runs-on: ubuntu-latest

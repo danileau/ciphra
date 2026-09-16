@@ -3,6 +3,8 @@ import { defineConfig, type Plugin } from 'vite';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { IN_APP_DOCS } from './src/lib/docs-manifest';
+import { withPendingFragments } from './src/lib/changelogFragments.js';
+import { readFragments } from './src/lib/changelogFragmentFiles.js';
 
 // CIPH-pi20-LB-6 — default 5000 → 5050: macOS AirPlay/AirTunes listens
 // on :5000 by default, which silently 403'd against our API in local
@@ -45,12 +47,20 @@ function ciphraDocs(): Plugin {
 				)
 			: [];
 
+	// Pending changelog entries live one file per change in changelog.d/
+	// (see changelog.d/README.md). The app shows them under [Unreleased], so a
+	// change that is deployed before it is released is not invisible to the
+	// people using it; CHANGELOG.md on disk is untouched.
+	const fragmentDir = docRoot ? join(docRoot, 'changelog.d') : null;
+	const fragments = () => (fragmentDir ? readFragments(fragmentDir) : []);
+
 	const collect = (): Record<string, string> => {
 		const out: Record<string, string> = {};
 		for (const abs of mdFiles()) {
 			const key = abs.slice(abs.lastIndexOf('/') + 1); // 'ARCHITECTURE.md'
 			try {
-				out[key] = readFileSync(abs, 'utf8');
+				const text = readFileSync(abs, 'utf8');
+				out[key] = key === 'CHANGELOG.md' ? withPendingFragments(text, fragments()) : text;
 			} catch {
 				/* a file may be momentarily absent during an edit — skip it */
 			}
@@ -69,14 +79,19 @@ function ciphraDocs(): Plugin {
 		},
 		configureServer(server) {
 			for (const f of mdFiles()) server.watcher.add(f);
-			server.watcher.on('change', (file: string) => {
+			if (fragmentDir) server.watcher.add(fragmentDir);
+			const reload = (file: string) => {
 				if (!file.endsWith('.md')) return;
 				const mod = server.moduleGraph.getModuleById(RESOLVED);
 				if (mod) {
 					server.moduleGraph.invalidateModule(mod);
 					server.ws.send({ type: 'full-reload' });
 				}
-			});
+			};
+			// A new or deleted fragment changes the changelog as much as an edit.
+			server.watcher.on('change', reload);
+			server.watcher.on('add', reload);
+			server.watcher.on('unlink', reload);
 		},
 	};
 }
