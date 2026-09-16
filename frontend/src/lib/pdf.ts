@@ -20,11 +20,11 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Blueprint, VitalField } from '$lib/blueprint';
-import { effectiveVitalTargets } from '$lib/blueprint/vitalTargets';
 import { isCustomItem, resolveBlueprint, resolveMedDisplay, bedarfMedColumns, medAdherence } from '$lib/blueprint';
 import { cohortOf } from '$lib/blueprint/cohort';
 import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
 import { sectionsForCohort } from '$lib/cohortSections';
+import { effectiveVitalTargets } from '$lib/blueprint/vitalTargets';
 import { aggregatePhaseDistribution } from '$lib/pdfPhaseDistribution';
 import { aggregateCycleStrip } from '$lib/pdfCycleStrip';
 import { aggregateDailyMonthSeries } from '$lib/pdfDailyMonthChart';
