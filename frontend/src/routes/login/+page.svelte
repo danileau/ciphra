@@ -109,7 +109,11 @@
 				recUser = ''; recCode = ''; recNewPass = ''; recNewPassConfirm = '';
 				setTimeout(() => { recSuccess = ''; tab = 'login'; }, 2000);
 			} else {
-				const msg = res.status === 429 ? $t('auth.error_locked') : $t('auth.error_recovery');
+				const msg = res.status === 429
+					? $t('auth.error_locked')
+					: res.status === 403 && res.data.error === 'account_suspended'
+						? $t('auth.error_suspended')
+						: $t('auth.error_recovery');
 				setError(msg, res.data.error as string);
 			}
 		} catch (e) {

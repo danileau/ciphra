@@ -92,6 +92,7 @@ export default {
 	'auth.error_locked': 'Trop de tentatives. Veuillez attendre 15 minutes.',
 	'auth.session_expired': 'Votre session a expiré. Veuillez vous reconnecter.',
 	'auth.technical_details': 'Afficher les détails techniques',
+	'auth.error_suspended': 'Ce compte est suspendu. Si vous pensez qu’il s’agit d’une erreur, écrivez à info@ciphra.ch.',
 	'auth.phase_checking': 'Vérification…',
 	'auth.phase_deriving': 'Dérivation de clé (quelques secondes)…',
 	'auth.phase_verifying': 'Vérification…',

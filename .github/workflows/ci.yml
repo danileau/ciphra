@@ -70,16 +70,39 @@ jobs:
 
   api:
     runs-on: ubuntu-latest
+    # A throwaway PostgreSQL so the tests that check SQL semantics against a
+    # real planner run here instead of being skipped (test_hardening.py
+    # TestCountersAgainstPostgres, test_batch_on_conflict.py). Mocked cursors
+    # prove which statement is sent, not what it does. The tests only use
+    # TEMP tables, so an empty database is all they need.
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - name: Build dev image (adds pytest tooling)
         run: docker build --target dev -t ciphra-api:ci api
       - name: Run api tests
+        # --network host reaches the service's published port on the runner.
+        # `-rs` lists skips, so a test that silently stops reaching the
+        # database shows up in the log.
         run: >-
-          docker run --rm
+          docker run --rm --network host
           -e SECRET_KEY=ci-0123456789abcdef0123456789abcdef
+          -e DATABASE_URL=postgresql://ci:ci@127.0.0.1:5432/ci
           -v "$PWD/api:/app"
-          ciphra-api:ci pytest -q
+          ciphra-api:ci pytest -q -rs
 
       # ── the published surface ───────────────────────────────────────
       # `prod` is the last stage, so this is byte-for-byte what

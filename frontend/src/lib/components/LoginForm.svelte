@@ -62,9 +62,13 @@
 			const res = await api.login(loginUser.trim().toLowerCase(), authKey);
 			if (!res.ok) {
 				const rawErr = res.data.error as string | undefined;
+				// 403 account_suspended = an operator lock. Distinct from the
+				// 15-minute lockout (429): waiting will not help, so say so.
 				const msg = res.status === 429
 					? $t('auth.error_locked')
-					: $t('auth.error_credentials');
+					: res.status === 403 && rawErr === 'account_suspended'
+						? $t('auth.error_suspended')
+						: $t('auth.error_credentials');
 				setError(msg, rawErr);
 				return;
 			}

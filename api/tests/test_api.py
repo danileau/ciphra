@@ -124,7 +124,8 @@ class TestLogin:
     @patch('server.verify_auth')
     def test_login_success(self, mock_verify, client, mock_db):
         mock_verify.return_value = True
-        mock_db.queue(_user_row())
+        # user row, then the guarded success UPDATE's RETURNING password_version
+        mock_db.queue(_user_row(), {'password_version': 1})
 
         resp = client.post('/api/login', json={
             'username': 'alice',
@@ -140,7 +141,8 @@ class TestLogin:
     @patch('server.verify_auth')
     def test_login_wrong_password(self, mock_verify, client, mock_db):
         mock_verify.return_value = False
-        mock_db.queue(_user_row())
+        # user row, then the atomic counter UPDATE's RETURNING
+        mock_db.queue(_user_row(), {'attempts': 1})
 
         resp = client.post('/api/login', json={
             'username': 'alice',
@@ -152,8 +154,9 @@ class TestLogin:
     @patch('server.verify_auth')
     def test_login_lockout_after_5_failures(self, mock_verify, client, mock_db):
         mock_verify.return_value = False
-        # 4 prior failures → this attempt is the 5th, triggers lockout
-        mock_db.queue(_user_row(login_attempts=4))
+        # 4 prior failures → this attempt is the 5th, triggers lockout. The
+        # count comes back from the atomic UPDATE, not from the SELECT.
+        mock_db.queue(_user_row(login_attempts=4), {'attempts': 5})
 
         resp = client.post('/api/login', json={
             'username': 'alice',
@@ -184,7 +187,7 @@ class TestLogin:
         # Without this, knowing a username = a permanent DoS on that account.
         mock_verify.return_value = True
         future = datetime.now(timezone.utc) + timedelta(minutes=10)
-        mock_db.queue(_user_row(login_attempts=5, locked_until=future))
+        mock_db.queue(_user_row(login_attempts=5, locked_until=future), {'password_version': 1})
 
         resp = client.post('/api/login', json={
             'username': 'alice',
@@ -215,9 +218,14 @@ class TestLogin:
 # Documents CRUD
 # ═══════════════════════════════════════════════════════════════════
 
-# Queued first by every authenticated test: token_required → _current_password_version
-# runs SELECT password_version + fetchone before the route handler (server.py:243-249).
-PWD_VERSION_ROW = {'password_version': 1}
+# Queued first by every authenticated test: token_required → _token_subject runs
+# SELECT password_version, is_admin + fetchone before the route handler. A
+# missing row is now a 401 (the account is gone), so tests that expect a route's
+# own 400/403 must queue this too.
+PWD_VERSION_ROW = {'password_version': 1, 'is_admin': False}
+# The same lookup for an admin. admin_required reads is_admin from HERE, not
+# from the token's claim.
+ADMIN_AUTH_ROW = {'password_version': 1, 'is_admin': True}
 
 
 class TestDocuments:
@@ -433,9 +441,9 @@ class TestSecurityHardening:
         assert resp.status_code == 401
 
     def test_claim_init_with_token_still_works(self, client, mock_db, auth_token):
-        # token pwd_version check, then the grants SELECT (fetchall → empty,
-        # so the anti-enumeration fake list is returned).
-        mock_db.queue(PWD_VERSION_ROW, [])
+        # token auth lookup, MAX(id) for the decoy id, then the grants SELECT
+        # (fetchall → empty, so the anti-enumeration fake list is returned).
+        mock_db.queue(PWD_VERSION_ROW, {'max_id': 0}, [])
         resp = client.post('/api/family/grants/claim/init',
             json={'source_username': 'someone'},
             headers={'Authorization': f'Bearer {auth_token}'},
@@ -473,6 +481,7 @@ class TestSecurityHardening:
 
 class TestAdmin:
     def test_admin_stats_requires_admin(self, client, mock_db, auth_token):
+        mock_db.queue(PWD_VERSION_ROW)  # a live, non-admin account
         resp = client.get('/api/admin/stats',
             headers={'Authorization': f'Bearer {auth_token}'},
         )
@@ -480,17 +489,18 @@ class TestAdmin:
         assert 'Admin' in resp.get_json()['error']
 
     def test_admin_users_requires_admin(self, client, mock_db, auth_token):
+        mock_db.queue(PWD_VERSION_ROW)
         resp = client.get('/api/admin/users',
             headers={'Authorization': f'Bearer {auth_token}'},
         )
         assert resp.status_code == 403
 
     def test_admin_stats_success(self, client, mock_db, admin_token):
-        # admin_required pwd_version check + admin_stats's 18 count queries
+        # admin_required auth lookup + admin_stats's 18 count queries
         # (Track-2 admin metrics added the 24h/deletion/migration/dormant
         # rows — the stale 8-row queue starved the mock into a 500).
         mock_db.queue(
-            PWD_VERSION_ROW,
+            ADMIN_AUTH_ROW,
             {'total': 10},     # total users
             {'active': 5},     # active 30d
             {'active': 3},     # active 7d
@@ -521,7 +531,7 @@ class TestAdmin:
 
     def test_admin_users_success(self, client, mock_db, admin_token):
         now = datetime.now(timezone.utc)
-        mock_db.queue(PWD_VERSION_ROW, [{
+        mock_db.queue(ADMIN_AUTH_ROW, [{
             'id': 1,
             'username': 'alice',
             'created_at': now,
@@ -541,7 +551,7 @@ class TestAdmin:
         assert users[0]['username'] == 'alice'
 
     def test_admin_lock_user(self, client, mock_db, admin_token):
-        mock_db.queue(PWD_VERSION_ROW, {'id': 2})  # admin pwd_version + user exists
+        mock_db.queue(ADMIN_AUTH_ROW, {'id': 2})  # admin pwd_version + user exists
 
         resp = client.post('/api/admin/users/2/lock',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -549,6 +559,7 @@ class TestAdmin:
         assert resp.status_code == 200
 
     def test_admin_cannot_lock_self(self, client, mock_db, admin_token):
+        mock_db.queue(ADMIN_AUTH_ROW)
         # admin_token has user_id=99
         resp = client.post('/api/admin/users/99/lock',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -556,7 +567,7 @@ class TestAdmin:
         assert resp.status_code == 400
 
     def test_admin_unlock_user(self, client, mock_db, admin_token):
-        mock_db.queue(PWD_VERSION_ROW, {'id': 2})
+        mock_db.queue(ADMIN_AUTH_ROW, {'id': 2})
 
         resp = client.post('/api/admin/users/2/unlock',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -564,7 +575,7 @@ class TestAdmin:
         assert resp.status_code == 200
 
     def test_admin_delete_user(self, client, mock_db, admin_token):
-        mock_db.queue(PWD_VERSION_ROW, {'id': 2, 'username': 'bob'})
+        mock_db.queue(ADMIN_AUTH_ROW, {'id': 2, 'username': 'bob'})
 
         resp = client.delete('/api/admin/users/2',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -572,13 +583,14 @@ class TestAdmin:
         assert resp.status_code == 200
 
     def test_admin_cannot_delete_self(self, client, mock_db, admin_token):
+        mock_db.queue(ADMIN_AUTH_ROW)
         resp = client.delete('/api/admin/users/99',
             headers={'Authorization': f'Bearer {admin_token}'},
         )
         assert resp.status_code == 400
 
     def test_admin_promote_user(self, client, mock_db, admin_token):
-        mock_db.queue(PWD_VERSION_ROW, {'id': 2, 'username': 'bob'})
+        mock_db.queue(ADMIN_AUTH_ROW, {'id': 2, 'username': 'bob'})
 
         resp = client.post('/api/admin/users/2/promote',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -586,7 +598,7 @@ class TestAdmin:
         assert resp.status_code == 200
 
     def test_admin_demote_user(self, client, mock_db, admin_token):
-        mock_db.queue(PWD_VERSION_ROW, {'id': 2, 'username': 'bob'})
+        mock_db.queue(ADMIN_AUTH_ROW, {'id': 2, 'username': 'bob'})
 
         resp = client.post('/api/admin/users/2/demote',
             headers={'Authorization': f'Bearer {admin_token}'},
@@ -594,6 +606,7 @@ class TestAdmin:
         assert resp.status_code == 200
 
     def test_admin_cannot_demote_self(self, client, mock_db, admin_token):
+        mock_db.queue(ADMIN_AUTH_ROW)
         resp = client.post('/api/admin/users/99/demote',
             headers={'Authorization': f'Bearer {admin_token}'},
         )
@@ -601,7 +614,7 @@ class TestAdmin:
 
     def test_admin_audit_log(self, client, mock_db, admin_token):
         now = datetime.now(timezone.utc)
-        mock_db.queue(PWD_VERSION_ROW, [{
+        mock_db.queue(ADMIN_AUTH_ROW, [{
             'id': 1,
             'user_id': 1,
             'username': 'alice',
@@ -633,7 +646,7 @@ class TestRecovery:
             'recovery_auth': 'storedhash',
             'recovery_attempts': 0,
             'locked_until': None,
-        })
+        }, {'id': 1})  # the guarded credential swap's RETURNING id
 
         resp = client.post('/api/recover', json={
             'username': 'alice',
@@ -658,7 +671,7 @@ class TestRecovery:
             'recovery_auth': 'storedhash',
             'recovery_attempts': 3,
             'locked_until': future,
-        })
+        }, {'id': 1})
 
         resp = client.post('/api/recover', json={
             'username': 'alice',
@@ -685,7 +698,7 @@ class TestRecovery:
             'recovery_auth': 'storedhash',
             'recovery_attempts': 0,
             'locked_until': None,
-        })
+        }, {'attempts': 1})
 
         resp = client.post('/api/recover', json={
             'username': 'alice',
