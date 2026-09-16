@@ -4,6 +4,7 @@
 	import { rememberFocusMonth, recallFocusMonth } from '$lib/stores/focusMonth';
 	import { anyPhaseDayCount } from '$lib/monthAggregates';
 	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
+	import { todayISO } from '$lib/date';
 	import { documents, type CiphraDocument } from '$lib/stores/documents';
 	import { resolvedBlueprint, isCustomItem, prettifyCustomId, resolveMedDisplay } from '$lib/blueprint';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
@@ -49,7 +50,7 @@
 	// via the focus-month handoff; fresh sessions start on today.
 	let currentDate = (() => {
 		const m = recallFocusMonth();
-		return m ? `${m}-01` : new Date().toISOString().slice(0, 10);
+		return m ? `${m}-01` : todayISO();
 	})();
 	let pdfScope: ReportScope = 'month';
 	// Anchor of the period the user last chose, so the secondary CSV action
