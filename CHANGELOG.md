@@ -11,7 +11,10 @@ app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
-<!-- Nothing yet. Add lines here as you work; they become the next release. -->
+### Fixed
+- When the server was briefly unreachable and the connection answered with an
+  error page instead, saving an entry failed. It is now kept on your device and
+  synced once the server is back, the same as when you are offline.
 
 ## [1.3.0] — 2026-08-30
 

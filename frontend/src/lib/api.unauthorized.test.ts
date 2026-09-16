@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 function mockFetch(status: number) {
 	vi.stubGlobal(
 		'fetch',
-		vi.fn(async () => ({ ok: status < 400, status, json: async () => ({}) })),
+		vi.fn(async () => ({ ok: status < 400, status, text: async () => '{}' })),
 	);
 }
 
