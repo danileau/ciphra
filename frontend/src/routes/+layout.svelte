@@ -683,6 +683,9 @@
 		initialLoadOk = false;
 		linksLoaded = false;
 		vaultLoadSeq++;
+		// auth.logout() removed the stored copy; drop the in-memory one too so
+		// the next account on this tab does not see it floated first.
+		lastEpisodeId = null;
 	}
 
 	// Redirect to setup when authenticated but no blueprint, only for

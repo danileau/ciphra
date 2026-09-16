@@ -444,7 +444,12 @@
 			? withSelectedNoteMarkers(exportableDocs, selectedNoteIds)
 			: exportableDocs;
 		const { generateDoctorPdf } = await loadPdfLib();
-		generateDoctorPdf(bp, docs, year, month, $t, $locale, $auth.username || '', scope);
+		// Personal vital targets on this device are the LOGGED-IN user's: a
+		// caregiver exporting a linked patient's PDF drew the patient's charts
+		// against the caregiver's own targets.
+		const username = $auth.username || '';
+		const targetsOf = $activeVault === null ? username : '';
+		generateDoctorPdf(bp, docs, year, month, $t, $locale, username, scope, targetsOf);
 	}
 
 	async function exportCsvFile() {

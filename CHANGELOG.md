@@ -54,6 +54,13 @@ app at **/docs → Changelog** and here on the public repo.
 - Changing an episode count with + / − in the reports table could be undone the
   next time you saved that day, and clicking quickly could lose clicks or create
   a second entry for the same day.
+- Logging out left two health-related settings behind on the device: the target
+  values for your vitals from the setup wizard, and the episode type you last
+  picked in quick-add. Both are now removed when you log out, so the doctor PDF
+  uses the standard reference lines after you log in again. The security
+  documentation now lists every setting ciphra keeps in the browser.
+- A doctor PDF exported for someone else's account drew their charts against
+  your own vital targets. It now uses the standard reference lines.
 
 ## [1.3.0] — 2026-08-30
 

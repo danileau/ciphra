@@ -44,6 +44,28 @@ const emptyState = (ready: boolean): AuthState => ({
 const LS_KEY = 'ciphra_auth';
 const SS_MASTER_KEY = 'ciphra_master_key';
 
+// Plaintext localStorage values derived from the user's health data: the
+// vital targets from the setup wizard (a blood-pressure goal says what is
+// being treated) and the episode type quick-add last used (its id names the
+// condition). Not session state, but they outlived logout and were readable
+// by the next person on the device. Removed on logout — see
+// docs/SECURITY_MODEL.md "Small preference + bookkeeping keys".
+export const HEALTH_PREF_KEYS = ['ciphra_quickadd_last_episode'] as const;
+export const HEALTH_PREF_PREFIXES = ['ciphra_vital_targets:'] as const;
+
+function clearHealthPreferences() {
+	try {
+		const doomed: string[] = [...HEALTH_PREF_KEYS];
+		for (let i = 0; i < localStorage.length; i++) {
+			const k = localStorage.key(i);
+			if (k && HEALTH_PREF_PREFIXES.some((p) => k.startsWith(p))) doomed.push(k);
+		}
+		for (const k of doomed) localStorage.removeItem(k);
+	} catch {
+		// Storage blocked (private mode) — nothing was persisted either.
+	}
+}
+
 function loadFromStorage(): AuthState {
 	if (!browser) return emptyState(false);
 	try {
@@ -152,6 +174,7 @@ function createAuthStore() {
 			// the next user on this browser must not inherit a previous
 			// session's "skip the setup wizard" decision.
 			try { localStorage.removeItem('ciphra_setup_skipped'); } catch {}
+			clearHealthPreferences();
 			try {
 				const m = await import('$lib/idb');
 				await m.clearAllPartitions();

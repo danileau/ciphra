@@ -1672,7 +1672,11 @@ export function generateDoctorPdf(
 	t: TranslateFn,
 	locale: string,
 	username: string = '',
-	scope: ReportScope = 'month'
+	scope: ReportScope = 'month',
+	// Whose personal vital targets to draw ('' = none). Defaults to the
+	// named user; a caregiver's export of a linked patient passes '' — the
+	// targets on this device are the caregiver's own, not the patient's.
+	vitalTargetsOf: string = username,
 ): void {
 	// CIPH-301: personal vital-target overrides live in localStorage. Apply
 	// them here so the chart's reference line reflects the user's target,
@@ -1680,7 +1684,7 @@ export function generateDoctorPdf(
 	// CIPH-301b: also strip wizard-hidden symptoms/triggers/vitals so every
 	// downstream aggregator (symptomFreq, triggerFreq, chartableVitals,
 	// condition-aware bullets) skips them automatically.
-	const blueprint = applyBlueprintCustomizations(applyVitalTargetOverrides(blueprintIn, username));
+	const blueprint = applyBlueprintCustomizations(applyVitalTargetOverrides(blueprintIn, vitalTargetsOf));
 
 	// CIPH-pi18-2 Chunk 2 — Cohort accent resolution. Discrete cohort returns
 	// the original brick/ochre verbatim; cycle/phase/narrative/custom shift
