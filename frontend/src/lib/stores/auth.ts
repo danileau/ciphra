@@ -45,22 +45,21 @@ const LS_KEY = 'ciphra_auth';
 const SS_MASTER_KEY = 'ciphra_master_key';
 
 // Plaintext localStorage values derived from the user's health data: the
-// vital targets from the setup wizard (a blood-pressure goal says what is
-// being treated) and the episode type quick-add last used (its id names the
-// condition). Not session state, but they outlived logout and were readable
-// by the next person on the device. Removed on logout — see
-// docs/SECURITY_MODEL.md "Small preference + bookkeeping keys".
+// episode type quick-add last used (its id names the condition). Not session
+// state, but it outlived logout and was readable by the next person on the
+// device. Removed on logout — see docs/SECURITY_MODEL.md "Small preference +
+// bookkeeping keys".
+//
+// NOT here: the legacy `ciphra_vital_targets:<username>` key. Vital targets
+// moved into the encrypted blueprint; the layout folds the old key in and
+// removes it after that save succeeds (lib/blueprint/vitalTargets.ts). Wiping
+// it on logout would destroy targets that were never migrated — logout also
+// runs when a closed browser is reopened, BEFORE the user can log in again.
 export const HEALTH_PREF_KEYS = ['ciphra_quickadd_last_episode'] as const;
-export const HEALTH_PREF_PREFIXES = ['ciphra_vital_targets:'] as const;
 
 function clearHealthPreferences() {
 	try {
-		const doomed: string[] = [...HEALTH_PREF_KEYS];
-		for (let i = 0; i < localStorage.length; i++) {
-			const k = localStorage.key(i);
-			if (k && HEALTH_PREF_PREFIXES.some((p) => k.startsWith(p))) doomed.push(k);
-		}
-		for (const k of doomed) localStorage.removeItem(k);
+		for (const k of HEALTH_PREF_KEYS) localStorage.removeItem(k);
 	} catch {
 		// Storage blocked (private mode) — nothing was persisted either.
 	}

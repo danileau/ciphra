@@ -54,13 +54,14 @@ app at **/docs → Changelog** and here on the public repo.
 - Changing an episode count with + / − in the reports table could be undone the
   next time you saved that day, and clicking quickly could lose clicks or create
   a second entry for the same day.
-- Logging out left two health-related settings behind on the device: the target
-  values for your vitals from the setup wizard, and the episode type you last
-  picked in quick-add. Both are now removed when you log out, so the doctor PDF
-  uses the standard reference lines after you log in again. The security
-  documentation now lists every setting ciphra keeps in the browser.
+- Your vital targets from the setup wizard (a blood-pressure goal, say) were
+  kept unencrypted in the browser and only on that one device. They are now
+  stored encrypted with the rest of your profile, so they follow you to other
+  devices; the old unencrypted copy is removed the next time you sign in.
+  Logging out also removes the episode type you last picked in quick-add. The
+  security documentation now lists every setting ciphra keeps in the browser.
 - A doctor PDF exported for someone else's account drew their charts against
-  your own vital targets. It now uses the standard reference lines.
+  your own vital targets. It now uses theirs.
 - **"Revoke all" could fail without telling you** — and so could revoking a
   single invitation. You now see clearly when access was not removed, so you can
   try again. Creating an invitation or changing what it may see also reports a

@@ -148,12 +148,15 @@ Same wipe contract as IndexedDB on logout — every cache whose key starts with 
 
 ### 5. Small preference + bookkeeping keys
 
-A handful of plain-string keys that hold UI state. None of them holds entry content. Two are **derived from your health data** and are removed on logout; the rest carry nothing about your health and are not part of the wipe contract above.
+A handful of plain-string keys that hold UI state. None of them holds entry content. One is **derived from your health data** and is removed on logout; the rest carry nothing about your health and are not part of the wipe contract above.
 
-Removed on logout (`clearHealthPreferences` in `frontend/src/lib/stores/auth.ts`, called from `logout()` — which also runs when a session expires, when the browser was closed and the vault has to be unlocked again, and after account deletion). They are *not* touched by the "Cache jetzt leeren" button, which by contract keeps everything in `localStorage`:
+Removed on logout (`clearHealthPreferences` in `frontend/src/lib/stores/auth.ts`, called from `logout()` — which also runs when a session expires, when the browser was closed and the vault has to be unlocked again, and after account deletion). It is *not* touched by the "Cache jetzt leeren" button, which by contract keeps everything in `localStorage`:
 
-- `localStorage.ciphra_vital_targets:<username>` — the personal target values you entered for your vitals in the setup wizard (e.g. a blood-pressure goal), used as reference lines in your doctor PDF. A target says something about what is being treated, so it does not outlive the session. Consequence: after a logout the PDF falls back to the condition's default reference lines. A caregiver's own targets are never applied to a linked patient's PDF.
 - `localStorage.ciphra_quickadd_last_episode` — the id of the episode type you last picked in quick-add, so it is offered first. Episode type ids name the condition (e.g. a seizure type).
+
+Migrated away:
+
+- `localStorage.ciphra_vital_targets:<username>` — where the personal vital targets from the setup wizard (e.g. a blood-pressure goal) used to be kept, in plaintext. A target says something about what is being treated, so targets now live inside your encrypted blueprint instead. On the first sign-in after the change, an existing key is copied into the blueprint and **removed once that encrypted copy is saved**. It is deliberately not removed on logout: logout also runs when a closed browser is reopened, before you can sign in again, and removing it then would lose targets that were never copied. A caregiver's device-local targets are never applied to a linked patient.
 
 Kept (no health data):
 

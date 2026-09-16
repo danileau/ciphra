@@ -136,6 +136,12 @@ export interface Blueprint {
 	 *  empty, the FAB does not render the "med" mode chip. */
 	rescueMedications?: RescueMedication[];
 
+	/** Personal target per vital id (e.g. a blood-pressure goal), overriding
+	 *  that vital's `referenceLine.value` in the doctor PDF. Set in the setup
+	 *  wizard. Lives here — encrypted — rather than in localStorage; see
+	 *  `vitalTargets.ts`. Optional; absent = the condition defaults. */
+	vitalTargets?: Record<string, number>;
+
 	/** Which symptom columns appear in the monthly grid */
 	gridSymptomColumns: string[];  // item IDs from symptomGroups
 

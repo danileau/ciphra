@@ -14,6 +14,7 @@
 	import { get } from 'svelte/store';
 	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem, hasBedarfMeds, bedarfMedsForPicker, foldRescueMedications } from '$lib/blueprint';
 	import { cohortOf } from '$lib/blueprint/cohort';
+	import { clearLegacyVitalTargets, migrateLegacyVitalTargets } from '$lib/blueprint/vitalTargets';
 	import { pathToRoute } from '$lib/cohortPalette';
 	import { conditionAccent } from '$lib/conditionAccent';
 	import { resolvedTheme } from '$lib/stores/theme';
@@ -676,8 +677,19 @@
 			// FAB + Settings read one source. No-op for blueprints already in
 			// the new shape (incl. all new presets). Persist once; subsequent
 			// loads find nothing to fold.
-			const migrated = foldRescueMedications(get(blueprint), $t);
-			if (migrated) blueprint.save(migrated);
+			let migrated = foldRescueMedications(get(blueprint), $t);
+			// One-time: vital targets move from plaintext localStorage into the
+			// encrypted blueprint. Own vault only — a device's legacy targets
+			// belong to the logged-in user, never to a linked patient. The key
+			// is removed only once the blueprint carrying them is saved.
+			const legacyTargetsFor = get(activeVault) === null ? get(auth).username : null;
+			const withTargets = migrateLegacyVitalTargets(migrated ?? get(blueprint), legacyTargetsFor);
+			if (withTargets) migrated = withTargets;
+			if (migrated) {
+				blueprint.save(migrated).then((ok) => {
+					if (ok && withTargets) clearLegacyVitalTargets(legacyTargetsFor);
+				});
+			}
 			// Replay anything queued while offline in a previous session.
 			documents.flushOutbox();
 		} else if (attempt < 4) {

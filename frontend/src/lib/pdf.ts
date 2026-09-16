@@ -20,6 +20,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Blueprint, VitalField } from '$lib/blueprint';
+import { effectiveVitalTargets } from '$lib/blueprint/vitalTargets';
 import { isCustomItem, resolveBlueprint, resolveMedDisplay, bedarfMedColumns, medAdherence } from '$lib/blueprint';
 import { cohortOf } from '$lib/blueprint/cohort';
 import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
@@ -269,18 +270,14 @@ export function aggregateEpisodeMonthlyShared(
 	return acc;
 }
 
-/** CIPH-301: read per-user vital target overrides from localStorage and
- *  apply them to the blueprint's `referenceLine.value`. Non-destructive —
- *  returns a shallow-modified blueprint that can be used by either PDF
- *  generator without touching the saved document. */
-export function applyVitalTargetOverrides(blueprint: Blueprint, username: string): Blueprint {
-	if (!username || typeof localStorage === 'undefined') return blueprint;
-	let overrides: Record<string, number> = {};
-	try {
-		const raw = localStorage.getItem(`ciphra_vital_targets:${username}`);
-		if (raw) overrides = JSON.parse(raw) || {};
-	} catch { return blueprint; }
-	if (!overrides || Object.keys(overrides).length === 0) return blueprint;
+/** CIPH-301: apply the user's personal vital targets to each vital's
+ *  `referenceLine.value`. Targets come from the blueprint (`vitalTargets`);
+ *  a blueprint not migrated yet falls back to the legacy localStorage key for
+ *  `legacyUsername` ('' = never, e.g. a linked patient's PDF on a caregiver's
+ *  device). Non-destructive — returns a shallow-modified blueprint. */
+export function applyVitalTargetOverrides(blueprint: Blueprint, legacyUsername: string): Blueprint {
+	const overrides = effectiveVitalTargets(blueprint, legacyUsername);
+	if (!overrides) return blueprint;
 	const cloned: Blueprint = {
 		...blueprint,
 		vitals: blueprint.vitals.map((v) => {
