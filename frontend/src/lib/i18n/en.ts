@@ -2131,6 +2131,7 @@ export default {
 	// CIPH-411c — Setup wizard step 4
 	'setup.medications_title': 'Medications',
 	'setup.medications_subtitle': 'Add medications you take regularly. Optional — you can add more anytime in settings.',
+	'setup.medications_change_in_settings': 'To change the dose of a saved medication, stop it or delete it, use Settings — that keeps its history.',
 
 	// CIPH-411d — PDF med compliance bullet
 

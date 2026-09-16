@@ -2114,6 +2114,7 @@ export default {
 	// CIPH-411c — Assistant étape 4
 	'setup.medications_title': 'Médicaments',
 	'setup.medications_subtitle': 'Ajoutez les médicaments que vous prenez régulièrement. Optionnel — vous pouvez les compléter à tout moment dans les paramètres.',
+	'setup.medications_change_in_settings': 'Pour modifier la dose d’un médicament enregistré, l’arrêter ou le supprimer, passe par les réglages : son historique y est conservé.',
 
 	// CIPH-411d — PDF observance médicamenteuse
 

@@ -2142,6 +2142,7 @@ export default {
 	// CIPH-411c — Setup Schritt 4
 	'setup.medications_title': 'Medikamente',
 	'setup.medications_subtitle': 'Trage Medikamente ein, die du regelmässig nimmst. Optional — du kannst sie später jederzeit in den Einstellungen ergänzen.',
+	'setup.medications_change_in_settings': 'Dosis ändern, absetzen oder löschen kannst du bei gespeicherten Medikamenten in den Einstellungen – dort bleibt der Verlauf erhalten.',
 
 	// CIPH-411d — PDF Medikamenten-Compliance
 

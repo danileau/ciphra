@@ -2114,6 +2114,7 @@ export default {
 	// CIPH-411c — Wizard passo 4
 	'setup.medications_title': 'Farmaci',
 	'setup.medications_subtitle': 'Aggiungi i farmaci che assumi regolarmente. Facoltativo — puoi integrarli in qualsiasi momento nelle impostazioni.',
+	'setup.medications_change_in_settings': 'Per cambiare la dose di un farmaco salvato, sospenderlo o eliminarlo, usa le impostazioni: lì lo storico resta.',
 
 	// CIPH-411d — PDF aderenza farmacologica
 
