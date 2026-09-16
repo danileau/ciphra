@@ -61,6 +61,13 @@ app at **/docs → Changelog** and here on the public repo.
   documentation now lists every setting ciphra keeps in the browser.
 - A doctor PDF exported for someone else's account drew their charts against
   your own vital targets. It now uses the standard reference lines.
+- **"Revoke all" could fail without telling you** — and so could revoking a
+  single invitation. You now see clearly when access was not removed, so you can
+  try again. Creating an invitation or changing what it may see also reports a
+  failure instead of silently stopping, and if your invitations cannot be
+  loaded, ciphra says so rather than showing that there are none.
+- Some error messages in Settings and in family sharing were shown in English
+  whatever your language, and "last seen" used English abbreviations.
 
 ## [1.3.0] — 2026-08-30
 

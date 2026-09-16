@@ -429,6 +429,15 @@
 		goto('/login');
 	}
 
+	// The server's `error` field is English and written for logs ("Current
+	// password is incorrect", "Account deletion failed"). It was rendered as
+	// is, in every language. Say what the status means instead.
+	function credentialCheckError(status: number): string {
+		if (status === 429) return $t('auth.error_rate_limited');
+		if (status === 0 || status >= 500) return $t('auth.error_server');
+		return $t('auth.error_credentials');
+	}
+
 	async function handleChangePassword() {
 		passwordError = '';
 		passwordSuccess = false;
@@ -472,7 +481,7 @@
 					goto('/login');
 				}, 1500);
 			} else {
-				passwordError = (res.data?.error as string) || $t('auth.error_credentials');
+				passwordError = credentialCheckError(res.status);
 			}
 		} catch {
 			passwordError = $t('auth.error_credentials');
@@ -524,7 +533,7 @@
 				activeVault.set(null);
 				goto('/login');
 			} else {
-				deleteError = (res.data?.error as string) || $t('auth.error_credentials');
+				deleteError = credentialCheckError(res.status);
 			}
 		} catch {
 			deleteError = $t('auth.error_credentials');
