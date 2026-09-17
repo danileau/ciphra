@@ -110,6 +110,89 @@
 	// is better served by tooltip enrichment at the bin level (see
 	// callbacks.afterBody on the caller-side chart options).
 
+	// Dose bands (2026-09-17) — the before/after structure behind a chart:
+	// a medication's dose periods as subtle background shades with a thin
+	// boundary where the dose changed (geometry: lib/reports/doseBands.ts).
+	// Callers opt in with `options.plugins.doseBands`; charts without it are
+	// untouched. Drawn BEFORE the datasets so the data line stays on top.
+	// Not the rejected per-event tick row: one labelled boundary per change,
+	// not a mark per day.
+	type DoseBandsCfg = {
+		bands?: Array<{ start: number; end: number; label: string; shaded: boolean }>;
+		boundaries?: Array<{ at: number }>;
+	};
+	function bandGeometry(c: any) {
+		const cfg = c.options?.plugins?.doseBands as DoseBandsCfg | undefined;
+		if (!cfg?.bands?.length) return null;
+		const xScale = c.scales?.x;
+		const area = c.chartArea;
+		const count = c.data?.labels?.length ?? 0;
+		if (!xScale || !area || count === 0) return null;
+		const x0 = xScale.getPixelForValue(0);
+		const step = count > 1 ? (xScale.getPixelForValue(count - 1) - x0) / (count - 1) : area.right - area.left;
+		const px = (pos: number) => Math.min(area.right, Math.max(area.left, x0 + pos * step));
+		const root = getComputedStyle(document.documentElement);
+		return {
+			cfg,
+			area,
+			px,
+			olive: root.getPropertyValue('--olive-rgb').trim() || '127, 130, 27',
+			muted: root.getPropertyValue('--text-muted').trim() || '#8a7f73',
+			surface: root.getPropertyValue('--surface-card').trim() || '#ffffff',
+		};
+	}
+	const doseBandsPlugin = {
+		id: 'doseBands',
+		// Shades and boundaries go BEHIND the data …
+		beforeDatasetsDraw(c: any) {
+			const g = bandGeometry(c);
+			if (!g) return;
+			const ctx = c.ctx;
+			ctx.save();
+			for (const band of g.cfg.bands ?? []) {
+				const left = g.px(band.start);
+				const right = g.px(band.end);
+				if (!band.shaded || right - left < 1) continue;
+				ctx.fillStyle = `rgba(${g.olive}, ${isDarkMode() ? 0.16 : 0.1})`;
+				ctx.fillRect(left, g.area.top, right - left, g.area.bottom - g.area.top);
+			}
+			ctx.strokeStyle = `rgba(${g.olive}, 0.75)`;
+			ctx.lineWidth = 1;
+			ctx.setLineDash([3, 3]);
+			for (const b of g.cfg.boundaries ?? []) {
+				const x = Math.round(g.px(b.at)) + 0.5;
+				ctx.beginPath();
+				ctx.moveTo(x, g.area.top);
+				ctx.lineTo(x, g.area.bottom);
+				ctx.stroke();
+			}
+			ctx.restore();
+		},
+		// … and the labels ABOVE the plot area, in the strip the caller reserves
+		// with `layout.padding.top`. A label inside the plot collides with any
+		// data line that reaches the top (a peak month), and drawing it on a
+		// backing pill only moves the collision onto the line. Up here the two
+		// never share a pixel.
+		afterDatasetsDraw(c: any) {
+			const g = bandGeometry(c);
+			if (!g) return;
+			const ctx = c.ctx;
+			ctx.save();
+			ctx.font = '10px system-ui, sans-serif';
+			ctx.textBaseline = 'bottom';
+			ctx.fillStyle = g.muted;
+			const y = g.area.top - 4;
+			for (const band of g.cfg.bands ?? []) {
+				const left = g.px(band.start);
+				const right = g.px(band.end);
+				const width = ctx.measureText(band.label).width;
+				if (width + 6 > right - left) continue;
+				ctx.fillText(band.label, left + 3, y);
+			}
+			ctx.restore();
+		},
+	};
+
 	onMount(async () => {
 		const mod = await import('chart.js');
 		Chart = mod.Chart;
@@ -118,7 +201,8 @@
 		chart = new Chart(canvas, {
 			type,
 			data,
-			options: mergeDefaults(options)
+			options: mergeDefaults(options),
+			plugins: [doseBandsPlugin],
 		});
 	});
 

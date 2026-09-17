@@ -26,15 +26,21 @@ import {
 	csvDoseCell,
 	csvDoseMedications,
 	daysBetweenISO,
+	doseBandLayer,
+	gridChangeMarksForMonth,
 	layoutTickLabels,
 	medChangeMarksForMonth,
 	medicationChangeRows,
+	medicationsOnDate,
 	medicationTimeline,
 	periodRangeText,
 	type DateWindow,
 	type DayMedMark,
+	type DoseBandLayer,
 	type TimelineLane,
 } from '$lib/pdfMedicationHistory';
+import { dayBins, monthBins } from '$lib/reports/doseBands';
+import { toLocalISODate } from '$lib/date';
 import { cohortOf } from '$lib/blueprint/cohort';
 import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
 import { sectionsForCohort } from '$lib/cohortSections';
@@ -1114,6 +1120,153 @@ function drawCycleStrip(
 	return cursorY;
 }
 
+/* ────────────────────────────────────────────────────────────────
+ * Dose bands (2026-09-17) — the before/after structure on a chart.
+ *
+ * When a medication started, changed or stopped inside a chart's range, the
+ * plot's background is split into that medication's dose periods: an
+ * alternating shade per period, a thin boundary where the dose changed, and
+ * the dose above each period ("Lamotrigin 50 mg", "75 mg", …). The doctor
+ * compares the line before and after by eye.
+ *
+ * STRUCTURE, NEVER NUMBERS OR VERDICTS (operator, 2026-09-16/17). Nothing
+ * here counts, averages or compares anything per period, and no string says
+ * what happened after a change — pdf.no-assessment.test.ts holds the line.
+ *
+ * Geometry comes from reports/doseBands.ts, shared with the /reports charts;
+ * the data prep (which medication, which labels) from
+ * `doseBandLayer` in pdfMedicationHistory.ts. Each chart hands in its OWN
+ * point math as `xOf`, so a boundary lands exactly between the two days (or
+ * months) its points sit on. A chart whose range holds no change gets a null
+ * layer and renders exactly as before.
+ * ──────────────────────────────────────────────────────────────── */
+
+/** The two alternating period shades: warm greys off the paper, outside
+ *  every cohort's data hue, so the shading reads as ground and the data line
+ *  stays the figure. Distinct in grayscale too. */
+const DOSE_BAND_TINTS: readonly [RGB, RGB] = [
+	softBlendRgb(BRAND.textSecondary, 0.07),
+	softBlendRgb(BRAND.textSecondary, 0.16),
+];
+/** Label rows above the plot: pitch and the gap to the plot's top edge. */
+const DOSE_BAND_ROW_PITCH = 2.5;
+const DOSE_BAND_LABEL_GAP = 1;
+
+interface DoseBandPlan {
+	layer: DoseBandLayer;
+	/** x of a position in bin units, clamped to the plot. */
+	xOf: (u: number) => number;
+	left: number;
+	right: number;
+	labels: Array<{ x: number; x0: number; row: number; text: string; labelled: boolean }>;
+	/** Height of the label strip above the plot. The chart moves its plot
+	 *  down by this much, so the labels never sit on the data. */
+	stripH: number;
+}
+
+/** Measure the label strip for a chart. Null layer → null plan: the chart
+ *  draws nothing extra and keeps its geometry. */
+function planDoseBands(
+	doc: jsPDF,
+	layer: DoseBandLayer | null,
+	xOf: (u: number) => number,
+	left: number,
+	right: number,
+): DoseBandPlan | null {
+	if (!layer) return null;
+	const clampX = (u: number) => Math.max(left, Math.min(right, xOf(u)));
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.chartAxisMicro);
+	const xs = layer.labels.map((l) => clampX(l.at));
+	// Same packing as the change ticks under the daily chart: a label that
+	// would run into its neighbour moves up a row; one with no room at all is
+	// left out (the changes table lists every step in full).
+	const placed = layoutTickLabels(
+		xs.map((x, i) => ({ x, width: doc.getTextWidth(layer.labels[i].text) })),
+		left,
+		right,
+		2,
+	);
+	const labels = placed.map((p, i) => ({ x: xs[i], x0: p.x0, row: p.row, text: layer.labels[i].text, labelled: p.labelled }));
+	const rows = labels.length > 0 ? 1 + Math.max(...labels.map((l) => l.row)) : 0;
+	return { layer, xOf: clampX, left, right, labels, stripH: rows * DOSE_BAND_ROW_PITCH + DOSE_BAND_LABEL_GAP };
+}
+
+/** The period shades, drawn right after the plot background so gridlines,
+ *  area and line all sit on top. */
+function drawDoseBandFills(doc: jsPDF, plan: DoseBandPlan | null, top: number, h: number): void {
+	if (!plan) return;
+	for (const b of plan.layer.bands) {
+		const x0 = plan.xOf(b.start);
+		const x1 = plan.xOf(b.end);
+		if (x1 - x0 < 0.05) continue;
+		doc.setFillColor(...DOSE_BAND_TINTS[b.index % 2]);
+		doc.rect(x0, top, x1 - x0, h, 'F');
+	}
+}
+
+/** Boundaries and dose labels, drawn before the data line so the line stays
+ *  on top. A boundary runs through the plot; above it, a tick in its label's
+ *  row only, so it never strikes through a label in the row below. */
+function drawDoseBandMarks(doc: jsPDF, plan: DoseBandPlan | null, top: number, h: number): void {
+	if (!plan) return;
+	const rowBaseline = (row: number) => top - DOSE_BAND_LABEL_GAP - row * DOSE_BAND_ROW_PITCH;
+	doc.setDrawColor(...BRAND.textSecondary);
+	doc.setLineWidth(0.3);
+	for (const bd of plan.layer.boundaries) {
+		const at = plan.xOf(bd.at);
+		// A change at the axis's left edge is where the shading starts anyway.
+		if (at <= plan.left + 0.05) continue;
+		const label = plan.labels.find((l) => l.labelled && Math.abs(l.x - at) < 0.01);
+		// On a monthly axis the last point sits on the right edge, so a change
+		// in the second half of the last month lands past it. Keep that step
+		// visible as a stroke just inside the edge, its label to the left.
+		const x = Math.min(at, plan.right - 0.3);
+		if (label && label.row > 0) {
+			doc.line(x, rowBaseline(label.row) - 2, x, rowBaseline(label.row) + 0.5);
+			doc.line(x, top, x, top + h);
+		} else {
+			doc.line(x, label ? rowBaseline(0) - 2 : top, x, top + h);
+		}
+	}
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.chartAxisMicro);
+	doc.setTextColor(...BRAND.textSecondary);
+	for (const l of plan.labels) {
+		if (l.labelled) doc.text(l.text, l.x0, rowBaseline(l.row));
+	}
+	doc.setLineWidth(0.2);
+}
+
+/** "Hintergrund: Dosisphasen von Lamotrigin", with the two shades as its
+ *  swatch — only when another medication changed on the same axis, so the
+ *  shading can never be read as belonging to it. `x` is the left edge, or
+ *  the right edge for `align: 'right'`. Returns the height used. */
+function drawDoseBandCaption(
+	doc: jsPDF,
+	plan: DoseBandPlan | null,
+	t: TranslateFn,
+	x: number,
+	y: number,
+	align: 'left' | 'right' = 'left',
+): number {
+	if (!plan?.layer.othersChanged) return 0;
+	const text = t('pdf.dose_band_caption', { name: plan.layer.med.name });
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.chartAxis);
+	const x0 = align === 'right' ? x - doc.getTextWidth(text) - 6.5 : x;
+	doc.setDrawColor(...BRAND.border);
+	doc.setLineWidth(0.1);
+	doc.setFillColor(...DOSE_BAND_TINTS[0]);
+	doc.rect(x0, y - 2.1, 2.5, 2.4, 'FD');
+	doc.setFillColor(...DOSE_BAND_TINTS[1]);
+	doc.rect(x0 + 2.5, y - 2.1, 2.5, 2.4, 'FD');
+	doc.setTextColor(...BRAND.textMuted);
+	doc.text(text, x0 + 6.5, y);
+	doc.setLineWidth(0.2);
+	return 4;
+}
+
 /**
  * Medication timeline strip (dose history, 2026-09-16).
  *
@@ -1124,9 +1277,8 @@ function drawCycleStrip(
  * meets the next. Rendered only when the window holds a change — a window of
  * unchanged full-width bars would repeat the adherence table as decoration.
  *
- * Separate from the charts on purpose: the strip shares no axis with the
- * episode or symptom series, so it cannot be read as setting a change beside
- * an outcome. It documents the regimen; the reader relates it to the rest.
+ * The strip holds EVERY medication. The charts shade one (dose bands, above):
+ * the one that changed most recently on their axis.
  */
 function drawMedicationTimeline(
 	doc: jsPDF,
@@ -1335,6 +1487,7 @@ function drawDailyMonthChart(
 	acc: CohortAccents,
 	cursorY: number,
 	medMarks: DayMedMark[] = [],
+	doseLayer: DoseBandLayer | null = null,
 ): number {
 	const { dailyTotals, dailySymptomDays, dailySymptomCounts } = aggregateDailyMonthSeries(
 		documents, year, month, daysInMonth, episodeCols,
@@ -1354,9 +1507,21 @@ function drawDailyMonthChart(
 	doc.text(t('pdf.daily_month_chart_title', { month: focusMonthName }), 14, cursorY);
 	cursorY += 4;
 
+	// Dose bands: day i's point sits at i / (N − 1) of the width, so bin
+	// units map with the same step. The label strip sits above the plot.
+	const bandPlan = planDoseBands(
+		doc,
+		doseLayer,
+		(u) => chartX + (u / Math.max(1, daysInMonth - 1)) * chartW,
+		chartX,
+		chartX + chartW,
+	);
+	if (bandPlan) cursorY += bandPlan.stripH;
+
 	// Plot background.
 	doc.setFillColor(...BRAND.paper);
 	doc.rect(chartX, cursorY, chartW, chartH, 'F');
+	drawDoseBandFills(doc, bandPlan, cursorY, chartH);
 
 	// Horizontal gridlines.
 	doc.setDrawColor(...BRAND.borderSubtle);
@@ -1418,7 +1583,7 @@ function drawDailyMonthChart(
 	// error the comment above records fixing for episode-only months.
 	// Medication changes join it for the same reason: the early return would
 	// otherwise drop their marks.
-	if (episodeTotal === 0 && symptomTotal === 0 && dayMarks.size === 0 && medMarks.length === 0) {
+	if (episodeTotal === 0 && symptomTotal === 0 && dayMarks.size === 0 && medMarks.length === 0 && !bandPlan) {
 		doc.setFont('helvetica', 'italic');
 		doc.setFontSize(TYPE.body);
 		doc.setTextColor(...BRAND.textMuted);
@@ -1450,6 +1615,7 @@ function drawDailyMonthChart(
 		doc.setDrawColor(...acc.primarySoft);
 		doc.lines(areaPath, firstX, baseY, undefined, 'F', true);
 	}
+	drawDoseBandMarks(doc, bandPlan, yTop, chartH);
 
 	// Stroke the line.
 	doc.setDrawColor(...acc.primary);
@@ -1538,7 +1704,8 @@ function drawDailyMonthChart(
 	//
 	// Tick + label pack into up to three rows under the axis; a mark that finds
 	// no room keeps a bare tick, and the "Medikamentenänderungen" table lists
-	// it in full.
+	// it in full. The medication shaded as dose bands (above the plot) is left
+	// out by the caller: its steps are the band boundaries already.
 	let medRowsH = 0;
 	if (medMarks.length > 0) {
 		const rowTop = cursorY + chartH + (dayMarks.size > 0 ? 8.4 : 4.4);
@@ -1565,8 +1732,8 @@ function drawDailyMonthChart(
 	}
 
 	// Legend — episode line + symptom-day dot.
+	const lgY = cursorY + chartH + (dayMarks.size > 0 ? 11.5 : 8) + medRowsH;
 	{
-		const lgY = cursorY + chartH + (dayMarks.size > 0 ? 11.5 : 8) + medRowsH;
 		doc.setFont('helvetica', 'normal');
 		doc.setFontSize(TYPE.chartAxis);
 		doc.setTextColor(...BRAND.textMuted);
@@ -1602,8 +1769,11 @@ function drawDailyMonthChart(
 		}
 		doc.setLineWidth(0.2);
 	}
+	// The legend sits 4mm above whatever follows; a caption line needs a
+	// little more air than that before the next section head.
+	const captionH = drawDoseBandCaption(doc, bandPlan, t, chartX, lgY + 4);
 
-	return cursorY + chartH + (dayMarks.size > 0 ? 15.5 : 12) + medRowsH;
+	return cursorY + chartH + (dayMarks.size > 0 ? 15.5 : 12) + medRowsH + (captionH > 0 ? captionH + 2 : 0);
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -1723,13 +1893,31 @@ function drawGridSection(
 	// consent gate. Note markers are listed, in full, in their own section.
 	const allHeaders = [t('pdf.day'), ...symptomLabels, ...episodeLabels];
 
-	const rows: string[][] = [];
+	// Medication starts, changes and stops (dose history, 2026-09-17): a thin
+	// full-width row directly above the day the step took effect, ruled on
+	// top — "Lamotrigin: 50 mg → 75 mg". A row of its own because the grid
+	// has no free column: the label never covers a day's data, and every
+	// column keeps its width. Short forms; the changes table carries the full
+	// regimen, and the reason typed for a change is never printed.
+	const changeRowText = new Map(
+		gridChangeMarksForMonth(blueprint.medications ?? [], year, month, daysInMonth, t)
+			.map((m) => [m.day, m.labels.join(';   ')]),
+	);
+	// The day each body row shows — Infinity for change rows and the totals.
+	const rowDay: number[] = [];
+
+	const rows: Array<Array<string | { content: string; colSpan: number }>> = [];
 	const symptomSums = new Array(symptomCols.length).fill(0);
 	const episodeSums = new Array(episodeCols.length).fill(0);
 	let totalEpisodes = 0;
 	let symptomEntries = 0;
 
 	for (let day = 1; day <= daysInMonth; day++) {
+		const change = changeRowText.get(day);
+		if (change) {
+			rows.push([{ content: change, colSpan: allHeaders.length }]);
+			rowDay.push(Infinity);
+		}
 		const dayStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
 		const dayDoc = monthDocs.find((d) => d.data.date === dayStr);
 		// Additional entry docs for the day (quick-adds alongside the main
@@ -1757,7 +1945,10 @@ function drawGridSection(
 		});
 
 		rows.push(row);
+		rowDay.push(day);
 	}
+	const totalsRowIdx = rows.length;
+	rowDay.push(Infinity, Infinity);
 
 	// Totals row (brick background, white bold)
 	const totalsRow: string[] = [t('pdf.totals')];
@@ -1841,6 +2032,8 @@ function drawGridSection(
 	// Max episode count for intensity scaling
 	const maxEpCount = Math.max(...episodeSums, 1);
 	const maxSymptomDays = Math.max(...symptomSums, 1);
+	// "→" in a change row, drawn — Helvetica has no arrow (vectorArrowHooks).
+	const changeArrows = vectorArrowHooks();
 
 	autoTable(doc, {
 		startY: 34,
@@ -1889,8 +2082,17 @@ function drawGridSection(
 		didParseCell: (data: any) => {
 			const rowIdx = data.row.index;
 			const colIdx = data.column.index;
-			const isTotals = rowIdx === daysInMonth;
-			const isPercent = rowIdx === daysInMonth + 1;
+			const isTotals = rowIdx === totalsRowIdx;
+			const isPercent = rowIdx === totalsRowIdx + 1;
+			if (data.section === 'body' && rowIdx < totalsRowIdx && rowDay[rowIdx] === Infinity) {
+				// Medication change row: plain paper, secondary text, tight.
+				data.cell.styles.fillColor = BRAND.paper as any;
+				data.cell.styles.textColor = BRAND.textSecondary as any;
+				data.cell.styles.fontStyle = 'normal';
+				data.cell.styles.halign = 'left';
+				data.cell.styles.cellPadding = { top: 0.45, bottom: 0.35, left: 2, right: 2 };
+				return;
+			}
 			const isSymptomCol = colIdx > 0 && colIdx <= symptomCols.length;
 			const isEpisodeCol = colIdx > symptomCols.length && colIdx <= symptomCols.length + episodeCols.length;
 
@@ -1949,12 +2151,20 @@ function drawGridSection(
 				}
 			}
 		},
+		willDrawCell: changeArrows.willDrawCell,
 		didDrawCell: (data: any) => {
 			continuationLabelHook(t('pdf.table_continued'))(data);
+			changeArrows.didDrawCell(data);
 			// Day column, body rows only — the totals and percent rows are
 			// not days.
 			if (data.section !== 'body' || data.column.index !== 0) return;
-			const day = data.row.index + 1;
+			const day = rowDay[data.row.index];
+			if (day === Infinity && data.row.index < totalsRowIdx) {
+				// The change row's rule: where the new regimen begins.
+				doc.setDrawColor(...BRAND.textSecondary);
+				doc.setLineWidth(0.35);
+				doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
+			}
 			if (day > daysInMonth || !markedDays.has(day)) return;
 			const cx = data.cell.x + data.cell.width - 2.2;
 			const cy = data.cell.y + data.cell.height / 2;
@@ -2037,6 +2247,9 @@ export function generateDoctorPdf(
 	const scopeStartDate = new Date(year, month + 1 - scopeMonths, 1, 12);
 	const scopeStartISO = scopeStartDate.toISOString().slice(0, 10);
 	const scopeEndISO = scopeEndDate.toISOString().slice(0, 10);
+	// Dose history reads the same window (page-1 regimen, charts, tables).
+	const medWindow: DateWindow = { from: scopeStartISO, to: scopeEndISO };
+	const reportMeds = blueprint.medications ?? [];
 
 	/**
 	 * Does this month hold any exportable ENTRY?
@@ -2688,6 +2901,56 @@ export function generateDoctorPdf(
 		cursorY += tileH + 11;
 	}
 
+	// ── Medication on the report's end date ──
+	//
+	// What was taken on the last day the report covers — clipped to today, so
+	// a September report exported on the 17th does not state a day that has
+	// not happened — since when, and what it was before when that period
+	// began with a change. Medications stopped inside the window name the
+	// day. Neutral facts from the medication list, nothing derived; the dose
+	// periods themselves are shaded on the charts below.
+	{
+		const today = toLocalISODate();
+		const medAsOf = scopeEndISO < today ? scopeEndISO : today;
+		const fmtDay = (iso: string) => formatISODateChoice(iso, blueprint.dateFormat);
+		const medNow = medicationsOnDate(reportMeds, medWindow, medAsOf, fmtDay, t);
+		if (medNow.length > 0) {
+			const colGap = 6;
+			const colW = (pageW - 28 - colGap) / 2;
+			const lineH = 3.4;
+			doc.setFont('helvetica', 'normal');
+			doc.setFontSize(TYPE.table);
+			const wrapped = medNow.map((s) => doc.splitTextToSize(s, colW) as string[]);
+			// Two columns, filled top to bottom: the list stays one glance wide.
+			const leftCount = Math.ceil(wrapped.length / 2);
+			const columns = [wrapped.slice(0, leftCount), wrapped.slice(leftCount)];
+			const bodyLines = Math.max(...columns.map((c) => c.reduce((n, w) => n + w.length, 0)));
+			const blockH = 4 + bodyLines * lineH;
+			// The tiles leave an 11mm run-up to the next title; the block starts
+			// inside it and leaves its own.
+			if (renderTileCount > 0) cursorY -= 4;
+			cursorY = reserveSpace(doc, cursorY, blockH + 8);
+			doc.setFont('helvetica', 'bold');
+			doc.setFontSize(TYPE.compact);
+			doc.setTextColor(...BRAND.textSecondary);
+			doc.text(t('pdf.meds_on_date', { date: fmtDay(medAsOf) }).toUpperCase(), 14, cursorY);
+			doc.setFont('helvetica', 'normal');
+			doc.setFontSize(TYPE.table);
+			doc.setTextColor(...BRAND.textPrimary);
+			columns.forEach((col, ci) => {
+				const x = 14 + ci * (colW + colGap);
+				let y = cursorY + 4;
+				for (const lines of col) {
+					for (const line of lines) {
+						doc.text(line, x, y);
+						y += lineH;
+					}
+				}
+			});
+			cursorY += blockH + 8;
+		}
+	}
+
 	// CIPH-pi21-Track-B-4 — cohort-conditional middle. The typed gate at
 	// `cohortSections.ts:sectionsForCohort` decides which (if any) primitive
 	// renders here. Phase cohorts (bipolar/MS/IBD/anxiety_depression/...)
@@ -2778,6 +3041,11 @@ export function generateDoctorPdf(
 
 
 	if (scope === 'month') {
+		// The shaded medication's steps are the band boundaries; the tick row
+		// under the axis keeps every other medication's, so no step is drawn
+		// twice.
+		const dailyBands = doseBandLayer(reportMeds, dayBins(year, month), t);
+		const tickMeds = dailyBands ? reportMeds.filter((m) => m.id !== dailyBands.med.id) : reportMeds;
 		cursorY = drawDailyMonthChart(
 			doc,
 			documents,
@@ -2789,7 +3057,8 @@ export function generateDoctorPdf(
 			locale,
 			acc,
 			cursorY,
-			medChangeMarksForMonth(blueprint.medications ?? [], year, month, focusDaysInMonth, t),
+			medChangeMarksForMonth(tickMeds, year, month, focusDaysInMonth, t),
+			dailyBands,
 		);
 	}
 	if (scope !== 'month') {
@@ -2918,9 +3187,26 @@ export function generateDoctorPdf(
 	// it with a slim border once all charts in the group have rendered.
 	const trendsBlockTop = cursorY - 8;
 
+	// Dose bands on the monthly axis — PERIODS, not per-event marks: the
+	// shading spans the months a dose applied, which the axis carries at any
+	// width. Month i's point sits at i / (MONTHS − 1) of the width; bins are
+	// the same calendar months as `monthBuckets`. The vital trends below
+	// share the layer, so every chart on this axis shades the same medication.
+	const trendBins = monthBins(monthBuckets[0].y, monthBuckets[0].m, MONTHS);
+	const trendBands = doseBandLayer(reportMeds, trendBins, t);
+	const trajBandPlan = planDoseBands(
+		doc,
+		trendBands,
+		(u) => chartX + (u / Math.max(1, MONTHS - 1)) * chartW,
+		chartX,
+		chartX + chartW,
+	);
+	if (trajBandPlan) cursorY += trajBandPlan.stripH;
+
 	// Plot area background
 	doc.setFillColor(...BRAND.paper);
 	doc.rect(chartX, cursorY, chartW, chartH, 'F');
+	drawDoseBandFills(doc, trajBandPlan, cursorY, chartH);
 
 	// Horizontal gridlines at 1/4, 1/2, 3/4
 	doc.setDrawColor(...BRAND.borderSubtle);
@@ -2988,6 +3274,7 @@ export function generateDoctorPdf(
 		doc.setDrawColor(...acc.primarySoft);
 		doc.lines(areaPath, firstX, baseY, undefined, 'F', true);
 	}
+	drawDoseBandMarks(doc, trajBandPlan, yTop, chartH);
 
 	// Stroke smoothed bezier segments on top.
 	if (points.length >= 2) {
@@ -3108,6 +3395,7 @@ export function generateDoctorPdf(
 			doc.setTextColor(...BRAND.textMuted);
 			doc.text(t('pdf.legend_event_count'), lx + 4.4, legendY);
 		}
+		cursorY += drawDoseBandCaption(doc, trajBandPlan, t, chartX, legendY + 4);
 	}
 
 	cursorY += chartH + (noteEvents.length > 0 ? 27 : 18);
@@ -3391,10 +3679,28 @@ export function generateDoctorPdf(
 		const ch = 24;
 
 		for (const chart of charts) {
+			const asBars = chart.kind === 'diverging-bars'
+				&& typeof chart.yMin === 'number'
+				&& typeof chart.yMax === 'number'
+				&& chart.yMin < 0
+				&& chart.yMax > 0;
+			// Same dose bands as the trajectory, in this chart's own x math:
+			// line points sit at i / (MONTHS − 1), bars at slot centres.
+			const barSlotW = cw / Math.max(1, MONTHS);
+			const miniBandPlan = planDoseBands(
+				doc,
+				trendBands,
+				asBars
+					? (u) => cx + (u + 0.5) * barSlotW
+					: (u) => cx + (u / Math.max(1, MONTHS - 1)) * cw,
+				cx,
+				cx + cw,
+			);
+			const miniStripH = miniBandPlan?.stripH ?? 0;
 			// Per-chart break: title + legend + body. On continuation
 			// pages re-render the section title so the chart never
 			// appears without its group header (§8 orphan-prevention).
-			cursorY = reserveSpace(doc, cursorY, BREAK.chartTitle, () => {
+			cursorY = reserveSpace(doc, cursorY, BREAK.chartTitle + miniStripH, () => {
 				doc.setFont('helvetica', 'bold');
 				doc.setFontSize(TYPE.head);
 				doc.setTextColor(...BRAND.textPrimary);
@@ -3406,6 +3712,7 @@ export function generateDoctorPdf(
 			doc.setFontSize(TYPE.table);
 			doc.setTextColor(...BRAND.textSecondary);
 			doc.text(chart.title, 14, cursorY);
+			let titleRowEnd = 14 + doc.getTextWidth(chart.title);
 			if (chart.series.length > 1) {
 				let lx = 14 + doc.getTextWidth(chart.title) + 6;
 				doc.setFontSize(TYPE.compact);
@@ -3421,8 +3728,22 @@ export function generateDoctorPdf(
 					doc.text(s.label, lx + 2, cursorY);
 					lx += doc.getTextWidth(s.label) + 7;
 				}
+				titleRowEnd = lx;
 			}
-			cursorY += 2;
+			// Which medication the shading shows, when more than one changed:
+			// on the title row where it fits, else under the chart.
+			let miniCaptionBelow = false;
+			if (miniBandPlan?.layer.othersChanged) {
+				doc.setFont('helvetica', 'normal');
+				doc.setFontSize(TYPE.chartAxis);
+				const captionW = doc.getTextWidth(t('pdf.dose_band_caption', { name: miniBandPlan.layer.med.name })) + 6.5;
+				if (pageW - 14 - captionW > titleRowEnd + 4) {
+					drawDoseBandCaption(doc, miniBandPlan, t, pageW - 14, cursorY, 'right');
+				} else {
+					miniCaptionBelow = true;
+				}
+			}
+			cursorY += 2 + miniStripH;
 
 			// pi24 P-PDF-3 — Diverging-bars renderer for polarity vitals
 			// (e.g. bipolar mood_polarity). Per-bar color by sign; y-axis
@@ -3433,18 +3754,16 @@ export function generateDoctorPdf(
 			// below zero" directly. The chart is pure display — neutral
 			// colors per sign, no clinical labels, no value judgment in
 			// the legend.
-			if (chart.kind === 'diverging-bars'
-				&& typeof chart.yMin === 'number'
-				&& typeof chart.yMax === 'number'
-				&& chart.yMin < 0
-				&& chart.yMax > 0) {
+			if (asBars) {
 				// Plot area background.
 				doc.setFillColor(...BRAND.paper);
 				doc.rect(cx, cursorY, cw, ch, 'F');
+				drawDoseBandFills(doc, miniBandPlan, cursorY, ch);
+				drawDoseBandMarks(doc, miniBandPlan, cursorY, ch);
 				// Zero baseline — explicit, slightly stronger than the
 				// midline of a normal line chart because bars hang from it.
-				const yMin = chart.yMin;
-				const yMax = chart.yMax;
+				const yMin = chart.yMin as number;
+				const yMax = chart.yMax as number;
 				const yRange = yMax - yMin;
 				const zeroY = cursorY + ch - ((0 - yMin) / yRange) * ch;
 				doc.setDrawColor(...BRAND.borderSubtle);
@@ -3511,6 +3830,7 @@ export function generateDoctorPdf(
 						: { month: 'short' });
 					doc.text(lbl, lx, cursorY + ch + 3, { align: 'center' });
 				}
+				if (miniCaptionBelow) cursorY += drawDoseBandCaption(doc, miniBandPlan, t, cx, cursorY + ch + 7);
 				cursorY += ch + 9;
 				continue;  // skip the default line-chart render below
 			}
@@ -3518,6 +3838,7 @@ export function generateDoctorPdf(
 			// Plot area
 			doc.setFillColor(...BRAND.paper);
 			doc.rect(cx, cursorY, cw, ch, 'F');
+			drawDoseBandFills(doc, miniBandPlan, cursorY, ch);
 			doc.setDrawColor(...BRAND.borderSubtle);
 			doc.setLineWidth(0.1);
 			doc.line(cx, cursorY + ch / 2, cx + cw, cursorY + ch / 2);
@@ -3559,6 +3880,7 @@ export function generateDoctorPdf(
 					doc.text(`${ref.label}: ${ref.value}`, cx + cw - 0.5, refY - 0.5, { align: 'right' });
 				}
 			}
+			drawDoseBandMarks(doc, miniBandPlan, cursorY, ch);
 
 			// Each series — CIPH-pi19-3-fix: bezier-smoothed segments to
 			// match the rounded /reports Chart.js style. Same tension/clamp
@@ -3620,6 +3942,7 @@ export function generateDoctorPdf(
 					: { month: 'short' });
 				doc.text(lbl, lx, cursorY + ch + 3, { align: 'center' });
 			}
+			if (miniCaptionBelow) cursorY += drawDoseBandCaption(doc, miniBandPlan, t, cx, cursorY + ch + 7);
 			cursorY += ch + 9;
 		}
 		cursorY += 2;
@@ -3925,11 +4248,10 @@ export function generateDoctorPdf(
 	// inside the window is two adherence rows, each dose with its own days,
 	// and a stopped medication keeps its rows for the days it was taken.
 	//
-	// MARKERS ONLY. The timeline and the changes table say when the regimen
-	// changed and to what. Nothing here — and nothing may — sets a change
-	// beside what symptoms or episodes did before and after it.
-	const medWindow: DateWindow = { from: scopeStartISO, to: scopeEndISO };
-	const reportMeds = blueprint.medications ?? [];
+	// STRUCTURE ONLY. The timeline and the changes table say when the regimen
+	// changed and to what; the charts shade the dose periods. Nothing here —
+	// and nothing may — counts or compares what symptoms or episodes did
+	// before and after a change.
 	const medChangeRows = medicationChangeRows(reportMeds, medWindow, t);
 	const adherenceRows = adherenceRowsForWindow(reportMeds, monthDocs, medWindow);
 

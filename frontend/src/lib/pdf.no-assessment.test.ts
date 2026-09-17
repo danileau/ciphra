@@ -112,6 +112,46 @@ describe('the PDF makes no directional assessment', () => {
 		expect(PDF).toMatch(/interface StatCardDelta\s*\{[\s\S]{0,400}value:\s*string/);
 	});
 
+	describe('a medication change gets structure, not an outcome (2026-09-17)', () => {
+		// Operator ruling 2026-09-16/17: the charts shade the dose periods,
+		// draw a boundary at the change and label the dose, and page 1 states
+		// the regimen on the end date. The doctor compares by eye. ciphra
+		// prints no per-period count, rate, average or delta, and no word
+		// about what happened after the change — "before/after" is the
+		// layout, never a sentence.
+		const STRUCTURE_KEYS = [
+			'pdf.dose_band_caption',
+			'pdf.dose_band_stopped',
+			'pdf.meds_on_date',
+			'pdf.med_now_since',
+			'pdf.med_now_before',
+			'pdf.med_now_stopped',
+			'pdf.med_now_as_needed',
+		];
+		const OUTCOME =
+			/besser|schlechter|wirk|erfolg|seltener|häufiger|weniger|mehr|anfall|anfälle|episod|symptom|durchschnitt|better|worse|improv|effect|success|fewer|more|seizure|average|mieux|pire|amélior|efficac|moins|crise|moyenne|miglior|peggior|effic|meno|più|crisi|%/i;
+
+		for (const [name, dict] of DICTS) {
+			it(`${name}: the structure strings name doses and dates only`, () => {
+				for (const k of STRUCTURE_KEYS) {
+					expect(dict[k], `${name} ${k}`).toBeTruthy();
+					expect(dict[k], `${name} ${k}`).not.toMatch(OUTCOME);
+				}
+			});
+		}
+
+		it('the band drawing reads no series data — it cannot count per period', () => {
+			for (const fn of ['planDoseBands', 'drawDoseBandFills', 'drawDoseBandMarks', 'drawDoseBandCaption']) {
+				const i = PDF.indexOf(`function ${fn}(`);
+				expect(i, `${fn} missing`).toBeGreaterThan(0);
+				const body = PDF.slice(i, PDF.indexOf('\n}\n', i));
+				expect(body, `${fn} touches the data it must not summarise`).not.toMatch(
+					/episod|symptom|seizure|Totals|values|documents|reduce\(/,
+				);
+			}
+		});
+	});
+
 	it('measured facts are untouched — this guard is not a blanket ban', () => {
 		// Guards against over-correcting: the report must still state what
 		// was recorded.
