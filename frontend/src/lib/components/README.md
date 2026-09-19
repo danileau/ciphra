@@ -431,6 +431,14 @@ route kind.
   "stop instead" first when days are logged against the medication and
   takes a second step to delete anyway. Pure writers live in
   `blueprint/medicationHistory.ts`; the dialog never saves.
+- **MedicationHistoryDialog.svelte** — records what happened BEFORE ciphra
+  (2026-09-19): an earlier dose of a medication still taken, or a
+  medication tried and stopped long ago, with a reason from a fixed list.
+  Wraps `Modal.svelte`. Dates are months, and the start may stay unknown —
+  nobody remembers the day a dose changed years ago. Writes through
+  `prependPeriod` / `createPastMedication`, which never touch a recorded
+  day; the periods are marked remembered, so they show the dose but never
+  count as logged days. Like the other dialogs, it never saves.
 - **MedicationTimeline.svelte** — `/reports` dose-history card. One lane
   per medication inside the window, a segment per dose period with a
   visible step at each change and a gap while stopped, plus the same

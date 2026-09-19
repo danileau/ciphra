@@ -27,6 +27,7 @@
 		newMedicationId,
 		periodOn,
 		plannedChange,
+		removeReportedPeriod,
 		undoLastChange,
 		type MedChange,
 	} from '$lib/blueprint/medicationHistory';
@@ -36,6 +37,7 @@
 	import { todayISO } from '$lib/date';
 	import MedicationChangeDialog, { type DialogMode } from '$lib/components/MedicationChangeDialog.svelte';
 	import MedicationCombineDialog from '$lib/components/MedicationCombineDialog.svelte';
+	import MedicationHistoryDialog, { type HistoryDialogMode } from '$lib/components/MedicationHistoryDialog.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
 
 	// Render from the resolved view (medications are not customized, so it is
@@ -48,6 +50,7 @@
 	$: stoppedMeds = meds.filter((m) => medStatusOn(m, today) === 'stopped');
 
 	const fmt = (iso: string) => formatISODateChoice(iso, bp?.dateFormat);
+	const monthOf = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 	const regimenText = (p: { dose: string; schedule: string }) =>
 		[p.dose, p.schedule].filter(Boolean).join(' · ');
 
@@ -104,6 +107,42 @@
 		dialogOpen = true;
 	}
 
+	// ─── History from before ciphra (2026-09-19) ───
+	let historyOpen = false;
+	let historyMode: HistoryDialogMode = 'earlier';
+	let historyMed: MedicationSlot | null = null;
+
+	function openHistory(m: MedicationSlot | null, hMode: HistoryDialogMode) {
+		historyMed = m;
+		historyMode = hMode;
+		saveError = false;
+		dialogOpen = false;
+		addOpen = false;
+		historyOpen = true;
+	}
+
+	/** Periods the person filled in afterwards, oldest first — the rows the
+	 *  history list offers to take back. */
+	function reportedPeriodsOf(m: MedicationSlot) {
+		return medPeriods(m)
+			.map((p, index) => ({ p, index }))
+			.filter(({ p }) => p.reported);
+	}
+
+	async function removeReported(m: MedicationSlot, index: number) {
+		const next = removeReportedPeriod(m, index);
+		if (!next) return;
+		await persist((list) => list.map((x) => (x.id === m.id ? next : x)));
+	}
+
+	function historyRangeText(p: { from?: string; to?: string; fromPrecision?: 'month'; toPrecision?: 'month' }): string {
+		const start = p.from
+			? p.fromPrecision === 'month' ? monthOf(p.from) : fmt(p.from)
+			: $t('medication.combine_start_unknown');
+		const end = p.to ? (p.toPrecision === 'month' ? monthOf(p.to) : fmt(p.to)) : '';
+		return end ? `${start} – ${end}` : start;
+	}
+
 	async function persist(mutate: (meds: MedicationSlot[]) => MedicationSlot[]): Promise<boolean> {
 		const raw = get(blueprint);
 		if (!raw) return false;
@@ -123,7 +162,10 @@
 			if (add) out = [...out, add];
 			return out;
 		});
-		if (ok) dialogOpen = false;
+		if (ok) {
+			dialogOpen = false;
+			historyOpen = false;
+		}
 	}
 
 	async function undo(m: MedicationSlot) {
@@ -241,6 +283,11 @@
 							{$t('medication.change')}
 						</button>
 					</div>
+					{#if changes.length === 0}
+						<button type="button" class="text-xs mt-2 underline min-h-[32px]" style="color: var(--text-muted)" on:click={() => openHistory(med, 'earlier')} data-testid="med-add-earlier">
+							{$t('medication.earlier_add')}
+						</button>
+					{/if}
 					{#if changes.length > 0}
 						<button
 							type="button"
@@ -260,9 +307,23 @@
 									</li>
 								{/each}
 							</ol>
-							<button type="button" class="text-xs mt-2 underline min-h-[32px]" style="color: var(--text-secondary)" on:click={() => undo(med)} data-testid="med-undo">
-								{$t('medication.undo_last')}
-							</button>
+							{#each reportedPeriodsOf(med) as row (row.index)}
+								<p class="text-xs mt-1 flex gap-2 items-baseline" style="color: var(--text-muted)" data-testid="med-reported-period">
+									<span class="shrink-0 tabular-nums">{historyRangeText(row.p)}</span>
+									<span>{regimenText(row.p)} · {$t('medication.history_reported')}</span>
+									<button type="button" class="underline min-h-[32px]" style="color: var(--text-secondary)" on:click={() => removeReported(med, row.index)} data-testid="med-reported-remove">
+										{$t('common.remove')}
+									</button>
+								</p>
+							{/each}
+							<div class="flex gap-4">
+								<button type="button" class="text-xs mt-2 underline min-h-[32px]" style="color: var(--text-secondary)" on:click={() => undo(med)} data-testid="med-undo">
+									{$t('medication.undo_last')}
+								</button>
+								<button type="button" class="text-xs mt-2 underline min-h-[32px]" style="color: var(--text-secondary)" on:click={() => openHistory(med, 'earlier')} data-testid="med-add-earlier">
+									{$t('medication.earlier_add')}
+								</button>
+							</div>
 						{/if}
 					{/if}
 				</li>
@@ -333,9 +394,14 @@
 	{/if}
 
 	{#if !addOpen}
-		<button type="button" on:click={openAdd} class="btn-secondary w-full rounded-xl text-sm font-medium min-h-[44px]">
-			{$t('settings.add_medication')}
-		</button>
+		<div class="space-y-2">
+			<button type="button" on:click={openAdd} class="btn-secondary w-full rounded-xl text-sm font-medium min-h-[44px]">
+				{$t('settings.add_medication')}
+			</button>
+			<button type="button" on:click={() => openHistory(null, 'past')} class="w-full rounded-xl text-sm min-h-[44px]" style="color: var(--text-secondary); background: transparent; border: 1px dashed var(--border)" data-testid="med-add-past">
+				{$t('medication.past_add')}
+			</button>
+		</div>
 	{:else}
 		<form on:submit|preventDefault={saveAdd} class="space-y-3 p-4 rounded-xl" style="background: var(--surface-muted); border: 1px solid var(--border)">
 			<h4 class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted)">{$t('settings.add_medication')}</h4>
@@ -373,6 +439,16 @@
 		</form>
 	{/if}
 </section>
+
+<MedicationHistoryDialog
+	open={historyOpen}
+	mode={historyMode}
+	med={historyMed}
+	dateFormat={bp?.dateFormat}
+	{today}
+	on:apply={handleApply}
+	on:close={() => (historyOpen = false)}
+/>
 
 <MedicationChangeDialog
 	open={dialogOpen}

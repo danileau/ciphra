@@ -1,4 +1,4 @@
-import type { Blueprint, MedicationPeriod, MedicationSlot } from './types';
+import type { Blueprint, MedicationPeriod, MedicationSlot, MedicationStopReason } from './types';
 import { docReferencesMed, isTrackedOn, isUnbounded, medIds, medPeriods, periodOn } from './medicationHistory';
 import { todayISO } from '$lib/date';
 import { translateUnit } from '$lib/i18n';
@@ -166,6 +166,25 @@ export function medAdherenceByPeriod(
 		rows.push({ period, from, to, ...medAdherence(single, slice) });
 	}
 	return rows;
+}
+
+/** Label for why a medication was stopped, from the fixed list (2026-09-19).
+ *  Written out per case rather than built from the value, so the key orphan
+ *  detector can see every one of them — and so this is the single place the
+ *  doctor PDF and the app agree on the wording. */
+export function stopReasonLabel(reason: MedicationStopReason, t: Translator): string {
+	switch (reason) {
+		case 'side_effects':
+			return t('medication.stop_reason_side_effects');
+		case 'ineffective':
+			return t('medication.stop_reason_ineffective');
+		case 'doctor':
+			return t('medication.stop_reason_doctor');
+		case 'pregnancy':
+			return t('medication.stop_reason_pregnancy');
+		default:
+			return t('medication.stop_reason_other');
+	}
 }
 
 /** Resolve a logged event's `medicationId` to a display label + unit.

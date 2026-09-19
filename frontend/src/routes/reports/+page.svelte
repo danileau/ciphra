@@ -13,7 +13,7 @@
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import VitalTrendReportsCard from '$lib/components/VitalTrendReportsCard.svelte';
 	import MedicationTimeline from '$lib/components/MedicationTimeline.svelte';
-	import { medicationChanges, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
+	import { medicationChanges, medPeriods, medStartDate, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
 	import { chartDoseBands, dayBins, medsChangedIn, monthBins } from '$lib/reports/doseBands';
 	import { toLocalISODate } from '$lib/date';
 	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
@@ -299,6 +299,36 @@
 			return [{ med, details }];
 		});
 	})();
+
+	// What was taken and stopped — the prior therapy a doctor asks about first
+	// (2026-09-19). Independent of the window: it is history by definition.
+	$: previousMeds = (() => {
+		const today = todayISO();
+		return (bp?.medications ?? []).flatMap((med) => {
+			if (periodOn(med, today)) return [];
+			const periods = medPeriods(med);
+			const first = periods[0];
+			const last = periods[periods.length - 1];
+			const start = first.from
+				? first.fromPrecision === 'month'
+					? `${first.from.slice(5, 7)}/${first.from.slice(0, 4)}`
+					: formatISODateChoice(first.from, bp?.dateFormat)
+				: $t('medication.combine_start_unknown');
+			const end = last.to
+				? last.toPrecision === 'month'
+					? `${last.to.slice(5, 7)}/${last.to.slice(0, 4)}`
+					: formatISODateChoice(last.to, bp?.dateFormat)
+				: '';
+			const regimen = [last.dose, last.schedule].filter(Boolean).join(' · ');
+			return [{ med, details: `${regimen} · ${end ? `${start} – ${end}` : start}` }];
+		});
+	})();
+
+	// A medication ciphra only knows from the day it was entered has a history
+	// nobody can see. Point at where that gets filled in — once, quietly.
+	$: medsWithoutStart = (bp?.medications ?? []).filter(
+		(med) => periodOn(med, todayISO()) && !medStartDate(med),
+	).length;
 
 	// Monthly grid helpers
 	$: monthDocs = getMonthDocs(exportableDocs, currentDate);
@@ -1389,6 +1419,22 @@
 					</li>
 				{/each}
 			</ul>
+			{#if previousMeds.length > 0}
+				<p class="text-xs font-medium uppercase tracking-wider mt-3 mb-1" style="color: var(--text-muted)">{$t('reports.previous_meds_title')}</p>
+				<ul class="flex flex-col gap-1" data-testid="reports-previous-meds">
+					{#each previousMeds as pm (pm.med.id)}
+						<li class="text-sm" style="color: var(--text-muted)">
+							<span class="font-medium">{pm.med.name}</span>
+							{pm.details}
+						</li>
+					{/each}
+				</ul>
+			{/if}
+			{#if medsWithoutStart > 0}
+				<a href="/settings?tab=tracking" class="text-xs underline inline-flex items-center mt-2 min-h-[44px]" style="color: var(--text-secondary)" data-testid="reports-history-nudge">
+					{$t('reports.previous_meds_add')}
+				</a>
+			{/if}
 		</div>
 	{/if}
 
