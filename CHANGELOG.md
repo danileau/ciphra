@@ -13,6 +13,81 @@ app at **/docs → Changelog** and here on the public repo.
 
 <!-- Nothing yet. Pending entries live in changelog.d/ — see changelog.d/README.md. -->
 
+## [1.5.0] — 2026-09-19
+
+Your medication history now reaches back to before you used ciphra: the doses
+you were on earlier, and the medications that were tried and stopped again. A
+new *Treatment history* export puts all of it on one document for a first
+consultation. A dose change also structures your reports into before and
+after. This release further fixes several places where ciphra answered in
+German whatever your language — the calendar after a reload, and a broken
+family-invite link — and corrects what the privacy policy says the server
+records about you.
+
+### Added
+- **A dose change now structures your reports into "before" and "after".**
+  When a medication's dose changed, the trend charts on the reports page shade
+  each dose period in the background and mark the day of the change, so you and
+  your doctor can read the curve before and after it at a glance. The reports
+  page also shows the medication you take today — since when, and the dose
+  before — lists the change among your recent events, and marks the day in the
+  monthly table. ciphra shows the structure; it does not compare or judge the
+  periods for you.
+- **Your medication history can now reach back before ciphra.** Under a
+  medication in Settings, *Add an earlier dose* records what you took before
+  the app knew about it — 12 mg, then 10 mg, then the 8 mg it has on record.
+  Days you already logged stay exactly as they are. You give a month rather
+  than a day, and "I don't remember" is an answer: nobody recalls that a dose
+  changed on a Tuesday three years ago.
+- **Medications you no longer take can be added.** *Add a medication from the
+  past* records a drug that was tried and stopped, with the period, the dose
+  and — from a short list — why it ended. It appears under "Stopped" and in
+  your reports, without claiming anything about the days it covers.
+- **A treatment-history export for a first consultation.** Next to Month and
+  Year there is now a *Treatment history* report: every medication you have
+  recorded, oldest first, with its dose periods and how each one ended, over
+  the whole span rather than one window. It holds no symptom or episode data —
+  it answers "what has been tried", nothing else.
+- `/reports` lists the medications you took previously under the current ones,
+  and points at Settings when a medication has no recorded start.
+
+### Changed
+- History you fill in afterwards never counts as a missed dose. It shows the
+  dose that applied, but those days were never logged, so they stay out of
+  every adherence figure and out of the day view's medication list.
+
+### Fixed
+- A report exported while you were looking at a family member's account
+  carried **your** name in the header and the file name, not theirs. The
+  document a doctor reads now names whose record it is.
+- **The privacy policy now describes the whole audit log.** It said the server
+  logs authentication events; it also records every time a document is
+  created, changed or deleted, along with family-sharing and admin actions.
+  The page says so, and adds the one category it was missing: the bookkeeping
+  about your account and your invitations — including that the name you give
+  an invitation is stored as plain text. What the log has never held is what
+  you wrote.
+- **A family member now sees how much is being kept back from them.** The line
+  under the "you are viewing someone's record" banner has counted zero since
+  per-invite sharing scopes arrived, because it counted private entries the
+  server no longer sends. It now uses the number the server withholds, and
+  both halves of the sentence read correctly for a single entry.
+- **The calendar spoke German to everyone after a reload.** Opening or
+  refreshing the calendar in English, French or Italian left every day's
+  screen-reader label in German — and reading "no entry" on days that had
+  one. Both are right now, in every language.
+- **A broken family-invite link explained itself in German.** The message on
+  `/join` is now in the language of the person opening it, which for an
+  invite link is always someone arriving cold.
+- The date field's format hint read `TT.MM.JJJJ` in every language; it now
+  says `DD.MM.YYYY`, `JJ.MM.AAAA` or `GG.MM.AAAA` as appropriate.
+- The doctor PDF was saved as `…-bericht-….pdf` whatever your language, and
+  its first CSV column was headed `date`. Both follow your language now.
+- Screen readers announced "untitled page" after moving between pages: the
+  day view, journal, calendar, reports, settings, setup, login and the invite
+  page had no title. The main navigation, the dialog close button and the
+  landing page's browser title were English-only.
+
 ## [1.4.0] — 2026-09-16
 
 Your medications now keep a history: a dose change, a stop or a switch to
@@ -243,7 +318,8 @@ above.
   and the admin surface. (Established feature set — see
   [`docs/FEATURES.md`](docs/FEATURES.md).)
 
-[Unreleased]: https://github.com/danileau/ciphra/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/danileau/ciphra/releases/tag/v1.5.0
 [1.4.0]: https://github.com/danileau/ciphra/releases/tag/v1.4.0
 [1.3.0]: https://github.com/danileau/ciphra/releases/tag/v1.3.0
 [0.1.0]: https://github.com/danileau/ciphra/releases/tag/v0.1.0
