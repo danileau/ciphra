@@ -63,7 +63,7 @@
 					<!-- Docs link is hardcoded English (no i18n key) — see /docs
 					     index for the why. The docs themselves are English-only;
 					     the link label matches. -->
-					<li><a href="/docs" class="hover:underline" style="color: inherit;">Documentation</a></li>
+					<li><a href="/docs" class="hover:underline" style="color: inherit;">{$t('nav.documentation')}</a></li>
 					<li><a href={sourceUrl} target="_blank" rel="noopener" class="hover:underline inline-flex items-center gap-1" style="color: inherit;">
 						<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6zm5.2 0 4.6-4.6-4.6-4.6L16 6l6 6-6 6z"/></svg>
 						{$t('footer.source')}

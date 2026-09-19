@@ -1341,6 +1341,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>{$t('nav.reports')} — ciphra</title>
+</svelte:head>
+
 {#if !bp && (!initialLoadDone || !$activeVaultReady)}
 	<!-- Genuine loading state — we're still fetching/decrypting documents. -->
 	<div class="layout-data-wide py-12 text-center">

@@ -439,6 +439,10 @@
 	$: if (step) { tick().then(() => headingEl?.focus()); }
 </script>
 
+<svelte:head>
+	<title>{$t('setup.title')}</title>
+</svelte:head>
+
 <!-- 2026-06-07 — was <main class="min-h-screen ..."> which nested a
 	<main> inside the layout's own <main class="flex-1"> AND forced an
 	inner 100vh that broke the layout's sticky-footer flex. Result: even

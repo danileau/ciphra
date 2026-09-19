@@ -44,6 +44,8 @@ export default {
 	'nav.stream': 'Stream',
 	'nav.journal': 'Journal',
 	'nav.more': 'More',
+	'nav.primary_aria': 'Main navigation',
+	'nav.documentation': 'Documentation',
 	'nav.settings': 'Settings',
 	'nav.add': 'Add',
 
@@ -54,6 +56,12 @@ export default {
 	'common.show': 'Show',
 	'common.hide': 'Hide',
 	'common.close': 'Close',
+	'common.date_placeholder_dot': 'DD.MM.YYYY',
+	'common.date_placeholder_slash': 'DD/MM/YYYY',
+	'common.date_placeholder_iso': 'YYYY-MM-DD',
+	'common.date_placeholder_us': 'MM/DD/YYYY',
+	'common.decrease_label': 'Decrease {label}',
+	'common.increase_label': 'Increase {label}',
 	'common.loading': 'Loading...',
 	'common.copy': 'Copy',
 	'common.copied': 'Copied',
@@ -993,6 +1001,7 @@ export default {
 	'landing.nav_origin': 'Our story',
 	'landing.nav_security': 'Security',
 	'landing.nav_features': 'Features',
+	'landing.page_title': 'ciphra — encrypted by design',
 	'landing.nav_login': 'Log in',
 
 	'landing.hero_badge': 'encrypted by design',
@@ -1359,6 +1368,8 @@ export default {
 	'pdf.family_url_label': 'Or open this link',
 	'pdf.disclaimer_medical': 'ciphra is a personal notebook, not a medical device.',
 	'pdf.disclaimer_medical_long': 'Personal notebook — not a medical device under EU MDR 2017/745 or Swiss MepV. Self-entered data. Not a substitute for professional medical advice.',
+	'pdf.csv_date_col': 'Date',
+	'pdf.file_tag': 'report',
 	'pdf.table_continued': 'continued',
 
 	// Clinical handoff PDF (CLINICAL_HANDOFF.md, 2026-05-21 binding spec).
@@ -1368,6 +1379,12 @@ export default {
 
 	// Admin
 	'admin.title': 'Administration',
+	'admin.spark_new_users': 'New accounts per week',
+	'admin.spark_migrations': 'Migrations per week',
+	'admin.spark_logins': 'Sign-ins per week',
+	'admin.per_week': '+{count} / week',
+	'admin.last_7d': '+{count} in 7 days',
+	'admin.pct_of_total': '{pct}% of all accounts',
 	'admin.stats': 'Statistics',
 	'admin.trend_26w': 'Trend — 26 weeks',
 	'admin.migrations': 'Migrations from epilepc',

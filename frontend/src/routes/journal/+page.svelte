@@ -265,6 +265,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>{$t('nav.journal')} — ciphra</title>
+</svelte:head>
+
 <div class="layout-data pt-4">
 	<div class="flex items-center justify-between gap-3 mb-4">
 		<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('stream.title')}</h1>

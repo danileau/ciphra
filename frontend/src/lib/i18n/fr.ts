@@ -44,6 +44,8 @@ export default {
 	'nav.stream': 'Flux',
 	'nav.journal': 'Journal',
 	'nav.more': 'Plus',
+	'nav.primary_aria': 'Navigation principale',
+	'nav.documentation': 'Documentation (en anglais)',
 	'nav.settings': 'Réglages',
 	'nav.add': 'Ajouter',
 
@@ -54,6 +56,12 @@ export default {
 	'common.show': 'Afficher',
 	'common.hide': 'Masquer',
 	'common.close': 'Fermer',
+	'common.date_placeholder_dot': 'JJ.MM.AAAA',
+	'common.date_placeholder_slash': 'JJ/MM/AAAA',
+	'common.date_placeholder_iso': 'AAAA-MM-JJ',
+	'common.date_placeholder_us': 'MM/JJ/AAAA',
+	'common.decrease_label': 'Diminuer {label}',
+	'common.increase_label': 'Augmenter {label}',
 	'common.loading': 'Chargement...',
 	'common.copy': 'Copier',
 	'common.copied': 'Copié',
@@ -993,6 +1001,7 @@ export default {
 	'landing.nav_origin': 'Notre histoire',
 	'landing.nav_security': 'Sécurité',
 	'landing.nav_features': 'Fonctionnalités',
+	'landing.page_title': 'ciphra — chiffré par conception',
 	'landing.nav_login': 'Se connecter',
 
 	'landing.hero_badge': 'encrypted by design',
@@ -1358,6 +1367,8 @@ export default {
 	'pdf.family_url_label': 'Ou ouvrez ce lien',
 	'pdf.disclaimer_medical': "ciphra est un carnet personnel, pas un dispositif médical.",
 	'pdf.disclaimer_medical_long': "Carnet personnel — pas un dispositif médical au sens du Règlement UE 2017/745 ou de l'ODim suisse. Données auto-déclarées. Ne remplace pas un avis médical professionnel.",
+	'pdf.csv_date_col': 'Date',
+	'pdf.file_tag': 'rapport',
 	'pdf.table_continued': 'suite',
 
 	// Transmission clinique — voir CLINICAL_HANDOFF.md.
@@ -1365,6 +1376,12 @@ export default {
 
 	// Admin
 	'admin.title': 'Administration',
+	'admin.spark_new_users': 'Nouveaux comptes par semaine',
+	'admin.spark_migrations': 'Migrations par semaine',
+	'admin.spark_logins': 'Connexions par semaine',
+	'admin.per_week': '+{count} / semaine',
+	'admin.last_7d': '+{count} en 7 jours',
+	'admin.pct_of_total': '{pct}% de tous les comptes',
 	'admin.stats': 'Statistiques',
 	'admin.trend_26w': 'Tendance — 26 semaines',
 	'admin.migrations': 'Migrations depuis epilepc',

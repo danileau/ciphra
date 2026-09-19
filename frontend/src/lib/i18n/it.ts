@@ -44,6 +44,8 @@ export default {
 	'nav.stream': 'Flusso',
 	'nav.journal': 'Diario',
 	'nav.more': 'Altro',
+	'nav.primary_aria': 'Navigazione principale',
+	'nav.documentation': 'Documentazione (in inglese)',
 	'nav.settings': 'Impostazioni',
 	'nav.add': 'Aggiungi',
 
@@ -54,6 +56,12 @@ export default {
 	'common.show': 'Mostra',
 	'common.hide': 'Nascondi',
 	'common.close': 'Chiudi',
+	'common.date_placeholder_dot': 'GG.MM.AAAA',
+	'common.date_placeholder_slash': 'GG/MM/AAAA',
+	'common.date_placeholder_iso': 'AAAA-MM-GG',
+	'common.date_placeholder_us': 'MM/GG/AAAA',
+	'common.decrease_label': 'Riduci {label}',
+	'common.increase_label': 'Aumenta {label}',
 	'common.loading': 'Caricamento...',
 	'common.copy': 'Copia',
 	'common.copied': 'Copiato',
@@ -993,6 +1001,7 @@ export default {
 	'landing.nav_origin': 'La nostra storia',
 	'landing.nav_security': 'Sicurezza',
 	'landing.nav_features': 'Funzionalità',
+	'landing.page_title': 'ciphra — cifrato per definizione',
 	'landing.nav_login': 'Accedi',
 
 	'landing.hero_badge': 'encrypted by design',
@@ -1358,6 +1367,8 @@ export default {
 	'pdf.family_url_label': 'Oppure apri questo link',
 	'pdf.disclaimer_medical': 'ciphra è un taccuino personale, non un dispositivo medico.',
 	'pdf.disclaimer_medical_long': 'Taccuino personale — non un dispositivo medico ai sensi del Regolamento UE 2017/745 o dell\'ODmed svizzero. Dati auto-inseriti. Non sostituisce il parere medico professionale.',
+	'pdf.csv_date_col': 'Data',
+	'pdf.file_tag': 'referto',
 	'pdf.table_continued': 'segue',
 
 	// Consegna clinica — vedi CLINICAL_HANDOFF.md.
@@ -1365,6 +1376,12 @@ export default {
 
 	// Admin
 	'admin.title': 'Amministrazione',
+	'admin.spark_new_users': 'Nuovi account a settimana',
+	'admin.spark_migrations': 'Migrazioni a settimana',
+	'admin.spark_logins': 'Accessi a settimana',
+	'admin.per_week': '+{count} / settimana',
+	'admin.last_7d': '+{count} in 7 giorni',
+	'admin.pct_of_total': '{pct}% di tutti gli account',
 	'admin.stats': 'Statistiche',
 	'admin.trend_26w': 'Tendenza — 26 settimane',
 	'admin.migrations': 'Migrazioni da epilepc',

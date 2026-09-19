@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	/**
 	 * CIPH-834 — Modal primitive.
 	 *
@@ -123,7 +124,7 @@
 			<button
 				type="button"
 				class="fixed inset-0 w-full h-full cursor-default"
-				aria-label="Close"
+				aria-label={$t('common.close')}
 				tabindex="-1"
 				on:click={handleBackdropClick}
 			></button>

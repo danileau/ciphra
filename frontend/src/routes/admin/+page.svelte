@@ -251,6 +251,10 @@
 	$: groupedAudit = groupAudit(auditLog);
 </script>
 
+<svelte:head>
+	<title>{$t('admin.title')} — ciphra</title>
+</svelte:head>
+
 <div class="layout-data py-6 space-y-6">
 	<h1 class="text-2xl font-bold" style="color: var(--text-primary);">{$t('admin.title')}</h1>
 
@@ -334,9 +338,9 @@
 							<p class="text-xl font-bold mt-0.5 num-data" style="line-height: 1.1;">{stats.total_users}</p>
 						</div>
 						<div class="metric-spark">
-							<Sparkline values={timeseries.new_users_per_week} width={260} height={36} color="var(--brand, #b23c2c)" label="New users per week" />
+							<Sparkline values={timeseries.new_users_per_week} width={260} height={36} color="var(--brand, #b23c2c)" label={$t('admin.spark_new_users')} />
 						</div>
-						<div class="metric-aside">+{stats.new_users_7d} / Woche</div>
+						<div class="metric-aside">{$t('admin.per_week', { count: stats.new_users_7d })}</div>
 					</div>
 
 					<div class="metric-row">
@@ -345,11 +349,11 @@
 							<p class="text-xl font-bold mt-0.5 num-data" style="line-height: 1.1;">{stats.migrations_total}</p>
 						</div>
 						<div class="metric-spark">
-							<Sparkline values={timeseries.migrations_per_week} width={260} height={36} color="var(--brand, #b23c2c)" label="Migrations per week" />
+							<Sparkline values={timeseries.migrations_per_week} width={260} height={36} color="var(--brand, #b23c2c)" label={$t('admin.spark_migrations')} />
 						</div>
 						<div class="metric-aside">
 							{#if stats.migrations_7d > 0}
-								+{stats.migrations_7d} last 7d
+								{$t('admin.last_7d', { count: stats.migrations_7d })}
 							{:else if stats.last_migration_at}
 								{$t('admin.last_migration') || 'Last'}: {formatDate(stats.last_migration_at)}
 							{:else}
@@ -364,9 +368,9 @@
 							<p class="text-xl font-bold mt-0.5 num-data" style="line-height: 1.1;">{stats.active_users_30d}</p>
 						</div>
 						<div class="metric-spark">
-							<Sparkline values={timeseries.logins_per_week} width={260} height={36} color="var(--brand, #b23c2c)" label="Logins per week" />
+							<Sparkline values={timeseries.logins_per_week} width={260} height={36} color="var(--brand, #b23c2c)" label={$t('admin.spark_logins')} />
 						</div>
-						<div class="metric-aside">{active_pct}% of total</div>
+						<div class="metric-aside">{$t('admin.pct_of_total', { pct: active_pct })}</div>
 					</div>
 
 					<div class="metric-row metric-row--last">
