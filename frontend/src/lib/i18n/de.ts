@@ -1335,8 +1335,6 @@ export default {
 	'pdf.med_now_stopped': 'abgesetzt ab {date}',
 	'pdf.med_now_as_needed': 'bei Bedarf',
 	'pdf.csv_dose_col': 'Dosis',
-	'pdf.csv_date_col': 'Datum',
-	'pdf.file_tag': 'bericht',
 	'pdf.medication': 'Medikament',
 	'pdf.schedule': 'Einnahme',
 	'pdf.taken': 'Genommen',
@@ -1373,6 +1371,8 @@ export default {
 	'pdf.family_url_label': 'Oder diesen Link öffnen',
 	'pdf.disclaimer_medical': 'ciphra ist ein persönliches Notizbuch, kein Medizinprodukt.',
 	'pdf.disclaimer_medical_long': 'Persönliches Notizbuch — kein Medizinprodukt nach EU-MDR 2017/745 oder schweizerischer MepV. Selbst erfasste Daten. Kein Ersatz für professionelle medizinische Beratung.',
+	'pdf.csv_date_col': 'Datum',
+	'pdf.file_tag': 'bericht',
 	'pdf.table_continued': 'Fortsetzung',
 
 	// Klinische Übergabe — siehe CLINICAL_HANDOFF.md.

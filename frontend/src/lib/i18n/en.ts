@@ -1313,8 +1313,6 @@ export default {
 	'pdf.med_now_stopped': 'stopped from {date}',
 	'pdf.med_now_as_needed': 'as needed',
 	'pdf.csv_dose_col': 'Dose',
-	'pdf.csv_date_col': 'Date',
-	'pdf.file_tag': 'report',
 	'pdf.medication': 'Medication',
 	'pdf.schedule': 'Schedule',
 	'pdf.taken': 'Taken',
@@ -1352,6 +1350,8 @@ export default {
 	'pdf.family_url_label': 'Or open this link',
 	'pdf.disclaimer_medical': 'ciphra is a personal notebook, not a medical device.',
 	'pdf.disclaimer_medical_long': 'Personal notebook — not a medical device under EU MDR 2017/745 or Swiss MepV. Self-entered data. Not a substitute for professional medical advice.',
+	'pdf.csv_date_col': 'Date',
+	'pdf.file_tag': 'report',
 	'pdf.table_continued': 'continued',
 
 	// Clinical handoff PDF (CLINICAL_HANDOFF.md, 2026-05-21 binding spec).

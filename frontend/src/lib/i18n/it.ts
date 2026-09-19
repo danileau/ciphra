@@ -1313,8 +1313,6 @@ export default {
 	'pdf.med_now_stopped': 'sospeso dal {date}',
 	'pdf.med_now_as_needed': 'al bisogno',
 	'pdf.csv_dose_col': 'Dose',
-	'pdf.csv_date_col': 'Data',
-	'pdf.file_tag': 'referto',
 	'pdf.medication': 'Farmaco',
 	'pdf.schedule': 'Assunzione',
 	'pdf.taken': 'Assunto',
@@ -1351,6 +1349,8 @@ export default {
 	'pdf.family_url_label': 'Oppure apri questo link',
 	'pdf.disclaimer_medical': 'ciphra è un taccuino personale, non un dispositivo medico.',
 	'pdf.disclaimer_medical_long': 'Taccuino personale — non un dispositivo medico ai sensi del Regolamento UE 2017/745 o dell\'ODmed svizzero. Dati auto-inseriti. Non sostituisce il parere medico professionale.',
+	'pdf.csv_date_col': 'Data',
+	'pdf.file_tag': 'referto',
 	'pdf.table_continued': 'segue',
 
 	// Consegna clinica — vedi CLINICAL_HANDOFF.md.

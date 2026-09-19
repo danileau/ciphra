@@ -1313,8 +1313,6 @@ export default {
 	'pdf.med_now_stopped': 'arrêté dès le {date}',
 	'pdf.med_now_as_needed': 'si besoin',
 	'pdf.csv_dose_col': 'Dose',
-	'pdf.csv_date_col': 'Date',
-	'pdf.file_tag': 'rapport',
 	'pdf.medication': 'Médicament',
 	'pdf.schedule': 'Prise',
 	'pdf.taken': 'Pris',
@@ -1351,6 +1349,8 @@ export default {
 	'pdf.family_url_label': 'Ou ouvrez ce lien',
 	'pdf.disclaimer_medical': "ciphra est un carnet personnel, pas un dispositif médical.",
 	'pdf.disclaimer_medical_long': "Carnet personnel — pas un dispositif médical au sens du Règlement UE 2017/745 ou de l'ODim suisse. Données auto-déclarées. Ne remplace pas un avis médical professionnel.",
+	'pdf.csv_date_col': 'Date',
+	'pdf.file_tag': 'rapport',
 	'pdf.table_continued': 'suite',
 
 	// Transmission clinique — voir CLINICAL_HANDOFF.md.
