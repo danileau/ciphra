@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { isAuthenticated, authReady, auth, needsUnlock } from '$lib/stores/auth';
 	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
-	import { t } from '$lib/i18n';
+	import { t, locale, plural } from '$lib/i18n';
 	import { todayISO, toLocalISODate } from '$lib/date';
 	import type { Locale } from '$lib/i18n';
 	import { goto } from '$app/navigation';
@@ -1119,8 +1119,14 @@
 
 	{#if $activeVault}
 		{@const activeLink = $familyLinks.find(l => l.sourceUserId === $activeVault)}
-		{@const hiddenCount = $documents.filter(d => d.data?.type === 'diary' || d.data?.private === true).length}
-		{@const visibleCount = $documents.length - hiddenCount}
+		<!-- The number comes from the STORE, which takes it from the server's
+			 `withheld` count (2026-09-19). Counting diary/locked documents in
+			 `$documents` was counting what a caregiver can never receive: the
+			 server stopped sending them with per-invite scopes, so this was
+			 always 0 and the line below never rendered for the one audience it
+			 was written for. -->
+		{@const hiddenCount = $caregiverHiddenCount}
+		{@const visibleCount = $documents.length}
 		<div class="border-b px-4 py-2" style="background: rgba(var(--ochre-rgb), 0.08); border-color: rgba(var(--ochre-rgb), 0.2)">
 			<div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
 				<p class="text-sm" style="color: var(--ochre)">
@@ -1141,7 +1147,13 @@
 					 private/diary entries. Muted, lock-iconed, non-alarmist. -->
 				<div class="max-w-6xl mx-auto mt-1 flex items-center gap-1.5 text-xs" style="color: var(--text-muted)">
 					<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke-width="2"/><path d="M8 11V8a4 4 0 018 0v3" stroke-width="2" stroke-linecap="round"/></svg>
-					<span>{$t('family.private_context', { visible: String(visibleCount), private: String(hiddenCount) })}</span>
+					<!-- Two counts, two plural rules: "1 persönliche Einträge" is
+						 what one sentence with raw interpolation produced the
+						 first time this line ever rendered. -->
+					<span>
+						{plural($t, $locale as Locale, 'family.private_context_shared', visibleCount)}
+						{plural($t, $locale as Locale, 'family.private_context_private', hiddenCount)}
+					</span>
 				</div>
 			{/if}
 		</div>

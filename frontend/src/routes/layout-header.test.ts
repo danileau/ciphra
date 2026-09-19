@@ -71,11 +71,13 @@ describe('CIPH-pi24-1B — language picker is footer-only', () => {
 		expect(headerNav![0]).not.toMatch(/aria-label=\{?\$?t?\(?['"]common\.language/);
 	});
 
-	it('the layout no longer imports `locale`/`locales`/`localeNames` (dead after the move)', () => {
+	it('the layout no longer imports the picker\'s list/labels (dead after the move)', () => {
 		// PublicFooter has its own copy of these imports; +layout.svelte
-		// shouldn't pull them now that the dropdown is gone.
+		// shouldn't pull them now that the dropdown is gone. `locale` itself
+		// came back in 2026-09 for `plural()` in the caregiver banner — a
+		// picker needs `locales` + `localeNames`, and those stay out.
 		expect(LAYOUT).not.toMatch(
-			/import\s*\{[^}]*\b(locale|locales|localeNames)\b[^}]*\}\s*from\s*['"]\$lib\/i18n['"]/,
+			/import\s*\{[^}]*\b(locales|localeNames)\b[^}]*\}\s*from\s*['"]\$lib\/i18n['"]/,
 		);
 	});
 
