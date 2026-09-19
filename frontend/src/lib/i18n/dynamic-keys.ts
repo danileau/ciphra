@@ -300,8 +300,9 @@ export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
 	'auth.enable_recovery',
 
 	// Family / private / quickadd — flash or settings-surface paths.
-	// Keep until audited.
-	'family.private_hidden',
+	// Keep until audited. ('family.private_hidden' was audited on
+	// 2026-09-19 and deleted: `family.private_context` says the same
+	// thing with both numbers, and is the one the banner renders.)
 	'private.toggle_make_private',
 
 	// Migrate phases — invoked via store-driven phase label lookup,

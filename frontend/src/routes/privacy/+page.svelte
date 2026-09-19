@@ -30,6 +30,7 @@
 			<li>{$t('privacy.data_item_credentials')}</li>
 			<li>{$t('privacy.data_item_vault')}</li>
 			<li>{$t('privacy.data_item_audit')}</li>
+			<li>{$t('privacy.data_item_bookkeeping')}</li>
 		</ul>
 	</section>
 
