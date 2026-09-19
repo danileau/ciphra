@@ -74,7 +74,11 @@ export interface VitalField {
 
 /** Why a medication was stopped — a fixed list, so it can be shown to a
  *  doctor without printing free text (2026-09-19). The person's own wording
- *  stays in `endNote`, which never leaves the app. */
+ *  stays in `endNote`, which is never PRINTED: no PDF, no CSV. It is not a
+ *  secret from a linked family member, though — the medication list is part
+ *  of what a family invitation reads (`family.scope_shared_only_hint` names
+ *  it), and the blueprint is one document, so a caregiver's /reports and day
+ *  view render these reasons like the owner's do. */
 export type MedicationStopReason =
 	| 'side_effects'
 	| 'ineffective'

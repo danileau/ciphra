@@ -21,3 +21,8 @@
 - History you fill in afterwards never counts as a missed dose. It shows the
   dose that applied, but those days were never logged, so they stay out of
   every adherence figure and out of the day view's medication list.
+
+### Fixed
+- A report exported while you were looking at a family member's account
+  carried **your** name in the header and the file name, not theirs. The
+  document a doctor reads now names whose record it is.

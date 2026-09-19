@@ -4470,7 +4470,8 @@ export function generateDoctorPdf(
  * accident, so nothing in it can read as a verdict on a medication. Periods
  * the person filled in from memory are marked as such, and the reason a
  * medication ended prints only from the fixed list — the free text a person
- * typed stays in the app, as everywhere else.
+ * typed is never printed, as everywhere else. (In the app it is visible to
+ * anyone the owner shares their medication list with; see types.ts.)
  */
 export function generateTherapyPdf(
 	blueprintIn: Blueprint,

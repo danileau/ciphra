@@ -170,6 +170,14 @@
 			recommended: c.scope === 'year' && !!preview && preview.monthsWithData >= 6,
 		};
 	});
+	// Whose record this is — the name that goes on a document a doctor reads
+	// (2026-09-19). A caregiver exporting a linked patient used to stamp their
+	// OWN name on the patient's report and its file name.
+	$: exportUsername =
+		$activeVault === null
+			? $auth.username || ''
+			: liveLinks.find((l) => l.sourceUserId === $activeVault)?.sourceUsername || '';
+
 	// The treatment history is not a period (2026-09-19): it covers everything
 	// recorded, including the years before ciphra, which the period picker
 	// cannot offer — its months come from logged entries only.
@@ -186,7 +194,7 @@
 	async function exportTherapy() {
 		if (!bp) return;
 		const { generateTherapyPdf } = await loadPdfLib();
-		generateTherapyPdf(bp, $t, $locale, $auth.username || '');
+		generateTherapyPdf(bp, $t, $locale, exportUsername);
 	}
 
 	let viewMode: 'month' | 'year' = 'month';
@@ -541,9 +549,8 @@
 		// Personal vital targets on this device are the LOGGED-IN user's: a
 		// caregiver exporting a linked patient's PDF drew the patient's charts
 		// against the caregiver's own targets.
-		const username = $auth.username || '';
-		const targetsOf = $activeVault === null ? username : '';
-		generateDoctorPdf(bp, docs, year, month, $t, $locale, username, scope, targetsOf);
+		const targetsOf = $activeVault === null ? $auth.username || '' : '';
+		generateDoctorPdf(bp, docs, year, month, $t, $locale, exportUsername, scope, targetsOf);
 	}
 
 	async function exportCsvFile() {
