@@ -58,11 +58,19 @@ describe('auth.logout — health-derived preferences', () => {
 });
 
 describe('doctor PDF in a linked vault', () => {
+	const reports = readFileSync(join(__dirname, '..', '..', 'routes', 'reports', '+page.svelte'), 'utf8');
+
 	it('does not apply the logged-in caregiver\'s vital targets', () => {
-		const reports = readFileSync(join(__dirname, '..', '..', 'routes', 'reports', '+page.svelte'), 'utf8');
-		expect(reports).toMatch(/const targetsOf = \$activeVault === null \? username : ''/);
-		expect(reports).toMatch(/generateDoctorPdf\(bp, docs, year, month, \$t, \$locale, username, scope, targetsOf\)/);
+		expect(reports).toMatch(/const targetsOf = \$activeVault === null \? \$auth\.username \|\| '' : ''/);
+		expect(reports).toMatch(/generateDoctorPdf\(bp, docs, year, month, \$t, \$locale, exportUsername, scope, targetsOf\)/);
 		const pdf = readFileSync(join(__dirname, '..', 'pdf.ts'), 'utf8');
 		expect(pdf).toMatch(/applyVitalTargetOverrides\(blueprintIn, vitalTargetsOf\)/);
+	});
+
+	it('puts the PATIENT\'s name on the document, not the caregiver\'s (2026-09-19)', () => {
+		// A report a doctor reads carries the name of whose record it is. The
+		// caregiver's own name used to go in the header and the file name.
+		expect(reports).toMatch(/\$: exportUsername =[\s\S]{0,240}sourceUsername/);
+		expect(reports).toMatch(/generateTherapyPdf\(bp, \$t, \$locale, exportUsername\)/);
 	});
 });

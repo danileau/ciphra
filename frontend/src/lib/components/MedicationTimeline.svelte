@@ -46,7 +46,7 @@
 		return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(fy, fm - 1, fd)) / 86400000);
 	}
 
-	interface Segment { left: number; width: number; dose: string; alt: boolean; stepIn: boolean }
+	interface Segment { left: number; width: number; dose: string; alt: boolean; stepIn: boolean; continues: boolean }
 	interface Lane { id: string; name: string; segments: Segment[] }
 
 	$: totalDays = Math.max(1, dayIndex(to) + 1);
@@ -75,6 +75,9 @@
 					alt: i % 2 === 1,
 					// A step, not a gap: the previous period ended the day before.
 					stepIn: !!(prev?.to && p.from && p.from >= from && addDaysISO(prev.to, 1) === p.from),
+					// The dose was already running when the window opened — a
+					// flush left edge would read as "started here" (2026-09-19).
+					continues: !p.from || p.from < from,
 				});
 			});
 			if (segments.length > 0) out.push({ id: med.id, name: med.name, segments });
@@ -123,6 +126,7 @@
 								class="medtl-seg"
 								class:medtl-seg--alt={seg.alt}
 								class:medtl-seg--step={seg.stepIn}
+								class:medtl-seg--continues={seg.continues}
 								style="left: {seg.left}%; width: {seg.width}%"
 								title={seg.dose}
 							>
@@ -199,6 +203,13 @@
 	   hands over to the next, so two adjacent segments never merge. */
 	.medtl-seg--step {
 		box-shadow: inset 2px 0 0 var(--surface-card);
+	}
+	/* Already running when the window opened: the left edge stays square and
+	   fades out, rather than claiming the dose began here. */
+	.medtl-seg--continues {
+		border-top-left-radius: 0;
+		border-bottom-left-radius: 0;
+		mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 1) 10px);
 	}
 	.medtl-dose {
 		font-size: 11px;

@@ -1,5 +1,5 @@
-import type { Blueprint, MedicationPeriod, MedicationSlot } from './types';
-import { docReferencesMed, isActiveOn, isUnbounded, medIds, medPeriods, periodOn } from './medicationHistory';
+import type { Blueprint, MedicationPeriod, MedicationSlot, MedicationStopReason } from './types';
+import { docReferencesMed, isTrackedOn, isUnbounded, medIds, medPeriods, periodOn } from './medicationHistory';
 import { todayISO } from '$lib/date';
 import { translateUnit } from '$lib/i18n';
 
@@ -52,7 +52,8 @@ export function bedarfMedsForPicker(
 	const out: MedicationSlot[] = [];
 	for (const m of allBedarfMeds(bp)) {
 		const period = periodOn(m, date);
-		if (period) out.push({ ...m, dose: period.dose, schedule: period.schedule });
+		// Remembered history is not an offer to log against.
+		if (period && !period.reported) out.push({ ...m, dose: period.dose, schedule: period.schedule });
 	}
 	return out;
 }
@@ -94,6 +95,11 @@ export interface MedAdherence {
  * explicitly always counts, even outside its recorded periods, so nothing the
  * user entered is ever silently dropped. Documents without a date count only
  * for a medication with no recorded start or end (the pre-history shape).
+ *
+ * History the person filled in afterwards (`reported`, 2026-09-19) is not a
+ * regimen ciphra was tracking, so it never puts a day in the denominator —
+ * otherwise "and before that I was on 10 mg" would turn every already-logged
+ * day it reaches into a missed dose.
  */
 export function medAdherence(
 	med: MedicationSlot,
@@ -102,7 +108,7 @@ export function medAdherence(
 	const relevant = loggedDocs.filter((d) => {
 		const date = d.data?.date;
 		if (typeof date !== 'string') return isUnbounded(med);
-		return isActiveOn(med, date) || docReferencesMed(d, med);
+		return isTrackedOn(med, date) || docReferencesMed(d, med);
 	});
 	// A combined medication answers for the duplicates merged into it.
 	const ids = medIds(med);
@@ -146,6 +152,8 @@ export function medAdherenceByPeriod(
 ): MedPeriodAdherence[] {
 	const rows: MedPeriodAdherence[] = [];
 	for (const period of medPeriods(med)) {
+		// Remembered history has no logged day to grade.
+		if (period.reported) continue;
 		if (period.from && period.from > window.to) continue;
 		if (period.to && period.to < window.from) continue;
 		const from = !period.from || period.from < window.from ? window.from : period.from;
@@ -158,6 +166,25 @@ export function medAdherenceByPeriod(
 		rows.push({ period, from, to, ...medAdherence(single, slice) });
 	}
 	return rows;
+}
+
+/** Label for why a medication was stopped, from the fixed list (2026-09-19).
+ *  Written out per case rather than built from the value, so the key orphan
+ *  detector can see every one of them — and so this is the single place the
+ *  doctor PDF and the app agree on the wording. */
+export function stopReasonLabel(reason: MedicationStopReason, t: Translator): string {
+	switch (reason) {
+		case 'side_effects':
+			return t('medication.stop_reason_side_effects');
+		case 'ineffective':
+			return t('medication.stop_reason_ineffective');
+		case 'doctor':
+			return t('medication.stop_reason_doctor');
+		case 'pregnancy':
+			return t('medication.stop_reason_pregnancy');
+		default:
+			return t('medication.stop_reason_other');
+	}
 }
 
 /** Resolve a logged event's `medicationId` to a display label + unit.

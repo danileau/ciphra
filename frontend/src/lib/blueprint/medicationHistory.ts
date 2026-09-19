@@ -1,4 +1,4 @@
-import type { MedicationPeriod, MedicationSlot } from './types';
+import type { MedicationPeriod, MedicationSlot, MedicationStopReason } from './types';
 import { toLocalISODate } from '$lib/date';
 
 /**
@@ -16,6 +16,11 @@ import { toLocalISODate } from '$lib/date';
  * closes it; resuming opens another after the gap. Every reader asks "what
  * applied on THIS day" (`periodOn`), so history stays true and the change is
  * visible wherever a date is.
+ *
+ * History runs backwards too (2026-09-19): a medication's development before
+ * ciphra — earlier doses, and drugs tried and stopped long ago — is entered
+ * afterwards and marked `reported`. Those periods say what applied; they
+ * never say a day was logged. See `prependPeriod` / `createPastMedication`.
  *
  * Everything here is pure: writers return a new MedicationSlot and never touch
  * the blueprint store. Dates are compared as `YYYY-MM-DD` strings, which sort
@@ -54,7 +59,9 @@ const sameRegimen = (a: MedicationPeriod, b: MedicationPeriod) =>
  *  not a step anyone took; showing it as one misstates the history. Applied on
  *  read, so data saved with such a step reads cleanly, and on write, so it is
  *  not stored again. A switch boundary is kept even with equal doses — it
- *  links two different medications. */
+ *  links two different medications, and so is a boundary between remembered
+ *  and tracked history: joining those would claim days were logged that never
+ *  were. */
 function coalesce(periods: MedicationPeriod[]): MedicationPeriod[] {
 	const out: MedicationPeriod[] = [];
 	for (const p of periods) {
@@ -66,12 +73,22 @@ function coalesce(periods: MedicationPeriod[]): MedicationPeriod[] {
 			addDaysISO(prev.to, 1) === p.from &&
 			sameRegimen(prev, p) &&
 			!prev.switchedTo &&
-			!p.switchedFrom
+			!p.switchedFrom &&
+			!!prev.reported === !!p.reported
 		) {
-			const joined: MedicationPeriod = { ...prev, to: p.to, endNote: p.endNote, switchedTo: p.switchedTo };
+			const joined: MedicationPeriod = {
+				...prev,
+				to: p.to,
+				toPrecision: p.toPrecision,
+				endNote: p.endNote,
+				switchedTo: p.switchedTo,
+				stopReason: p.stopReason,
+			};
 			if (!p.to) delete joined.to;
+			if (!p.toPrecision) delete joined.toPrecision;
 			if (!p.endNote) delete joined.endNote;
 			if (!p.switchedTo) delete joined.switchedTo;
+			if (!p.stopReason) delete joined.stopReason;
 			const notes = [prev.note?.trim(), p.note?.trim()].filter(Boolean);
 			if (notes.length > 0) joined.note = [...new Set(notes)].join(' · ');
 			out[out.length - 1] = joined;
@@ -98,6 +115,16 @@ export function periodOn(med: MedicationSlot, date: string): MedicationPeriod | 
 
 export function isActiveOn(med: MedicationSlot, date: string): boolean {
 	return periodOn(med, date) !== null;
+}
+
+/** Was the medication part of the regimen on `date` AND was that day tracked
+ *  by ciphra? False inside history the person filled in afterwards
+ *  (2026-09-19): those days were never logged, so counting them would invent
+ *  missed doses. Everything that shows WHAT applied uses `periodOn`; only the
+ *  readers that count days use this. */
+export function isTrackedOn(med: MedicationSlot, date: string): boolean {
+	const p = periodOn(med, date);
+	return !!p && !p.reported;
 }
 
 /** True for a medication with one period and no recorded start or end — the
@@ -172,6 +199,10 @@ function cleanPeriod(p: MedicationPeriod): MedicationPeriod {
 	if (p.endNote?.trim()) out.endNote = p.endNote.trim();
 	if (p.switchedTo) out.switchedTo = p.switchedTo;
 	if (p.switchedFrom) out.switchedFrom = p.switchedFrom;
+	if (p.reported) out.reported = true;
+	if (p.from && p.fromPrecision) out.fromPrecision = p.fromPrecision;
+	if (p.to && p.toPrecision) out.toPrecision = p.toPrecision;
+	if (p.stopReason) out.stopReason = p.stopReason;
 	return out;
 }
 
@@ -325,6 +356,149 @@ export function undoLastChange(med: MedicationSlot): MedicationSlot | null {
 		delete prev.endNote;
 	}
 	return withPeriods(med, periods.map(cleanPeriod));
+}
+
+/* ─── History from before ciphra (2026-09-19) ─────────────────────────── */
+
+/**
+ * What the person remembers about a dose they took before ciphra recorded
+ * anything. `to` defaults to the day before the earliest recorded day, so the
+ * usual case — "and before that I was on 10 mg" — needs one date, or none at
+ * all when the start is a blur.
+ */
+export interface HistoryEntry {
+	dose: string;
+	schedule: string;
+	/** First day at this dose; omit when it is no longer known. */
+	from?: string;
+	/** Last day at this dose. Omit to run it up to what is already recorded. */
+	to?: string;
+	fromPrecision?: 'month';
+	toPrecision?: 'month';
+	note?: string;
+}
+
+/**
+ * Add a dose period BEFORE everything already recorded, and return the new
+ * medication — or null when the dates cannot be squared with the history that
+ * exists.
+ *
+ * Deliberately not `applyDoseChange` with an old date: that one runs through
+ * `truncateBefore` and drops every period from the given day on, because a
+ * change is the truth from that day forward. Backfilling is the opposite
+ * claim — it says what came before, and must leave every recorded day alone.
+ *
+ * A medication whose start ciphra never learned (no `from` on its first
+ * period — the shape of every medication added without a start date) covers
+ * all of the past, so nothing can sit in front of it. Recording earlier
+ * history therefore gives that period the start it was missing: the day after
+ * the remembered one ends. The dialog says so before saving.
+ */
+export function prependPeriod(med: MedicationSlot, entry: HistoryEntry): MedicationSlot | null {
+	const dose = entry.dose.trim();
+	if (!dose) return null;
+	const periods = clonePeriods(med);
+	const first = periods[0];
+	const to = entry.to ?? (first.from ? addDaysISO(first.from, -1) : null);
+	// Without an end there is no day at which the recorded regimen takes over.
+	if (!to) return null;
+	if (entry.from && entry.from > to) return null;
+	if (first.from) {
+		if (to >= first.from) return null;
+	} else {
+		// The open start becomes a recorded one.
+		const adopted = addDaysISO(to, 1);
+		if (first.to && adopted > first.to) return null;
+		first.from = adopted;
+	}
+	const period = cleanPeriod({
+		from: entry.from,
+		to,
+		dose,
+		schedule: entry.schedule.trim(),
+		note: entry.note,
+		fromPrecision: entry.fromPrecision,
+		toPrecision: entry.toPrecision,
+		reported: true,
+	});
+	return withPeriods(med, [period, ...periods].map(cleanPeriod));
+}
+
+export interface PastMedication {
+	name: string;
+	dose: string;
+	schedule: string;
+	asNeeded: boolean;
+	/** First day taken; omit when it is no longer known. */
+	from?: string;
+	/** Last day taken — a medication from the past has one by definition. */
+	to: string;
+	fromPrecision?: 'month';
+	toPrecision?: 'month';
+	stopReason?: MedicationStopReason;
+	/** The person's own words for why it ended. Stays in the app. */
+	endNote?: string;
+}
+
+/** A medication that was taken and stopped before ciphra: one remembered
+ *  period, so it lands among the stopped medications and carries no claim
+ *  about any logged day. Null when the dates contradict each other. */
+export function createPastMedication(id: string, input: PastMedication): MedicationSlot | null {
+	const dose = input.dose.trim();
+	if (!input.name.trim() || !dose || !input.to) return null;
+	if (input.from && input.from > input.to) return null;
+	const period = cleanPeriod({
+		from: input.from,
+		to: input.to,
+		dose,
+		schedule: input.schedule.trim(),
+		endNote: input.endNote,
+		fromPrecision: input.fromPrecision,
+		toPrecision: input.toPrecision,
+		stopReason: input.stopReason,
+		reported: true,
+	});
+	return withPeriods(
+		{ id, name: input.name.trim(), dose: period.dose, schedule: period.schedule, asNeeded: input.asNeeded },
+		[period],
+	);
+}
+
+/** Drop one remembered period — the undo for a backfill that came out wrong.
+ *  Only a remembered period can go: recorded history is never removed this
+ *  way. Dates on the other periods stay as they are, including a start that
+ *  the backfill established: that is what the person said, and guessing it
+ *  back to "unknown" would throw away an answer they gave. Null when the
+ *  index is not a remembered period, or when it is the only one left. */
+export function removeReportedPeriod(med: MedicationSlot, index: number): MedicationSlot | null {
+	const periods = clonePeriods(med);
+	const target = periods[index];
+	if (!target?.reported || periods.length < 2) return null;
+	periods.splice(index, 1);
+	return withPeriods(med, periods.map(cleanPeriod));
+}
+
+/** The span every medication together covers, for a report about the therapy
+ *  itself rather than about a month. `from` is null when any period has no
+ *  recorded start — the history reaches further back than anyone can say.
+ *  `knownFrom` is the earliest date that IS recorded, so a drawing still has
+ *  a left edge to work from. `to` runs to today, or further when a change is
+ *  already planned. */
+export function medHistorySpan(
+	meds: MedicationSlot[],
+	today: string = toLocalISODate(),
+): { from: string | null; knownFrom: string | null; to: string } {
+	let knownFrom: string | null = null;
+	let openStart = false;
+	let to = today;
+	for (const med of meds) {
+		for (const p of medPeriods(med)) {
+			if (!p.from) openStart = true;
+			else if (!knownFrom || p.from < knownFrom) knownFrom = p.from;
+			for (const edge of [p.from, p.to]) if (edge && edge > to) to = edge;
+		}
+	}
+	return { from: openStart ? null : knownFrom, knownFrom, to };
 }
 
 /* ─── Readers for reports ─────────────────────────────────────────────── */

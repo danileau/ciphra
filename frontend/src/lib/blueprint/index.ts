@@ -7,6 +7,7 @@ export type {
 	VitalField,
 	MedicationSlot,
 	MedicationPeriod,
+	MedicationStopReason,
 	RescueMedication,
 } from './types';
 export { blueprint, hasBlueprint, resolvedBlueprint } from './store';
@@ -43,12 +44,15 @@ export {
 	combineHistories,
 	combineMedications,
 	createMedication,
+	createPastMedication,
 	docReferencesMed,
 	duplicateGroups,
 	earliestChangeDate,
 	isActiveOn,
+	isTrackedOn,
 	isUnbounded,
 	medHistoryDays,
+	medHistorySpan,
 	medIds,
 	medNameKey,
 	medicationsOverlap,
@@ -59,6 +63,17 @@ export {
 	newMedicationId,
 	periodOn,
 	plannedChange,
+	prependPeriod,
+	removeReportedPeriod,
 	undoLastChange,
 } from './medicationHistory';
-export type { DoseChange, MedChange, MedChangeKind, MedStatus, NewMedication, PlannedChange } from './medicationHistory';
+export type {
+	DoseChange,
+	HistoryEntry,
+	MedChange,
+	MedChangeKind,
+	MedStatus,
+	NewMedication,
+	PastMedication,
+	PlannedChange,
+} from './medicationHistory';

@@ -423,6 +423,10 @@ route kind.
   Applies `MedicationChangeDialog` results to the RAW blueprint and saves
   it — never `$resolvedBlueprint`. The add form takes an optional start
   date; left empty, the medication reads as "since before the record".
+  Two entry points open `MedicationHistoryDialog`: "add an earlier dose"
+  inside a medication's history, and "add a medication from the past"
+  beside the add button. Remembered periods are listed with a way to
+  take them back.
 - **MedicationChangeDialog.svelte** — the one place a medication changes.
   Wraps `Modal.svelte`. Asks *what* changes (dose/schedule, stopping, or
   switching to another drug) and *from when*, and renders a preview from
@@ -431,9 +435,18 @@ route kind.
   "stop instead" first when days are logged against the medication and
   takes a second step to delete anyway. Pure writers live in
   `blueprint/medicationHistory.ts`; the dialog never saves.
+- **MedicationHistoryDialog.svelte** — records what happened BEFORE ciphra
+  (2026-09-19): an earlier dose of a medication still taken, or a
+  medication tried and stopped long ago, with a reason from a fixed list.
+  Wraps `Modal.svelte`. Dates are months, and the start may stay unknown —
+  nobody remembers the day a dose changed years ago. Writes through
+  `prependPeriod` / `createPastMedication`, which never touch a recorded
+  day; the periods are marked remembered, so they show the dose but never
+  count as logged days. Like the other dialogs, it never saves.
 - **MedicationTimeline.svelte** — `/reports` dose-history card. One lane
   per medication inside the window, a segment per dose period with a
-  visible step at each change and a gap while stopped, plus the same
+  visible step at each change, a faded square left edge when the dose was
+  already running before the window, and a gap while stopped, plus the same
   changes as a dated list (the accessible form, and the one that still
   reads on a narrow phone). A strip of its own rather than marks on the
   trend chart — per-event marks on aggregate-axis charts were rejected as

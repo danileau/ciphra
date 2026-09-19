@@ -52,7 +52,7 @@
 <script lang="ts">
 	import { t, locale, translateUnit } from '$lib/i18n';
 	import type { Blueprint, CustomKind, MedicationSlot } from '$lib/blueprint';
-	import { isCustomItem, blueprint, canonicalMedId, createMedication, isActiveOn, medicationChanges, newMedicationId, periodOn } from '$lib/blueprint';
+	import { isCustomItem, blueprint, canonicalMedId, createMedication, isTrackedOn, medicationChanges, newMedicationId, periodOn } from '$lib/blueprint';
 	import { groupIconPath } from '$lib/groupIcons';
 	import { get } from 'svelte/store';
 	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
@@ -910,9 +910,12 @@
 					 regimen ON THAT DAY, at the dose that applied then — opening an
 					 entry from before a dose change shows the old dose. A medication
 					 this day already mentions stays visible either way, so nothing
-					 recorded can become uneditable. -->
-				{@const standardMeds = bp.medications.filter(m => !m.asNeeded && (isActiveOn(m, date) || missedMeds[m.id]))}
-				{@const asNeededMeds = bp.medications.filter(m => m.asNeeded && (isActiveOn(m, date) || medications[m.id]))}
+					 recorded can become uneditable. History filled in afterwards
+					 (2026-09-19) is not on offer here: those days were never logged,
+					 and a checkbox would invite a missed dose to be recorded for a
+					 day nobody tracked. -->
+				{@const standardMeds = bp.medications.filter(m => !m.asNeeded && (isTrackedOn(m, date) || missedMeds[m.id]))}
+				{@const asNeededMeds = bp.medications.filter(m => m.asNeeded && (isTrackedOn(m, date) || medications[m.id]))}
 				{@const medChangesToday = medicationChanges(bp.medications, { from: date, to: date })}
 				<section id="section-medications" class="log-card log-card--olive">
 					<button class="log-section-toggle" on:click={() => toggleSection('medications')}>

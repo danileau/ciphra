@@ -17,7 +17,7 @@
  */
 import type { MedicationPeriod, MedicationSlot } from '$lib/blueprint/types';
 import { addDaysISO, medIds, medicationChanges, medPeriods, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
-import { medAdherenceByPeriod, type MedPeriodAdherence } from '$lib/blueprint/medications';
+import { medAdherenceByPeriod, stopReasonLabel, type MedPeriodAdherence } from '$lib/blueprint/medications';
 import { doseBands, medsChangedIn, type AxisBin, type DoseBand, type DoseBoundary } from '$lib/reports/doseBands';
 
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
@@ -453,7 +453,7 @@ export function medicationsOnDate(
 			const parts = [[med.name, now].filter(Boolean).join(' ')];
 			if (med.asNeeded) parts.push(t('pdf.med_now_as_needed'));
 			if (p.from) {
-				const since = t('pdf.med_now_since', { date: format(p.from) });
+				const since = t('pdf.med_now_since', { date: historyDateText(p.from, p.fromPrecision, format) });
 				const before = prev ? regimenDetail(prev, p) : '';
 				parts.push(before ? `${since} ${t('pdf.med_now_before', { regimen: before })}` : since);
 			}
@@ -465,4 +465,75 @@ export function medicationsOnDate(
 		if (last) stopped.push(`${med.name} · ${t('pdf.med_now_stopped', { date: format(last.date) })}`);
 	}
 	return [...taken, ...stopped];
+}
+
+/* ─── 7. The treatment history (2026-09-19) ───────────────────────────── */
+
+/** A date the person gave as a month prints as a month. Anything else prints
+ *  as a date in their chosen format. */
+export function historyDateText(
+	iso: string | undefined,
+	precision: 'month' | undefined,
+	format: (iso: string) => string,
+): string {
+	if (!iso) return '';
+	return precision === 'month' ? `${iso.slice(5, 7)}/${iso.slice(0, 4)}` : format(iso);
+}
+
+export interface TherapyRow {
+	med: MedicationSlot;
+	name: string;
+	/** "03/2023 – 05/2026", "seit 01.06.2026", "Beginn nicht erfasst – 05/2026". */
+	period: string;
+	regimen: string;
+	/** Why it ended, from the fixed list — empty when none was given. */
+	reason: string;
+	/** True when the person filled this period in from memory. */
+	remembered: boolean;
+	/** Sort key: the first day of the period, '' for an unrecorded start. */
+	sortKey: string;
+}
+
+/**
+ * Every dose period of every medication, oldest first — the therapy as a
+ * whole, which is what a first consultation asks about. Unlike every other
+ * reader here this one has no window: the history before ciphra is the point.
+ *
+ * STRUCTURE ONLY, like its neighbours. A row says what was taken, when, and
+ * which of the fixed reasons ended it. It never says what happened while it
+ * was taken.
+ */
+export function therapyRows(
+	meds: MedicationSlot[],
+	format: (iso: string) => string,
+	t: TranslateFn,
+): TherapyRow[] {
+	const rows: TherapyRow[] = [];
+	for (const med of meds) {
+		for (const p of medPeriods(med)) {
+			const start = p.from
+				? historyDateText(p.from, p.fromPrecision, format)
+				: t('pdf.therapy_start_unknown');
+			const end = p.to ? historyDateText(p.to, p.toPrecision, format) : t('pdf.therapy_ongoing');
+			rows.push({
+				med,
+				name: med.name,
+				period: `${start} – ${end}`,
+				regimen: [regimenText(p), med.asNeeded ? t('pdf.med_now_as_needed') : ''].filter(Boolean).join(' · '),
+				// The fixed list, resolved here rather than by the caller: a
+				// callback is a way for free text to reach a clinical document.
+				reason: p.stopReason ? stopReasonLabel(p.stopReason, t) : '',
+				remembered: !!p.reported,
+				// An unrecorded start is the earliest thing there is.
+				sortKey: p.from ?? '',
+			});
+		}
+	}
+	return rows.sort((a, b) => (a.sortKey === b.sortKey ? a.name.localeCompare(b.name) : a.sortKey < b.sortKey ? -1 : 1));
+}
+
+/** True when any period was filled in from memory — the provenance line only
+ *  claims it when it is true. */
+export function hasRememberedHistory(meds: MedicationSlot[]): boolean {
+	return meds.some((med) => medPeriods(med).some((p) => p.reported));
 }
