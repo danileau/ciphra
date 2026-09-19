@@ -19,7 +19,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { generateTherapyPdf } from './pdf';
 import { therapyRows, hasRememberedHistory } from './pdfMedicationHistory';
-import { stopReasonLabel } from '$lib/blueprint/medications';
 import { epilepsy } from '$lib/blueprint/presets';
 import type { Blueprint, MedicationSlot } from '$lib/blueprint';
 import de from '$lib/i18n/de';
@@ -97,7 +96,7 @@ afterEach(() => vi.useRealTimers());
 /* ─── 1. The rows ─────────────────────────────────────────────────────── */
 
 describe('therapyRows', () => {
-	const rows = therapyRows(MEDS, fmt, t, (r) => stopReasonLabel(r, t));
+	const rows = therapyRows(MEDS, fmt, t);
 
 	it('is every dose period of every medication, oldest first', () => {
 		expect(rows.map((r) => [r.name, r.period, r.regimen])).toEqual([
@@ -122,7 +121,7 @@ describe('therapyRows', () => {
 	it('says so when a start was never recorded', () => {
 		const unknown = therapyRows(
 			[{ id: 'x', name: 'Lamotrigin', dose: '50 mg', schedule: '', asNeeded: false }],
-			fmt, t, (r) => stopReasonLabel(r, t),
+			fmt, t,
 		);
 		expect(unknown[0].period).toBe(`${t('pdf.therapy_start_unknown')} – ${t('pdf.therapy_ongoing')}`);
 	});

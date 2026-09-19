@@ -1332,6 +1332,7 @@ export default {
 	'pdf.med_now_as_needed': 'bei Bedarf',
 	'pdf.csv_dose_col': 'Dosis',
 	'pdf.scope_therapy_label': 'Therapieverlauf',
+	'pdf.file_tag_therapy': 'therapieverlauf',
 	'pdf.therapy_title': 'Therapieverlauf · {range}',
 	'pdf.therapy_col_med': 'Medikament',
 	'pdf.therapy_col_period': 'Zeitraum',

@@ -122,7 +122,10 @@ The blueprint is just another encrypted document; the server never sees it.
 hands their doctor — a multi-page A4 report rendered entirely in the browser
 with jsPDF. It carries a KPI glance, cohort-aware trend charts, symptom /
 trigger / medication tables, and a landscape day-by-day protocol grid. Export
-scope (month / year / 2 years) is chosen on `/reports`.
+scope (month / year / 2 years) is chosen on `/reports`. `generateTherapyPdf`
+beside it builds the treatment history — every medication's dose periods over
+the whole recorded span. It is handed the blueprint and nothing else, so no
+symptom or episode data can reach it.
 
 This PDF is the moment health data leaves the device — once saved, the file is
 plaintext, so the export UI says so explicitly. (History: a single-page

@@ -1310,6 +1310,7 @@ export default {
 	'pdf.med_now_as_needed': 'al bisogno',
 	'pdf.csv_dose_col': 'Dose',
 	'pdf.scope_therapy_label': 'Storico della terapia',
+	'pdf.file_tag_therapy': 'terapia',
 	'pdf.therapy_title': 'Storico della terapia · {range}',
 	'pdf.therapy_col_med': 'Farmaco',
 	'pdf.therapy_col_period': 'Periodo',

@@ -17,7 +17,7 @@
  */
 import type { MedicationPeriod, MedicationSlot } from '$lib/blueprint/types';
 import { addDaysISO, medIds, medicationChanges, medPeriods, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
-import { medAdherenceByPeriod, type MedPeriodAdherence } from '$lib/blueprint/medications';
+import { medAdherenceByPeriod, stopReasonLabel, type MedPeriodAdherence } from '$lib/blueprint/medications';
 import { doseBands, medsChangedIn, type AxisBin, type DoseBand, type DoseBoundary } from '$lib/reports/doseBands';
 
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
@@ -507,7 +507,6 @@ export function therapyRows(
 	meds: MedicationSlot[],
 	format: (iso: string) => string,
 	t: TranslateFn,
-	stopReasonText: (reason: NonNullable<MedicationPeriod['stopReason']>) => string,
 ): TherapyRow[] {
 	const rows: TherapyRow[] = [];
 	for (const med of meds) {
@@ -521,7 +520,9 @@ export function therapyRows(
 				name: med.name,
 				period: `${start} – ${end}`,
 				regimen: [regimenText(p), med.asNeeded ? t('pdf.med_now_as_needed') : ''].filter(Boolean).join(' · '),
-				reason: p.stopReason ? stopReasonText(p.stopReason) : '',
+				// The fixed list, resolved here rather than by the caller: a
+				// callback is a way for free text to reach a clinical document.
+				reason: p.stopReason ? stopReasonLabel(p.stopReason, t) : '',
 				remembered: !!p.reported,
 				// An unrecorded start is the earliest thing there is.
 				sortKey: p.from ?? '',

@@ -21,7 +21,6 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Blueprint, VitalField } from '$lib/blueprint';
 import { addDaysISO, canonicalMedId, isCustomItem, medHistorySpan, resolveBlueprint, resolveMedDisplay, bedarfMedColumns } from '$lib/blueprint';
-import { stopReasonLabel } from '$lib/blueprint/medications';
 import {
 	adherenceRowsForWindow,
 	csvDoseCell,
@@ -4473,6 +4472,14 @@ export function generateDoctorPdf(
  * typed is never printed, as everywhere else. (In the app it is visible to
  * anyone the owner shares their medication list with; see types.ts.)
  */
+/** The word in the file name, in the reader's language — sanitised, because a
+ *  file name travels through mail clients and practice software: letters,
+ *  digits and hyphens only, with an ASCII fallback when a locale's word
+ *  leaves nothing behind. */
+function therapyFileTag(t: TranslateFn): string {
+	return t('pdf.file_tag_therapy').toLowerCase().normalize('NFKD').replace(/[^a-z0-9-]/g, '') || 'therapy';
+}
+
 export function generateTherapyPdf(
 	blueprintIn: Blueprint,
 	t: TranslateFn,
@@ -4529,14 +4536,14 @@ export function generateTherapyPdf(
 	);
 
 	let cursorY = 46;
-	const rows = therapyRows(meds, fmt, t, (reason) => stopReasonLabel(reason, t));
+	const rows = therapyRows(meds, fmt, t);
 
 	if (rows.length === 0) {
 		doc.setFontSize(TYPE.body);
 		doc.setTextColor(...BRAND.textSecondary);
 		doc.text(t('pdf.therapy_empty'), 14, cursorY);
 		drawFooter(doc, t, 'pdf.disclaimer_medical_long', rangeLabel);
-		doc.save(`ciphra-${username ? `${username}-` : ''}therapy-${span.to}.pdf`);
+		doc.save(`ciphra-${username ? `${username}-` : ''}${therapyFileTag(t)}-${span.to}.pdf`);
 		return;
 	}
 
@@ -4633,9 +4640,7 @@ export function generateTherapyPdf(
 	}
 
 	drawFooter(doc, t, 'pdf.disclaimer_medical_long', rangeLabel);
-	// ASCII file name: a locale-specific one would arrive at the practice
-	// mangled by whatever system opens it.
-	doc.save(`ciphra-${username ? `${username}-` : ''}therapy-${span.to}.pdf`);
+	doc.save(`ciphra-${username ? `${username}-` : ''}${therapyFileTag(t)}-${span.to}.pdf`);
 }
 
 export function generateRecoveryPdf(

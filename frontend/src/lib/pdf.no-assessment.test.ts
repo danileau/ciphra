@@ -140,6 +140,69 @@ describe('the PDF makes no directional assessment', () => {
 			});
 		}
 
+		it('the treatment history says what was taken, never how it went (2026-09-19)', () => {
+			// Its own strings, held to the same vocabulary as the bands.
+			const THERAPY_KEYS = [
+				'pdf.scope_therapy_label',
+				'pdf.therapy_title',
+				'pdf.therapy_col_med',
+				'pdf.therapy_col_period',
+				'pdf.therapy_col_regimen',
+				'pdf.therapy_col_reason',
+				'pdf.therapy_current_title',
+				'pdf.therapy_provenance',
+				'pdf.therapy_start_unknown',
+				'pdf.therapy_ongoing',
+				'pdf.therapy_remembered',
+				'pdf.therapy_empty',
+			];
+			for (const [name, dict] of DICTS) {
+				for (const k of THERAPY_KEYS) {
+					expect(dict[k], `${name} ${k}`).toBeTruthy();
+					expect(dict[k], `${name} ${k}`).not.toMatch(OUTCOME);
+				}
+			}
+		});
+
+		it('why a medication ended comes from the fixed list, and cannot be swapped for free text', () => {
+			// The reasons are the person's own statement, so they are exempt
+			// from the OUTCOME vocabulary ("Nebenwirkungen" contains "wirk").
+			// What must hold is that they are a CLOSED set: five keys, resolved
+			// inside the row builder. `therapyRows` used to take the resolver
+			// as a callback — a caller could have passed `p => p.endNote` and
+			// put free text on a clinical document.
+			const REASONS = ['side_effects', 'ineffective', 'doctor', 'pregnancy', 'other'];
+			for (const [name, dict] of DICTS) {
+				for (const r of REASONS) expect(dict[`medication.stop_reason_${r}`], `${name} ${r}`).toBeTruthy();
+			}
+			const src = readFileSync(join(__dirname, 'pdfMedicationHistory.ts'), 'utf8');
+			const i = src.indexOf('export function therapyRows(');
+			expect(i, 'therapyRows missing').toBeGreaterThan(0);
+			const body = src.slice(i, src.indexOf('\n}\n', i));
+			expect(body).toMatch(/stopReasonLabel\(p\.stopReason, t\)/);
+			expect(body, 'a typed reason must never reach a row').not.toMatch(/endNote|\.note\b/);
+			// No indirection left for one to arrive through.
+			expect(src.slice(i, src.indexOf(')', i))).not.toMatch(/=>|callback|stopReasonText/);
+		});
+
+		it('every PDF carries the medical-device disclaimer', () => {
+			// The one sentence that states what ciphra is NOT. Each document
+			// stamps it through drawFooter; nothing else pinned this.
+			for (const fn of ['generateDoctorPdf', 'generateTherapyPdf']) {
+				const i = PDF.indexOf(`export function ${fn}(`);
+				expect(i, `${fn} missing`).toBeGreaterThan(0);
+				const body = PDF.slice(i, PDF.indexOf('\nexport function ', i + 10));
+				expect(body, `${fn} does not stamp the disclaimer`).toMatch(
+					/drawFooter\(doc, t, 'pdf\.disclaimer_medical_long'/,
+				);
+			}
+			// Each locale names its own regulation (MDR / MepV, ODim, ODmed);
+			// the regulation NUMBER is what they all have to carry.
+			for (const [name, dict] of DICTS) {
+				expect(dict['pdf.disclaimer_medical_long'], name).toMatch(/2017\/745/);
+			}
+		});
+
 		it('the band drawing reads no series data — it cannot count per period', () => {
 			for (const fn of ['planDoseBands', 'drawDoseBandFills', 'drawDoseBandMarks', 'drawDoseBandCaption']) {
 				const i = PDF.indexOf(`function ${fn}(`);
