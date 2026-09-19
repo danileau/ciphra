@@ -72,6 +72,16 @@ export interface VitalField {
 	splitByTimeOfDay?: boolean;
 }
 
+/** Why a medication was stopped — a fixed list, so it can be shown to a
+ *  doctor without printing free text (2026-09-19). The person's own wording
+ *  stays in `endNote`, which never leaves the app. */
+export type MedicationStopReason =
+	| 'side_effects'
+	| 'ineffective'
+	| 'doctor'
+	| 'pregnancy'
+	| 'other';
+
 /** One stretch of a medication's regimen: a dose + schedule that applied
  *  between two dates (2026-09-16, dose history).
  *
@@ -94,6 +104,20 @@ export interface MedicationPeriod {
 	switchedTo?: string;
 	/** The medication this one replaced at `from` (a switch). */
 	switchedFrom?: string;
+	/** Remembered, not tracked (2026-09-19): the person entered this period
+	 *  afterwards, for time before ciphra recorded anything. It carries the
+	 *  dose that applied, so reports and the PDF can show the development —
+	 *  but no day inside it was ever logged, so it must never count towards
+	 *  adherence or produce a missed dose (`isTrackedOn`). */
+	reported?: true;
+	/** `from` / `to` were given as a month, not a day. The date stored is the
+	 *  first / last day of that month; readers print "03/2023" instead of a
+	 *  day nobody remembers. */
+	fromPrecision?: 'month';
+	toPrecision?: 'month';
+	/** Why the medication was stopped at `to`, from the fixed list. Unlike
+	 *  `endNote` this one may be printed for a doctor. */
+	stopReason?: MedicationStopReason;
 }
 
 /** Medication template */
