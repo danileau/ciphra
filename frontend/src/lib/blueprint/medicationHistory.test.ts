@@ -27,9 +27,14 @@ import {
 	medicationChanges,
 	medicationsOverlap,
 	medPeriods,
+	medHistorySpan,
 	medStatusOn,
+	isTrackedOn,
 	periodOn,
 	plannedChange,
+	prependPeriod,
+	createPastMedication,
+	removeReportedPeriod,
 	undoLastChange,
 } from './medicationHistory';
 import type { MedicationSlot } from './types';
@@ -314,5 +319,159 @@ describe('combineMedications — the operator\'s Fycompa case (2026-09-16)', () 
 		const a = legacy({ id: 'a', mergedIds: ['old'] });
 		const b = legacy({ id: 'b', mergedIds: ['older'] });
 		expect(combineMedications(a, b, { earlierId: 'a', switchDate: '2026-01-01' })!.mergedIds).toEqual(['old', 'b', 'older']);
+	});
+});
+
+/* ─── History from before ciphra (2026-09-19) ──────────────────────────── */
+
+describe('prependPeriod — the development before the record', () => {
+	it('gives a medication with no recorded start one, and keeps every later period', () => {
+		const med = applyDoseChange(legacy(), { from: '2026-09-16', dose: '8 mg', schedule: '2× täglich' });
+		const back = prependPeriod(med, { dose: '12 mg', schedule: '2× täglich', from: '2023-03-01', to: '2026-05-31' })!;
+		expect(medPeriods(back)).toEqual([
+			{ from: '2023-03-01', to: '2026-05-31', dose: '12 mg', schedule: '2× täglich', reported: true },
+			{ from: '2026-06-01', to: '2026-09-15', dose: '10 mg', schedule: '2× täglich' },
+			{ from: '2026-09-16', dose: '8 mg', schedule: '2× täglich' },
+		]);
+		// The mirror still reads the CURRENT regimen, not the remembered one.
+		expect(back.dose).toBe('8 mg');
+	});
+
+	it('runs up to the day before what is already recorded when no end is given', () => {
+		const med = createMedication('m', { name: 'Fycompa', dose: '8mg', schedule: 'abends', asNeeded: false, from: '2026-06-01' });
+		const back = prependPeriod(med, { dose: '10mg', schedule: 'abends', from: '2025-01-01' })!;
+		expect(medPeriods(back).map((p) => [p.from, p.to, p.dose])).toEqual([
+			['2025-01-01', '2026-05-31', '10mg'],
+			['2026-06-01', undefined, '8mg'],
+		]);
+	});
+
+	it('takes a start nobody remembers, and a month as a month', () => {
+		const med = createMedication('m', { name: 'Fycompa', dose: '8mg', schedule: '', asNeeded: false, from: '2026-06-01' });
+		const back = prependPeriod(med, { dose: '10mg', schedule: '', to: '2026-05-31', toPrecision: 'month' })!;
+		const first = medPeriods(back)[0];
+		expect(first.from).toBeUndefined();
+		expect([first.to, first.toPrecision, first.reported]).toEqual(['2026-05-31', 'month', true]);
+	});
+
+	it('leaves a gap alone — a pause in the therapy is not a dose', () => {
+		const med = createMedication('m', { name: 'Fycompa', dose: '8mg', schedule: '', asNeeded: false, from: '2026-06-01' });
+		const back = prependPeriod(med, { dose: '10mg', schedule: '', from: '2024-01-01', to: '2025-12-31' })!;
+		expect(isActiveOn(back, '2026-03-01')).toBe(false);
+		expect(periodOn(back, '2024-06-06')?.dose).toBe('10mg');
+	});
+
+	it('refuses dates that contradict the record', () => {
+		const dated = createMedication('m', { name: 'Fycompa', dose: '8mg', schedule: '', asNeeded: false, from: '2026-06-01' });
+		expect(prependPeriod(dated, { dose: '10mg', schedule: '', to: '2026-06-02' })).toBeNull();
+		expect(prependPeriod(dated, { dose: '10mg', schedule: '', from: '2026-05-31', to: '2026-01-01' })).toBeNull();
+		expect(prependPeriod(dated, { dose: '  ', schedule: '' })).toBeNull();
+		// Nothing recorded to sit in front of, and no end given: unanswerable.
+		expect(prependPeriod(legacy(), { dose: '10mg', schedule: '' })).toBeNull();
+	});
+
+	it('is not applyDoseChange with an old date — that one drops the later history', () => {
+		const med = applyDoseChange(legacy(), { from: '2026-09-16', dose: '8 mg', schedule: '2× täglich' });
+		const wrong = applyDoseChange(med, { from: '2024-01-01', dose: '12 mg', schedule: '2× täglich' });
+		// The 8 mg the person actually takes today is gone.
+		expect(medPeriods(wrong).map((p) => p.dose)).toEqual(['10 mg', '12 mg']);
+		expect(periodOn(wrong, '2026-09-19')?.dose).toBe('12 mg');
+		expect(medPeriods(prependPeriod(med, { dose: '12 mg', schedule: '2× täglich', to: '2026-05-31' })!)).toHaveLength(3);
+	});
+
+	it('never joins remembered history into a recorded period, equal dose or not', () => {
+		const med = createMedication('m', { name: 'Fycompa', dose: '8mg', schedule: 'abends', asNeeded: false, from: '2026-06-01' });
+		const back = prependPeriod(med, { dose: '8mg', schedule: 'abends', from: '2025-01-01' })!;
+		expect(medPeriods(back).map((p) => [p.from, p.reported])).toEqual([
+			['2025-01-01', true],
+			['2026-06-01', undefined],
+		]);
+	});
+});
+
+describe('remembered days are not tracked days', () => {
+	const med = prependPeriod(
+		createMedication('m', { name: 'Fycompa', dose: '8mg', schedule: '', asNeeded: false, from: '2026-06-01' }),
+		{ dose: '10mg', schedule: '', from: '2025-01-01' },
+	)!;
+
+	it('reads the dose that applied, but reports the day as untracked', () => {
+		expect(periodOn(med, '2025-06-06')?.dose).toBe('10mg');
+		expect(isActiveOn(med, '2025-06-06')).toBe(true);
+		expect(isTrackedOn(med, '2025-06-06')).toBe(false);
+		expect(isTrackedOn(med, '2026-06-06')).toBe(true);
+	});
+
+	it('still counts as a change, so the development is visible', () => {
+		expect(medicationChanges([med]).map((c) => [c.date, c.kind, c.after?.dose])).toEqual([
+			['2025-01-01', 'start', '10mg'],
+			['2026-06-01', 'change', '8mg'],
+		]);
+	});
+});
+
+describe('createPastMedication — tried, and stopped again', () => {
+	it('is one remembered period and reads as stopped', () => {
+		const med = createPastMedication('lev', {
+			name: 'Levetiracetam', dose: '1000 mg', schedule: '2× täglich', asNeeded: false,
+			from: '2019-03-01', fromPrecision: 'month', to: '2022-06-30', toPrecision: 'month',
+			stopReason: 'side_effects', endNote: 'Müdigkeit',
+		})!;
+		expect(medPeriods(med)).toEqual([{
+			from: '2019-03-01', to: '2022-06-30', dose: '1000 mg', schedule: '2× täglich',
+			endNote: 'Müdigkeit', reported: true, fromPrecision: 'month', toPrecision: 'month',
+			stopReason: 'side_effects',
+		}]);
+		expect(medStatusOn(med, '2026-09-19')).toBe('stopped');
+		expect(medicationChanges([med]).map((c) => [c.date, c.kind])).toEqual([
+			['2019-03-01', 'start'],
+			['2022-07-01', 'stop'],
+		]);
+	});
+
+	it('refuses a range that runs backwards, and a medication with no end', () => {
+		const input = { name: 'Levetiracetam', dose: '1000 mg', schedule: '', asNeeded: false };
+		expect(createPastMedication('lev', { ...input, from: '2022-01-01', to: '2019-01-01' })).toBeNull();
+		expect(createPastMedication('lev', { ...input, to: '' })).toBeNull();
+	});
+});
+
+describe('removeReportedPeriod', () => {
+	const med = prependPeriod(
+		createMedication('m', { name: 'Fycompa', dose: '8mg', schedule: '', asNeeded: false, from: '2026-06-01' }),
+		{ dose: '10mg', schedule: '', from: '2025-01-01' },
+	)!;
+
+	it('takes back a remembered period and leaves the recorded one untouched', () => {
+		expect(medPeriods(removeReportedPeriod(med, 0)!)).toEqual([{ from: '2026-06-01', dose: '8mg', schedule: '' }]);
+	});
+
+	it('refuses to touch recorded history', () => {
+		expect(removeReportedPeriod(med, 1)).toBeNull();
+		expect(removeReportedPeriod(createMedication('m', { name: 'F', dose: '8mg', schedule: '', asNeeded: false }), 0)).toBeNull();
+	});
+});
+
+describe('medHistorySpan', () => {
+	const past = createPastMedication('lev', {
+		name: 'Levetiracetam', dose: '1000 mg', schedule: '', asNeeded: false, from: '2019-03-01', to: '2022-06-30',
+	})!;
+	const current = createMedication('m', { name: 'Fycompa', dose: '8mg', schedule: '', asNeeded: false, from: '2026-06-01' });
+
+	it('runs from the earliest recorded day to today', () => {
+		expect(medHistorySpan([current, past], '2026-09-19')).toEqual({
+			from: '2019-03-01', knownFrom: '2019-03-01', to: '2026-09-19',
+		});
+	});
+
+	it('reaches past today when a change is already planned', () => {
+		const planned = applyDoseChange(current, { from: '2026-10-01', dose: '6mg', schedule: '' });
+		expect(medHistorySpan([planned], '2026-09-19').to).toBe('2026-10-01');
+	});
+
+	it('has no start when one medication predates the record, but keeps the earliest date it knows', () => {
+		const span = medHistorySpan([legacy(), past], '2026-09-19');
+		expect(span.from).toBeNull();
+		expect(span.knownFrom).toBe('2019-03-01');
 	});
 });

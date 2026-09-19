@@ -16,6 +16,14 @@
 	PI v17 — addressed user feedback "datepicker breaks the design with
 	its sharp edges and 2000ish design" + "in english and doesnt respect
 	the selected language".
+
+	`mode="month"` (2026-09-19) picks a month instead of a day, for history
+	entered from memory: nobody knows the day a dose changed three years ago,
+	and a picker that demands one gets an invented answer. The value stays an
+	ISO date — the first day of the month, or its last when `monthEdge="end"`
+	— so every reader keeps comparing plain dates; the caller records the
+	precision beside it. `max` bounds both modes: history cannot end in the
+	future.
 -->
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
@@ -25,6 +33,12 @@
 	export let id: string = '';
 	export let format: 'dd.mm.yyyy' | 'dd/mm/yyyy' | 'iso' | 'us' = 'dd.mm.yyyy';
 	export let ariaLabel: string | undefined = undefined;
+	/** `day` picks a date, `month` picks a month (see the header comment). */
+	export let mode: 'day' | 'month' = 'day';
+	/** Which day of the chosen month the value lands on, in month mode. */
+	export let monthEdge: 'start' | 'end' = 'start';
+	/** Latest selectable date, ISO. Later days and months are disabled. */
+	export let max: string = '';
 
 	let triggerEl: HTMLButtonElement | null = null;
 	let popoverEl: HTMLDivElement | null = null;
@@ -43,6 +57,7 @@
 		if (!iso) return '';
 		const [y, m, d] = iso.split('-');
 		if (!y || !m || !d) return iso;
+		if (mode === 'month') return `${m}/${y}`;
 		switch (format) {
 			case 'dd/mm/yyyy':
 				return `${d}/${m}/${y}`;
@@ -58,6 +73,7 @@
 
 	$: display = formatDisplay(value);
 	$: placeholder = (() => {
+		if (mode === 'month') return $t('common.month_placeholder');
 		switch (format) {
 			case 'dd/mm/yyyy': return 'TT/MM/JJJJ';
 			case 'iso': return 'YYYY-MM-DD';
@@ -89,11 +105,32 @@
 		open = false;
 	}
 
-	function selectDay(day: number) {
-		value = `${cursorYear}-${pad(cursorMonth + 1)}-${pad(day)}`;
+	const isoOf = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
+	const lastDayOf = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+	const beyondMax = (iso: string) => !!max && iso > max;
+
+	function commit(iso: string) {
+		if (beyondMax(iso)) return;
+		value = iso;
 		open = false;
 		// Return focus to trigger so keyboard users don't get stranded.
 		triggerEl?.focus();
+	}
+
+	function selectDay(day: number) {
+		commit(isoOf(cursorYear, cursorMonth, day));
+	}
+
+	/** In month mode the value is a real date at the chosen edge of the month,
+	 *  clamped so "this month" never reaches past `max`. */
+	function selectMonth(month: number) {
+		const last = lastDayOf(cursorYear, month);
+		const iso = monthEdge === 'end' ? isoOf(cursorYear, month, last) : isoOf(cursorYear, month, 1);
+		if (beyondMax(iso) && !beyondMax(isoOf(cursorYear, month, 1))) {
+			commit(max);
+			return;
+		}
+		commit(iso);
 	}
 
 	function shiftMonth(delta: number) {
@@ -102,11 +139,22 @@
 		cursorMonth = d.getMonth();
 	}
 
+	function shiftYear(delta: number) {
+		cursorYear += delta;
+	}
+
+	$: monthNames = Array.from({ length: 12 }, (_, i) =>
+		new Date(2024, i, 1).toLocaleDateString($locale, { month: 'short' }),
+	);
+	$: monthDisabled = (m: number) => beyondMax(isoOf(cursorYear, m, 1));
+	$: dayDisabled = (d: number) => beyondMax(isoOf(cursorYear, cursorMonth, d));
+	$: navDisabled = mode === 'month'
+		? beyondMax(isoOf(cursorYear + 1, 0, 1))
+		: beyondMax(isoOf(cursorYear, cursorMonth + 1, 1));
+
 	function jumpToToday() {
 		const now = new Date();
-		value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-		open = false;
-		triggerEl?.focus();
+		commit(isoOf(now.getFullYear(), now.getMonth(), now.getDate()));
 	}
 
 	function clearValue() {
@@ -155,6 +203,11 @@
 			isToday ? 'dp-day--today' : '',
 			isSelected ? 'dp-day--selected' : '',
 		].filter(Boolean).join(' ');
+	}
+
+	function monthClass(month: number): string {
+		const isSelected = month === selectedM && cursorYear === selectedY;
+		return ['dp-month', isSelected ? 'dp-day--selected' : ''].filter(Boolean).join(' ');
 	}
 
 	// Outside-click + Escape close.
@@ -218,48 +271,67 @@
 				<button
 					type="button"
 					class="dp-nav"
-					on:click={() => shiftMonth(-1)}
-					aria-label={$t('common.previous_month')}
+					on:click={() => (mode === 'month' ? shiftYear(-1) : shiftMonth(-1))}
+					aria-label={mode === 'month' ? $t('common.previous_year') : $t('common.previous_month')}
 				>
 					<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
-				<span class="dp-month-label">{monthLabel}</span>
+				<span class="dp-month-label">{mode === 'month' ? cursorYear : monthLabel}</span>
 				<button
 					type="button"
 					class="dp-nav"
-					on:click={() => shiftMonth(1)}
-					aria-label={$t('common.next_month')}
+					on:click={() => (mode === 'month' ? shiftYear(1) : shiftMonth(1))}
+					disabled={navDisabled}
+					aria-label={mode === 'month' ? $t('common.next_year') : $t('common.next_month')}
 				>
 					<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9,6 15,12 9,18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
 			</div>
-			<div class="dp-weekdays">
-				{#each weekdayHeaders as wd}
-					<span class="dp-wd">{wd}</span>
-				{/each}
-			</div>
-			<div class="dp-grid">
-				{#each gridDays as day}
-					{#if day === null}
-						<span class="dp-day-empty"></span>
-					{:else}
+			{#if mode === 'month'}
+				<div class="dp-months">
+					{#each monthNames as name, i}
 						<button
 							type="button"
-							class={dayClass(day)}
-							on:click={() => selectDay(day)}
+							class={monthClass(i)}
+							disabled={monthDisabled(i)}
+							on:click={() => selectMonth(i)}
 						>
-							{day}
+							{name}
 						</button>
-					{/if}
-				{/each}
-			</div>
+					{/each}
+				</div>
+			{:else}
+				<div class="dp-weekdays">
+					{#each weekdayHeaders as wd}
+						<span class="dp-wd">{wd}</span>
+					{/each}
+				</div>
+				<div class="dp-grid">
+					{#each gridDays as day}
+						{#if day === null}
+							<span class="dp-day-empty"></span>
+						{:else}
+							<button
+								type="button"
+								class={dayClass(day)}
+								disabled={dayDisabled(day)}
+								on:click={() => selectDay(day)}
+							>
+								{day}
+							</button>
+						{/if}
+					{/each}
+				</div>
+			{/if}
 			<div class="dp-footer">
 				<button type="button" class="dp-action" on:click={clearValue}>
 					{$t('common.clear') ?? 'Clear'}
 				</button>
-				<button type="button" class="dp-action dp-action--primary" on:click={jumpToToday}>
-					{$t('common.today')}
-				</button>
+				{#if mode !== 'month'}
+					<button type="button" class="dp-action dp-action--primary" on:click={jumpToToday}>
+						{$t('common.today')}
+					</button>
+				{/if}
 			</div>
 		</div>
 	{/if}
@@ -404,6 +476,42 @@
 	.dp-day--selected:hover {
 		background: var(--accent);
 		opacity: 0.9;
+	}
+	.dp-day:disabled,
+	.dp-month:disabled,
+	.dp-nav:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+	.dp-day:disabled:hover,
+	.dp-month:disabled:hover {
+		background: transparent;
+	}
+	.dp-months {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 4px;
+	}
+	.dp-month {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 40px;
+		padding: 4px 8px;
+		border-radius: 8px;
+		background: transparent;
+		border: 1px solid transparent;
+		font: inherit;
+		font-size: 13px;
+		color: var(--text-primary);
+		cursor: pointer;
+	}
+	.dp-month:hover {
+		background: var(--surface-muted);
+	}
+	.dp-month:focus-visible {
+		outline: none;
+		border-color: var(--accent);
 	}
 	.dp-footer {
 		display: flex;

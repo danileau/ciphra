@@ -195,6 +195,39 @@ describe('medAdherence — only days the medication was part of the regimen (dos
 	});
 });
 
+describe('history filled in afterwards never becomes a missed dose (2026-09-19)', () => {
+	const entry = (date: string, data: Record<string, unknown> = {}) => ({ data: { type: 'entry', date, ...data } });
+	// 10 mg remembered up to 14 Sept, 8 mg recorded from 15 Sept on.
+	const med = slot({
+		id: 'fyc', name: 'Fycompa', asNeeded: false, dose: '8 mg',
+		periods: [
+			{ to: '2026-09-14', dose: '10 mg', schedule: 'abends', reported: true },
+			{ from: '2026-09-15', dose: '8 mg', schedule: 'abends' },
+		],
+	});
+
+	it('days inside the remembered period are not in the denominator', () => {
+		const docs = ['2026-09-01', '2026-09-10', '2026-09-15', '2026-09-16'].map((d) => entry(d));
+		expect(medAdherence(med, docs)).toEqual({ taken: 2, total: 2, pct: 100 });
+	});
+
+	it('a day that mentions the medication itself still counts', () => {
+		const docs = [entry('2026-09-01', { missedMedications: ['fyc'] }), entry('2026-09-16')];
+		expect(medAdherence(med, docs)).toEqual({ taken: 1, total: 2, pct: 50 });
+	});
+
+	it('gets no row of its own in the per-period table', () => {
+		const docs = ['2026-09-10', '2026-09-16'].map((d) => entry(d));
+		expect(medAdherenceByPeriod(med, docs, { from: '2026-09-01', to: '2026-09-30' })
+			.map((r) => [r.from, r.period.dose])).toEqual([['2026-09-15', '8 mg']]);
+	});
+
+	it('is not offered in the as-needed picker', () => {
+		const past = slot({ id: 'mid', asNeeded: true, periods: [{ from: '2019-01-01', to: '2022-12-31', dose: '5 mg', schedule: '', reported: true }] });
+		expect(bedarfMedsForPicker({ medications: [past] } as unknown as Blueprint, '2020-06-06')).toEqual([]);
+	});
+});
+
 describe('medAdherenceByPeriod', () => {
 	const entry = (date: string, data: Record<string, unknown> = {}) => ({ data: { type: 'entry', date, ...data } });
 	const titrated = slot({

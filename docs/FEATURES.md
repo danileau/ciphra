@@ -32,6 +32,9 @@ a single episode or a rescue-medication as a timestamped event.
 Medications are configured in Settings. A scheduled medication is assumed
 taken on each logged day and the daily log records only missed doses; an
 as-needed medication is ticked when taken, or logged as a timestamped intake.
+History filled in afterwards is the exception: a dose period the person
+entered from memory shows what applied, but no day inside it was ever logged,
+so it never counts towards adherence and never produces a missed dose.
 
 A medication's **dose changes over time without rewriting the past.** Each
 medication keeps one identity and a dated history of dose periods, stored
@@ -50,6 +53,14 @@ chart's tooltip), and the doctor PDF (adherence per dose period, and the
 changes in the export window). The history is descriptive only: ciphra marks
 when a dose changed and never compares symptoms before and after it.
 
+History also runs **backwards**. *Add an earlier dose* records what applied
+before ciphra knew the medication — days already recorded are untouched — and
+*Add a medication from the past* records one that was tried and stopped, with
+its period and, from a fixed translated list, why it ended. Those dates are
+entered as months, and "I don't remember" leaves the start open rather than
+inventing a day. The reason a person types in their own words is never
+printed; only the fixed-list reason reaches the treatment-history export.
+
 ## Cohort-aware surfaces
 
 ciphra adapts to how a condition actually behaves. Each condition belongs to a
@@ -65,15 +76,23 @@ cohort — discrete, cycle, phase, narrative, or custom — and that drives:
 ## Reports and the doctor PDF
 
 `/reports` is the "show your doctor" surface. An export picker offers three
-scopes — last month, 12 months, 2 years — each shown as a card explaining when
-to use it. The export produces a multi-page A4 PDF, rendered in the browser:
+period scopes — last month, 12 months, 2 years — each shown as a card
+explaining when to use it. The export produces a multi-page A4 PDF, rendered
+in the browser:
 
 - a KPI glance and a cohort-aware trend chart,
 - symptom / trigger frequency and medication tables,
 - a landscape day-by-day protocol grid.
 
-The PDF is the one moment data leaves the device — once saved it is plaintext,
-and the export UI says so plainly. A CSV export is also available.
+A fourth card exports the **treatment history**: every medication ever
+recorded, oldest first, with its dose periods and how each one ended, across
+the whole span rather than one window. It is built from the medication list
+alone — no symptom or episode data reaches it — and answers the question a
+first consultation opens with.
+
+Saving any of these writes plaintext to disk, and the export UI says so
+plainly. A CSV export is also available, and Settings can export the raw
+encrypted documents.
 
 ## Family sharing
 
