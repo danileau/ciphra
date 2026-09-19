@@ -47,6 +47,8 @@ export default {
 	'nav.stream': 'Stream',
 	'nav.journal': 'Journal',
 	'nav.more': 'Mehr',
+	'nav.primary_aria': 'Hauptnavigation',
+	'nav.documentation': 'Dokumentation (englisch)',
 	'nav.settings': 'Einstellungen',
 	'nav.add': 'Neu',
 
@@ -58,6 +60,12 @@ export default {
 	'common.show': 'Anzeigen',
 	'common.hide': 'Ausblenden',
 	'common.close': 'Schliessen',
+	'common.date_placeholder_dot': 'TT.MM.JJJJ',
+	'common.date_placeholder_slash': 'TT/MM/JJJJ',
+	'common.date_placeholder_iso': 'JJJJ-MM-TT',
+	'common.date_placeholder_us': 'MM/TT/JJJJ',
+	'common.decrease_label': '{label} verringern',
+	'common.increase_label': '{label} erhöhen',
 	'common.loading': 'Laden...',
 	'common.copy': 'Kopieren',
 	'common.copied': 'Kopiert',
@@ -1013,6 +1021,7 @@ export default {
 	'landing.nav_origin': 'Die Geschichte',
 	'landing.nav_security': 'Sicherheit',
 	'landing.nav_features': 'Funktionen',
+	'landing.page_title': 'ciphra — verschlüsselt von Anfang an',
 	'landing.nav_login': 'Anmelden',
 
 	'landing.hero_badge': 'encrypted by design',
@@ -1362,6 +1371,8 @@ export default {
 	'pdf.family_url_label': 'Oder diesen Link öffnen',
 	'pdf.disclaimer_medical': 'ciphra ist ein persönliches Notizbuch, kein Medizinprodukt.',
 	'pdf.disclaimer_medical_long': 'Persönliches Notizbuch — kein Medizinprodukt nach EU-MDR 2017/745 oder schweizerischer MepV. Selbst erfasste Daten. Kein Ersatz für professionelle medizinische Beratung.',
+	'pdf.csv_date_col': 'Datum',
+	'pdf.file_tag': 'bericht',
 	'pdf.table_continued': 'Fortsetzung',
 
 	// Klinische Übergabe — siehe CLINICAL_HANDOFF.md.
@@ -1369,6 +1380,12 @@ export default {
 
 	// Admin
 	'admin.title': 'Administration',
+	'admin.spark_new_users': 'Neue Konten pro Woche',
+	'admin.spark_migrations': 'Migrationen pro Woche',
+	'admin.spark_logins': 'Anmeldungen pro Woche',
+	'admin.per_week': '+{count} / Woche',
+	'admin.last_7d': '+{count} in 7 Tagen',
+	'admin.pct_of_total': '{pct}% aller Konten',
 	'admin.stats': 'Statistiken',
 	'admin.trend_26w': 'Trend — 26 Wochen',
 	'admin.migrations': 'Migrationen von epilepc',

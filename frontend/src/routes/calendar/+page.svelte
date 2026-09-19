@@ -281,6 +281,23 @@
 		return sum;
 	}
 
+	// A label per day, recomputed whenever anything it reads changes
+	// (2026-09-19). It used to be a function called straight from the
+	// template, and the template named neither `$t` nor `$documents` — so on
+	// a hard load every cell kept the label built in the first frame: German
+	// for anyone on another language, and "no entry" for days whose entries
+	// arrived a moment later. Screen-reader users got both wrong at once.
+	$: dayAriaLabels = (() => {
+		// Everything the label reads, named here so a change to any of it
+		// rebuilds the labels — a month with the same number of days as the
+		// last one would otherwise not invalidate this block.
+		void $t; void $locale; void monthPrefix; void docsByDay; void medChangeDays;
+		void showTriggerMark; void showRescueMedMark; void triggerCountByDay; void rescueMedCountByDay;
+		const out = new Map<number, string>();
+		for (let day = 1; day <= daysInMonth; day++) out.set(day, dayAriaLabel(day));
+		return out;
+	})();
+
 	function dayAriaLabel(day: number): string {
 		const dateStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
 		const dateFmt = new Date(dateStr + 'T12:00:00').toLocaleDateString($locale, {
@@ -538,6 +555,10 @@
 		.sort((a, b) => a.date.localeCompare(b.date));
 </script>
 
+<svelte:head>
+	<title>{$t('nav.calendar')} — ciphra</title>
+</svelte:head>
+
 <!-- CIPH-746: widened to layout-data and dropped the nested max-w-2xl
 	 that used to pinch the month grid + event timeline on desktop.
 	 CIPH-782: tighter desktop spacing so month + event strip + day list
@@ -710,7 +731,7 @@
 					<button
 						on:click={() => { selectedDate = dayStr; focusedDay = day; }}
 						on:keydown={(e) => handleGridKey(e, day)}
-						aria-label={dayAriaLabel(day)}
+						aria-label={dayAriaLabels.get(day) ?? ''}
 						aria-selected={isSelected}
 						role="gridcell"
 						data-calendar-day={day}

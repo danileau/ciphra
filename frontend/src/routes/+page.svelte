@@ -117,7 +117,7 @@
 
 <svelte:head>
 	{#if !$isAuthenticated}
-		<title>ciphra — encrypted by design</title>
+		<title>{$t('landing.page_title')}</title>
 		<meta name="description" content={$t('landing.meta_description')} />
 		<!-- Open Graph + Twitter (SEO foundation 2026-06-12). og:image is a
 		     static 1200×630 branded card (static/og-image.png). -->

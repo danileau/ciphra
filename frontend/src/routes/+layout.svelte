@@ -1048,7 +1048,7 @@
 			     nav links that would each trigger the redirect-back-to-/setup
 			     loop. Primary-nav reappears the instant the wizard finishes. -->
 			{#if $hasBlueprint}
-			<nav class="hidden md:flex items-center gap-1 ml-2" aria-label="Primary">
+			<nav class="hidden md:flex items-center gap-1 ml-2" aria-label={$t('nav.primary_aria')}>
 				{#each [
 					{ href: '/',         label: $t('nav.dashboard') },
 					{ href: '/calendar', label: $t('nav.calendar') },

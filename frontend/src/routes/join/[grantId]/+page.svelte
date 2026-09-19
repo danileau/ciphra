@@ -33,7 +33,37 @@
 	const PENDING_KEY = 'ciphra_pending_family_claim';
 
 	let status: 'loading' | 'needs_login' | 'confirming' | 'claiming' | 'success' | 'error' = 'loading';
-	let errorMsg = '';
+	// The KEY, not the translated sentence (2026-09-19). An invite link is
+	// always opened cold, and the dictionary for anything but German arrives a
+	// moment after the page does — a sentence resolved here would stay German
+	// on the one screen a new caregiver ever sees.
+	let errorKey = '';
+	/** A technical message with no key of its own (an exception's text). */
+	let errorText = '';
+
+	/** Translated at render. `t` is a parameter, so the reactive statement
+	 *  below re-runs when the dictionary arrives — and the keys stay literal,
+	 *  which is what the orphan detector reads. */
+	function translateError(
+		t: (key: string) => string,
+		key: string,
+		fallback: string,
+	): string {
+		switch (key) {
+			case 'family.error_bad_link':
+				return t('family.error_bad_link');
+			case 'family.error_already_claimed':
+				return t('family.error_already_claimed');
+			case 'auth.error_vault_decrypt':
+				return t('auth.error_vault_decrypt');
+			case 'family.error_claim_failed':
+				return t('family.error_claim_failed');
+			default:
+				return fallback || t('family.error_claim_failed');
+		}
+	}
+
+	$: errorMessage = translateError($t, errorKey, errorText);
 	let grantId = 0;
 	let familyCode = '';
 	let sourceUsername = '';
@@ -53,7 +83,7 @@
 		const state = get(auth);
 		if (!state.masterKey) {
 			status = 'error';
-			errorMsg = $t('auth.error_vault_decrypt');
+			errorKey = 'auth.error_vault_decrypt';
 			return;
 		}
 		try {
@@ -75,7 +105,7 @@
 			status = 'confirming';
 		} catch (e) {
 			status = 'error';
-			errorMsg = e instanceof Error ? e.message : String(e);
+			errorText = e instanceof Error ? e.message : String(e);
 		}
 	}
 
@@ -83,7 +113,8 @@
 		const state = get(auth);
 		if (!state.masterKey || !sourceUsername.trim()) return;
 		status = 'claiming';
-		errorMsg = '';
+		errorKey = '';
+		errorText = '';
 		try {
 			const initRes = await api.familyGrantClaimInit(sourceUsername.trim().toLowerCase());
 			if (!initRes.ok) {
@@ -103,7 +134,7 @@
 			if (!claimRes.ok) {
 				if (claimRes.status === 409) {
 					status = 'error';
-					errorMsg = $t('family.error_already_claimed');
+					errorKey = 'family.error_already_claimed';
 					return;
 				}
 				throw new Error('claim-rejected');
@@ -119,7 +150,7 @@
 			setTimeout(() => goto('/settings'), 1500);
 		} catch (e) {
 			status = 'error';
-			errorMsg = $t('family.error_claim_failed');
+			errorKey = 'family.error_claim_failed';
 		}
 	}
 
@@ -127,7 +158,7 @@
 		const params = parseParams();
 		if (!params || !params.code) {
 			status = 'error';
-			errorMsg = $t('family.error_bad_link');
+			errorKey = 'family.error_bad_link';
 			return;
 		}
 		grantId = params.grantId;
@@ -152,6 +183,10 @@
 		attemptClaim();
 	});
 </script>
+
+<svelte:head>
+	<title>{$t('family.join_title')} — ciphra</title>
+</svelte:head>
 
 <main class="min-h-screen flex items-center justify-center p-4" style="background: var(--surface)">
 	<div class="w-full max-w-md card p-6">
@@ -189,7 +224,7 @@
 
 		{:else if status === 'error'}
 			<div class="rounded-xl p-3 mb-3" style="background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2)">
-				<p class="text-sm" style="color: var(--danger)">{errorMsg || $t('family.error_claim_failed')}</p>
+				<p class="text-sm" style="color: var(--danger)" data-testid="join-error">{errorMessage}</p>
 			</div>
 			<a href="/settings" class="btn-secondary w-full min-h-[44px] block text-center">{$t('common.back')}</a>
 		{/if}

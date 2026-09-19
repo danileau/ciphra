@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import { t } from '$lib/i18n';
 
 	export let value: number = 0;
 	export let label: string = '';
@@ -31,7 +32,7 @@
 		<button
 			type="button"
 			class="counter-btn"
-			aria-label="Decrease {label}"
+			aria-label={$t('common.decrease_label', { label })}
 			disabled={value <= min}
 			on:click={decrement}
 		>
@@ -46,7 +47,7 @@
 		<button
 			type="button"
 			class="counter-btn"
-			aria-label="Increase {label}"
+			aria-label={$t('common.increase_label', { label })}
 			on:click={increment}
 		>
 			+

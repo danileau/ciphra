@@ -57,13 +57,15 @@
 	}
 
 	$: display = formatDisplay(value);
+	// The hint has to be readable in the reader's language: "TT.MM.JJJJ" is
+	// only a hint if you know T is for Tag (2026-09-19).
 	$: placeholder = (() => {
 		switch (format) {
-			case 'dd/mm/yyyy': return 'TT/MM/JJJJ';
-			case 'iso': return 'YYYY-MM-DD';
-			case 'us': return 'MM/DD/YYYY';
+			case 'dd/mm/yyyy': return $t('common.date_placeholder_slash');
+			case 'iso': return $t('common.date_placeholder_iso');
+			case 'us': return $t('common.date_placeholder_us');
 			case 'dd.mm.yyyy':
-			default: return 'TT.MM.JJJJ';
+			default: return $t('common.date_placeholder_dot');
 		}
 	})();
 
