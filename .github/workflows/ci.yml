@@ -20,7 +20,12 @@
 #   trivy     — fs scan, HIGH/CRITICAL fail the run (SAST discipline:
 #               feedback_sast_scanning).
 #
-# Branch protection: require "frontend", "api", "trivy".
+# Branch protection: the `main-protection` ruleset requires "frontend", "api",
+# "trivy" and "version-guard". The last one was advisory until 2026-09-19 —
+# the job existed, went red on a PR without a changelog fragment, and the
+# merge button stayed green anyway, which is the failure #194 was built to
+# prevent. If you add a job that should block a merge, add its context to the
+# ruleset in the same change, or say in its comment that it does not.
 name: CI
 
 on:
@@ -35,7 +40,10 @@ concurrency:
 jobs:
   # Mechanical enforcement of the versioning rules (docs/VERSIONING.md):
   # VERSION is valid SemVer, frontend/package.json agrees, and CHANGELOG.md has
-  # a section for it. A version bump without a changelog entry cannot merge.
+  # a section for it. Required by `main-protection`, so a version bump without
+  # a changelog entry — or a feat/fix PR without a fragment — cannot merge.
+  # Waivers are the guards' own: `[skip changelog]`, `[changelog edit]`, and a
+  # release PR, which is recognised by its VERSION change.
   version-guard:
     runs-on: ubuntu-latest
     steps:

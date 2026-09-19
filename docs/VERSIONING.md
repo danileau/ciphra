@@ -159,6 +159,12 @@ all of #192's entries. New files never conflict; the release PR compiles them.
   (correcting notes that already shipped). `node scripts/changelog.mjs check`
   fails on a fragment that would lose text on release, and
   `scripts/test-changelog.sh` proves both scripts do what this section says.
+- **Why those two block a merge**: `version-guard` is a *required status check*
+  in the `main-protection` ruleset (added 2026-09-19). Until then the job ran,
+  went red on a PR with no fragment, and the merge button stayed green anyway —
+  the guard was advisory by accident, which is exactly what it was written to
+  stop. A job that is not in that list cannot enforce anything, whatever its
+  comment says.
 - **`Release images`**: reads `VERSION`, **fails the build** if it isn't valid
   SemVer, and only then tags/pushes the images. No valid version → no images.
 The operator additionally runs a local pre-commit guard that refuses a
