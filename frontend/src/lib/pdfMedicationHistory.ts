@@ -466,3 +466,73 @@ export function medicationsOnDate(
 	}
 	return [...taken, ...stopped];
 }
+
+/* ─── 7. The treatment history (2026-09-19) ───────────────────────────── */
+
+/** A date the person gave as a month prints as a month. Anything else prints
+ *  as a date in their chosen format. */
+export function historyDateText(
+	iso: string | undefined,
+	precision: 'month' | undefined,
+	format: (iso: string) => string,
+): string {
+	if (!iso) return '';
+	return precision === 'month' ? `${iso.slice(5, 7)}/${iso.slice(0, 4)}` : format(iso);
+}
+
+export interface TherapyRow {
+	med: MedicationSlot;
+	name: string;
+	/** "03/2023 – 05/2026", "seit 01.06.2026", "Beginn nicht erfasst – 05/2026". */
+	period: string;
+	regimen: string;
+	/** Why it ended, from the fixed list — empty when none was given. */
+	reason: string;
+	/** True when the person filled this period in from memory. */
+	remembered: boolean;
+	/** Sort key: the first day of the period, '' for an unrecorded start. */
+	sortKey: string;
+}
+
+/**
+ * Every dose period of every medication, oldest first — the therapy as a
+ * whole, which is what a first consultation asks about. Unlike every other
+ * reader here this one has no window: the history before ciphra is the point.
+ *
+ * STRUCTURE ONLY, like its neighbours. A row says what was taken, when, and
+ * which of the fixed reasons ended it. It never says what happened while it
+ * was taken.
+ */
+export function therapyRows(
+	meds: MedicationSlot[],
+	format: (iso: string) => string,
+	t: TranslateFn,
+	stopReasonText: (reason: NonNullable<MedicationPeriod['stopReason']>) => string,
+): TherapyRow[] {
+	const rows: TherapyRow[] = [];
+	for (const med of meds) {
+		for (const p of medPeriods(med)) {
+			const start = p.from
+				? historyDateText(p.from, p.fromPrecision, format)
+				: t('pdf.therapy_start_unknown');
+			const end = p.to ? historyDateText(p.to, p.toPrecision, format) : t('pdf.therapy_ongoing');
+			rows.push({
+				med,
+				name: med.name,
+				period: `${start} – ${end}`,
+				regimen: [regimenText(p), med.asNeeded ? t('pdf.med_now_as_needed') : ''].filter(Boolean).join(' · '),
+				reason: p.stopReason ? stopReasonText(p.stopReason) : '',
+				remembered: !!p.reported,
+				// An unrecorded start is the earliest thing there is.
+				sortKey: p.from ?? '',
+			});
+		}
+	}
+	return rows.sort((a, b) => (a.sortKey === b.sortKey ? a.name.localeCompare(b.name) : a.sortKey < b.sortKey ? -1 : 1));
+}
+
+/** True when any period was filled in from memory — the provenance line only
+ *  claims it when it is true. */
+export function hasRememberedHistory(meds: MedicationSlot[]): boolean {
+	return meds.some((med) => medPeriods(med).some((p) => p.reported));
+}

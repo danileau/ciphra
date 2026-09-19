@@ -13,7 +13,7 @@
 	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
 	import VitalTrendReportsCard from '$lib/components/VitalTrendReportsCard.svelte';
 	import MedicationTimeline from '$lib/components/MedicationTimeline.svelte';
-	import { medicationChanges, medPeriods, medStartDate, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
+	import { medHistorySpan, medicationChanges, medPeriods, medStartDate, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
 	import { chartDoseBands, dayBins, medsChangedIn, monthBins } from '$lib/reports/doseBands';
 	import { toLocalISODate } from '$lib/date';
 	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
@@ -170,6 +170,25 @@
 			recommended: c.scope === 'year' && !!preview && preview.monthsWithData >= 6,
 		};
 	});
+	// The treatment history is not a period (2026-09-19): it covers everything
+	// recorded, including the years before ciphra, which the period picker
+	// cannot offer — its months come from logged entries only.
+	$: therapyCard = (() => {
+		const meds = bp?.medications ?? [];
+		if (meds.length === 0) return null;
+		const span = medHistorySpan(meds);
+		const start = span.from
+			? formatISODateChoice(span.from, bp?.dateFormat)
+			: $t('pdf.therapy_start_unknown');
+		return { range: `${start} – ${formatISODateChoice(span.to, bp?.dateFormat)}` };
+	})();
+
+	async function exportTherapy() {
+		if (!bp) return;
+		const { generateTherapyPdf } = await loadPdfLib();
+		generateTherapyPdf(bp, $t, $locale, $auth.username || '');
+	}
+
 	let viewMode: 'month' | 'year' = 'month';
 	let currentYear = new Date().getFullYear();
 	// Track loading explicitly so the empty / loading / ready states don't
@@ -1617,7 +1636,7 @@
 		<h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">
 			{$t('reports.export_heading')}
 		</h2>
-		<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 			{#each scopeCards as card (card.scope)}
 				<!-- Relative slot so the anchored picker can position against
 				     the card without breaking the 3-up grid. -->
@@ -1672,6 +1691,30 @@
 					{/if}
 				</div>
 			{/each}
+
+			{#if therapyCard}
+				<div class="report-card-slot">
+					<button
+						type="button"
+						data-testid="export-card-therapy"
+						class="report-card"
+						on:click={exportTherapy}
+					>
+						<span class="report-doc" aria-hidden="true">
+							<span class="report-sheet report-sheet--b2"></span>
+							<span class="report-sheet report-sheet--b1"></span>
+							<span class="report-sheet report-sheet--front">
+								<span class="report-line"></span>
+								<span class="report-line"></span>
+								<span class="report-line report-line--short"></span>
+							</span>
+						</span>
+						<span class="report-card__title">{$t('pdf.scope_therapy_label')}</span>
+						<span class="report-card__range">{therapyCard.range}</span>
+						<span class="report-card__use">{$t('reports.scope_therapy_use')}</span>
+					</button>
+				</div>
+			{/if}
 		</div>
 
 		<ExportNoteReview

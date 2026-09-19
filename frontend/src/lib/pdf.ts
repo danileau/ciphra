@@ -20,7 +20,8 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Blueprint, VitalField } from '$lib/blueprint';
-import { addDaysISO, canonicalMedId, isCustomItem, resolveBlueprint, resolveMedDisplay, bedarfMedColumns } from '$lib/blueprint';
+import { addDaysISO, canonicalMedId, isCustomItem, medHistorySpan, resolveBlueprint, resolveMedDisplay, bedarfMedColumns } from '$lib/blueprint';
+import { stopReasonLabel } from '$lib/blueprint/medications';
 import {
 	adherenceRowsForWindow,
 	csvDoseCell,
@@ -28,12 +29,14 @@ import {
 	daysBetweenISO,
 	doseBandLayer,
 	gridChangeMarksForMonth,
+	hasRememberedHistory,
 	layoutTickLabels,
 	medChangeMarksForMonth,
 	medicationChangeRows,
 	medicationsOnDate,
 	medicationTimeline,
 	periodRangeText,
+	therapyRows,
 	type DateWindow,
 	type DayMedMark,
 	type DoseBandLayer,
@@ -4451,6 +4454,185 @@ export function generateDoctorPdf(
 /* ────────────────────────────────────────────────────────────────
  * 3) Recovery Code PDF — one-page handout
  * ──────────────────────────────────────────────────────────────── */
+
+/**
+ * The treatment history, as its own document (2026-09-19).
+ *
+ * The month and year reports answer "how has it been lately". The first
+ * question at a new consultation is a different one: what has been tried, at
+ * what dose, for how long, and why did it end. That history reaches back
+ * before ciphra — before any logged day — so it cannot ride on the export
+ * period picker, which only offers months that hold entries. It gets a card
+ * and a document of its own, spanning everything recorded.
+ *
+ * STRUCTURE ONLY, and more strictly than elsewhere: this function is handed
+ * no documents at all. It cannot count a symptom, an episode or a day even by
+ * accident, so nothing in it can read as a verdict on a medication. Periods
+ * the person filled in from memory are marked as such, and the reason a
+ * medication ended prints only from the fixed list — the free text a person
+ * typed stays in the app, as everywhere else.
+ */
+export function generateTherapyPdf(
+	blueprintIn: Blueprint,
+	t: TranslateFn,
+	locale: string,
+	username: string = '',
+): void {
+	const blueprint = applyBlueprintCustomizations(blueprintIn);
+	const acc = resolveCohortAccents(blueprint);
+	const meds = blueprint.medications ?? [];
+	const fmt = (iso: string) => formatISODateChoice(iso, blueprint.dateFormat);
+
+	const span = medHistorySpan(meds);
+	const startLabel = span.from ? fmt(span.from) : t('pdf.therapy_start_unknown');
+	const rangeLabel = `${startLabel} – ${fmt(span.to)}`;
+
+	const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+	paintPaper(doc);
+	const pageW = doc.internal.pageSize.getWidth();
+
+	// ── Header — same chrome as the doctor PDF, so a doctor holding both
+	// reads them as one family.
+	drawWordmark(doc, 14, 16, { size: 14 });
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.summary);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.scope_therapy_label'), pageW - 14, 15, { align: 'right' });
+
+	const conditionLabel = blueprint.conditionLabel ? t(blueprint.conditionLabel) : blueprint.conditionId;
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.body);
+	doc.setTextColor(...BRAND.textSecondary);
+	doc.text(conditionLabel, pageW - 14, 21, { align: 'right' });
+
+	doc.setFontSize(TYPE.table);
+	doc.setTextColor(...BRAND.textMuted);
+	const metaParts: string[] = [];
+	if (username) metaParts.push(capitalizeName(username));
+	metaParts.push(`${t('pdf.export_date')}: ${formatDateChoice(new Date(), blueprint.dateFormat)}`);
+	doc.text(metaParts.join('   ·   '), 14, 22);
+
+	doc.setFont('helvetica', 'bold');
+	doc.setFontSize(TYPE.body);
+	doc.setTextColor(...BRAND.textPrimary);
+	doc.text(t('pdf.therapy_title', { range: rangeLabel }), 14, 34);
+
+	// Provenance, in the same voice as the changes table in the doctor PDF.
+	doc.setFont('helvetica', 'normal');
+	doc.setFontSize(TYPE.compact);
+	doc.setTextColor(...BRAND.textMuted);
+	doc.text(
+		hasRememberedHistory(meds) ? t('pdf.therapy_provenance') : t('pdf.med_changes_provenance'),
+		14,
+		39,
+	);
+
+	let cursorY = 46;
+	const rows = therapyRows(meds, fmt, t, (reason) => stopReasonLabel(reason, t));
+
+	if (rows.length === 0) {
+		doc.setFontSize(TYPE.body);
+		doc.setTextColor(...BRAND.textSecondary);
+		doc.text(t('pdf.therapy_empty'), 14, cursorY);
+		drawFooter(doc, t, 'pdf.disclaimer_medical_long', rangeLabel);
+		doc.save(`ciphra-${username ? `${username}-` : ''}therapy-${span.to}.pdf`);
+		return;
+	}
+
+	// ── The whole span as one strip: every medication as a lane, so overlaps
+	// and the order things were tried are visible at a glance. A history with
+	// no recorded start still needs a left edge — two years before the end is
+	// enough to show the shape without claiming a date.
+	const timelineWin: DateWindow = {
+		from: span.from ?? addDaysISO(span.to, -730),
+		to: span.to,
+	};
+	cursorY = drawMedicationTimeline(
+		doc,
+		medicationTimeline(meds, timelineWin),
+		timelineWin,
+		t,
+		locale,
+		acc,
+		rangeLabel,
+		cursorY,
+	);
+
+	// ── One row per dose period, oldest first.
+	const remembered = rows.some((r) => r.remembered);
+	autoTable(doc, {
+		margin: { left: 14, right: 14 },
+		startY: cursorY + 2,
+		head: [[
+			t('pdf.therapy_col_med'),
+			t('pdf.therapy_col_period'),
+			t('pdf.therapy_col_regimen'),
+			t('pdf.therapy_col_reason'),
+		]],
+		body: rows.map((r) => [
+			r.name,
+			r.remembered ? `${r.period} *` : r.period,
+			r.regimen,
+			r.reason,
+		]),
+		theme: 'plain',
+		rowPageBreak: 'avoid',
+		styles: {
+			fontSize: TYPE.table,
+			cellPadding: 2,
+			lineColor: BRAND.borderSubtle as any,
+			lineWidth: 0.1,
+			textColor: BRAND.textPrimary as any,
+		},
+		headStyles: {
+			fillColor: BRAND.paperInset as any,
+			textColor: BRAND.textPrimary as any,
+			fontStyle: 'bold',
+			fontSize: TYPE.table,
+		},
+		alternateRowStyles: { fillColor: [252, 250, 248] as any },
+		columnStyles: {
+			0: { cellWidth: 46 },
+			1: { cellWidth: 46 },
+			3: { cellWidth: 40, textColor: BRAND.textSecondary as any },
+		},
+	});
+	cursorY = ((doc as any).lastAutoTable?.finalY ?? cursorY) + 6;
+
+	if (remembered) {
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.compact);
+		doc.setTextColor(...BRAND.textMuted);
+		doc.text(`*  ${t('pdf.therapy_remembered')}`, 14, cursorY);
+		cursorY += 6;
+	}
+
+	// ── What applies today, so the history ends where the consultation starts.
+	const today = toLocalISODate();
+	const current = medicationsOnDate(meds, { from: span.from ?? timelineWin.from, to: today }, today, fmt, t);
+	if (current.length > 0) {
+		cursorY = reserveSpace(doc, cursorY, BREAK.sectionHead + current.length * 5);
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(TYPE.head);
+		doc.setTextColor(...BRAND.textPrimary);
+		doc.text(t('pdf.therapy_current_title'), 14, cursorY);
+		cursorY += 6;
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(TYPE.body);
+		doc.setTextColor(...BRAND.textSecondary);
+		for (const line of current) {
+			for (const wrapped of doc.splitTextToSize(line, pageW - 28) as string[]) {
+				doc.text(wrapped, 14, cursorY);
+				cursorY += 5;
+			}
+		}
+	}
+
+	drawFooter(doc, t, 'pdf.disclaimer_medical_long', rangeLabel);
+	// ASCII file name: a locale-specific one would arrive at the practice
+	// mangled by whatever system opens it.
+	doc.save(`ciphra-${username ? `${username}-` : ''}therapy-${span.to}.pdf`);
+}
 
 export function generateRecoveryPdf(
 	username: string,
