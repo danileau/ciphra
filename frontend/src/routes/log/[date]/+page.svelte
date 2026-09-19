@@ -106,6 +106,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>{$t('protocol.title')} — ciphra</title>
+</svelte:head>
+
 {#if !bp}
 	<div class="log-loading">
 		<Asterisk size={32} spin color="muted" />

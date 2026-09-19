@@ -468,6 +468,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>{$t('nav.settings')} — ciphra</title>
+</svelte:head>
+
 <div class="layout-default py-6 space-y-6">
 	<h1 id="settings-heading" class="text-2xl font-bold" style="color: var(--text-primary)">{$t('nav.more')}</h1>
 

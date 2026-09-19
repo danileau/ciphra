@@ -126,6 +126,10 @@
 
 </script>
 
+<svelte:head>
+	<title>{$t('auth.login')} — ciphra</title>
+</svelte:head>
+
 <main id="main-content" class="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4" style="background: var(--surface)">
 	<div class="w-full max-w-md">
 		<!-- Centered wordmark above the form — gives the auth flow its own

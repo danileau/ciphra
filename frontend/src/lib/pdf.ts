@@ -4445,7 +4445,12 @@ export function generateDoctorPdf(
 
 	const userTag = username ? `${username}-` : '';
 	const scopeTag = scopeFileTag(scope, year, month);
-	doc.save(`ciphra-${userTag}bericht-${blueprint.conditionId}-${scopeTag}.pdf`);
+	// The file name says "report" in the reader's language — it used to say
+	// "bericht" to everyone (2026-09-19). Sanitised, because a file name
+	// travels through mail clients and practice software: letters, digits and
+	// hyphens only, with an ASCII fallback when a locale leaves nothing.
+	const fileTag = t('pdf.file_tag').toLowerCase().normalize('NFKD').replace(/[^a-z0-9-]/g, '') || 'report';
+	doc.save(`ciphra-${userTag}${fileTag}-${blueprint.conditionId}-${scopeTag}.pdf`);
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -4857,7 +4862,7 @@ export function exportCsv(
 	const takenWord = t('pdf.taken');
 
 	const headers = [
-		'date',
+		t('pdf.csv_date_col'),
 		...symptomCols.map((c) => c.label),
 		...episodeCols.map((c) => c.label),
 		...episodeDetailCols.map((c) => c.label),

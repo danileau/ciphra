@@ -47,8 +47,10 @@ describe('CIPH-pi24-1A — header CTA is Login, not registration', () => {
 		// Pin against accidental revert to "kostenlos starten" in the header.
 		// Body still uses landing.hero_cta in 3 places (hero, conditions, final
 		// CTA) — that's separate and intentional.
+		// The label became an i18n key in 2026-09 (it was the English word
+		// "Primary", read out to every screen reader in every language).
 		const headerNav = LAYOUT.match(
-			/<nav[^>]*aria-label="Primary"[\s\S]+?<\/nav>/,
+			/<nav[^>]*aria-label=\{\$t\('nav\.primary_aria'\)\}[\s\S]+?<\/nav>/,
 		);
 		expect(headerNav, 'primary nav block must exist').toBeTruthy();
 		expect(headerNav![0]).not.toMatch(/landing\.hero_cta/);
@@ -59,8 +61,10 @@ describe('CIPH-pi24-1B — language picker is footer-only', () => {
 	it('header section does NOT contain a <select> for language', () => {
 		// The primary nav block in +layout.svelte must not host a language
 		// dropdown. PublicFooter handles it.
+		// The label became an i18n key in 2026-09 (it was the English word
+		// "Primary", read out to every screen reader in every language).
 		const headerNav = LAYOUT.match(
-			/<nav[^>]*aria-label="Primary"[\s\S]+?<\/nav>/,
+			/<nav[^>]*aria-label=\{\$t\('nav\.primary_aria'\)\}[\s\S]+?<\/nav>/,
 		);
 		expect(headerNav, 'primary nav block must exist').toBeTruthy();
 		expect(headerNav![0]).not.toMatch(/<select[\s\S]+?on:change=\{setLocale\}/);

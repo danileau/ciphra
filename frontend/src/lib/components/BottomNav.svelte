@@ -52,7 +52,7 @@
 {#if !hidden}
 	<nav
 		class="md:hidden fixed bottom-0 left-0 right-0 z-50 bottomnav"
-		aria-label="Main navigation"
+		aria-label={$t('nav.primary_aria')}
 	>
 		<div class="max-w-md mx-auto grid grid-cols-5 items-end">
 			<!-- Today -->
