@@ -453,7 +453,7 @@ export function medicationsOnDate(
 			const parts = [[med.name, now].filter(Boolean).join(' ')];
 			if (med.asNeeded) parts.push(t('pdf.med_now_as_needed'));
 			if (p.from) {
-				const since = t('pdf.med_now_since', { date: format(p.from) });
+				const since = t('pdf.med_now_since', { date: historyDateText(p.from, p.fromPrecision, format) });
 				const before = prev ? regimenDetail(prev, p) : '';
 				parts.push(before ? `${since} ${t('pdf.med_now_before', { regimen: before })}` : since);
 			}

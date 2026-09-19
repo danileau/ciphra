@@ -479,24 +479,26 @@ export function removeReportedPeriod(med: MedicationSlot, index: number): Medica
 }
 
 /** The span every medication together covers, for a report about the therapy
- *  itself rather than about a month. `from` is null when the earliest period
- *  has no recorded start. `to` runs to today, or further when a change is
+ *  itself rather than about a month. `from` is null when any period has no
+ *  recorded start — the history reaches further back than anyone can say.
+ *  `knownFrom` is the earliest date that IS recorded, so a drawing still has
+ *  a left edge to work from. `to` runs to today, or further when a change is
  *  already planned. */
 export function medHistorySpan(
 	meds: MedicationSlot[],
 	today: string = toLocalISODate(),
-): { from: string | null; to: string } {
-	let from: string | null = null;
+): { from: string | null; knownFrom: string | null; to: string } {
+	let knownFrom: string | null = null;
 	let openStart = false;
 	let to = today;
 	for (const med of meds) {
 		for (const p of medPeriods(med)) {
 			if (!p.from) openStart = true;
-			else if (!from || p.from < from) from = p.from;
+			else if (!knownFrom || p.from < knownFrom) knownFrom = p.from;
 			for (const edge of [p.from, p.to]) if (edge && edge > to) to = edge;
 		}
 	}
-	return { from: openStart ? null : from, to };
+	return { from: openStart ? null : knownFrom, knownFrom, to };
 }
 
 /* ─── Readers for reports ─────────────────────────────────────────────── */

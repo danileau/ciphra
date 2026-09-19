@@ -142,6 +142,18 @@ describe('the treatment-history PDF', () => {
 		expect(texts).toContain(de['medication.stop_reason_side_effects']);
 	});
 
+	it('draws the timeline from the oldest recorded period, not a rounded window', () => {
+		today(new Date('2026-09-19T12:00:00'));
+		// Levetiracetam starts 03/2019, far outside a trailing two years; its
+		// lane must still be on the strip.
+		const texts = therapyPdf([
+			{ id: 'x', name: 'Lamotrigin', dose: '50 mg', schedule: '', asNeeded: false },
+			levetiracetam,
+		]);
+		expect(texts).toContain('Levetiracetam');
+		expect(texts.some((x) => x.includes('2019'))).toBe(true);
+	});
+
 	it('states what applies today, so the history ends where the visit starts', () => {
 		today(new Date('2026-09-19T12:00:00'));
 		const texts = therapyPdf();

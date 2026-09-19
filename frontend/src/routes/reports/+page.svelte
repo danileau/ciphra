@@ -328,16 +328,12 @@
 			const periods = medPeriods(med);
 			const first = periods[0];
 			const last = periods[periods.length - 1];
-			const start = first.from
-				? first.fromPrecision === 'month'
-					? `${first.from.slice(5, 7)}/${first.from.slice(0, 4)}`
-					: formatISODateChoice(first.from, bp?.dateFormat)
-				: $t('medication.combine_start_unknown');
-			const end = last.to
-				? last.toPrecision === 'month'
-					? `${last.to.slice(5, 7)}/${last.to.slice(0, 4)}`
-					: formatISODateChoice(last.to, bp?.dateFormat)
-				: '';
+			const edge = (iso: string | undefined, precision: 'month' | undefined) =>
+				!iso ? '' : precision === 'month'
+					? `${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+					: formatISODateChoice(iso, bp?.dateFormat);
+			const start = first.from ? edge(first.from, first.fromPrecision) : $t('medication.combine_start_unknown');
+			const end = edge(last.to, last.toPrecision);
 			const regimen = [last.dose, last.schedule].filter(Boolean).join(' · ');
 			return [{ med, details: `${regimen} · ${end ? `${start} – ${end}` : start}` }];
 		});

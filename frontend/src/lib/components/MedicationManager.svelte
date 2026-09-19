@@ -51,6 +51,10 @@
 
 	const fmt = (iso: string) => formatISODateChoice(iso, bp?.dateFormat);
 	const monthOf = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+	/** A date the person gave as a month reads as a month, not as a day
+	 *  nobody chose (2026-09-19). */
+	const edge = (iso: string | undefined, precision: 'month' | undefined) =>
+		!iso ? '' : precision === 'month' ? monthOf(iso) : fmt(iso);
 	const regimenText = (p: { dose: string; schedule: string }) =>
 		[p.dose, p.schedule].filter(Boolean).join(' · ');
 
@@ -136,10 +140,8 @@
 	}
 
 	function historyRangeText(p: { from?: string; to?: string; fromPrecision?: 'month'; toPrecision?: 'month' }): string {
-		const start = p.from
-			? p.fromPrecision === 'month' ? monthOf(p.from) : fmt(p.from)
-			: $t('medication.combine_start_unknown');
-		const end = p.to ? (p.toPrecision === 'month' ? monthOf(p.to) : fmt(p.to)) : '';
+		const start = p.from ? edge(p.from, p.fromPrecision) : $t('medication.combine_start_unknown');
+		const end = edge(p.to, p.toPrecision);
 		return end ? `${start} – ${end}` : start;
 	}
 
@@ -257,7 +259,7 @@
 						<div class="flex-1 min-w-0">
 							<p class="text-sm font-medium truncate" style="color: var(--text-primary)">{med.name}</p>
 							<p class="text-xs mt-0.5" style="color: var(--text-secondary)">
-								{regimenText(regimen)}{med.asNeeded ? ' · ' + $t('settings.medication_as_needed') : ''}{status === 'active' && start ? ' · ' + $t('medication.since', { date: fmt(start) }) : ''}
+								{regimenText(regimen)}{med.asNeeded ? ' · ' + $t('settings.medication_as_needed') : ''}{status === 'active' && start ? ' · ' + $t('medication.since', { date: edge(start, medPeriods(med)[0].fromPrecision) }) : ''}
 							</p>
 							{#if status === 'upcoming' && start}
 								<p class="text-xs mt-0.5 font-medium" style="color: var(--olive)" data-testid="med-upcoming">
@@ -343,7 +345,7 @@
 						<div class="flex-1 min-w-0">
 							<p class="text-sm font-medium truncate" style="color: var(--text-secondary)">{med.name}</p>
 							<p class="text-xs mt-0.5" style="color: var(--text-muted)">
-								{regimenText(last)}{last.to ? ' · ' + $t('medication.last_taken', { date: fmt(last.to) }) : ''}
+								{regimenText(last)}{last.to ? ' · ' + $t('medication.last_taken', { date: edge(last.to, last.toPrecision) }) : ''}
 							</p>
 						</div>
 						<button

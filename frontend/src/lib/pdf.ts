@@ -4541,10 +4541,13 @@ export function generateTherapyPdf(
 
 	// ── The whole span as one strip: every medication as a lane, so overlaps
 	// and the order things were tried are visible at a glance. A history with
-	// no recorded start still needs a left edge — two years before the end is
-	// enough to show the shape without claiming a date.
+	// no recorded start still needs a left edge: the earliest date that IS
+	// recorded, or two years back when there is none — never later than the
+	// oldest bar, which would clip history the strip is meant to show.
+	const fallbackStart = addDaysISO(span.to, -730);
 	const timelineWin: DateWindow = {
-		from: span.from ?? addDaysISO(span.to, -730),
+		from: span.from
+			?? (span.knownFrom && span.knownFrom < fallbackStart ? span.knownFrom : fallbackStart),
 		to: span.to,
 	};
 	cursorY = drawMedicationTimeline(

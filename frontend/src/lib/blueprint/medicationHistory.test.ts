@@ -459,7 +459,9 @@ describe('medHistorySpan', () => {
 	const current = createMedication('m', { name: 'Fycompa', dose: '8mg', schedule: '', asNeeded: false, from: '2026-06-01' });
 
 	it('runs from the earliest recorded day to today', () => {
-		expect(medHistorySpan([current, past], '2026-09-19')).toEqual({ from: '2019-03-01', to: '2026-09-19' });
+		expect(medHistorySpan([current, past], '2026-09-19')).toEqual({
+			from: '2019-03-01', knownFrom: '2019-03-01', to: '2026-09-19',
+		});
 	});
 
 	it('reaches past today when a change is already planned', () => {
@@ -467,7 +469,9 @@ describe('medHistorySpan', () => {
 		expect(medHistorySpan([planned], '2026-09-19').to).toBe('2026-10-01');
 	});
 
-	it('has no start when one medication predates the record', () => {
-		expect(medHistorySpan([legacy(), past], '2026-09-19').from).toBeNull();
+	it('has no start when one medication predates the record, but keeps the earliest date it knows', () => {
+		const span = medHistorySpan([legacy(), past], '2026-09-19');
+		expect(span.from).toBeNull();
+		expect(span.knownFrom).toBe('2019-03-01');
 	});
 });
