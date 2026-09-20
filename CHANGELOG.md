@@ -13,6 +13,45 @@ app at **/docs → Changelog** and here on the public repo.
 
 <!-- Nothing yet. Pending entries live in changelog.d/ — see changelog.d/README.md. -->
 
+## [1.5.1] — 2026-09-20
+
+A fixing release. Dropdowns behave like dropdowns again, lists show what you
+just added without a reload, and the pages that describe ciphra say what the
+server actually keeps.
+
+### Changed
+- **The pages that describe ciphra now match what it does.** The landing page
+  said the server stores a username, an auth-hash, encrypted blobs and
+  timestamps — "that is the entire list" — which stopped being true when
+  per-invite sharing added one bit per entry, and imports added a key that
+  stops a repeated import duplicating your history. Both are named now, as is
+  the audit log. `/docs → Security model` always listed them; the rest of the
+  app now says the same thing.
+- The feature documentation covers what shipped since: dose history backwards
+  in time, the treatment-history export, the before-and-after shading on the
+  reports charts, and — for family sharing — that a caregiver sees the
+  medication list including the reason a medication was changed or stopped.
+
+### Fixed
+- **Dropdowns open below the field again, and stay open.** Most of the
+  choices in ciphra — language, date format, appearance, the duration of an
+  episode, the group of a custom symptom, why a medication was stopped — were
+  the browser's own dropdown. Its list is drawn by the operating system, so
+  it opened over the field it belonged to, closed when you let go of the
+  mouse, and never looked like the rest of the app. All of them are ciphra's
+  own control now: it opens below the field, stays open until you choose or
+  click away, works with the keyboard, and only flips above when the field is
+  genuinely too close to the bottom of the window. On a phone the system
+  picker is still used, because there it is the better one.
+- **A symptom you add now appears straight away.** Creating a custom symptom,
+  trigger, vital or episode type in Settings saved it, but the list kept
+  showing what it had shown when the page opened — you had to reload to see
+  your own entry.
+- **The totals under the monthly table follow the month.** Paging back a month
+  redrew the day-by-day grid and left the sums and percentages of the month
+  you came from underneath it. The numbers a doctor reads are the numbers of
+  the month on screen now.
+
 ## [1.5.0] — 2026-09-19
 
 Your medication history now reaches back to before you used ciphra: the doses
@@ -318,7 +357,8 @@ above.
   and the admin surface. (Established feature set — see
   [`docs/FEATURES.md`](docs/FEATURES.md).)
 
-[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/danileau/ciphra/releases/tag/v1.5.1
 [1.5.0]: https://github.com/danileau/ciphra/releases/tag/v1.5.0
 [1.4.0]: https://github.com/danileau/ciphra/releases/tag/v1.4.0
 [1.3.0]: https://github.com/danileau/ciphra/releases/tag/v1.3.0
