@@ -27,7 +27,7 @@ on:
         required: false
         type: string
       sha:
-        description: 'Commit to tag. Defaults to the current ref. Use this to backfill a historical release.'
+        description: 'Commit to tag — full or short SHA, or a branch/tag name. Defaults to the current ref. Use this to backfill a historical release.'
         required: false
         type: string
 
@@ -41,9 +41,27 @@ jobs:
       - uses: actions/checkout@v7
         with:
           # Tags and full history: version-guard's computed-bump check reads
-          # both, and a shallow clone silently skips it.
+          # both, and a shallow clone silently skips it. Checking out the
+          # dispatched ref rather than `inputs.sha`: the action resolves `ref`
+          # as a branch or tag name and accepts only a FULL 40-character SHA,
+          # so a short one fails with "a branch or tag with the name 'b1ad18c'
+          # could not be found" — in the very first step, which reads like a
+          # runner flake rather than a bad input. That is why v1.4.0 went
+          # unminted for three days (2026-09-19). The checkout below moves to
+          # the requested commit, where git resolves anything it recognises.
           fetch-depth: 0
-          ref: ${{ inputs.sha || github.sha }}
+
+      - name: Move to the commit being released
+        if: ${{ inputs.sha }}
+        run: |
+          # Full SHA, short SHA, branch or tag — git resolves them all, and
+          # says so clearly when it cannot.
+          SHA="$(git rev-parse --verify "${{ inputs.sha }}^{commit}")" || {
+            echo "::error::'${{ inputs.sha }}' is not a commit in this repository."
+            exit 1
+          }
+          echo "Releasing from $(git log -1 --format='%h %s' "$SHA")"
+          git switch --detach "$SHA"
 
       - name: Resolve the version
         id: v
