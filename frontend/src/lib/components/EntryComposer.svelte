@@ -57,6 +57,7 @@
 	import { get } from 'svelte/store';
 	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
 	import Modal from '$lib/components/Modal.svelte';
+	import Listbox from '$lib/components/Listbox.svelte';
 	import type { CiphraDocument } from '$lib/stores/documents';
 	import { cohortOf } from '$lib/blueprint/cohort';
 	import type { Phase } from '$lib/cycleState';
@@ -1083,14 +1084,15 @@
 								{#if ep.trackDuration}
 									<div class="log-episode-detail-field">
 										<label class="log-detail-label" for="ep-dur-{ep.id}">{$t('protocol.duration')}</label>
-										<select id="ep-dur-{ep.id}" class="log-detail-input"
+										<Listbox
+											id="ep-dur-{ep.id}"
+											testid="ep-dur-{ep.id}"
+											buttonClass="log-detail-input"
+											options={durationOptions.map((opt) => ({ value: opt.value, label: $t(opt.labelKey) }))}
 											bind:value={episodeDurations[ep.id]}
+											ariaLabel={$t('protocol.duration')}
 											on:change={markChanged}
-										>
-											{#each durationOptions as opt}
-												<option value={opt.value}>{$t(opt.labelKey)}</option>
-											{/each}
-										</select>
+										/>
 									</div>
 								{/if}
 							</div>
@@ -1143,14 +1145,15 @@
 												{#if ep.trackDuration}
 													<div class="log-episode-detail-field">
 														<label class="log-detail-label" for="ep-dur-{ep.id}-{i}">{$t('protocol.duration')}</label>
-														<select id="ep-dur-{ep.id}-{i}" class="log-detail-input"
+														<Listbox
+															id="ep-dur-{ep.id}-{i}"
+															testid="ep-dur-{ep.id}-{i}"
+															buttonClass="log-detail-input"
+															options={durationOptions.map((opt) => ({ value: opt.value, label: $t(opt.labelKey) }))}
 															bind:value={inst.duration}
+															ariaLabel={$t('protocol.duration')}
 															on:change={markChanged}
-														>
-															{#each durationOptions as opt}
-																<option value={opt.value}>{$t(opt.labelKey)}</option>
-															{/each}
-														</select>
+														/>
 													</div>
 												{/if}
 											</div>
@@ -2011,19 +2014,10 @@
 	.log-detail-input:focus {
 		border-color: var(--accent);
 	}
-	/* CIPH-pi24-5d — Bring <select.log-detail-input> in line with the rest
-	   of the app: strip the native chevron + paint the brand SVG one. */
-	select.log-detail-input {
-		appearance: none;
-		-webkit-appearance: none;
-		-moz-appearance: none;
-		padding-right: 32px;
-		background-repeat: no-repeat;
-		background-position: right 10px center;
-		background-size: 12px 12px;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='3,4.5 6,7.5 9,4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-		cursor: pointer;
-	}
+	/* CIPH-pi24-5d painted a brand chevron onto <select.log-detail-input> to
+	   disguise the native control. The duration field is a Listbox now
+	   (2026-09-20), which brings its own chevron — and, unlike the native
+	   one, a panel that obeys this stylesheet. */
 
 	/* ─── Vitals ─── */
 	.log-vitals-grid {

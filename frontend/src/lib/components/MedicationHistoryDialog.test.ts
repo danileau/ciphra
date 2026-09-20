@@ -93,7 +93,11 @@ describe('a medication from the past', () => {
 		const { getByTestId, onApply } = mount({ mode: 'past', med: null });
 		await fireEvent.input(getByTestId('history-name'), { target: { value: 'Levetiracetam' } });
 		await fireEvent.input(getByTestId('history-dose'), { target: { value: '1000 mg' } });
-		await fireEvent.change(getByTestId('history-stop-reason'), { target: { value: 'side_effects' } });
+		// A Listbox now, not a <select> (2026-09-20): open it and pick.
+		await fireEvent.click(getByTestId('history-stop-reason'));
+		const sideEffects = [...document.querySelectorAll('[role="option"]')]
+			.find((o) => /Nebenwirkungen|Side effects/.test(o.textContent ?? ''));
+		await fireEvent.click(sideEffects as Element);
 
 		await fireEvent.click(document.getElementById('history-until') as Element);
 		const march = Array.from(document.querySelectorAll('.dp-month')).find((b) => /Mär|Mar/.test(b.textContent ?? ''));

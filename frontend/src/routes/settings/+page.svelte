@@ -30,6 +30,7 @@
 	import FamilySharing from '$lib/components/FamilySharing.svelte';
 	import LinkedAccounts from '$lib/components/LinkedAccounts.svelte';
 	import Tabs from '$lib/components/Tabs.svelte';
+	import Listbox from '$lib/components/Listbox.svelte';
 	import { iconPath } from '$lib/conditionIcons';
 	import { page } from '$app/stores';
 	import { getCohort } from '$lib/blueprint/cohort';
@@ -65,9 +66,8 @@
 		if (!bp) return;
 		await blueprint.save(applyDateFormatChoice(bp, value));
 	}
-	function onDateFormatChange(e: Event) {
-		const target = e.currentTarget as HTMLSelectElement;
-		setDateFormat(target.value as DateFormatChoice);
+	function applyDateFormat(value: string) {
+		void setDateFormat(value as DateFormatChoice);
 	}
 	$: currentDateFormat = bp?.dateFormat ?? 'dd.mm.yyyy';
 
@@ -615,16 +615,14 @@
 		<div class="space-y-4">
 			<div>
 				<label class="text-sm mb-1.5 block" style="color: var(--text-secondary)" for="settings-language-select">{$t('common.language')}</label>
-				<select
+				<Listbox
 					id="settings-language-select"
-					class="input select-chevron cursor-pointer"
+					testid="settings-language-select"
+					options={locales.map((l) => ({ value: l, label: localeNames[l] }))}
 					value={$locale}
-					on:change={(e) => locale.set(e.currentTarget.value)}
-				>
-					{#each locales as l}
-						<option value={l}>{localeNames[l]}</option>
-					{/each}
-				</select>
+					ariaLabel={$t('common.language')}
+					on:change={(e) => locale.set(e.detail.value)}
+				/>
 			</div>
 
 			{#if bp}
@@ -634,17 +632,19 @@
 			<div>
 				<label class="text-sm mb-1.5 block" style="color: var(--text-secondary)" for="date-format-select">{$t('settings.date_format_title')}</label>
 				<p class="text-xs mb-1.5" style="color: var(--text-muted)">{$t('settings.date_format_desc')}</p>
-				<select
+				<Listbox
 					id="date-format-select"
-					class="input select-chevron cursor-pointer"
+					testid="date-format-select"
+					options={[
+						{ value: 'dd.mm.yyyy', label: sampleDate('dd.mm.yyyy') },
+						{ value: 'dd/mm/yyyy', label: sampleDate('dd/mm/yyyy') },
+						{ value: 'iso', label: `${sampleDate('iso')} (ISO 8601)` },
+						{ value: 'us', label: sampleDate('us') },
+					]}
 					value={currentDateFormat}
-					on:change={onDateFormatChange}
-				>
-					<option value="dd.mm.yyyy">{sampleDate('dd.mm.yyyy')}</option>
-					<option value="dd/mm/yyyy">{sampleDate('dd/mm/yyyy')}</option>
-					<option value="iso">{sampleDate('iso')} (ISO 8601)</option>
-					<option value="us">{sampleDate('us')}</option>
-				</select>
+					ariaLabel={$t('settings.date_format_title')}
+					on:change={(e) => applyDateFormat(e.detail.value)}
+				/>
 			</div>
 			{/if}
 
@@ -655,16 +655,18 @@
 			<div>
 				<label class="text-sm mb-1.5 block" style="color: var(--text-secondary)" for="theme-select">{$t('settings.theme_title')}</label>
 				<p class="text-xs mb-1.5" style="color: var(--text-muted)">{$t('settings.theme_desc')}</p>
-				<select
+				<Listbox
 					id="theme-select"
-					class="input select-chevron cursor-pointer"
+					testid="theme-select"
+					options={[
+						{ value: 'light', label: $t('settings.theme_light') },
+						{ value: 'dark', label: $t('settings.theme_dark') },
+						{ value: 'system', label: $t('settings.theme_system') },
+					]}
 					value={$themeChoice}
-					on:change={(e) => setThemeChoice((e.currentTarget as HTMLSelectElement).value as ThemeChoice)}
-				>
-					<option value="light">{$t('settings.theme_light')}</option>
-					<option value="dark">{$t('settings.theme_dark')}</option>
-					<option value="system">{$t('settings.theme_system')}</option>
-				</select>
+					ariaLabel={$t('settings.theme_title')}
+					on:change={(e) => setThemeChoice(e.detail.value as ThemeChoice)}
+				/>
 			</div>
 		</div>
 	</section>
