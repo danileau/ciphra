@@ -470,35 +470,53 @@
 		if (Array.isArray(trs)) return trs.includes(col);
 		return !!(trs && trs[col]);
 	}
-	function triggerSum(col: string): number {
-		return monthDocs.filter((d) => getTrigger(d, col)).length;
-	}
 	function getEpisodeCount(doc: any, col: string): number {
 		return doc?.data?.episodes?.[col] || doc?.data?.seizures?.[col] || 0;
 	}
-	function symptomSum(col: string): number {
-		return monthDocs.filter(d => d.data.symptoms?.[col]).length;
-	}
-	function episodeSum(col: string): number {
-		// Includes both daily_log and standalone `episode` docs in the month.
-		const prefix = currentDate.slice(0, 7);
-		return exportableDocs.reduce((sum: number, d: any) => {
-			if (!isEpisodeBearing(d)) return sum;
-			if (!String(d.data?.date || '').startsWith(prefix)) return sum;
-			return sum + (d.data.episodes?.[col] || d.data.seizures?.[col] || 0);
-		}, 0);
-	}
 
-	function itemLabel(id: string): string {
-		if (!bp) return id;
-		for (const g of bp.symptomGroups) {
+	// The totals row and the column labels used to call these helpers straight
+	// from the template (2026-09-20). The expressions named only the column, so
+	// Svelte never re-ran them when the MONTH changed: August's grid sat under
+	// September's totals, and a doctor reading the table had no way to tell.
+	// Naming the inputs here is what makes the dependency visible.
+	$: symptomSums = new Map(
+		effectiveSymptomColumns.map((col) => [col, monthDocs.filter((d) => d.data.symptoms?.[col]).length]),
+	);
+	$: triggerSums = new Map(
+		effectiveTriggerColumns.map((col) => [col, monthDocs.filter((d) => getTrigger(d, col)).length]),
+	);
+	$: episodeSums = new Map(
+		effectiveEpisodeColumns.map((col) => {
+			const prefix = currentDate.slice(0, 7);
+			const sum = exportableDocs.reduce((acc: number, d: any) => {
+				if (!isEpisodeBearing(d)) return acc;
+				if (!String(d.data?.date || '').startsWith(prefix)) return acc;
+				return acc + (d.data.episodes?.[col] || d.data.seizures?.[col] || 0);
+			}, 0);
+			return [col, sum];
+		}),
+	);
+	// Column labels follow the blueprint: a custom symptom added in Settings
+	// renames nothing, but it does add a column, and its label is user text.
+	$: itemLabels = new Map(
+		[...effectiveSymptomColumns, ...effectiveEpisodeColumns, ...effectiveTriggerColumns].map((id) => [
+			id,
+			itemLabel(id, bp, $t),
+		]),
+	);
+
+	/** Pure: everything it reads is a parameter, so `itemLabels` below is the
+	 *  only place the reactive dependency lives. */
+	function itemLabel(id: string, blueprintIn: typeof bp, translate: typeof $t): string {
+		if (!blueprintIn) return id;
+		for (const g of blueprintIn.symptomGroups) {
 			const item = g.items.find(i => i.id === id);
-			if (item) return isCustomItem(item.id) ? item.label : $t(item.label);
+			if (item) return isCustomItem(item.id) ? item.label : translate(item.label);
 		}
-		const ep = bp.episodeTypes.find(e => e.id === id);
-		if (ep) return isCustomItem(ep.id) ? ep.label : $t(ep.label);
-		const tr = bp.triggers?.find(t => t.id === id);
-		if (tr) return isCustomItem(tr.id) ? tr.label : $t(tr.label);
+		const ep = blueprintIn.episodeTypes.find(e => e.id === id);
+		if (ep) return isCustomItem(ep.id) ? ep.label : translate(ep.label);
+		const tr = blueprintIn.triggers?.find(t => t.id === id);
+		if (tr) return isCustomItem(tr.id) ? tr.label : translate(tr.label);
 		return prettifyCustomId(id);
 	}
 
@@ -1847,13 +1865,13 @@
 					<tr class="bg-slate-50">
 						<th class="bg-slate-50 px-3 py-2 text-left font-medium text-slate-500 border-b border-slate-200">{$t('common.day')}</th>
 						{#each effectiveSymptomColumns as col}
-							<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200 whitespace-nowrap" class:rpt-col--auto={autoAddedSymptomSet.has(col)} title={autoAddedSymptomSet.has(col) ? $t('reports.col_auto_tooltip') : ''}>{itemLabel(col)}{#if autoAddedSymptomSet.has(col)}<span class="rpt-col-auto-dot" aria-label={$t('reports.col_auto_tooltip')}>·</span>{/if}</th>
+							<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200 whitespace-nowrap" class:rpt-col--auto={autoAddedSymptomSet.has(col)} title={autoAddedSymptomSet.has(col) ? $t('reports.col_auto_tooltip') : ''}>{itemLabels.get(col) ?? col}{#if autoAddedSymptomSet.has(col)}<span class="rpt-col-auto-dot" aria-label={$t('reports.col_auto_tooltip')}>·</span>{/if}</th>
 						{/each}
 						{#each effectiveEpisodeColumns as col}
-							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" class:rpt-col--auto={autoAddedEpisodeSet.has(col)} title={autoAddedEpisodeSet.has(col) ? $t('reports.col_auto_tooltip') : ''} style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{itemLabel(col)}{#if autoAddedEpisodeSet.has(col)}<span class="rpt-col-auto-dot" aria-label={$t('reports.col_auto_tooltip')}>·</span>{/if}</th>
+							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" class:rpt-col--auto={autoAddedEpisodeSet.has(col)} title={autoAddedEpisodeSet.has(col) ? $t('reports.col_auto_tooltip') : ''} style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{itemLabels.get(col) ?? col}{#if autoAddedEpisodeSet.has(col)}<span class="rpt-col-auto-dot" aria-label={$t('reports.col_auto_tooltip')}>·</span>{/if}</th>
 						{/each}
 						{#each effectiveTriggerColumns as col}
-							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" style="color: var(--ochre)">{itemLabel(col)}</th>
+							<th class="px-2 py-2 text-center font-medium border-b border-slate-200 whitespace-nowrap" style="color: var(--ochre)">{itemLabels.get(col) ?? col}</th>
 						{/each}
 						<th class="px-2 py-2 text-center font-medium text-slate-500 border-b border-slate-200">{$t('common.notes')}</th>
 					</tr>
@@ -1881,7 +1899,7 @@
 										type="button"
 										class="grid-symptom-toggle"
 										aria-pressed={present}
-										aria-label={`${dayStr} — ${itemLabel(col)}`}
+										aria-label={`${dayStr} — ${itemLabels.get(col) ?? col}`}
 										on:click|stopPropagation={() => toggleGridSymptom(dayStr, col)}
 									>
 										{#if present}
@@ -1937,7 +1955,7 @@
 										type="button"
 										class="grid-symptom-toggle"
 										aria-pressed={present}
-										aria-label={`${dayStr} — ${itemLabel(col)}`}
+										aria-label={`${dayStr} — ${itemLabels.get(col) ?? col}`}
 										on:click|stopPropagation={() => toggleGridTrigger(dayStr, col)}
 									>
 										{#if present}
@@ -1958,13 +1976,13 @@
 					<tr class="bg-slate-50 font-medium">
 						<td class="bg-slate-50 px-3 py-2 text-slate-700">{$t('protocol.sum')}</td>
 						{#each effectiveSymptomColumns as col}
-							<td class="px-2 py-2 text-center text-slate-700">{symptomSum(col)}</td>
+							<td class="px-2 py-2 text-center text-slate-700">{symptomSums.get(col) ?? 0}</td>
 						{/each}
 						{#each effectiveEpisodeColumns as col}
-							<td class="px-2 py-2 text-center font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{episodeSum(col)}</td>
+							<td class="px-2 py-2 text-center font-bold" style="color: {bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}">{episodeSums.get(col) ?? 0}</td>
 						{/each}
 						{#each effectiveTriggerColumns as col}
-							<td class="px-2 py-2 text-center text-slate-700">{triggerSum(col)}</td>
+							<td class="px-2 py-2 text-center text-slate-700">{triggerSums.get(col) ?? 0}</td>
 						{/each}
 						<td></td>
 					</tr>
@@ -1972,7 +1990,7 @@
 						<td class="bg-slate-50 px-3 py-2">{$t('protocol.percent')}</td>
 						{#each effectiveSymptomColumns as col}
 							{@const total = daysInMonth}
-							{@const count = symptomSum(col)}
+							{@const count = symptomSums.get(col) ?? 0}
 							<td class="px-2 py-2 text-center text-xs">{total > 0 ? Math.round(count / total * 100) : 0}%</td>
 						{/each}
 						{#each effectiveEpisodeColumns as _}
@@ -1980,7 +1998,7 @@
 						{/each}
 						{#each effectiveTriggerColumns as col}
 							{@const total = daysInMonth}
-							{@const count = triggerSum(col)}
+							{@const count = triggerSums.get(col) ?? 0}
 							<td class="px-2 py-2 text-center text-xs">{total > 0 ? Math.round(count / total * 100) : 0}%</td>
 						{/each}
 						<td></td>
