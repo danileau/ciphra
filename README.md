@@ -3,8 +3,9 @@
 **A zero-knowledge personal health notebook.** ciphra lets people living with a
 chronic condition log their day in a few minutes each evening — symptoms,
 episodes, triggers, vitals, medications, notes — and hand their doctor a clean
-PDF at the next visit. The server stores only opaque encrypted blobs: it
-mathematically cannot read a single health entry.
+PDF at the next visit. Every entry reaches the server as an opaque blob it
+mathematically cannot read — alongside the bookkeeping any account needs, which
+[`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md) lists in full.
 
 ciphra grew out of [epilepc](https://epilepc.ch), a Symfony epilepsy tracker
 built as a diploma thesis. epilepc encrypted data *server-side* (the server

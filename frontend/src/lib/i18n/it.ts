@@ -1072,7 +1072,7 @@ export default {
 	'landing.template_custom_desc': 'Configura tutto da zero',
 
 	'landing.security_title': 'Architettura a conoscenza zero',
-	'landing.security_subtitle': 'Nemmeno noi amministratori possiamo leggere le tue voci. Il server archivia un hash di autenticazione, un nome utente, blob crittografati e timestamp di caricamento. Questa è la lista completa.',
+	'landing.security_subtitle': "Nemmeno noi come amministratori possiamo leggere le tue voci. Il server conserva un nome utente, un hash di autenticazione, blocchi cifrati con data e ora e un bit per voce che indica se la condividi. Il contenuto resta illeggibile per noi.",
 	'landing.security_hierarchy_title': 'Gerarchia delle chiavi',
 	'landing.security_hierarchy_password': 'La tua password',
 	'landing.security_hierarchy_auth': 'auth_hash (il server archivia solo questo hash)',
@@ -1463,7 +1463,7 @@ export default {
 	'tech.why_client_title': 'Perché la crittografia lato client?',
 	'tech.why_client_desc': 'Una compromissione del server non può esporre i dati sanitari. Anche i dump del database sono inutili senza le password degli utenti. Vero zero-knowledge.',
 	'tech.why_metadata_title': 'Perché nessun metadato?',
-	'tech.why_metadata_desc': 'La tabella encrypted_documents memorizza solo: user_id, blob crittografato, timestamp. Nessun tipo di record, nessuna data evento, nessuna patologia. Anche l\'analisi del traffico non rivela nulla sullo stato di salute.',
+	'tech.why_metadata_desc': "La tabella encrypted_documents memorizza un ID utente, il blocco cifrato, data e ora, un bit che indica se la voce può essere condivisa e — per le voci importate da epilepc — una chiave opaca che impedisce a una nuova importazione di duplicarle. Nessun tipo di voce, nessuna data dell'evento, nessuna patologia. L'analisi del traffico mostra quando hai scritto, mai cosa.",
 	'tech.why_hardening_title': 'Difesa in profondità',
 	'tech.why_hardening_desc': 'La libreria Argon2 WASM è vincolata tramite Subresource Integrity — uno script manomesso viene rifiutato dal browser. La chiave master vive solo in sessionStorage, cancellata alla chiusura del browser, riducendo la finestra di attacco XSS. Header CSP, X-Frame-Options e Referrer-Policy, CORS rigoroso, blocchi per account su login e recupero, retention di 90 giorni del log di audit con anonimizzazione IP completano il quadro.',
 	'tech.verify_title': 'Verificalo tu stesso',

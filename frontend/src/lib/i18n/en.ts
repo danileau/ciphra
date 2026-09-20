@@ -1072,7 +1072,7 @@ export default {
 	'landing.template_custom_desc': 'Configure everything from scratch',
 
 	'landing.security_title': 'Zero-knowledge architecture',
-	'landing.security_subtitle': 'Not even we as admins can read your entries. The server stores an auth-hash, a username, encrypted blobs, and upload timestamps. That is the entire list.',
+	'landing.security_subtitle': "Not even we as admins can read your entries. The server holds a username, an auth-hash, encrypted blobs with their timestamps, and one bit per entry saying whether you share it. What is inside stays unreadable to us.",
 	'landing.security_hierarchy_title': 'Key hierarchy',
 	'landing.security_hierarchy_password': 'Your password',
 	'landing.security_hierarchy_auth': 'auth_hash (server only stores this hash)',
@@ -1466,7 +1466,7 @@ export default {
 	'tech.why_client_title': 'Why Client-Side Encryption?',
 	'tech.why_client_desc': 'Server compromise cannot leak health data. Even database dumps are useless without user passwords. True zero-knowledge.',
 	'tech.why_metadata_title': 'Why No Metadata?',
-	'tech.why_metadata_desc': 'The encrypted_documents table stores only: user_id, encrypted blob, timestamp. No record type, no event date, no condition. Even traffic analysis reveals nothing about health status.',
+	'tech.why_metadata_desc': "The encrypted_documents table stores a user id, the encrypted blob, timestamps, one bit saying whether the entry may be shared, and — for entries imported from epilepc — an opaque key that keeps a repeated import from duplicating them. No entry type, no event date, no condition. Traffic analysis reveals when you wrote, never what.",
 	'tech.why_hardening_title': 'Defense in depth',
 	'tech.why_hardening_desc': 'The Argon2 WASM library is pinned with Subresource Integrity so a tampered script is refused by the browser. The master key lives in sessionStorage only — cleared when the browser closes, shrinking the XSS window. CSP + X-Frame-Options + Referrer-Policy headers, strict CORS, per-account lockouts on login and recovery, and 90-day audit-log retention with IP anonymization round it out.',
 	'tech.verify_title': 'Verify It Yourself',
