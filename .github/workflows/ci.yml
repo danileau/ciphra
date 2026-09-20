@@ -57,6 +57,7 @@ jobs:
       # Changelog fragments (changelog.d/README.md): the tooling's own suite,
       # every fragment parses, and a PR that earns an entry carries one.
       - run: scripts/test-changelog.sh
+      - run: scripts/test-release-state.sh
       - run: node scripts/changelog.mjs check
       - name: Changelog fragment for feat/fix PRs
         if: github.event_name == 'pull_request'

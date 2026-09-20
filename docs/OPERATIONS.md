@@ -424,6 +424,14 @@ tag → push → health-poll itself. It only offers commits that are on
 `origin/main` **and** have a green, signed `release-images` build. Choose
 `r` for rollback / redeploy. `-n <N>` widens the candidate window.
 
+Before the confirm it also says whether the commit is **in a release**
+(`scripts/release-state.sh`, 2026-09-20): it warns when the commit still
+carries `changelog.d/` fragments no release has compiled, and when its
+`VERSION` has no `vX.Y.Z` tag — which is how v1.4.0 stayed untagged for three
+days with every `compare/v1.4.0…` link in the user-facing changelog dead.
+Neither blocks the deploy; shipping ahead of a release is a legitimate choice,
+doing it without noticing is not.
+
 Under the hood it's still just a tag push, so the manual path also works:
 
 ```bash
