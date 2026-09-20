@@ -260,14 +260,6 @@
 		await blueprint.save(next);
 	}
 
-	function isCustomHidden(kind: CustomKind, id: string): boolean {
-		if (!bp?.customizations) return false;
-		if (kind === 'symptom') return (bp.customizations.hiddenSymptoms || []).includes(id);
-		if (kind === 'trigger') return (bp.customizations.hiddenTriggers || []).includes(id);
-		if (kind === 'vital') return (bp.customizations.hiddenVitals || []).includes(id);
-		return false;
-	}
-
 	async function deleteCustom(kind: CustomKind, item: { id: string; label: string }) {
 		if (!bp) return;
 		const msg = $t('customization.delete_confirm_title', { label: item.label }) +
@@ -301,13 +293,24 @@
 		await blueprint.save(next);
 	}
 
-	function customsForKind(kind: CustomKind): { id: string; label: string }[] {
-		if (!bp?.customizations) return [];
-		if (kind === 'symptom') return bp.customizations.customSymptoms || [];
-		if (kind === 'trigger') return bp.customizations.customTriggers || [];
-		if (kind === 'vital') return bp.customizations.customVitals || [];
-		return bp.customizations.customEpisodes || [];
-	}
+	// Reactive, not a function called from the template (2026-09-20). The
+	// template expression named only `section.kind`, so Svelte never re-ran it
+	// when the blueprint changed: a symptom you had just created did not
+	// appear until the page was reloaded. `{#if bp}` around the list does not
+	// help — an if-block that stays truthy is not re-created.
+	$: customsByKind = {
+		symptom: bp?.customizations?.customSymptoms ?? [],
+		trigger: bp?.customizations?.customTriggers ?? [],
+		vital: bp?.customizations?.customVitals ?? [],
+		episode: bp?.customizations?.customEpisodes ?? [],
+	} as Record<CustomKind, { id: string; label: string }[]>;
+
+	$: hiddenByKind = {
+		symptom: bp?.customizations?.hiddenSymptoms ?? [],
+		trigger: bp?.customizations?.hiddenTriggers ?? [],
+		vital: bp?.customizations?.hiddenVitals ?? [],
+		episode: [] as string[],
+	} as Record<CustomKind, string[]>;
 
 	/** Type-narrowing helper: when section.kind is 'episode' the item
 	 *  has a .color field (it's an EpisodeType). Inline type assertions
@@ -773,7 +776,7 @@
 	     all four kinds share the same delete affordance. -->
 	{#if bp}
 	{#each CUSTOM_SECTIONS as section}
-		{@const items = customsForKind(section.kind)}
+		{@const items = customsByKind[section.kind]}
 		<section class="card p-5">
 			<div class="flex items-center justify-between mb-3">
 				<h3 class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted)">{$t(section.titleKey)}</h3>
@@ -796,7 +799,7 @@
 								{#if section.kind === 'episode'}
 									<span class="w-3 h-3 rounded-full shrink-0" style="background: {episodeColor(item)}"></span>
 								{/if}
-								<span class="text-sm truncate" style="color: var(--text-primary); {isCustomHidden(section.kind, item.id) ? 'opacity: 0.5; text-decoration: line-through;' : ''}">{item.label}</span>
+								<span class="text-sm truncate" style="color: var(--text-primary); {hiddenByKind[section.kind].includes(item.id) ? 'opacity: 0.5; text-decoration: line-through;' : ''}">{item.label}</span>
 							</div>
 							<div class="flex items-center gap-1 shrink-0">
 								<!-- Episodes intentionally have no Hide toggle: the
@@ -813,7 +816,7 @@
 										on:click={() => toggleCustomHidden(section.kind, item.id)}
 										data-testid="toggle-custom-{section.kind}-{item.id}"
 									>
-										{isCustomHidden(section.kind, item.id) ? $t('common.show') : $t('common.hide')}
+										{hiddenByKind[section.kind].includes(item.id) ? $t('common.show') : $t('common.hide')}
 									</button>
 								{/if}
 								<button
