@@ -28,6 +28,7 @@
 	import { t } from '$lib/i18n';
 	import Modal from '$lib/components/Modal.svelte';
 	import DatePicker from '$lib/components/DatePicker.svelte';
+	import Listbox from '$lib/components/Listbox.svelte';
 	import {
 		addDaysISO,
 		createPastMedication,
@@ -217,16 +218,22 @@
 		</div>
 
 		{#if mode === 'past'}
-			<label class="block">
-				<span class="text-xs font-medium" style="color: var(--text-secondary)">{$t('medication.stop_reason')}</span>
-				<select bind:value={stopReason} class="input mt-1 w-full" data-testid="history-stop-reason">
-					<option value="">{$t('medication.stop_reason_none')}</option>
-					{#each STOP_REASONS as reason}
-						<option value={reason}>{stopReasonLabel(reason, $t)}</option>
-					{/each}
-				</select>
+			<div class="block">
+				<span id="history-stop-reason-label" class="text-xs font-medium" style="color: var(--text-secondary)">{$t('medication.stop_reason')}</span>
+				<div class="mt-1">
+					<Listbox
+						testid="history-stop-reason"
+						ariaLabelledby="history-stop-reason-label"
+						options={[
+							{ value: '', label: $t('medication.stop_reason_none') },
+							...STOP_REASONS.map((reason) => ({ value: reason, label: stopReasonLabel(reason, $t) })),
+						]}
+						value={stopReason}
+						on:change={(e) => (stopReason = e.detail.value as MedicationStopReason | '')}
+					/>
+				</div>
 				<span class="text-xs mt-1 block" style="color: var(--text-muted)">{$t('medication.stop_reason_hint')}</span>
-			</label>
+			</div>
 		{/if}
 
 		<label class="block">

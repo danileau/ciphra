@@ -435,6 +435,17 @@ route kind.
   "stop instead" first when days are logged against the medication and
   takes a second step to delete anyway. Pure writers live in
   `blueprint/medicationHistory.ts`; the dialog never saves.
+- **Listbox.svelte** — the app's one dropdown (2026-09-20). A trigger
+  button plus a `role="listbox"` panel: opens on click and stays open,
+  closes on an outside click or Escape, arrow/Home/End move the
+  selection, and the panel opens below unless it genuinely does not fit
+  there — measured after it renders, not estimated. Replaced every
+  native `<select>` in the app: a `<select>`'s options panel is browser
+  chrome, so it could not be styled, placed, or kept open on mouse-up,
+  which is how half the dropdowns came to open over the field they
+  belonged to. Below 640px it renders a native `<select>` on purpose —
+  a phone's own picker is the better control. `variant="field"` matches
+  `.input` for forms; `variant="chip"` hugs its label for page chrome.
 - **MedicationHistoryDialog.svelte** — records what happened BEFORE ciphra
   (2026-09-19): an earlier dose of a medication still taken, or a
   medication tried and stopped long ago, with a reason from a fixed list.

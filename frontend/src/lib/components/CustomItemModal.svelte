@@ -20,6 +20,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { t } from '$lib/i18n';
 	import Modal from '$lib/components/Modal.svelte';
+	import Listbox from '$lib/components/Listbox.svelte';
 	import { DATA_PALETTE } from '$lib/dataPalette';
 	import {
 		generateCustomId,
@@ -176,21 +177,22 @@
 		</label>
 
 		{#if kind === 'symptom' && groups.length > 0}
-			<label class="block">
-				<span class="text-xs font-medium" style="color: var(--text-secondary)"
+			<div class="block">
+				<span id="custom-item-group-label" class="text-xs font-medium" style="color: var(--text-secondary)"
 					>{$t('customization.group')}</span
 				>
-				<select
-					bind:value={groupId}
-					class="input select-chevron mt-1 w-full cursor-pointer"
-					data-testid="custom-item-group"
-				>
-					<option value="">{$t('customization.no_group')}</option>
-					{#each groups as g}
-						<option value={g.id}>{$t(g.label)}</option>
-					{/each}
-				</select>
-			</label>
+				<div class="mt-1">
+					<Listbox
+						testid="custom-item-group"
+						ariaLabelledby="custom-item-group-label"
+						options={[
+							{ value: '', label: $t('customization.no_group') },
+							...groups.map((g) => ({ value: g.id, label: $t(g.label) })),
+						]}
+						bind:value={groupId}
+					/>
+				</div>
+			</div>
 		{/if}
 
 		{#if kind === 'vital'}
