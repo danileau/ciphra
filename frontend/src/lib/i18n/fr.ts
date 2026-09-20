@@ -1072,7 +1072,7 @@ export default {
 	'landing.template_custom_desc': 'Configurer entièrement selon vos besoins',
 
 	'landing.security_title': 'Architecture zéro connaissance',
-	'landing.security_subtitle': 'Même nous, les administrateurs, ne pouvons pas lire vos entrées. Le serveur stocke un hash d\'authentification, un nom d\'utilisateur, des blobs chiffrés et des horodatages de téléversement. C\'est la liste complète.',
+	'landing.security_subtitle': "Même nous, les administrateurs, ne pouvons pas lire vos entrées. Le serveur conserve un nom d'utilisateur, une empreinte d'authentification, des blocs chiffrés avec leur horodatage et un bit par entrée indiquant si vous la partagez. Leur contenu nous reste illisible.",
 	'landing.security_hierarchy_title': 'Hiérarchie des clés',
 	'landing.security_hierarchy_password': 'Votre mot de passe',
 	'landing.security_hierarchy_auth': 'auth_hash (le serveur ne stocke que ce hash)',
@@ -1463,7 +1463,7 @@ export default {
 	'tech.why_client_title': 'Pourquoi le chiffrement côté client ?',
 	'tech.why_client_desc': 'Une compromission du serveur ne peut pas divulguer les données de santé. Même les dumps de base de données sont inutiles sans les mots de passe des utilisateurs. Véritable zero-knowledge.',
 	'tech.why_metadata_title': 'Pourquoi aucune métadonnée ?',
-	'tech.why_metadata_desc': 'La table encrypted_documents ne stocke que : user_id, blob chiffré, horodatage. Aucun type d\'enregistrement, aucune date d\'événement, aucune pathologie. Même l\'analyse du trafic ne révèle rien sur l\'état de santé.',
+	'tech.why_metadata_desc': "La table encrypted_documents stocke un identifiant d'utilisateur, le bloc chiffré, des horodatages, un bit indiquant si l'entrée peut être partagée et — pour les entrées importées d'epilepc — une clé opaque qui empêche un nouvel import de les dupliquer. Aucun type d'entrée, aucune date d'événement, aucune pathologie. L'analyse du trafic révèle quand vous avez écrit, jamais quoi.",
 	'tech.why_hardening_title': 'Défense en profondeur',
 	'tech.why_hardening_desc': "La bibliothèque Argon2 WASM est épinglée par Subresource Integrity — un script altéré est refusé par le navigateur. La clé maître ne vit que dans sessionStorage, effacée à la fermeture du navigateur, réduisant la fenêtre XSS. En-têtes CSP, X-Frame-Options et Referrer-Policy, CORS strict, verrouillages par compte en connexion et récupération, rétention 90 jours du journal d'audit avec anonymisation IP complètent le dispositif.",
 	'tech.verify_title': 'Vérifiez par vous-même',

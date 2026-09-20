@@ -62,7 +62,7 @@ lives in exactly one of them, as opaque ciphertext.
 | Table | Holds | Server can read? |
 |-------|-------|------------------|
 | `users` | username, `SHA-256(auth_key)`, Argon2 params, `encrypted_master`, recovery blob, admin flag, lockout state | Metadata only — never the password or keys |
-| `encrypted_documents` | `user_id`, `encrypted_data` (AES-256-GCM blob), timestamps, `share_class` | **No** — opaque blobs. `share_class` is one bit (shareable / personal), set by the client so the server can enforce a sharing scope |
+| `encrypted_documents` | `user_id`, `encrypted_data` (AES-256-GCM blob), timestamps, `share_class`, `client_key` | **No** — opaque blobs. `share_class` is one bit (shareable / personal), set by the client so the server can enforce a sharing scope. `client_key` is an opaque idempotency key on imported records, so a repeated import cannot duplicate them |
 | `family_grants` | caregiver-sharing grants: a re-wrapped `master_key` + a family-code auth proof + `share_mask` (what this invitation may read) | No — wrapped key is opaque |
 | `audit_log` | event name (auth, sharing, admin, and every document create/update/delete), user id, timestamp, IP (truncated after 30 days, purged at 90; runs at boot and about daily) | Yes — this is operational metadata, by design |
 | `schema_meta` | one row: how far the schema has been migrated, and the lowest image allowed to read it | Yes — no user data; see [VERSIONING.md](VERSIONING.md#the-database-schema-has-its-own-version) |

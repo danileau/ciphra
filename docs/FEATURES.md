@@ -21,7 +21,9 @@ The core daily interaction is the entry form at `/log/[date]`:
 - **Episodes** — `+`/`−` counters per episode type.
 - **Triggers** — toggle chips (sleep, stress, weather, …).
 - **Vitals** — typed values (blood pressure, sleep hours, weight, mood, …).
-- **Medications** — taken / not-taken toggles.
+- **Medications** — a scheduled medication counts as taken on a logged day,
+  so the form asks only what was *missed*; an as-needed one is ticked when
+  taken.
 - **Notes** — free text.
 
 For capture-as-it-happens rather than an evening review, **quick-add** records
@@ -84,6 +86,11 @@ in the browser:
 - symptom / trigger frequency and medication tables,
 - a landscape day-by-day protocol grid.
 
+Where a dose changed inside the window, the trend charts shade each dose
+period behind the curve and mark the day it changed, so before and after can
+be read against one axis. ciphra draws the structure and no conclusion: there
+is no count, rate or comparison per period anywhere in the document.
+
 A fourth card exports the **treatment history**: every medication ever
 recorded, oldest first, with its dose periods and how each one ended, across
 the whole span rather than one window. It is built from the medication list
@@ -108,7 +115,15 @@ people want a relative to see the whole picture; others keep the diary to
 themselves. The scope is enforced on the server — an out-of-scope document is
 never sent to the caregiver at all, rather than being filtered in their browser
 — and it can be changed afterwards. Narrowing a scope stops further access; it
-cannot retract what was already downloaded.
+cannot retract what was already downloaded. While a caregiver is reading
+someone's record, a line under the banner says how many entries are being held
+back from them, counted by the server.
+
+What a caregiver sees is the whole medication list, not just its doses: the
+dated history, the reason typed for a change, and the reason a medication was
+stopped. That is deliberate — somebody managing another person's medication
+needs to know why a drug was dropped — but it is worth knowing before writing
+something in that field for a shared account.
 
 ## Account and recovery
 
@@ -125,8 +140,12 @@ orthography (`ss`, never `ß`).
 
 ## Privacy by construction
 
-- Zero-knowledge: the server stores only opaque encrypted blobs (see
-  [SECURITY_MODEL.md](SECURITY_MODEL.md)).
+- Zero-knowledge: every entry is an opaque blob the server cannot read. It
+  does hold what it needs to run an account — a username, an auth hash,
+  timestamps, one bit per entry saying whether you share it, invitation
+  bookkeeping, and a log of *when* you wrote (never what).
+  [SECURITY_MODEL.md](SECURITY_MODEL.md) lists all of it; that list is the
+  honest one, and this page defers to it.
 - No email address is collected — accounts are a username and password only.
 - A decrypted-document cache in IndexedDB makes revisits fast; logout wipes it.
 - Public condition pages (`/conditions/[id]`) explain what each condition
@@ -152,5 +171,6 @@ prevent the two systems from diverging.
 ## Operator tooling
 
 `/admin` is a metadata-only operator dashboard — user counts, account
-lock/unlock, an audit log of authentication events. It cannot show health
-content; there is none to show in plaintext.
+lock/unlock, and the audit log: sign-ins, family sharing, admin actions, and
+the fact that a document was written, changed or deleted. It cannot show
+health content; there is none to show in plaintext.

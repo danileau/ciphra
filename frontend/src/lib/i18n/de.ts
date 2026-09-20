@@ -1094,7 +1094,7 @@ export default {
 	'landing.template_custom_desc': 'Komplett individuell konfigurieren',
 
 	'landing.security_title': 'Zero-Knowledge Architektur',
-	'landing.security_subtitle': 'Nicht mal wir als Admins können deine Einträge lesen. Der Server speichert einen Auth-Hash, einen Benutzernamen, verschlüsselte Blobs und Upload-Zeitstempel. Das ist die vollständige Liste.',
+	'landing.security_subtitle': "Nicht einmal wir als Admins können deine Einträge lesen. Der Server hält einen Benutzernamen, einen Auth-Hash, verschlüsselte Blobs mit Zeitstempel und ein Bit pro Eintrag, ob du ihn teilst. Was darin steht, bleibt für uns unlesbar.",
 	'landing.security_hierarchy_title': 'Schlüssel-Hierarchie',
 	'landing.security_hierarchy_password': 'Dein Passwort',
 	'landing.security_hierarchy_auth': 'auth_hash (Server speichert nur diesen Hash)',
@@ -1485,7 +1485,7 @@ export default {
 	'tech.why_client_title': 'Warum clientseitige Verschlüsselung?',
 	'tech.why_client_desc': 'Bei Server-Kompromittierung können keine Gesundheitsdaten geleakt werden. Selbst Datenbank-Dumps sind nutzlos ohne Benutzerpasswörter. Echtes Zero-Knowledge.',
 	'tech.why_metadata_title': 'Warum keine Metadaten?',
-	'tech.why_metadata_desc': 'Die encrypted_documents-Tabelle speichert nur: user_id, verschlüsselten Blob, Zeitstempel. Kein Datentyp, kein Ereignisdatum, keine Erkrankung. Selbst Verkehrsanalyse verrät nichts über den Gesundheitszustand.',
+	'tech.why_metadata_desc': "Die Tabelle encrypted_documents speichert eine Benutzer-ID, das verschlüsselte Blob, Zeitstempel, ein Bit, ob der Eintrag geteilt werden darf, und — bei aus epilepc importierten Einträgen — einen undurchsichtigen Schlüssel, damit ein erneuter Import sie nicht dupliziert. Keinen Eintragstyp, kein Ereignisdatum, keine Erkrankung. Eine Verkehrsanalyse zeigt, wann du geschrieben hast, nie was.",
 	'tech.why_hardening_title': 'Defense in Depth',
 	'tech.why_hardening_desc': 'Die Argon2-WASM-Library ist mit Subresource Integrity (SRI) gepinnt — eine manipulierte Datei wird vom Browser abgelehnt. Der Master Key liegt nur im sessionStorage und wird beim Schliessen des Browsers gelöscht, was das XSS-Fenster verkleinert. CSP, X-Frame-Options und Referrer-Policy-Header, strenges CORS, Sperren pro Account bei Login und Recovery sowie 90-Tage-Audit-Log-Retention mit IP-Anonymisierung runden das Bild ab.',
 	'tech.verify_title': 'Überprüfe es selbst',
