@@ -5,5 +5,5 @@ redis>=8.1.0
 psycopg2-binary>=2.9.13
 argon2-cffi>=25.1.0
 cryptography>=50.0.1
-pyjwt>=2.13.0
+pyjwt>=2.14.0
 gunicorn>=26.2.0
