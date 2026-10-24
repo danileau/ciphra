@@ -24,12 +24,12 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.1",
     "@sveltejs/kit": "^2.70.3",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/svelte": "^5.4.2",
-    "@types/node": "^24.13.4",
+    "@types/node": "^24.19.2",
     "argon2": "^0.45.1",
     "autoprefixer": "^10.6.1",
     "jsdom": "^24.1.3",
