@@ -47,7 +47,7 @@
     "argon2-browser": "^1.18.0",
     "chart.js": "^4.5.1",
     "jspdf": "^4.2.1",
-    "jspdf-autotable": "^5.0.8",
+    "jspdf-autotable": "^5.0.9",
     "marked": "^18.1.1",
     "vite-plugin-top-level-await": "^1.6.0",
     "vite-plugin-wasm": "^3.6.0"
