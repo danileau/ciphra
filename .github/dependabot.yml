@@ -44,6 +44,13 @@ updates:
       # minor/patch still flow through.
       - dependency-name: typescript
         update-types: [version-update:semver-major]
+      # SvelteKit 3 (+ adapter-node 6, which peers it) is a framework
+      # migration, not a bump — #231 failed the frontend job. Hold both majors
+      # until it is done on purpose; 2.x minor/patch still flow through.
+      - dependency-name: "@sveltejs/kit"
+        update-types: [version-update:semver-major]
+      - dependency-name: "@sveltejs/adapter-node"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: pip
     directory: /api
@@ -58,13 +65,22 @@ updates:
   # a floating tag only refreshes when the image happens to be rebuilt.
   # Majors stay held — the Node major tracks @types/node (see above).
   - package-ecosystem: docker
-    directories: [/frontend, /nginx]
+    directories: [/frontend, /nginx, /api]
     schedule:
       interval: weekly
       day: monday
     ignore:
       - dependency-name: node
         update-types: [version-update:semver-major]
+      # nginx odd minors are mainline, even minors are stable, and Dependabot
+      # can't tell them apart (it offered mainline 1.31 in #228). Stay on the
+      # stable line: patches flow, the next stable minor is a manual bump.
+      - dependency-name: nginx
+        update-types: [version-update:semver-minor, version-update:semver-major]
+      # Python 3.11 → 3.12 is a runtime upgrade (C extensions, deprecations),
+      # not a bump. Patches (3.11.x) flow; the minor moves on purpose.
+      - dependency-name: python
+        update-types: [version-update:semver-minor, version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /

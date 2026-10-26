@@ -1,11 +1,18 @@
 # Scheduled vulnerability scan (2026-06-12) — closes the gap the
 # PR-triggered gate cannot: a CVE published AFTER the last commit hits
 # existing lockfiles and the base layers (alpine/debian) of images
-# already running in prod. Runs daily against a fresh scanner + fresh
-# DB (no cache here on purpose), scans the repo AND the published
-# images, and fails loudly — GitHub emails the repo owner on a failed
-# scheduled run. A red run means: assess, then either bump deps /
-# rebuild+redeploy images, or document the acceptance.
+# already running in prod. Runs daily against a fresh vuln DB (no cache
+# here on purpose), scans the repo AND the images prod is running, and
+# fails loudly: the `alert` job pushes the findings to ntfy
+# (scripts/scan-alert.sh), on top of GitHub's failed-run email. A red run
+# means: assess, then either bump deps / rebuild+redeploy images, or
+# document the acceptance.
+#
+# Trivy itself is pinned (`version:`) to the SAME release as ci.yml's PR gate:
+# with `latest`, the daily scan and the gate could disagree only because they
+# ran different scanners. Dependabot can't bump this input — move all four
+# `version:` lines together, by hand, with the trivy-action bump. The vuln DB
+# is not pinned and stays fresh; only the scanner binary is.
 name: Security scan
 
 on:
@@ -40,26 +47,109 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
-          version: latest
+          version: v0.76.1   # pinned — see the note at the top of this file
+          # JSON so the alert job can name packages and CVEs; the Findings
+          # step below prints the same list to this job's log.
+          format: json
+          output: trivy-repo.json
+      - name: Findings
+        if: always()
+        run: scripts/scan-alert.sh . repo
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-repo
+          path: trivy-repo.json
+          if-no-files-found: ignore
+
+  # Which images is prod running? `:latest` is the newest BUILD, and a build
+  # can sit undeployed for days (it did for 1.5.1) — scanning it reports the
+  # next release, not the exposure. The VPS deploys the newest `deploy-<sha>`
+  # tag by `--sort=-creatordate` (OPERATIONS.md); resolve it the same way.
+  live:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.tag.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: tag
+        run: |
+          tag="$(git for-each-ref --sort=-creatordate --count=1 --format='%(refname:strip=2)' 'refs/tags/deploy-*')"
+          [ -n "$tag" ] || { echo "::error::no deploy-* tag found — cannot tell what prod runs"; exit 1; }
+          echo "Live per deploy tags: $tag"
+          echo "sha=${tag#deploy-}" >> "$GITHUB_OUTPUT"
 
   images:
+    needs: live
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         image: [ciphra-frontend, ciphra-api, ciphra-nginx]
     steps:
+      - uses: actions/checkout@v7
       - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Trivy image scan (base layers + bundled deps), fresh DB
+      - name: Trivy image scan of the LIVE image (base layers + bundled deps), fresh DB
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
-          image-ref: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:latest
+          image-ref: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ needs.live.outputs.sha }}
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
-          version: latest
+          version: v0.76.1   # pinned — see the note at the top of this file
+          format: json
+          output: trivy-${{ matrix.image }}.json
+      - name: Findings
+        if: always()
+        run: scripts/scan-alert.sh . ${{ matrix.image }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-${{ matrix.image }}
+          path: trivy-${{ matrix.image }}.json
+          if-no-files-found: ignore
+
+  # One ntfy push that names the packages and CVEs. Red used to mean a GitHub
+  # email plus a weekly "CVE scan failure" line in the digest, and the scan
+  # stayed red for ~24 days. High priority when it turns red, default while it
+  # stays red, one recovery ping when it clears, silence while green. Only
+  # runs on main push to ntfy; branch runs print the same report.
+  alert:
+    needs: [repo, live, images]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read   # read the previous scan run's conclusion
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        continue-on-error: true   # nothing uploaded → every scan reports as incomplete
+        with:
+          pattern: trivy-*
+          merge-multiple: true
+          path: results
+      - name: Previous scan conclusion
+        id: prev
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prev="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow security-scan.yml --branch main \
+            --status completed --limit 5 --json conclusion \
+            -q '[.[] | select(.conclusion == "success" or .conclusion == "failure")][0].conclusion // ""')"
+          echo "Previous completed scan on main: ${prev:-none}"
+          echo "conclusion=$prev" >> "$GITHUB_OUTPUT"
+      - name: Alert
+        env:
+          PREV_CONCLUSION: ${{ steps.prev.outputs.conclusion }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          LIVE_SHA: ${{ needs.live.outputs.sha }}
+          NTFY_TOPIC_URL: ${{ github.ref == 'refs/heads/main' && secrets.NTFY_TOPIC_URL || '' }}
+        run: scripts/scan-alert.sh results repo ciphra-frontend ciphra-api ciphra-nginx
