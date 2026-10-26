@@ -7,7 +7,10 @@
 # Tests run via:  docker compose run --rm --build api pytest -q
 # (compose.api.target=dev — see docker-compose.yml).
 
-FROM python:3.11-slim AS base
+# Pinned to an exact patch (bumped by Dependabot's docker updater) for the
+# same reason as the frontend's Node: a floating tag is only as fresh as the
+# last rebuild. Minor/major (3.12+) is a runtime upgrade, held in dependabot.yml.
+FROM python:3.11.17-slim AS base
 
 # `apt-get upgrade` patches the Debian base packages (the slim base lags the
 # security repo); install build/runtime extras; then drop the apt lists.
