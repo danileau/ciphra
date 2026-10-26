@@ -1,9 +1,12 @@
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { fileURLToPath } from 'node:url';
+import { ciphraDocs } from './vite.config';
 
 export default defineConfig({
-    plugins: [sveltekit()],
+    // ciphraDocs serves `virtual:ciphra-docs`; the root layout reaches
+    // lib/docs.ts through lib/seoMeta.ts, so layout tests need it too.
+    plugins: [ciphraDocs(), sveltekit()],
     // Svelte 5 ships separate client/server builds selected via export
     // conditions. Without 'browser', vitest resolves the SERVER build and
     // every component render dies with "mount(...) is not available on the

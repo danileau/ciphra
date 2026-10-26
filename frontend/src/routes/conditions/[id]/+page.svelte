@@ -23,41 +23,6 @@
 		.filter(Boolean);
 </script>
 
-<svelte:head>
-	{#if info}
-		<title>{title} — ciphra | {$t('condition.seo_suffix')}</title>
-		<meta name="description" content="{subtitle} — {$t('condition.seo_description')}" />
-		<meta property="og:title" content="{title} — ciphra" />
-		<meta property="og:description" content={subtitle} />
-		<meta property="og:type" content="article" />
-		<meta property="og:url" content="https://ciphra.ch/conditions/{conditionId}" />
-		<meta name="twitter:card" content="summary" />
-		<meta name="twitter:title" content="{title} — ciphra" />
-		<meta name="twitter:description" content={subtitle} />
-		<!-- JSON-LD structured data. Defensive `</` → `<\/` escape so a
-		     condition title containing the literal closing-script-tag
-		     can't break out of the JSON-LD context (security review,
-		     PI v13). Marginal in practice since `title` is preset
-		     metadata, but the escape is free. -->
-		{@html `<script type="application/ld+json">${JSON.stringify({
-			"@context": "https://schema.org",
-			"@type": "MedicalWebPage",
-			"name": title,
-			"description": subtitle,
-			"url": `https://ciphra.ch/conditions/${conditionId}`,
-			"about": {
-				"@type": "MedicalCondition",
-				"name": title
-			},
-			"publisher": {
-				"@type": "Organization",
-				"name": "ciphra",
-				"url": "https://ciphra.ch"
-			}
-		}).replace(/<\//g, '<\\/')}</script>`}
-	{/if}
-</svelte:head>
-
 
 {#if !info}
 	<div class="min-h-screen flex items-center justify-center" style="background: var(--surface);">

@@ -1,7 +1,7 @@
 # ciphra — https://ciphra.ch
 # Public marketing + condition + doc pages are crawlable. The signed-in
 # app (journal, calendar, reports, settings, admin, log, setup, migrate,
-# join, stream) returns an auth-gated app shell to crawlers — no content,
+# join, stream, protocol) returns an auth-gated app shell to crawlers — no content,
 # so it's disallowed to keep empty shells out of the index. /api is data.
 
 User-agent: *
@@ -17,5 +17,6 @@ Disallow: /setup
 Disallow: /migrate
 Disallow: /join/
 Disallow: /stream
+Disallow: /protocol
 
 Sitemap: https://ciphra.ch/sitemap.xml

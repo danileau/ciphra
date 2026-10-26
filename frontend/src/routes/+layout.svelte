@@ -28,6 +28,8 @@
 	import DatePicker from '$lib/components/DatePicker.svelte';
 	import TimePicker from '$lib/components/TimePicker.svelte';
 	import { shellFor } from '$lib/routeShells';
+	import { publicMeta, jsonLdScript } from '$lib/seoMeta';
+	import de from '$lib/i18n/de';
 	import { sweepLegacyLocalStorage } from '$lib/legacy-cleanup';
 	import { fade, fly } from 'svelte/transition';
 
@@ -873,6 +875,10 @@
 	// replacing the old multi-branch `currentPath !== '/X' && …`
 	// chains that each new route had to be patched into.
 	$: currentShell = shellFor(currentPath);
+	// Public-page head (title / description / canonical / OG). Lives here,
+	// outside the $authReady gate, so it is in the SSR HTML crawlers read —
+	// see lib/seoMeta.ts. No user locale on the server, so SSR speaks `de`.
+	$: seo = publicMeta(currentPath, browser ? $t : (k) => (de as Record<string, string>)[k] ?? k);
 	// CIPH-890 — `data-route` and `data-cohort` on <main> drive the
 	// CIPH-892 rhythm tokens and the cohort accent overrides in app.css.
 	$: currentRoute = pathToRoute(currentPath);
@@ -940,6 +946,29 @@
 </script>
 
 <svelte:window on:keydown={onQuickAddKeydown} />
+
+<svelte:head>
+	{#if seo}
+		<title>{seo.title}</title>
+		{#if seo.description}<meta name="description" content={seo.description} />{/if}
+		<link rel="canonical" href={seo.canonical} />
+		<meta property="og:type" content={seo.ogType} />
+		<meta property="og:site_name" content="ciphra" />
+		<meta property="og:title" content={seo.title} />
+		{#if seo.description}<meta property="og:description" content={seo.description} />{/if}
+		<meta property="og:url" content={seo.canonical} />
+		{#if seo.ogImage}
+			<meta property="og:image" content={seo.ogImage} />
+			<meta property="og:image:width" content="1200" />
+			<meta property="og:image:height" content="630" />
+			<meta name="twitter:image" content={seo.ogImage} />
+		{/if}
+		<meta name="twitter:card" content={seo.ogImage ? 'summary_large_image' : 'summary'} />
+		<meta name="twitter:title" content={seo.title} />
+		{#if seo.description}<meta name="twitter:description" content={seo.description} />{/if}
+		{#if seo.jsonLd}{@html jsonLdScript(seo.jsonLd)}{/if}
+	{/if}
+</svelte:head>
 
 {#if secureContextMissing}
 	<div class="min-h-screen flex items-center justify-center p-6" style="background: var(--surface)">

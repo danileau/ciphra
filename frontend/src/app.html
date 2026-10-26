@@ -31,11 +31,10 @@
 	     and was a render-blocking request on landing. Inter is now
 	     served from the system stack with woff2 fallbacks; the system
 	     UI font is what most users render at native quality anyway. -->
-	<meta name="description" content="ciphra — the encrypted diary for chronic conditions. Encrypted with your password, right in your browser." />
-	<!-- CIPH-pi22-L-2 — canonical anchors search-engine ranking on the
-	     production origin. Per-route canonicals override via <svelte:head>
-	     where useful (/conditions/[id] etc); this is the site-wide default. -->
-	<link rel="canonical" href="https://ciphra.ch/" />
+	<!-- Title, description and a self-referencing canonical come from the
+	     root layout's <svelte:head> (lib/seoMeta.ts) so every public page
+	     carries its own. A site-wide canonical=/ here told crawlers that all
+	     condition/legal/doc pages were duplicates of the homepage. -->
 	<!-- CIPH-pi22-L-3 — JSON-LD: WebSite + Organization. Per Hans's L-1
 	     persona-dry-run deduct, MedicalWebPage / MedicalApplication markers
 	     are deferred until the MDR/MepV regulatory check (see
