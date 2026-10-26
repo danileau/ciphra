@@ -54,6 +54,18 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
 
+  # Base images are pinned to exact versions, so something has to move them:
+  # a floating tag only refreshes when the image happens to be rebuilt.
+  # Majors stay held — the Node major tracks @types/node (see above).
+  - package-ecosystem: docker
+    directories: [/frontend, /nginx]
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
