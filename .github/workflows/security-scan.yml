@@ -55,7 +55,7 @@ jobs:
       - name: Findings
         if: always()
         run: scripts/scan-alert.sh . repo
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: trivy-repo
@@ -109,7 +109,7 @@ jobs:
       - name: Findings
         if: always()
         run: scripts/scan-alert.sh . ${{ matrix.image }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: trivy-${{ matrix.image }}
@@ -130,7 +130,7 @@ jobs:
       actions: read   # read the previous scan run's conclusion
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true   # nothing uploaded → every scan reports as incomplete
         with:
           pattern: trivy-*
