@@ -8,7 +8,12 @@
 # a code-side decision in svelte.config.js.
 
 # ─── builder ────────────────────────────────────────────────────────────────
-FROM node:24-alpine AS builder
+# Node is pinned to an exact patch (bumped by Dependabot's docker updater).
+# The floating `node:24-alpine` tag is only as fresh as the last rebuild: the
+# image live on 2026-10-26 still ran 24.21.0, five days after 24.22.1 fixed
+# Node2Shell (CVE-2026-111497, the Brotli decoder bundled into the runtime).
+# Keep builder and runtime on the same version.
+FROM node:24.22.1-alpine AS builder
 WORKDIR /app
 
 # Install with npm ci against a locked manifest — reproducible images.
@@ -29,7 +34,7 @@ COPY _docs-src/ /docs-src/
 RUN npm run build && npm prune --omit=dev
 
 # ─── runtime ────────────────────────────────────────────────────────────────
-FROM node:24-alpine AS runtime
+FROM node:24.22.1-alpine AS runtime
 WORKDIR /app
 
 # Drop privileges + shrink the supply-chain surface. node-alpine ships a `node`
