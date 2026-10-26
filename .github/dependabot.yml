@@ -44,6 +44,13 @@ updates:
       # minor/patch still flow through.
       - dependency-name: typescript
         update-types: [version-update:semver-major]
+      # SvelteKit 3 (+ adapter-node 6, which peers it) is a framework
+      # migration, not a bump — #231 failed the frontend job. Hold both majors
+      # until it is done on purpose; 2.x minor/patch still flow through.
+      - dependency-name: "@sveltejs/kit"
+        update-types: [version-update:semver-major]
+      - dependency-name: "@sveltejs/adapter-node"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: pip
     directory: /api
@@ -65,6 +72,11 @@ updates:
     ignore:
       - dependency-name: node
         update-types: [version-update:semver-major]
+      # nginx odd minors are mainline, even minors are stable, and Dependabot
+      # can't tell them apart (it offered mainline 1.31 in #228). Stay on the
+      # stable line: patches flow, the next stable minor is a manual bump.
+      - dependency-name: nginx
+        update-types: [version-update:semver-minor, version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
