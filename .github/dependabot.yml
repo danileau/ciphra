@@ -58,7 +58,7 @@ updates:
   # a floating tag only refreshes when the image happens to be rebuilt.
   # Majors stay held — the Node major tracks @types/node (see above).
   - package-ecosystem: docker
-    directory: /frontend
+    directories: [/frontend, /nginx]
     schedule:
       interval: weekly
       day: monday
