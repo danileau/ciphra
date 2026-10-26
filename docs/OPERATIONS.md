@@ -378,7 +378,14 @@ The workflows:
   not a branch push, so `main-protection` is untouched). It used to fire on any
   merge that moved `VERSION`; that was removed 2026-08-30 — cutting a release
   is a decision, not a side effect. See `docs/VERSIONING.md`.
-- `security-scan.yml` — daily Trivy of repo + published images.
+- `security-scan.yml` — daily Trivy of the repo + the images prod **runs**
+  (the newest `deploy-*` tag, resolved like the VPS does — not `:latest`,
+  which can be an undeployed build). Trivy is pinned to the same version as
+  the PR gate in `ci.yml`; bump all four `version:` lines together. Red pushes
+  ntfy via `scripts/scan-alert.sh` with the packages, versions and CVEs:
+  high priority when it turns red, default while it stays red, one recovery
+  ping, silence while green. Until 2026-10-26 red only meant a GitHub email,
+  and the scan stayed red for ~24 days.
 - `security-monitor.yml` — daily deterministic drift check of the LIVE
   prod edge (`scripts/security-monitor.sh`): CSP shape, HSTS+preload, the
   security headers, no framework leak, and — with `CF_API_TOKEN` +
