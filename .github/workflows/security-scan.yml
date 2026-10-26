@@ -48,7 +48,27 @@ jobs:
           ignore-unfixed: true
           version: v0.76.1   # pinned — see the note at the top of this file
 
+  # Which images is prod running? `:latest` is the newest BUILD, and a build
+  # can sit undeployed for days (it did for 1.5.1) — scanning it reports the
+  # next release, not the exposure. The VPS deploys the newest `deploy-<sha>`
+  # tag by `--sort=-creatordate` (OPERATIONS.md); resolve it the same way.
+  live:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.tag.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: tag
+        run: |
+          tag="$(git for-each-ref --sort=-creatordate --count=1 --format='%(refname:strip=2)' 'refs/tags/deploy-*')"
+          [ -n "$tag" ] || { echo "::error::no deploy-* tag found — cannot tell what prod runs"; exit 1; }
+          echo "Live per deploy tags: $tag"
+          echo "sha=${tag#deploy-}" >> "$GITHUB_OUTPUT"
+
   images:
+    needs: live
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -60,11 +80,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Trivy image scan (base layers + bundled deps), fresh DB
+      - name: Trivy image scan of the LIVE image (base layers + bundled deps), fresh DB
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
-          image-ref: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:latest
+          image-ref: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ needs.live.outputs.sha }}
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
