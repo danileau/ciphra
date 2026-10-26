@@ -29,7 +29,7 @@ const apiTarget = process.env.VITE_API_URL || 'http://localhost:5050';
  *     so docker-compose bind-mounts the doc sources under `/docs-src`.
  *   - Host-side `vite build` / `npm run dev`: the repo root is one up.
  */
-function ciphraDocs(): Plugin {
+export function ciphraDocs(): Plugin {
 	const VIRTUAL = 'virtual:ciphra-docs';
 	const RESOLVED = '\0' + VIRTUAL;
 	const docRoot = ['/docs-src', resolve(process.cwd(), '..')].find((d) =>

@@ -2,11 +2,6 @@
 	import { t } from '$lib/i18n';
 </script>
 
-<svelte:head>
-	<title>{$t('terms.title')} — ciphra</title>
-	<meta name="description" content={$t('terms.meta')} />
-</svelte:head>
-
 <main id="main-content" class="layout-reading py-8 space-y-6">
 	<header class="space-y-1">
 		<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('terms.title')}</h1>

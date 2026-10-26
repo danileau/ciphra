@@ -5,10 +5,6 @@
 	$: doc = getDoc($page.params.slug ?? '');
 </script>
 
-<svelte:head>
-	<title>{doc ? doc.meta.title : 'Documentation'} — ciphra</title>
-</svelte:head>
-
 <main id="main-content" class="layout-reading py-8 space-y-5">
 	<a class="doc-back" href="/docs">← Documentation</a>
 

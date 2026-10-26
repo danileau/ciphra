@@ -23,6 +23,7 @@ const CONDITION_PAGE = readFileSync(
 	join(__dirname, '..', '..', 'routes', 'conditions', '[id]', '+page.svelte'),
 	'utf8',
 );
+const SEO_META = readFileSync(join(__dirname, '..', 'seoMeta.ts'), 'utf8');
 
 describe('CIPH-pi24-2 ciphra.app removal', () => {
 	it('PublicFooter contains no `ciphra.app` reference', () => {
@@ -36,24 +37,15 @@ describe('CIPH-pi24-2 ciphra.app removal', () => {
 		expect(FOOTER).not.toMatch(/landing\.footer_domains/);
 	});
 
-	it('conditions/[id] og:url uses ciphra.ch', () => {
-		expect(CONDITION_PAGE).toMatch(
-			/<meta\s+property="og:url"\s+content="https:\/\/ciphra\.ch\/conditions\//,
-		);
+	it('public-page og:url / canonical origin is ciphra.ch', () => {
+		// Condition-page head moved to the root layout via lib/seoMeta.ts.
+		expect(SEO_META).toMatch(/SITE_ORIGIN = 'https:\/\/ciphra\.ch'/);
+		expect(SEO_META).not.toMatch(/ciphra\.app/);
 	});
 
 	it('conditions/[id] JSON-LD has no ciphra.app references', () => {
 		// Both the page-level `url` and the publisher.url were stale.
 		expect(CONDITION_PAGE).not.toMatch(/ciphra\.app/);
-	});
-
-	it('conditions/[id] JSON-LD url uses ciphra.ch', () => {
-		// Anchor on the JSON-LD url field (different from og:url syntax).
-		expect(CONDITION_PAGE).toMatch(/"url":\s*`https:\/\/ciphra\.ch\/conditions\//);
-	});
-
-	it('conditions/[id] JSON-LD publisher.url uses ciphra.ch', () => {
-		expect(CONDITION_PAGE).toMatch(/"url":\s*"https:\/\/ciphra\.ch"/);
 	});
 });
 

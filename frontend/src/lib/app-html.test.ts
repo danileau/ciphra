@@ -22,15 +22,11 @@ const APP_HTML = readFileSync(
 );
 
 describe('CIPH-pi22-L-2 canonical link', () => {
-	it('app.html declares <link rel="canonical">', () => {
-		expect(APP_HTML).toMatch(/<link\s+rel="canonical"\s+href="https:\/\/ciphra\.ch\//);
-	});
-
-	it('canonical sits inside <head>, before %sveltekit.head%', () => {
-		const headEnd = APP_HTML.indexOf('%sveltekit.head%');
-		const canonical = APP_HTML.search(/<link\s+rel="canonical"/);
-		expect(canonical, 'canonical link must exist').toBeGreaterThan(-1);
-		expect(canonical, 'canonical must precede %sveltekit.head% so per-route overrides win').toBeLessThan(headEnd);
+	// The canonical is per-route now (root layout → lib/seoMeta.ts). A
+	// site-wide canonical=/ in app.html told crawlers every condition,
+	// legal and doc page was a duplicate of the homepage.
+	it('app.html does not declare a site-wide canonical', () => {
+		expect(APP_HTML).not.toMatch(/<link\s+rel="canonical"/);
 	});
 });
 
