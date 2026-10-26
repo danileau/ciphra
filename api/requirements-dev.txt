@@ -8,4 +8,4 @@
 # (Or build the dev target directly: `docker build --target dev ./api`.)
 
 pytest>=9.1.1,<10.0
-pytest-mock>=3.16.0,<4.0
+pytest-mock>=3.17.0,<4.0
