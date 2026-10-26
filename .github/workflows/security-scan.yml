@@ -6,6 +6,12 @@
 # images, and fails loudly — GitHub emails the repo owner on a failed
 # scheduled run. A red run means: assess, then either bump deps /
 # rebuild+redeploy images, or document the acceptance.
+#
+# Trivy itself is pinned (`version:`) to the SAME release as ci.yml's PR gate:
+# with `latest`, the daily scan and the gate could disagree only because they
+# ran different scanners. Dependabot can't bump this input — move all four
+# `version:` lines together, by hand, with the trivy-action bump. The vuln DB
+# is not pinned and stays fresh; only the scanner binary is.
 name: Security scan
 
 on:
@@ -40,7 +46,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
-          version: latest
+          version: v0.76.1   # pinned — see the note at the top of this file
 
   images:
     runs-on: ubuntu-latest
@@ -62,4 +68,4 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
-          version: latest
+          version: v0.76.1   # pinned — see the note at the top of this file
