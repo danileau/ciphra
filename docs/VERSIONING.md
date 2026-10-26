@@ -105,6 +105,11 @@ nothing.
 5. `Release images` then tags the three images `:X.Y.Z` (plus `:<sha>` and
    `:latest`) and cosign-signs them. That part is automatic — an image without
    a standardized tag is useless, and there is no judgement in it.
+   The deploy wizard warns about both halves of this before it pushes
+   anything: a commit carrying `changelog.d/` fragments that no release has
+   compiled, and a `VERSION` whose tag was never minted
+   (`scripts/release-state.sh`). Warnings, not blocks — shipping ahead of a
+   release is a legitimate choice; not noticing is not.
 6. **Mint the release tag by hand**, when you decide the release is a release:
    Actions → **Release tag** → *Run workflow*. It creates the annotated
    `vX.Y.Z` tag and publishes a GitHub release whose body is that version's

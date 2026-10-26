@@ -8,7 +8,13 @@
 #      with their release-images signing status, whether they're already
 #      deployed, and which one is currently live. You pick from a menu instead
 #      of hunting for a 7-char SHA (the `fatal: Failed to resolve` trap).
-#   2. AM I ALLOWED?  → reads your GitHub permission on the repo. The deploy
+#   2. IS THIS IN A RELEASE?  → warns when the commit carries changelog
+#      fragments no release has compiled yet, or when its VERSION was never
+#      tagged (v1.4.0 sat untagged for three days, with every compare link in
+#      the user-facing changelog dead, and nothing said so). Warnings only —
+#      shipping ahead of a release is a legitimate choice, an unnoticed one
+#      is not. See scripts/release-state.sh.
+#   3. AM I ALLOWED?  → reads your GitHub permission on the repo. The deploy
 #      gate is repo *write* access (the trigger is `git push` of a tag —
 #      "repo write = operator", per ciphra-autodeploy). Read-only collaborators
 #      get a view-only wizard with the deploy actions disabled and explained.
@@ -45,6 +51,15 @@ else
 fi
 die() { echo "${RED}✗ $*${R}" >&2; exit 1; }
 hr()  { printf '%s\n' "${DIM}────────────────────────────────────────────────────────────${R}"; }
+
+# release_state <sha> — what is about to ship, and whether it is labelled.
+# Never blocks: it prints, the y/N below decides. Kept in its own script so it
+# can be tested without driving the wizard (scripts/test-release-state.sh).
+release_state() {
+  local out
+  out="$("$(dirname "$0")/release-state.sh" "$1" "$REMOTE" 2>/dev/null)" || true
+  [ -n "$out" ] && { printf '%s\n' "$out"; echo; }
+}
 
 # do_deploy <sha> — the actual production trigger. Assumes the caller already
 # established that <sha> is on origin/main, has signed images, and (for a fresh
@@ -257,6 +272,7 @@ if [ "$choice" = "r" ] || [ "$choice" = "R" ]; then
   echo "${YLW}Rollback/redeploy re-points the deploy tag so the VPS re-pulls ${TARGET}.${R}"
   echo "${DIM}The tag deploy-${TARGET} exists, so it must be recreated with a fresh timestamp"
   echo "(the VPS picks the newest deploy tag by creatordate).${R}"
+  release_state "$TARGET"
   printf "Recreate & push deploy-%s? [y/N] " "$TARGET"
   read -r ans; case "$ans" in y|Y|yes|YES) ;; *) echo "aborted."; exit 0 ;; esac
   # Delete the old tag (local+remote) so do_deploy re-tags with a fresh date.
@@ -281,6 +297,7 @@ fi
 
 echo
 echo "${B}Deploy ${CYN}${SEL_SHA}${R}${B} to PRODUCTION${R} ${DIM}($(git log -1 --format='%s' "$SEL_SHA"))${R}"
+release_state "$SEL_SHA"
 printf "This pushes deploy-%s and triggers a live rollout. Proceed? [y/N] " "$SEL_SHA"
 read -r ans; case "$ans" in y|Y|yes|YES) ;; *) echo "aborted."; exit 0 ;; esac
 do_deploy "$SEL_SHA"
