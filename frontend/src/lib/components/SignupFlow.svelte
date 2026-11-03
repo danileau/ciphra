@@ -15,6 +15,7 @@
 	loss, so the gate is mandatory.
 -->
 <script lang="ts">
+	import { canonicalUsername, isValidUsername } from '$lib/username';
 	import { createEventDispatcher } from 'svelte';
 	import { t, locale } from '$lib/i18n';
 	import * as api from '$lib/api';
@@ -25,7 +26,7 @@
 	// jsPDF is heavy; only load it if the user clicks "download recovery PDF".
 	async function downloadRecoveryPdf() {
 		const { generateRecoveryPdf } = await import('$lib/pdf');
-		generateRecoveryPdf(username.trim().toLowerCase(), recoveryCode, $t, $locale);
+		generateRecoveryPdf(canonicalUsername(username), recoveryCode, $t, $locale);
 	}
 
 	const dispatch = createEventDispatcher<{ 'signup-complete': void; 'username-exists': { username: string } }>();
@@ -43,18 +44,19 @@
 	let error = '';
 	let technicalError = '';
 
-	// Username rule (mirrors the server): the value is normalized to
-	// trim().toLowerCase() before use, and must be >=3 chars of [a-z0-9_].
-	// Validated in JS with styled errors — the form is `novalidate` so the
-	// browser's native bubbles ("Please match the requested format" from a
-	// `pattern` attr, "Please fill out this field" from `required`) never
-	// appear in their own un-styled, browser-locale chrome.
-	const USERNAME_RE = /^[a-z0-9_]+$/;
+	// Username rule (mirrors the server): the value goes through
+	// canonicalUsername() — the same cleanup login applies, so an account is
+	// created under exactly the name login will send — and must be 3–64 chars
+	// of [a-z0-9_]. Validated in JS with styled errors — the form is
+	// `novalidate` so the browser's native bubbles ("Please match the
+	// requested format" from a `pattern` attr, "Please fill out this field"
+	// from `required`) never appear in their own un-styled, browser-locale
+	// chrome.
 	/** First username error i18n key, or '' when valid. */
 	function usernameError(raw: string): string {
-		const u = raw.trim().toLowerCase();
+		const u = canonicalUsername(raw);
 		if (u.length < 3) return 'auth.error_username_short';
-		if (!USERNAME_RE.test(u)) return 'auth.error_username_format';
+		if (!isValidUsername(u)) return 'auth.error_username_format';
 		return '';
 	}
 
@@ -115,7 +117,7 @@
 		busy = true;
 		busyLabel = $t('auth.phase_building_vault');
 		try {
-			const uname = username.trim().toLowerCase();
+			const uname = canonicalUsername(username);
 			const bundle = await createVault(uname, password, true);
 			const reg = await api.register(bundle, source);
 			if (!reg.ok) {
@@ -125,7 +127,7 @@
 				// can offer "log in and continue" instead of a dead-end error. The
 				// register tab passes no source → falls through to the error below.
 				if (source === 'migrate' && reg.status === 409) {
-					dispatch('username-exists', { username: username.trim().toLowerCase() });
+					dispatch('username-exists', { username: canonicalUsername(username) });
 					return;
 				}
 				// Status-aware copy. Server is enumeration-resistant (409 also covers

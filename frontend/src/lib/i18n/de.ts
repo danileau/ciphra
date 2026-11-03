@@ -216,6 +216,7 @@ export default {
 	'auth.error_password_short': 'Passwort muss mindestens 12 Zeichen lang sein',
 	'auth.error_username_short': 'Benutzername muss mindestens 3 Zeichen lang sein',
 	'auth.error_username_format': 'Benutzername darf nur Kleinbuchstaben, Zahlen und Unterstriche enthalten.',
+	'auth.error_username_autofill': 'Das ist kein gültiger Benutzername. Wurde das Feld vom Browser ausgefüllt, stammt der Wert wohl aus einem falsch gespeicherten Login: Tippe den Benutzernamen von Hand ein, wähle danach keinen Vorschlag über der Tastatur, und korrigiere den gespeicherten Eintrag im Passwort-Manager.',
 
 	// Companion
 	'companion.greeting': 'Hallo {name}',

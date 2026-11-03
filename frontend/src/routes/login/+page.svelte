@@ -5,6 +5,7 @@
 	import { page } from '$app/stores';
 	import { decryptMasterKeyWithRecovery, rewrapMasterKey } from '$lib/crypto';
 	import { validateRecoveryCode } from '$lib/wordlist';
+	import { canonicalUsername, describeUsername, isValidUsername } from '$lib/username';
 	import SignupFlow from '$lib/components/SignupFlow.svelte';
 	import LoginForm from '$lib/components/LoginForm.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
@@ -66,9 +67,18 @@
 		goto(resumePendingFamilyJoin());
 	}
 
-	async function handleRecover() {
+	async function handleRecover(e: SubmitEvent) {
 		error = '';
 		recSuccess = '';
+		// The field, not the bound copy: autofill can fill it silently (see
+		// LoginForm.handleLogin).
+		const userEl = (e.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>('#rec-user');
+		if (userEl) recUser = userEl.value;
+		const username = canonicalUsername(recUser);
+		if (!isValidUsername(username)) {
+			setError($t('auth.error_username_autofill'), describeUsername(username));
+			return;
+		}
 		if (recNewPass !== recNewPassConfirm) {
 			error = $t('auth.error_password_match');
 			return;
@@ -84,7 +94,6 @@
 		loading = true;
 		phase = $t('auth.phase_deriving');
 		try {
-			const username = recUser.trim().toLowerCase();
 			const initRes = await api.recoverInit(username);
 			if (!initRes.ok) {
 				setError($t('auth.error_recovery'), initRes.data.error as string);
@@ -194,7 +203,7 @@
 						<form on:submit|preventDefault={handleRecover} class="space-y-4" novalidate>
 							<div>
 								<label for="rec-user" class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary)">{$t('auth.username')}</label>
-								<input id="rec-user" type="text" bind:value={recUser} required minlength="3"
+								<input id="rec-user" name="username" type="text" bind:value={recUser} required minlength="3"
 									autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"
 									class="input" />
 							</div>
