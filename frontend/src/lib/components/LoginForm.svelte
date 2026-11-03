@@ -12,6 +12,7 @@
 	import { auth } from '$lib/stores/auth';
 	import PasswordField from '$lib/components/PasswordField.svelte';
 	import { decryptMasterKey, deriveAuthKey } from '$lib/crypto';
+	import { canonicalUsername, describeUsername, isValidUsername } from '$lib/username';
 
 	const dispatch = createEventDispatcher<{ 'login-complete': void }>();
 
@@ -45,12 +46,31 @@
 	}
 	function clearError() { error = ''; technicalError = ''; }
 
-	async function handleLogin() {
+	async function handleLogin(e: SubmitEvent) {
 		clearError();
+		// Read what the fields show, not the bound copies. iOS autofill can set
+		// an input's value without firing `input`, which is the only event
+		// bind:value listens to — the field showed a username while the form
+		// sent '' and the server answered "Invalid username" (2026-11-03).
+		const form = e.currentTarget as HTMLFormElement;
+		const userEl = form.querySelector<HTMLInputElement>('#login-user');
+		const passEl = form.querySelector<HTMLInputElement>('#login-pass');
+		if (userEl) loginUser = userEl.value;
+		if (passEl) loginPass = passEl.value;
+		const username = canonicalUsername(loginUser);
+		if (!isValidUsername(username)) {
+			// No account can have this username, so asking the server only
+			// earns "wrong username or password". The usual source is a saved
+			// login whose username field holds something else (a pre-#196
+			// recovery could save the recovery code there), and iOS refills
+			// both fields from it when the password field is tapped.
+			setError($t('auth.error_username_autofill'), describeUsername(username));
+			return;
+		}
 		loading = true;
 		phase = $t('auth.phase_checking');
 		try {
-			const initRes = await api.loginInit(loginUser.trim().toLowerCase());
+			const initRes = await api.loginInit(username);
 			if (!initRes.ok) {
 				setError($t('auth.error_credentials'), initRes.data.error as string);
 				return;
@@ -59,7 +79,7 @@
 			phase = $t('auth.phase_deriving');
 			const authKey = await deriveAuthKey(loginPass, authParams);
 			phase = $t('auth.phase_verifying');
-			const res = await api.login(loginUser.trim().toLowerCase(), authKey);
+			const res = await api.login(username, authKey);
 			if (!res.ok) {
 				const rawErr = res.data.error as string | undefined;
 				// 403 account_suspended = an operator lock. Distinct from the
@@ -114,7 +134,7 @@
 		<!-- autocomplete hints tell password managers which saved login this is,
 		     so they fill (and update after a password change) the right entry;
 		     the rest stops phone keyboards from altering what was typed. -->
-		<input id="login-user" type="text" bind:value={loginUser} required minlength="3"
+		<input id="login-user" name="username" type="text" bind:value={loginUser} required minlength="3"
 			autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"
 			on:blur={() => { touched.loginUser = true; }}
 			aria-invalid={userInvalid}

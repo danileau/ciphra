@@ -516,6 +516,12 @@
 				</button>
 			{:else}
 				<form on:submit|preventDefault={handleChangePassword} class="space-y-3">
+					<!-- Tells the password manager WHICH login the new password
+					     belongs to. Without a username field it guesses, and can
+					     save or update an entry whose username is wrong or empty —
+					     which then fills the login form with a name no account has. -->
+					<input type="text" name="username" autocomplete="username"
+						value={$auth.username ?? ''} readonly hidden aria-hidden="true" tabindex="-1" />
 					<PasswordField
 						bind:value={currentPassword}
 						placeholder={$t('settings.current_password')}

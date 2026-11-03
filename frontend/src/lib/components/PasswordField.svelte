@@ -55,6 +55,7 @@
 		aria-invalid={ariaInvalid}
 		value={value}
 		on:input={handleInput}
+		on:change={handleInput}
 		on:blur
 		on:focus
 		class="{cls} pwf-input"

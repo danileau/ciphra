@@ -211,6 +211,7 @@ export default {
 	'auth.error_password_short': 'Password must be at least 12 characters',
 	'auth.error_username_short': 'Username must be at least 3 characters',
 	'auth.error_username_format': 'Username may only contain lowercase letters, numbers, and underscores.',
+	'auth.error_username_autofill': 'That is not a valid username. If your browser filled the field in, the value probably comes from a saved login stored wrongly: type your username by hand, don\'t pick a suggestion above the keyboard afterwards, and correct the saved entry in your password manager.',
 
 	'companion.greeting': 'Hello {name}',
 	'companion.last_seizure': 'Last seizure: {date}',

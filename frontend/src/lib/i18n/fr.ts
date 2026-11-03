@@ -211,6 +211,7 @@ export default {
 	'auth.error_password_short': 'Le mot de passe doit contenir au moins 12 caractères',
 	'auth.error_username_short': 'Le nom d\'utilisateur doit comporter au moins 3 caractères',
 	'auth.error_username_format': 'Le nom d\'utilisateur ne peut contenir que des lettres minuscules, des chiffres et des tirets bas.',
+	'auth.error_username_autofill': "Ce n'est pas un nom d'utilisateur valide. Si le navigateur a rempli le champ, la valeur provient sans doute d'un identifiant mal enregistré : saisissez votre nom d'utilisateur à la main, ne choisissez ensuite aucune suggestion au-dessus du clavier, et corrigez l'entrée enregistrée dans votre gestionnaire de mots de passe.",
 
 	'companion.greeting': 'Bonjour {name}',
 	'companion.last_seizure': 'Dernière crise : {date}',
