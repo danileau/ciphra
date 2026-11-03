@@ -13,12 +13,18 @@
 FROM nginx:1.30.6-alpine
 
 # Patch the Alpine base packages (openssl/libcrypto3, musl, nghttp2, zlib,
-# libexpat, libpng, libxml2, …). The pinned nginx:1.27-alpine tag lags the
-# Alpine security repo, so Trivy flags fixed-upstream CVEs; `apk upgrade` pulls
-# the current patched builds at image-build time. Most are unreachable in this
-# reverse-proxy role (no PNG/XML/expat parsing; zlib untgz unused; the 32-bit
-# X.509 overflow needs a 32-bit host) — but openssl (TLS) / musl / nghttp2 are
-# in the request path, so we patch the whole base regardless.
+# libexpat, libpng, libxml2, …). The pinned nginx base tag lags the Alpine
+# security repo, so Trivy flags fixed-upstream CVEs; `apk upgrade` pulls the
+# current patched builds at image-build time. Most are unreachable in this
+# reverse-proxy role (no dynamic modules loaded, so no PNG/XML/expat parsing;
+# zlib untgz unused; the 32-bit X.509 overflow needs a 32-bit host) — but
+# openssl (TLS) / musl / nghttp2 are in the request path, so we patch the whole
+# base regardless.
+#
+# The upgrade happens at BUILD time only: a live image keeps the packages it was
+# built with. When the daily scan flags a fixed-upstream Alpine CVE in the live
+# nginx image (e.g. libexpat CVE-2026-117610/-118370, 2026-11-03), the fix is a
+# release — any merge to main rebuilds — not a Dockerfile change.
 #
 # CACHEBUST (commit SHA, set by release-images.yml) forces this layer to re-run
 # every release so `apk upgrade` hits the current Alpine security repo. Without
