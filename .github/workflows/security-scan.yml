@@ -29,6 +29,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # Python deps are `>=` floors (every build takes the newest release), so
+      # without this the fs scan saw none of them. Resolving them here gives the
+      # daily run a forward look: what the NEXT api build would install,
+      # dev deps included. The `images` job below covers what prod runs now.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Resolve Python deps for the scan
+        run: scripts/resolve-pydeps.sh ci-pydeps
       - name: Trivy fs scan, fresh DB
         uses: aquasecurity/trivy-action@v0.36.0
         with:

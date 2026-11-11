@@ -41,3 +41,6 @@ tmp/
 # something a public repository should publish or a contributor should need.
 CLAUDE.md
 .claude/
+
+# scripts/resolve-pydeps.sh output (CI scan input, regenerated each run)
+ci-pydeps/
