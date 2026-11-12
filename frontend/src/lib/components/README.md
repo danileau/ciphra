@@ -21,8 +21,8 @@ not at review.
 3. **Use the route-shell registry to add routes** (`routeShells.ts`).
    Do not add a new if/else branch to `+layout.svelte` — add a
    registry entry. `routeShells.test.ts` enforces structure.
-4. **Use interaction primitives** — `ConfirmDelete`, `Modal`,
-   `HelpHint`, `Toast`. Inline re-inventions are caught by
+4. **Use interaction primitives** — `Modal`, `BottomSheet`,
+   `Toast`. Inline re-inventions are caught by
    `primitives.test.ts`. Opt out with a `<!-- primitive-exempt: … -->`
    comment + a reason.
 5. **Add i18n keys to all 4 locales** (`de`, `en`, `fr`, `it`).
@@ -618,7 +618,7 @@ each surface is also visibly cohort-aware when empty.
   `onDateChange`, `onJumpToToday`. Owns auto-save (3s debounce),
   section-jump nav, mobile IntersectionObserver, multi-entry
   vitals JSON round-trip, copy-previous-day, delete-confirm
-  banner (primitive-exempt — see ConfirmDelete entry below),
+  banner,
   keyboard shortcuts (Ctrl+S, arrow keys for date nav), CIPH-302
   incomplete-CTA, CIPH-713 private toggle. Route wraps in
   `{#key date}` for fresh-instance-per-date semantics.
@@ -645,9 +645,8 @@ each surface is also visibly cohort-aware when empty.
   `password` and `text` for the current session only — visibility
   is never persisted to localStorage (security). Used wherever a
   passphrase is entered: `LoginForm`, `SignupFlow` (×2), the
-  recovery flow on `/login`, the password change in Settings, and
-  the (unwired) generic `Input.svelte` delegates to it for
-  `type="password"`. Audit guard in
+  recovery flow on `/login`, and the password change in
+  Settings. Audit guard in
   `PasswordField.test.ts` asserts no other `.svelte` renders a
   bare `<input type="password">`.
 - **SignupFlow.svelte** — multi-step signup (username →
@@ -686,15 +685,6 @@ each surface is also visibly cohort-aware when empty.
   axes, no legend, no library — by design. Used by the admin
   dashboard's sparkline-first metric layout (migration counter,
   active users, document totals).
-- **ConfirmDelete.svelte** (CIPH-834) — the red "Yes delete" +
-  "Cancel" button pair shown next to a just-tapped delete icon
-  on an entry card. **No call site imports it today**: the
-  calendar dropped it with the switch to `DayDetail` (CIPH-910),
-  and the journal moment-modal, `CompanionRail` (40px pair) and
-  `EntryComposer` (full-width banner) keep their inline markup
-  under a `<!-- primitive-exempt: ConfirmDelete … -->` comment.
-  It remains the primitive `primitives.test.ts` points new
-  yes-delete/cancel rows at.
 - **Modal.svelte** (CIPH-834) — centred dialog over a
   translucent backdrop. Esc + backdrop click close when
   `dismissable`. Used for the `/migrate` post-import tour, the
@@ -720,11 +710,6 @@ each surface is also visibly cohort-aware when empty.
   Contract test: `CustomItemModal.test.ts`. Used in
   `routes/settings/+page.svelte` (tracking tab), the
   `/setup` wizard and `EntryComposer`.
-- **HelpHint.svelte** (CIPH-834) — dismissable inline info
-  banner (NOT modal). Visually distinct from Toast (Toast is
-  transient + floating, HelpHint is persistent + inline).
-  Stateless: callers own the "already seen?" persistence.
-  Currently defined; not yet wired at any site.
 - **Tabs.svelte** (CIPH-857) — ARIA tab pattern with roving
   tabindex + Left/Right/Home/End keyboard nav. Parent owns the
   URL (passes `current` + `onSelect`). Used on
@@ -748,55 +733,24 @@ each surface is also visibly cohort-aware when empty.
   site is `ExportPeriodPopover` (below 640px); otherwise a
   Modal-primitive candidate for CIPH-834.
 
-### Primitives defined but not yet wired
-
-These exist as scaffolding from earlier PIs but no route
-currently imports them. Do not add new use sites without also
-updating this README and migrating at least one call site as
-part of the same change. A future PI will sweep or retire
-each.
-
-- **Badge.svelte** — would replace inline `.badge` + `.badge-*`
-  usage. Currently every call site uses the CSS class directly.
-- **Button.svelte** — would replace inline `btn-primary` /
-  `btn-secondary` usage. Call sites use the CSS class directly
-  (only the equally unwired `EmptyState.svelte` imports it).
-- **Card.svelte** — would wrap `.card-*` variants. Call sites
-  use the CSS classes directly (see "Card CSS variants" below).
-- **Input.svelte** — would wrap labelled form inputs (delegates
-  `type="password"` to `PasswordField`).
-- **ChipGroup.svelte** — symptom / preset chip selector. Not
-  currently used; chips are rendered inline in `/log/today`.
-- **Counter.svelte** — stepper for episode counts. Not
-  currently used; `/log/today` renders inline.
-- **StatCard.svelte** — the "big number + label" stat tile.
-  Reports page renders this pattern inline.
-- **EmptyState.svelte** — "nothing here yet" panel with CTA.
-  Used candidate for CIPH-834. Pages currently inline this.
-- **SectionDivider.svelte** — asterisk-centred rule. Companion
-  renders the pattern inline.
-- **Skeleton.svelte** — shimmer loading placeholder. Not used;
-  loading states currently use the `Asterisk mode="loading"`
-  pattern instead.
-
 ### Interaction primitives — CIPH-834 status
 
-CIPH-834 extracted three primitives. The heuristic test
+CIPH-834 extracted three primitives; `ConfirmDelete` and
+`HelpHint` were never adopted and were removed on 2026-11-12,
+along with ten other never-used scaffolding components (Badge,
+Button, Card, ChipGroup, Counter, EmptyState, Input,
+SectionDivider, Skeleton, StatCard). The heuristic test
 [`primitives.test.ts`](./primitives.test.ts) fails if a new
 inline duplicate appears without either adopting the primitive
 or declaring an exemption comment.
 
 | Primitive | Canonical sites | Exempt sites (with reason) |
 | --- | --- | --- |
-| `ConfirmDelete` | *(none currently)* | `CompanionRail.svelte` (40px compact variant), `EntryComposer.svelte` (full-width banner variant), `routes/journal/+page.svelte` (moment-modal confirm row) |
 | `Modal` | `routes/migrate/+page.svelte` (post-import tour), `routes/journal/+page.svelte`, `EntryComposer`, `CustomItemModal`, `ExportNoteReview`, the medication dialogs | `routes/settings/+page.svelte` + `routes/admin/+page.svelte` (bespoke danger-chrome dialogs), `routes/calendar/+page.svelte` (right-side day-detail), `routes/+layout.svelte` (quick-add sheet), `BottomSheet.svelte` (it **is** the other modal primitive — mobile bottom sheet) |
-| `HelpHint` | *(none yet wired)* | *(n/a)* |
 
 Opt-out: add `<!-- primitive-exempt: <Primitive> — <reason> -->`
 to the top of the file. The heuristic is a soft fence: it
-catches drift, it does not enforce style. `EmptyState.svelte`
-remains un-swept; adoption is deferred to a future PI because
-every "nothing here yet" site has bespoke iconography.
+catches drift, it does not enforce style.
 
 ## Shared math / helper modules
 
@@ -831,7 +785,7 @@ review, not at runtime.
 ## Card CSS variants
 
 Defined in `app.css` (`@layer components`). Used directly as
-CSS classes, not via `Card.svelte`. All 7 variants are in use;
+CSS classes. All 7 variants are in use;
 none pruned. (`.card-rhythmic` / `.card-rhythmic-stack` beside
 them are opt-in padding/gap helpers, not variants.)
 
@@ -912,8 +866,8 @@ When adding a new route:
 2. Use only tokens from Spacing / Typography / Color sections.
 3. Need a new component? Check the Component inventory first —
    there is probably already a primitive that covers it.
-4. Adding a confirm-delete pattern or a centred dialog? Use
-   `<ConfirmDelete>` / `<Modal>` / `<HelpHint>`. If your variant
+4. Adding a centred dialog? Use `<Modal>` (or `<BottomSheet>`
+   on mobile). If your variant
    genuinely does not fit, declare `<!-- primitive-exempt:
    <Primitive> — <reason> -->` so the heuristic test stays green
    and the next visual pass knows why you opted out.

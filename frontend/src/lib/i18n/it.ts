@@ -60,8 +60,6 @@ export default {
 	'common.date_placeholder_slash': 'GG/MM/AAAA',
 	'common.date_placeholder_iso': 'AAAA-MM-GG',
 	'common.date_placeholder_us': 'MM/GG/AAAA',
-	'common.decrease_label': 'Riduci {label}',
-	'common.increase_label': 'Aumenta {label}',
 	'common.loading': 'Caricamento...',
 	'common.copy': 'Copia',
 	'common.copied': 'Copiato',

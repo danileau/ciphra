@@ -3,12 +3,6 @@
 	 so every date change is a fresh instance (auto-cancels in-flight save
 	 timers, resets form state). Reserved density="quick" for PI v13 FAB
 	 quick-add consolidation. -->
-<!-- primitive-exempt: ConfirmDelete — uses a full-width red-tinted *banner*
-	 form ("Delete this entry?" + Yes / Cancel) styled by per-page
-	 `.log-delete-confirm`/`.log-btn-danger`/`.log-btn-cancel` CSS. The
-	 ConfirmDelete primitive renders the compact icon-pair used on journal +
-	 calendar rows; merging the two variants would regress this surface's
-	 visual. Candidate for a future banner-variant addition. -->
 <script context="module" lang="ts">
 	import type { Phase as CyclePhase } from '#lib/cycleState.ts';
 

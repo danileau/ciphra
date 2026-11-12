@@ -64,8 +64,6 @@ export default {
 	'common.date_placeholder_slash': 'TT/MM/JJJJ',
 	'common.date_placeholder_iso': 'JJJJ-MM-TT',
 	'common.date_placeholder_us': 'MM/TT/JJJJ',
-	'common.decrease_label': '{label} verringern',
-	'common.increase_label': '{label} erhöhen',
 	'common.loading': 'Laden...',
 	'common.copy': 'Kopieren',
 	'common.copied': 'Kopiert',

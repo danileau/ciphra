@@ -1,9 +1,3 @@
-<!-- primitive-exempt: ConfirmDelete — rail today-entries use a compact
-	 40px (not 44px) tap target and a non-btn-secondary cancel (surface-muted
-	 / text-secondary inline) to fit the denser right-rail rhythm. Swapping
-	 to the 44px btn-secondary primitive would stretch the row and push the
-	 rail content below the fold on 1024px width. Revisit if/when
-	 ConfirmDelete grows a `size=sm` variant. -->
 <script lang="ts">
 	// CIPH-750 / CIPH-781 — Dashboard right-rail (≥1024px).
 	// Rebalanced in CIPH-781: compliance + reports moved IN from CompanionMain
