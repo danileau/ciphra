@@ -16,11 +16,11 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import de from '$lib/i18n/de';
-import en from '$lib/i18n/en';
-import fr from '$lib/i18n/fr';
+import de from '#lib/i18n/de.ts';
+import en from '#lib/i18n/en.ts';
+import fr from '#lib/i18n/fr.ts';
 // `it` is vitest's; the dictionary comes in under its own name.
-import itDict from '$lib/i18n/it';
+import itDict from '#lib/i18n/it.ts';
 
 const SERVER = readFileSync(join(__dirname, '..', '..', '..', '..', 'api', 'server.py'), 'utf8');
 const PAGE = readFileSync(join(__dirname, '+page.svelte'), 'utf8');

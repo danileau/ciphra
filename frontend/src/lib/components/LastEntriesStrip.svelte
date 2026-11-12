@@ -19,10 +19,10 @@
 	Clicking a row routes to /journal (the canonical detail surface).
 -->
 <script lang="ts">
-	import { t, locale, plural } from '$lib/i18n';
-	import type { CiphraDocument } from '$lib/stores/documents';
-	import type { Blueprint } from '$lib/blueprint/types';
-	import { isCustomItem, resolveMedDisplay } from '$lib/blueprint';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import type { CiphraDocument } from '#lib/stores/documents.ts';
+	import type { Blueprint } from '#lib/blueprint/types.ts';
+	import { isCustomItem, resolveMedDisplay } from '#lib/blueprint/index.ts';
 
 	export let docs: CiphraDocument[];
 	export let bp: Blueprint | null = null;

@@ -55,12 +55,12 @@ function isExempt(src: string, primitive: string): boolean {
 
 /**
  * A file "uses" the primitive if it imports it by module path. We
- * match the $lib path specifically so a coincidental identifier
+ * match the #lib path specifically so a coincidental identifier
  * collision in a comment doesn't bypass the check.
  */
 function usesPrimitive(src: string, primitive: string): boolean {
 	const re = new RegExp(
-		`import\\s+${primitive}\\s+from\\s+['"]\\$lib/components/${primitive}\\.svelte['"]`,
+		`import\\s+${primitive}\\s+from\\s+['"]#lib/components/${primitive}\\.svelte['"]`,
 	);
 	return re.test(src);
 }

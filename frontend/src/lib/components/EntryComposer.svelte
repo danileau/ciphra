@@ -10,7 +10,7 @@
 	 calendar rows; merging the two variants would regress this surface's
 	 visual. Candidate for a future banner-variant addition. -->
 <script context="module" lang="ts">
-	import type { Phase as CyclePhase } from '$lib/cycleState';
+	import type { Phase as CyclePhase } from '#lib/cycleState.ts';
 
 	// One logged occurrence of a counted episode type. Each of the N episodes
 	// a user records in a day gets its OWN time/duration/note — the old model
@@ -50,20 +50,20 @@
 </script>
 
 <script lang="ts">
-	import { t, locale, translateUnit } from '$lib/i18n';
-	import type { Blueprint, CustomKind, MedicationSlot } from '$lib/blueprint';
-	import { isCustomItem, blueprint, canonicalMedId, createMedication, isTrackedOn, medicationChanges, newMedicationId, periodOn } from '$lib/blueprint';
-	import { groupIconPath } from '$lib/groupIcons';
+	import { t, locale, translateUnit } from '#lib/i18n/index.ts';
+	import type { Blueprint, CustomKind, MedicationSlot } from '#lib/blueprint/index.ts';
+	import { isCustomItem, blueprint, canonicalMedId, createMedication, isTrackedOn, medicationChanges, newMedicationId, periodOn } from '#lib/blueprint/index.ts';
+	import { groupIconPath } from '#lib/groupIcons.ts';
 	import { get } from 'svelte/store';
-	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import Listbox from '$lib/components/Listbox.svelte';
-	import type { CiphraDocument } from '$lib/stores/documents';
-	import { cohortOf } from '$lib/blueprint/cohort';
-	import type { Phase } from '$lib/cycleState';
+	import CustomItemModal from '#lib/components/CustomItemModal.svelte';
+	import Modal from '#lib/components/Modal.svelte';
+	import Listbox from '#lib/components/Listbox.svelte';
+	import type { CiphraDocument } from '#lib/stores/documents.ts';
+	import { cohortOf } from '#lib/blueprint/cohort.ts';
+	import type { Phase } from '#lib/cycleState.ts';
 	import { onMount, onDestroy, tick } from 'svelte';
-	import Asterisk from '$lib/components/Asterisk.svelte';
-	import TimePicker from '$lib/components/TimePicker.svelte';
+	import Asterisk from '#lib/components/Asterisk.svelte';
+	import TimePicker from '#lib/components/TimePicker.svelte';
 	import { fade } from 'svelte/transition';
 
 	export let date: string;

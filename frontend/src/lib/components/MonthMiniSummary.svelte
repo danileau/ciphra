@@ -16,10 +16,10 @@
 	re-traverse `monthDocs` here.
 -->
 <script lang="ts">
-	import { t, locale, plural } from '$lib/i18n';
-	import { isCustomItem } from '$lib/blueprint';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import { isCustomItem } from '#lib/blueprint/index.ts';
 	import { createEventDispatcher } from 'svelte';
-	import type { MonthSummaryInsight } from '$lib/monthSummaryInsight';
+	import type { MonthSummaryInsight } from '#lib/monthSummaryInsight.ts';
 
 	export let monthName: string;
 	export let triggerDayCount: number;

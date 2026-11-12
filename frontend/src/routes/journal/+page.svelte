@@ -24,19 +24,19 @@
 	vs quiet day" as visual rhythm.
 -->
 <script lang="ts">
-	import { t, locale, plural } from '$lib/i18n';
-	import { todayISO, toLocalISODate } from '$lib/date';
-	import { isAuthenticated } from '$lib/stores/auth';
-	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, isCustomItem } from '$lib/blueprint';
-	import { quickAddOpen } from '$lib/stores/quickAdd';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import { todayISO, toLocalISODate } from '#lib/date.ts';
+	import { isAuthenticated } from '#lib/stores/auth.ts';
+	import { documents, type CiphraDocument } from '#lib/stores/documents.ts';
+	import { resolvedBlueprint, isCustomItem } from '#lib/blueprint/index.ts';
+	import { quickAddOpen } from '#lib/stores/quickAdd.ts';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { fade } from 'svelte/transition';
-	import EntryPreview from '$lib/components/EntryPreview.svelte';
-	import JournalEmpty from '$lib/components/JournalEmpty.svelte';
-	import { buildNarrative, groupByMonth, type JournalDay, type JournalText } from '$lib/journal/narrative';
-	import Modal from '$lib/components/Modal.svelte';
+	import EntryPreview from '#lib/components/EntryPreview.svelte';
+	import JournalEmpty from '#lib/components/JournalEmpty.svelte';
+	import { buildNarrative, groupByMonth, type JournalDay, type JournalText } from '#lib/journal/narrative.ts';
+	import Modal from '#lib/components/Modal.svelte';
 
 	// ── Filters ──────────────────────────────────────────────────────────
 	// The old bar was three tabs — All / Entries / Note markers — two of

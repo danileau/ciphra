@@ -11,10 +11,10 @@
 	 * line; chips collapsible when dense; ranked by 30-day frequency; single-
 	 * axis pill style with left-edge severity stripe.
 	 */
-	import { t, locale, translateUnit, plural } from '$lib/i18n';
-	import type { CiphraDocument } from '$lib/stores/documents';
-	import type { Blueprint, VitalField } from '$lib/blueprint/types';
-	import { isCustomItem, prettifyCustomId, resolveMedDisplay } from '$lib/blueprint';
+	import { t, locale, translateUnit, plural } from '#lib/i18n/index.ts';
+	import type { CiphraDocument } from '#lib/stores/documents.ts';
+	import type { Blueprint, VitalField } from '#lib/blueprint/types.ts';
+	import { isCustomItem, prettifyCustomId, resolveMedDisplay } from '#lib/blueprint/index.ts';
 
 	export let entry: CiphraDocument;
 	export let bp: Blueprint | null = null;

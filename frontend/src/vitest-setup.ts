@@ -29,4 +29,14 @@ if (typeof Element !== 'undefined' && typeof Element.prototype.animate !== 'func
 	};
 }
 
+/**
+ * `$app/env/public` is generated from src/env.ts and populated by the
+ * SvelteKit runtime when the app starts. Under vitest nothing populates it
+ * and importing it throws, which takes down every test that reaches
+ * lib/source.ts. Stub it for all test files — see
+ * src/lib/testing/app-env-public.ts.
+ */
+import { vi } from 'vitest';
+vi.mock('$app/env/public', () => import('./lib/testing/app-env-public.ts'));
+
 export {};

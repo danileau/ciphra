@@ -23,13 +23,13 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
-	import { auth } from '$lib/stores/auth';
-	import { t } from '$lib/i18n';
-	import { documents } from '$lib/stores/documents';
-	import { blueprint, resolvedBlueprint } from '$lib/blueprint';
-	import { applyWelcomeDismissed } from '$lib/blueprint/preferences';
-	import Asterisk from '$lib/components/Asterisk.svelte';
+	import { browser } from '$app/env';
+	import { auth } from '#lib/stores/auth.ts';
+	import { t } from '#lib/i18n/index.ts';
+	import { documents } from '#lib/stores/documents.ts';
+	import { blueprint, resolvedBlueprint } from '#lib/blueprint/index.ts';
+	import { applyWelcomeDismissed } from '#lib/blueprint/preferences.ts';
+	import Asterisk from '#lib/components/Asterisk.svelte';
 
 	// Per-variant dismiss keys. Keeps the two acknowledgments independent.
 	const KEY_WEB = 'ciphra_welcome_web_seen';

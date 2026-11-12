@@ -44,9 +44,10 @@ updates:
       # minor/patch still flow through.
       - dependency-name: typescript
         update-types: [version-update:semver-major]
-      # SvelteKit 3 (+ adapter-node 6, which peers it) is a framework
-      # migration, not a bump — #231 failed the frontend job. Hold both majors
-      # until it is done on purpose; 2.x minor/patch still flow through.
+      # A SvelteKit major (+ adapter-node, which peers it) is a framework
+      # migration, not a bump: kit 3 renamed $lib, removed $app/stores and
+      # svelte.config.js (done on purpose 2026-11-12, after #231 failed the
+      # frontend job). Hold both majors; 3.x minor/patch still flow through.
       - dependency-name: "@sveltejs/kit"
         update-types: [version-update:semver-major]
       - dependency-name: "@sveltejs/adapter-node"

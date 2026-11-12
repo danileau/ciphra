@@ -10,11 +10,11 @@
 	 * Full blueprint customisation remains reachable via /settings (old 7-step
 	 * wizard — not replaced here).
 	 */
-	import { t, translateUnit } from '$lib/i18n';
-	import { browser } from '$app/environment';
-	import { isAuthenticated, auth } from '$lib/stores/auth';
-	import { blueprint, hasBlueprint, presets, isCustomItem, resolveBlueprint, periodOn } from '$lib/blueprint';
-	import { todayISO } from '$lib/date';
+	import { t, translateUnit } from '#lib/i18n/index.ts';
+	import { browser } from '$app/env';
+	import { isAuthenticated, auth } from '#lib/stores/auth.ts';
+	import { blueprint, hasBlueprint, presets, isCustomItem, resolveBlueprint, periodOn } from '#lib/blueprint/index.ts';
+	import { todayISO } from '#lib/date.ts';
 	import type {
 		Blueprint,
 		BlueprintItem,
@@ -22,18 +22,18 @@
 		EpisodeType,
 		MedicationSlot,
 		VitalField,
-	} from '$lib/blueprint';
-	import type { PresetInfo, CustomKind } from '$lib/blueprint';
-	import { clearLegacyVitalTargets, effectiveVitalTargets } from '$lib/blueprint/vitalTargets';
-	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
+	} from '#lib/blueprint/index.ts';
+	import type { PresetInfo, CustomKind } from '#lib/blueprint/index.ts';
+	import { clearLegacyVitalTargets, effectiveVitalTargets } from '#lib/blueprint/vitalTargets.ts';
+	import CustomItemModal from '#lib/components/CustomItemModal.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
 	import { get } from 'svelte/store';
 	import { slide } from 'svelte/transition';
-	import { iconPath } from '$lib/conditionIcons';
+	import { iconPath } from '#lib/conditionIcons.ts';
 	// CIPH-740 — symptom-group icons now live in a shared module so the daily
 	// entry screen renders the same icons (see groupIcons.ts).
-	import { GROUP_ICON } from '$lib/groupIcons';
+	import { GROUP_ICON } from '#lib/groupIcons.ts';
 
 	// step 0 is the caregiver-vs-own intro added for fresh registrants
 	// (no existing blueprint, not arrived via ?customize=1). Returning

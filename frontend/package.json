@@ -21,12 +21,12 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "smoke:visual": "playwright test e2e/visual-smoke.spec.ts",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",
-    "@sveltejs/adapter-node": "^5.5.8",
-    "@sveltejs/kit": "^2.70.4",
+    "@sveltejs/adapter-node": "^6.0.2",
+    "@sveltejs/kit": "^3.2.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/svelte": "^5.4.2",
@@ -54,7 +54,10 @@
   },
   "overrides": {
     "dompurify": "^3.4.17",
-    "uuid": "^14.0.0",
-    "cookie": "^0.7.0"
+    "uuid": "^14.0.0"
+  },
+  "imports": {
+    "#lib": "./src/lib/index.js",
+    "#lib/*": "./src/lib/*"
   }
 }

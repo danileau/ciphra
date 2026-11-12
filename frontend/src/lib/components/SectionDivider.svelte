@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Asterisk from '$lib/components/Asterisk.svelte';
+	import Asterisk from '#lib/components/Asterisk.svelte';
 </script>
 
 <div class="divider" aria-hidden="true">

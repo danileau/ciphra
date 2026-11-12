@@ -17,19 +17,19 @@
 -->
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { goto } from '$app/navigation';
-	import { t } from '$lib/i18n';
-	import { auth, isAuthenticated } from '$lib/stores/auth';
-	import { originStatus, hostOf, type OriginStatus } from '$lib/origin';
-	import Wordmark from '$lib/components/Wordmark.svelte';
+	import { t } from '#lib/i18n/index.ts';
+	import { auth, isAuthenticated } from '#lib/stores/auth.ts';
+	import { originStatus, hostOf, type OriginStatus } from '#lib/origin.ts';
+	import Wordmark from '#lib/components/Wordmark.svelte';
 	import { get } from 'svelte/store';
-	import { documents } from '$lib/stores/documents';
-	import { migrationClientKey } from '$lib/migrationKey';
-	import SignupFlow from '$lib/components/SignupFlow.svelte';
-	import LoginForm from '$lib/components/LoginForm.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import { blueprint } from '$lib/blueprint/store';
+	import { documents } from '#lib/stores/documents.ts';
+	import { migrationClientKey } from '#lib/migrationKey.ts';
+	import SignupFlow from '#lib/components/SignupFlow.svelte';
+	import LoginForm from '#lib/components/LoginForm.svelte';
+	import Modal from '#lib/components/Modal.svelte';
+	import { blueprint } from '#lib/blueprint/store.ts';
 	import {
 		validateBundle,
 		mapBundle,
@@ -39,7 +39,7 @@
 		defaultEpilepsyBlueprint,
 		type EpilepcBundle,
 		type MappedDocs,
-	} from '$lib/migration/epilepcMapping';
+	} from '#lib/migration/epilepcMapping.ts';
 
 	type Phase =
 		| 'init'

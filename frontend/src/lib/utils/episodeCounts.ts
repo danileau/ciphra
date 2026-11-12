@@ -4,7 +4,7 @@
 // full form or quick-add) and `event` (narrative marker). Episode data
 // lives on `entry` docs only.
 
-import type { CiphraDocument } from '$lib/stores/documents';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 /** True if this document contributes to episode counts. */
 export function isEpisodeBearing(doc: CiphraDocument): boolean {

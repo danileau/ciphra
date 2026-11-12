@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { isExportable } from './exportable';
-import type { CiphraDocument } from '$lib/stores/documents';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 function doc(data: unknown): CiphraDocument {
     return { id: 1, serverCreatedAt: '2026-04-14T00:00:00Z', data } as CiphraDocument;

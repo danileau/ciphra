@@ -13,7 +13,7 @@ const SOURCE = readFileSync(join(__dirname, '+page.svelte'), 'utf8');
 
 describe('CIPH-855a calendar cycle overlay', () => {
 	it('imports shared cycleState module', () => {
-		expect(SOURCE).toContain("from '$lib/cycleState'");
+		expect(SOURCE).toContain("from '#lib/cycleState.ts'");
 		expect(SOURCE).toContain('computeCycleAnchor');
 		expect(SOURCE).toContain('cycleStateForDate');
 		expect(SOURCE).toContain('PHASE_COLORS');

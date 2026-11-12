@@ -13,8 +13,8 @@
  * claiming alternates that don't have distinct URLs would mislead
  * crawlers. See the SEO plan / OPERATIONS follow-ups.
  */
-import { docList } from '$lib/docs';
-import { conditionInfoMap } from '$lib/conditionInfo';
+import { docList } from '#lib/docs.ts';
+import { conditionInfoMap } from '#lib/conditionInfo.ts';
 
 const BASE = 'https://ciphra.ch';
 

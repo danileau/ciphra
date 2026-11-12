@@ -12,7 +12,8 @@
  *
  *   PUBLIC_SOURCE_URL=https://git.example.org/you/ciphra
  *
- * It is read through `$env/dynamic/public`, not `$env/static/public`, on
+ * It is read through `$app/env/public` as a non-static variable (declared
+ * in src/env.ts), not a static one, on
  * purpose: the published container images are built once by our CI, and a
  * self-hoster pulls them rather than rebuilding. A static (build-time)
  * variable would be baked into the image and unchangeable without a
@@ -23,7 +24,7 @@
  * unmodified deployment and the wrong one for every other deployment;
  * `.env.example` and the README say so in those words.
  */
-import { env } from '$env/dynamic/public';
+import { PUBLIC_SOURCE_URL } from '$app/env/public';
 
 /**
  * Upstream ciphra. The single place this URL is written down — every
@@ -70,4 +71,4 @@ export function sourceLabel(url: string): string {
 }
 
 /** The source URL this instance offers its users. */
-export const sourceUrl: string = resolveSourceUrl(env.PUBLIC_SOURCE_URL);
+export const sourceUrl: string = resolveSourceUrl(PUBLIC_SOURCE_URL);

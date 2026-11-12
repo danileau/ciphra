@@ -1,36 +1,36 @@
 <script lang="ts">
 	import '../app.css';
-	import { isAuthenticated, authReady, auth, needsUnlock } from '$lib/stores/auth';
-	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
-	import { t, locale, plural } from '$lib/i18n';
-	import { todayISO, toLocalISODate } from '$lib/date';
-	import type { Locale } from '$lib/i18n';
+	import { isAuthenticated, authReady, auth, needsUnlock } from '#lib/stores/auth.ts';
+	import { familyLinks, activeVault } from '#lib/stores/familyLinks.ts';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import { todayISO, toLocalISODate } from '#lib/date.ts';
+	import type { Locale } from '#lib/i18n/index.ts';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { pageStore } from '#lib/pageStore.ts';
 	import { onMount, tick } from 'svelte';
-	import { browser } from '$app/environment';
-	import { documents, documentsError, caregiverHiddenCount } from '$lib/stores/documents';
-	import { pendingCount } from '$lib/outbox';
+	import { browser } from '$app/env';
+	import { documents, documentsError, caregiverHiddenCount } from '#lib/stores/documents.ts';
+	import { pendingCount } from '#lib/outbox.ts';
 	import { get } from 'svelte/store';
-	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem, hasBedarfMeds, bedarfMedsForPicker, foldRescueMedications } from '$lib/blueprint';
-	import { cohortOf } from '$lib/blueprint/cohort';
-	import { clearLegacyVitalTargets, migrateLegacyVitalTargets } from '$lib/blueprint/vitalTargets';
-	import { pathToRoute } from '$lib/cohortPalette';
-	import { conditionAccent } from '$lib/conditionAccent';
-	import { resolvedTheme } from '$lib/stores/theme';
-	import { quickAddOpen } from '$lib/stores/quickAdd';
-	import BottomNav from '$lib/components/BottomNav.svelte';
-	import VaultSwitcher from '$lib/components/VaultSwitcher.svelte';
-	import AuthedFooter from '$lib/components/AuthedFooter.svelte';
-	import PublicFooter from '$lib/components/PublicFooter.svelte';
-	import Wordmark from '$lib/components/Wordmark.svelte';
-	import Toast from '$lib/components/Toast.svelte';
-	import DatePicker from '$lib/components/DatePicker.svelte';
-	import TimePicker from '$lib/components/TimePicker.svelte';
-	import { shellFor } from '$lib/routeShells';
-	import { publicMeta, jsonLdScript } from '$lib/seoMeta';
-	import de from '$lib/i18n/de';
-	import { sweepLegacyLocalStorage } from '$lib/legacy-cleanup';
+	import { blueprint, hasBlueprint, resolvedBlueprint, isCustomItem, hasBedarfMeds, bedarfMedsForPicker, foldRescueMedications } from '#lib/blueprint/index.ts';
+	import { cohortOf } from '#lib/blueprint/cohort.ts';
+	import { clearLegacyVitalTargets, migrateLegacyVitalTargets } from '#lib/blueprint/vitalTargets.ts';
+	import { pathToRoute } from '#lib/cohortPalette.ts';
+	import { conditionAccent } from '#lib/conditionAccent.ts';
+	import { resolvedTheme } from '#lib/stores/theme.ts';
+	import { quickAddOpen } from '#lib/stores/quickAdd.ts';
+	import BottomNav from '#lib/components/BottomNav.svelte';
+	import VaultSwitcher from '#lib/components/VaultSwitcher.svelte';
+	import AuthedFooter from '#lib/components/AuthedFooter.svelte';
+	import PublicFooter from '#lib/components/PublicFooter.svelte';
+	import Wordmark from '#lib/components/Wordmark.svelte';
+	import Toast from '#lib/components/Toast.svelte';
+	import DatePicker from '#lib/components/DatePicker.svelte';
+	import TimePicker from '#lib/components/TimePicker.svelte';
+	import { shellFor } from '#lib/routeShells.ts';
+	import { publicMeta, jsonLdScript } from '#lib/seoMeta.ts';
+	import de from '#lib/i18n/de.ts';
+	import { sweepLegacyLocalStorage } from '#lib/legacy-cleanup.ts';
 	import { fade, fly } from 'svelte/transition';
 
 	let docsLoadStarted = false;
@@ -869,7 +869,8 @@
 	// picker now lives only in PublicFooter, which has its own local
 	// copy of the handler.
 
-	$: currentPath = $page.url.pathname as string;
+	const urlPathname = pageStore((p) => p.url.pathname);
+	$: currentPath = $urlPathname as string;
 	// CIPH-833 — route-shell registry. One lookup per route drives
 	// both the chrome selection and the auth/blueprint guards below,
 	// replacing the old multi-branch `currentPath !== '/X' && …`

@@ -40,8 +40,8 @@ const h = vi.hoisted(() => {
 	return { state };
 });
 
-vi.mock('$app/environment', () => ({ browser: true }));
-vi.mock('$lib/api', () => ({
+vi.mock('$app/env', () => ({ browser: true }));
+vi.mock('#lib/api.ts', () => ({
 	getDocuments: async () => ({ ok: true, data: { documents: h.state.serverDocs } }),
 	familyDocuments: async () => ({
 		ok: true,
@@ -62,18 +62,18 @@ vi.mock('$lib/api', () => ({
 	familyDocumentUpdate: vi.fn(),
 	familyDocumentDelete: vi.fn(),
 }));
-vi.mock('$lib/crypto', () => ({
+vi.mock('#lib/crypto.ts', () => ({
 	encryptDocument: vi.fn(),
 	decryptDocument: vi.fn(async (ct: string) => h.state.plaintext[ct]),
 }));
-vi.mock('$lib/idb', () => ({
+vi.mock('#lib/idb.ts', () => ({
 	getAllDocs: vi.fn(async () => h.state.cached),
 	putDocs: vi.fn(async (key: string, docs: unknown[]) => {
 		h.state.putDocsCalls.push({ key, docs: docs as Array<{ data: { type?: string } }> });
 	}),
 	clearDocs: vi.fn(async () => {}),
 }));
-vi.mock('$lib/outbox', () => ({
+vi.mock('#lib/outbox.ts', () => ({
 	enqueue: vi.fn(async () => 'obx-test'),
 	dequeue: vi.fn(async () => {}),
 	getPending: vi.fn(async () => []),

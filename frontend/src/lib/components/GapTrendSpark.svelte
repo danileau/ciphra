@@ -9,7 +9,7 @@
 	// trend, not a single resetting counter — and by hiding the card entirely
 	// when the preset doesn't declare a `markerEvent` (chronic_pain, burnout,
 	// depression, etc.).
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 
 	export let historicalGaps: number[];
 	export let currentGap: number;

@@ -7,7 +7,7 @@
 	the dashboard.
 -->
 <script lang="ts">
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 
 	/** Optional hint for the diary-only filter empty state. */
 	export let variant: 'all' | 'diary' = 'all';

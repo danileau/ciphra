@@ -16,25 +16,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, waitFor, within } from '@testing-library/svelte';
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api.ts', () => ({
 	loginInit: vi.fn(),
 	login: vi.fn(),
 }));
 
-vi.mock('$lib/crypto', () => ({
+vi.mock('#lib/crypto.ts', () => ({
 	decryptMasterKey: vi.fn(),
 	deriveAuthKey: vi.fn(),
 }));
 
-vi.mock('$lib/stores/auth', () => ({
+vi.mock('#lib/stores/auth.ts', () => ({
 	auth: { login: vi.fn() },
 }));
 
 import LoginForm from './LoginForm.svelte';
-import * as api from '$lib/api';
-import * as crypto from '$lib/crypto';
+import * as api from '#lib/api.ts';
+import * as crypto from '#lib/crypto.ts';
 // jsdom reports navigator.language = en-US, so the form renders English.
-import en from '$lib/i18n/en';
+import en from '#lib/i18n/en.ts';
 
 const AUTOFILL_MSG = en['auth.error_username_autofill'];
 

@@ -20,10 +20,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import de from '$lib/i18n/de';
-import en from '$lib/i18n/en';
-import fr from '$lib/i18n/fr';
-import itDict from '$lib/i18n/it';
+import de from '#lib/i18n/de.ts';
+import en from '#lib/i18n/en.ts';
+import fr from '#lib/i18n/fr.ts';
+import itDict from '#lib/i18n/it.ts';
 
 const PDF = readFileSync(join(__dirname, 'pdf.ts'), 'utf8');
 const DICTS: Array<[string, Record<string, string>]> = [
@@ -93,7 +93,7 @@ describe('the note text lives in a list, in full', () => {
 		// in reports/noteMarkers.test.ts; what matters HERE is that the PDF and
 		// the pre-export review resolve it identically, so the user cannot tick
 		// one set of sentences and hand over another.
-		expect(PDF).toContain("from '$lib/reports/noteMarkers'");
+		expect(PDF).toContain("from '#lib/reports/noteMarkers.ts'");
 		expect(PDF).toMatch(/text = noteMarkerText\(d\);/);
 		expect(PDF, 'a second, drifting copy').not.toMatch(/\.title\s*\|\|\s*d\.data\.notes/);
 	});

@@ -1,7 +1,7 @@
 /**
  * INC-001 — let the test's local source origins through CSP.
  *
- * ciphra ships a real Content-Security-Policy (svelte.config.js, `mode:
+ * ciphra ships a real Content-Security-Policy (vite.config.ts `kitConfig.csp`, `mode:
  * 'hash'`) whose `connect-src` names the production epilepc hosts:
  *
  *     connect-src 'self' https://cloudflareinsights.com

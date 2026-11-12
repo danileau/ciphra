@@ -25,10 +25,10 @@
 
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { t } from '$lib/i18n';
-	import Modal from '$lib/components/Modal.svelte';
-	import DatePicker from '$lib/components/DatePicker.svelte';
-	import Listbox from '$lib/components/Listbox.svelte';
+	import { t } from '#lib/i18n/index.ts';
+	import Modal from '#lib/components/Modal.svelte';
+	import DatePicker from '#lib/components/DatePicker.svelte';
+	import Listbox from '#lib/components/Listbox.svelte';
 	import {
 		addDaysISO,
 		createPastMedication,
@@ -36,11 +36,11 @@
 		medStartDate,
 		newMedicationId,
 		prependPeriod,
-	} from '$lib/blueprint/medicationHistory';
-	import { stopReasonLabel } from '$lib/blueprint/medications';
-	import type { MedicationPeriod, MedicationSlot, MedicationStopReason } from '$lib/blueprint/types';
-	import { formatISODateChoice, type DateFormatChoice } from '$lib/blueprint/preferences';
-	import { todayISO } from '$lib/date';
+	} from '#lib/blueprint/medicationHistory.ts';
+	import { stopReasonLabel } from '#lib/blueprint/medications.ts';
+	import type { MedicationPeriod, MedicationSlot, MedicationStopReason } from '#lib/blueprint/types.ts';
+	import { formatISODateChoice, type DateFormatChoice } from '#lib/blueprint/preferences.ts';
+	import { todayISO } from '#lib/date.ts';
 
 	export let open = false;
 	export let mode: HistoryDialogMode = 'earlier';

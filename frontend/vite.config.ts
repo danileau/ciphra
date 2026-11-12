@@ -1,4 +1,6 @@
-import { sveltekit } from '@sveltejs/kit/vite';
+import adapter from '@sveltejs/adapter-node';
+import { sveltekit, type Config as KitConfig } from '@sveltejs/kit/vite';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig, type Plugin } from 'vite';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
@@ -96,8 +98,72 @@ export function ciphraDocs(): Plugin {
 	};
 }
 
+/**
+ * SvelteKit + vite-plugin-svelte options. Until SvelteKit 3 this was
+ * svelte.config.js (`kit.*`); kit 3 reads it from the plugin call only.
+ * Exported so vitest.config.ts compiles components with the same options, and
+ * src/app-html-csp.test.ts pins the CSP below.
+ */
+export const kitConfig: KitConfig = {
+	preprocess: vitePreprocess(),
+	// 2026-06-07 — switched from adapter-auto to adapter-node so the
+	// Docker prod build (golive/frontend/Dockerfile.prod) produces a
+	// build/index.js the runtime stage can `node build/index.js`.
+	// adapter-auto only handles Vercel/Netlify/CF Pages/Azure SWA —
+	// for generic Linux Docker it produced no build/ output.
+	//
+	// `paths.origin` is deliberately left unset: adapter-node 6 then falls
+	// back to the ORIGIN env var (golive/docker-compose.app.yml sets it for
+	// prod), and dev/e2e/local `node build` keep deriving the origin from the
+	// request. Setting it here would pin every build to one host.
+	adapter: adapter(),
+	// Track 3 P0 (3.1) — drop `'unsafe-inline'` from script-src. SvelteKit
+	// emits a per-response CSP header and hashes its own inline hydration
+	// scripts (mode: 'hash'), so the blanket script-src unsafe-inline (the
+	// launch-night tactical) is no longer needed. This REPLACES the nginx
+	// CSP header (removed in nginx/ciphra.conf) — the script hashes are
+	// per-build, so only SvelteKit can keep them in sync.
+	//
+	// style-src KEEPS 'unsafe-inline': the app uses ~970 dynamic inline
+	// `style="..."` attributes (per-render values like `color: {accentHex}`)
+	// that CSP hashes cannot cover. script-src is the XSS-critical directive;
+	// hardening it is the win here.
+	csp: {
+		mode: 'hash',
+		directives: {
+			'default-src': ['self'],
+			// SvelteKit auto-adds the hash of its own inline hydration
+			// bootstrap. The two hashes below are the static author scripts
+			// in src/app.html (dark-mode pre-paint init + SW registration) —
+			// SvelteKit does NOT hash author scripts in app.html. If you edit
+			// either inline script, update these; the test
+			// src/app-html-csp.test.ts pins them so drift fails CI.
+			'script-src': [
+				'self',
+				'wasm-unsafe-eval',
+				'https://static.cloudflareinsights.com',
+				'sha256-qzKuFldrMK4qs/LEi+vQNxNT89C5GJlYyW9a0hZWtVg=',
+				'sha256-UIFddJohPrhXh+k9VkPCsy4Sgp1nZ+HUzlxHUoZm484='
+			],
+			'style-src': ['self', 'unsafe-inline'],
+			'img-src': ['self', 'data:'],
+			'connect-src': [
+				'self',
+				'https://cloudflareinsights.com',
+				'https://www.epilepc.ch',
+				'https://epilepc.ch',
+				'https://direct.epilepc.ch'
+			],
+			'font-src': ['self', 'data:'],
+			'frame-ancestors': ['none'],
+			'base-uri': ['self'],
+			'form-action': ['self']
+		}
+	}
+};
+
 export default defineConfig({
-	plugins: [ciphraDocs(), sveltekit()],
+	plugins: [ciphraDocs(), sveltekit(kitConfig)],
 	server: {
 		host: '0.0.0.0',
 		port: 5173,

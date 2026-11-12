@@ -10,11 +10,11 @@
 	so this same component enriches epilepsy, migraine, parkinson, diabetes …
 -->
 <script lang="ts">
-	import { t, locale, plural } from '$lib/i18n';
-	import { computeInsights } from '$lib/blueprint/insights';
-	import type { InsightDoc } from '$lib/blueprint/insights';
-	import type { Blueprint } from '$lib/blueprint/types';
-	import type { CiphraDocument } from '$lib/stores/documents';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import { computeInsights } from '#lib/blueprint/insights.ts';
+	import type { InsightDoc } from '#lib/blueprint/insights.ts';
+	import type { Blueprint } from '#lib/blueprint/types.ts';
+	import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 	export let docs: CiphraDocument[] = [];
 	export let bp: Blueprint | null = null;

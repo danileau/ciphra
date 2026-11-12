@@ -18,10 +18,10 @@
 	and diaries open the journal moment-modal — out of scope here).
 -->
 <script lang="ts">
-	import { t, locale, translateUnit } from '$lib/i18n';
-	import { isCustomItem, resolveMedDisplay, medicationChanges, periodOn, canonicalMedId } from '$lib/blueprint';
-	import type { Blueprint } from '$lib/blueprint/types';
-	import type { CiphraDocument } from '$lib/stores/documents';
+	import { t, locale, translateUnit } from '#lib/i18n/index.ts';
+	import { isCustomItem, resolveMedDisplay, medicationChanges, periodOn, canonicalMedId } from '#lib/blueprint/index.ts';
+	import type { Blueprint } from '#lib/blueprint/types.ts';
+	import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 	export let docs: CiphraDocument[];
 	export let bp: Blueprint | null;

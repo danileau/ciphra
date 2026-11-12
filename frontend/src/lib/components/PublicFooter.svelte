@@ -10,12 +10,12 @@
 	skip the footer — they're focus surfaces.
 -->
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import Wordmark from '$lib/components/Wordmark.svelte';
-	import Asterisk from '$lib/components/Asterisk.svelte';
-	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
-	import { themeChoice, setThemeChoice, type ThemeChoice } from '$lib/stores/theme';
-	import { sourceUrl } from '$lib/source';
+	import { t } from '#lib/i18n/index.ts';
+	import Wordmark from '#lib/components/Wordmark.svelte';
+	import Asterisk from '#lib/components/Asterisk.svelte';
+	import LocaleSelect from '#lib/components/LocaleSelect.svelte';
+	import { themeChoice, setThemeChoice, type ThemeChoice } from '#lib/stores/theme.ts';
+	import { sourceUrl } from '#lib/source.ts';
 
 	// Theme switch for logged-out visitors (2026-06-12). Settings is the
 	// authed control surface; anonymous visitors had no override and the

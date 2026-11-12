@@ -5,13 +5,13 @@
 	 * The link-based flow lives at /join/[grantId] and also ends up here.
 	 */
 	import { onMount } from 'svelte';
-	import { t } from '$lib/i18n';
-	import { auth } from '$lib/stores/auth';
-	import { familyLinks } from '$lib/stores/familyLinks';
+	import { t } from '#lib/i18n/index.ts';
+	import { auth } from '#lib/stores/auth.ts';
+	import { familyLinks } from '#lib/stores/familyLinks.ts';
 	import { get } from 'svelte/store';
-	import { matchFamilyGrant } from '$lib/crypto';
-	import { validateFamilyCode } from '$lib/wordlist';
-	import * as api from '$lib/api';
+	import { matchFamilyGrant } from '#lib/crypto.ts';
+	import { validateFamilyCode } from '#lib/wordlist.ts';
+	import * as api from '#lib/api.ts';
 
 	let showClaim = false;
 	let sourceUsername = '';

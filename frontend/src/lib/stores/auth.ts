@@ -1,5 +1,5 @@
 import { writable, derived } from 'svelte/store';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 interface AuthState {
 	token: string | null;
@@ -175,7 +175,7 @@ function createAuthStore() {
 			try { localStorage.removeItem('ciphra_setup_skipped'); } catch {}
 			clearHealthPreferences();
 			try {
-				const m = await import('$lib/idb');
+				const m = await import('#lib/idb.ts');
 				await m.clearAllPartitions();
 			} catch (e) {
 				console.error('logout: IndexedDB wipe failed', e);
@@ -210,7 +210,7 @@ function createAuthStore() {
 		async clearLocalCache() {
 			if (!browser) return;
 			try {
-				const m = await import('$lib/idb');
+				const m = await import('#lib/idb.ts');
 				await m.clearAllPartitions();
 			} catch (e) {
 				console.error('clearLocalCache: IndexedDB wipe failed', e);

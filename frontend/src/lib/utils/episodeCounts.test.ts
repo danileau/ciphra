@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { countEpisodesInWindow, totalEpisodesInWindow, daysWithEpisodes } from './episodeCounts';
-import type { CiphraDocument } from '$lib/stores/documents';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 let nextId = 1;
 function entry(date: string, episodes: Record<string, number>, key: 'episodes' | 'seizures' = 'episodes'): CiphraDocument {

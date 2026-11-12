@@ -3,7 +3,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { binPosition, dayBins, doseBands, medsChangedIn, monthBins } from './doseBands';
-import type { MedicationSlot } from '$lib/blueprint/types';
+import type { MedicationSlot } from '#lib/blueprint/types.ts';
 
 const fycompa: MedicationSlot = {
 	id: 'fyc', name: 'Fycompa', dose: '8mg', schedule: 'abends', asNeeded: false,

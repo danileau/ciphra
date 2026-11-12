@@ -16,7 +16,7 @@
  * for cross-device unlock.
  */
 import { describe, expect, it } from 'vitest';
-import { generateRecoveryCode, validateRecoveryCode, WORDLIST } from '$lib/wordlist';
+import { generateRecoveryCode, validateRecoveryCode, WORDLIST } from '#lib/wordlist.ts';
 
 describe('validateRecoveryCode — happy path', () => {
 	it('accepts a freshly generated code', () => {

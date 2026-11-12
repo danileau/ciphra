@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { aggregateCycleStrip } from '$lib/pdfCycleStrip';
-import type { Blueprint } from '$lib/blueprint';
-import type { CiphraDocument } from '$lib/stores/documents';
+import { aggregateCycleStrip } from '#lib/pdfCycleStrip.ts';
+import type { Blueprint } from '#lib/blueprint/index.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 function endoBlueprint(): Blueprint {
 	return {

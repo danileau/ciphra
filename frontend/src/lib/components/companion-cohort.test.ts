@@ -22,7 +22,7 @@ const SOURCE = readFileSync(
 describe('CIPH-854 Companion cohort ordering', () => {
 	it('imports PhaseContextCard', () => {
 		expect(SOURCE).toContain(
-			"import PhaseContextCard from '$lib/components/PhaseContextCard.svelte'",
+			"import PhaseContextCard from '#lib/components/PhaseContextCard.svelte'",
 		);
 	});
 

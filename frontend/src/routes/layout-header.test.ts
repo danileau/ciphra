@@ -77,7 +77,7 @@ describe('CIPH-pi24-1B — language picker is footer-only', () => {
 		// came back in 2026-09 for `plural()` in the caregiver banner — a
 		// picker needs `locales` + `localeNames`, and those stay out.
 		expect(LAYOUT).not.toMatch(
-			/import\s*\{[^}]*\b(locales|localeNames)\b[^}]*\}\s*from\s*['"]\$lib\/i18n['"]/,
+			/import\s*\{[^}]*\b(locales|localeNames)\b[^}]*\}\s*from\s*['"]#lib\/i18n\/index\.ts['"]/,
 		);
 	});
 

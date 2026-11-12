@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Asterisk from '$lib/components/Asterisk.svelte';
-	import Button from '$lib/components/Button.svelte';
+	import Asterisk from '#lib/components/Asterisk.svelte';
+	import Button from '#lib/components/Button.svelte';
 
 	export let message: string = '';
 	export let cta: string | undefined = undefined;

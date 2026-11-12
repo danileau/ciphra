@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { aggregateDailyMonthSeries } from '$lib/pdfDailyMonthChart';
-import type { CiphraDocument } from '$lib/stores/documents';
+import { aggregateDailyMonthSeries } from '#lib/pdfDailyMonthChart.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 function entryDoc(id: number, date: string, body: Record<string, unknown>): CiphraDocument {
 	return {

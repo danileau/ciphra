@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { get } from 'svelte/store';
 
 import VaultSwitcher from './VaultSwitcher.svelte';
-import { activeVault } from '$lib/stores/familyLinks';
+import { activeVault } from '#lib/stores/familyLinks.ts';
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (p: string) => readFileSync(join(SRC, p), 'utf8');

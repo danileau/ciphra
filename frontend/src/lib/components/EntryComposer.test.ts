@@ -23,8 +23,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import EntryComposer from './EntryComposer.svelte';
-import type { Blueprint } from '$lib/blueprint';
-import type { CiphraDocument } from '$lib/stores/documents';
+import type { Blueprint } from '#lib/blueprint/index.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 function makeBp(overrides: Partial<Blueprint> = {}): Blueprint {
 	return {

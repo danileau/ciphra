@@ -12,9 +12,9 @@
  * Gated by `sectionsForCohort(cohort).includes('phase-distribution')` —
  * cycle/discrete/narrative/custom cohorts never call this.
  */
-import type { Blueprint, EpisodeType } from '$lib/blueprint';
-import type { CiphraDocument } from '$lib/stores/documents';
-import { episodeCountTotals } from '$lib/monthAggregates';
+import type { Blueprint, EpisodeType } from '#lib/blueprint/index.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
+import { episodeCountTotals } from '#lib/monthAggregates.ts';
 
 export type RGB = [number, number, number];
 

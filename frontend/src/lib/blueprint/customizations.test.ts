@@ -23,7 +23,7 @@ import {
 	CUSTOM_GROUP_ID,
 	CUSTOM_GROUP_LABEL_KEY,
 } from './customizations';
-import { applyBlueprintCustomizations } from '$lib/pdf';
+import { applyBlueprintCustomizations } from '#lib/pdf.ts';
 import type { Blueprint, CustomSymptomItem } from './types';
 
 function makeBp(over: Partial<Blueprint> = {}): Blueprint {

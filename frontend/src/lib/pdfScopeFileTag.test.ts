@@ -7,7 +7,7 @@
  * the meaning of a non-December anchor, which really is an end month.
  */
 import { describe, expect, it } from 'vitest';
-import { scopeFileTag } from '$lib/pdf';
+import { scopeFileTag } from '#lib/pdf.ts';
 
 describe('scopeFileTag', () => {
 	it('names a month by its own prefix', () => {

@@ -15,7 +15,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
-import { locale, t, ensureLocale, localeNames } from '$lib/i18n';
+import { locale, t, ensureLocale, localeNames } from '#lib/i18n/index.ts';
 
 // Yield twice: once for the import promise to resolve, once for the derived
 // store to re-run after `translations.update()` fires its subscriber.

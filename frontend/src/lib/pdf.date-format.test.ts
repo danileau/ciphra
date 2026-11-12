@@ -25,7 +25,7 @@ const PDF = readFileSync(join(__dirname, 'pdf.ts'), 'utf8');
 
 describe('day-precision dates follow the setting', () => {
 	it('pdf.ts imports the canonical formatter rather than rolling its own', () => {
-		expect(PDF).toContain("from '$lib/blueprint/preferences'");
+		expect(PDF).toContain("from '#lib/blueprint/preferences.ts'");
 		expect(PDF).toMatch(/formatDateChoice/);
 		expect(PDF).toMatch(/formatISODateChoice/);
 	});

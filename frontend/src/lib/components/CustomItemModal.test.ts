@@ -19,7 +19,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, fireEvent, cleanup } from '@testing-library/svelte';
 import CustomItemModal from './CustomItemModal.svelte';
-import { DATA_PALETTE } from '$lib/dataPalette';
+import { DATA_PALETTE } from '#lib/dataPalette.ts';
 
 afterEach(() => cleanup());
 

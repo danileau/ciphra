@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_COHORTS } from '$lib/blueprint/cohort';
-import { SPINE, sectionsForCohort, type PdfSectionKey } from '$lib/cohortSections';
+import { ALL_COHORTS } from '#lib/blueprint/cohort.ts';
+import { SPINE, sectionsForCohort, type PdfSectionKey } from '#lib/cohortSections.ts';
 
 describe('cohortSections — typed gate', () => {
 	it('returns a non-empty ordered list for every cohort', () => {

@@ -15,7 +15,7 @@
  *   are NOT gated here — they live inline in pdf.ts because their gate is
  *   `blueprint.rescueMedications?.length`, not cohort.
  */
-import type { Cohort } from '$lib/blueprint/cohort';
+import type { Cohort } from '#lib/blueprint/cohort.ts';
 
 export type PdfSectionKey =
 	| 'header'

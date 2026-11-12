@@ -13,19 +13,19 @@
 	 *      verify with the server, persist the link into caregiver's vault
 	 */
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { get } from 'svelte/store';
-	import { t } from '$lib/i18n';
-	import { auth, isAuthenticated, authReady } from '$lib/stores/auth';
-	import { familyLinks } from '$lib/stores/familyLinks';
-	import { unwrapFamilyGrant } from '$lib/crypto';
-	import * as api from '$lib/api';
-	import Asterisk from '$lib/components/Asterisk.svelte';
+	import { t } from '#lib/i18n/index.ts';
+	import { auth, isAuthenticated, authReady } from '#lib/stores/auth.ts';
+	import { familyLinks } from '#lib/stores/familyLinks.ts';
+	import { unwrapFamilyGrant } from '#lib/crypto.ts';
+	import * as api from '#lib/api.ts';
+	import Asterisk from '#lib/components/Asterisk.svelte';
 
 	// SvelteKit passes route params as a component prop. Declare it to silence
-	// "unknown prop 'params'" warnings; we still read via $page.params.
+	// "unknown prop 'params'" warnings; we still read via page.params.
 	export const params: Record<string, string> | undefined = undefined;
 	export const data: unknown = undefined;
 	void params; void data;
@@ -69,7 +69,7 @@
 	let sourceUsername = '';
 
 	function parseParams(): { grantId: number; code: string } | null {
-		const idRaw = $page.params.grantId;
+		const idRaw = page.params.grantId;
 		const id = Number(idRaw);
 		if (!id || Number.isNaN(id)) return null;
 		let code = '';

@@ -52,7 +52,7 @@ describe('CIPH-pi24-2 ciphra.app removal', () => {
 describe('CIPH-pi24-2 landing.footer_domains key removal across all locales', () => {
 	for (const locale of ['de', 'en', 'fr', 'it'] as const) {
 		it(`${locale}.ts no longer carries landing.footer_domains`, async () => {
-			const dict = (await import(`$lib/i18n/${locale}`)).default as Record<string, string>;
+			const dict = (await import(`../i18n/${locale}.ts`)).default as Record<string, string>;
 			expect(dict['landing.footer_domains']).toBeUndefined();
 		});
 	}

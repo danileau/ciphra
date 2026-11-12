@@ -15,10 +15,10 @@
  * stating what happened around it would be an assessment — the line
  * `pdf.no-assessment.test.ts` holds for the whole document.
  */
-import type { MedicationPeriod, MedicationSlot } from '$lib/blueprint/types';
-import { addDaysISO, medIds, medicationChanges, medPeriods, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
-import { medAdherenceByPeriod, stopReasonLabel, type MedPeriodAdherence } from '$lib/blueprint/medications';
-import { doseBands, medsChangedIn, type AxisBin, type DoseBand, type DoseBoundary } from '$lib/reports/doseBands';
+import type { MedicationPeriod, MedicationSlot } from '#lib/blueprint/types.ts';
+import { addDaysISO, medIds, medicationChanges, medPeriods, periodOn, type MedChange } from '#lib/blueprint/medicationHistory.ts';
+import { medAdherenceByPeriod, stopReasonLabel, type MedPeriodAdherence } from '#lib/blueprint/medications.ts';
+import { doseBands, medsChangedIn, type AxisBin, type DoseBand, type DoseBoundary } from '#lib/reports/doseBands.ts';
 
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 type DayDoc = { data?: Record<string, unknown> };

@@ -5,25 +5,26 @@
 	 same effect as the previous imperative form-state reset, expressed
 	 structurally. See CIPH-850. -->
 <script lang="ts">
-	import { isAuthenticated } from '$lib/stores/auth';
-	import { documents } from '$lib/stores/documents';
-	import { activeVault } from '$lib/stores/familyLinks';
-	import { resolvedBlueprint } from '$lib/blueprint';
+	import { isAuthenticated } from '#lib/stores/auth.ts';
+	import { documents } from '#lib/stores/documents.ts';
+	import { activeVault } from '#lib/stores/familyLinks.ts';
+	import { resolvedBlueprint } from '#lib/blueprint/index.ts';
 	import { onMount } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { t } from '$lib/i18n';
-	import { todayISO } from '$lib/date';
-	import Asterisk from '$lib/components/Asterisk.svelte';
-	import EntryComposer, { type EntryData } from '$lib/components/EntryComposer.svelte';
+	import { pageStore } from '#lib/pageStore.ts';
+	import { t } from '#lib/i18n/index.ts';
+	import { todayISO } from '#lib/date.ts';
+	import Asterisk from '#lib/components/Asterisk.svelte';
+	import EntryComposer, { type EntryData } from '#lib/components/EntryComposer.svelte';
 
 	// Derive from the URL param REACTIVELY (not once in onMount): SvelteKit
 	// reuses this route component across /log/<a> → /log/<b> client-side
 	// navigations (e.g. clicking a day in /reports), so a one-shot onMount
 	// read leaves currentDate stale → {#key currentDate} never remounts →
 	// EntryComposer shows the previous day's data on an empty day.
+	const dateParam = pageStore((p) => p.params.date);
 	$: currentDate = (() => {
-		const p = $page.params.date;
+		const p = $dateParam;
 		if (!p || p === 'today') return todayISO();
 		return /^\d{4}-\d{2}-\d{2}$/.test(p) ? p : todayISO();
 	})();
@@ -97,12 +98,12 @@
 		const d = new Date(currentDate + 'T12:00:00');
 		d.setDate(d.getDate() + delta);
 		const newDate = d.toISOString().slice(0, 10);
-		// currentDate is derived from $page.params.date — the goto drives it.
-		goto(`/log/${newDate}`, { replaceState: true });
+		// currentDate is derived from the date route param — the goto drives it.
+		goto(`/log/${newDate}`, { replace: true });
 	}
 
 	function handleJumpToToday() {
-		goto(`/log/${todayISO()}`, { replaceState: true });
+		goto(`/log/${todayISO()}`, { replace: true });
 	}
 </script>
 

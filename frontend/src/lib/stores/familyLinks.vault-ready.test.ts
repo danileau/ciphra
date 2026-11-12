@@ -7,8 +7,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { get } from 'svelte/store';
 
-vi.mock('$app/environment', () => ({ browser: true }));
-vi.mock('$lib/api', () => ({
+vi.mock('$app/env', () => ({ browser: true }));
+vi.mock('#lib/api.ts', () => ({
 	getDocuments: vi.fn(async () => ({
 		ok: true,
 		status: 200,
@@ -19,7 +19,7 @@ vi.mock('$lib/api', () => ({
 	updateDocument: vi.fn(),
 	deleteDocument: vi.fn(),
 }));
-vi.mock('$lib/crypto', () => ({
+vi.mock('#lib/crypto.ts', () => ({
 	decryptDocument: vi.fn(async () => ({
 		type: 'family_link', source_user_id: 7, source_username: 'eva', label: 'Mama',
 		patient_master_key_b64: 'AAAA', linked_at: '2026-09-01T00:00:00Z',

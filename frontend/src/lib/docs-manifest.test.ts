@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { IN_APP_DOCS, NOT_IN_APP } from '$lib/docs-manifest';
+import { IN_APP_DOCS, NOT_IN_APP } from '#lib/docs-manifest.ts';
 
 // frontend/src/lib → repo root is three up.
 const REPO = resolve(__dirname, '..', '..', '..');

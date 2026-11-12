@@ -11,8 +11,8 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, waitFor, cleanup } from '@testing-library/svelte';
-import de from '$lib/i18n/de';
-import { locale } from '$lib/i18n';
+import de from '#lib/i18n/de.ts';
+import { locale } from '#lib/i18n/index.ts';
 
 const api = vi.hoisted(() => ({
 	familyGrantList: vi.fn(),
@@ -22,13 +22,13 @@ const api = vi.hoisted(() => ({
 	familyGrantRevokeAll: vi.fn(),
 }));
 
-vi.mock('$lib/api', () => api);
-vi.mock('$lib/crypto', () => ({
+vi.mock('#lib/api.ts', () => api);
+vi.mock('#lib/crypto.ts', () => ({
 	createFamilyGrant: vi.fn(async () => ({ grant_params: 'p', grant_auth: 'a', wrapped_master: 'w', family_code: 'eins zwei drei vier fünf sechs' })),
 	encryptData: vi.fn(async (s: string) => `enc:${s}`),
 	decryptData: vi.fn(async (s: string) => s.replace(/^enc:/, '')),
 }));
-vi.mock('$lib/stores/auth', () => ({
+vi.mock('#lib/stores/auth.ts', () => ({
 	auth: { subscribe: (run: (v: unknown) => void) => { run({ masterKey: new Uint8Array(32), username: 'eva' }); return () => {}; } },
 }));
 

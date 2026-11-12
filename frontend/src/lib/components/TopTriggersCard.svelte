@@ -20,11 +20,11 @@
 	truthy string values.
 -->
 <script lang="ts">
-	import { t, locale, plural } from '$lib/i18n';
-	import type { CiphraDocument } from '$lib/stores/documents';
-	import type { Blueprint } from '$lib/blueprint/types';
-	import { isCustomItem } from '$lib/blueprint';
-	import { toLocalISODate } from '$lib/date';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import type { CiphraDocument } from '#lib/stores/documents.ts';
+	import type { Blueprint } from '#lib/blueprint/types.ts';
+	import { isCustomItem } from '#lib/blueprint/index.ts';
+	import { toLocalISODate } from '#lib/date.ts';
 
 	export let docs: CiphraDocument[];
 	export let bp: Blueprint | null = null;

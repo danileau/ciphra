@@ -17,7 +17,7 @@
  * print media stays light.
  */
 import { writable, readable, derived, type Readable } from 'svelte/store';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 export type ThemeChoice = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';

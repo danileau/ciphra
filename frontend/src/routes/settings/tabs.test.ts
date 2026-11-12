@@ -25,7 +25,7 @@ describe('CIPH-857 settings tabs', () => {
 	});
 
 	it('uses the Tabs primitive', () => {
-		expect(source).toContain("import Tabs from '$lib/components/Tabs.svelte'");
+		expect(source).toContain("import Tabs from '#lib/components/Tabs.svelte'");
 		expect(source).toMatch(/<Tabs[\s\S]*?onSelect={selectTab}/);
 	});
 

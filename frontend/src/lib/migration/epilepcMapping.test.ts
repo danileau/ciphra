@@ -26,7 +26,7 @@ import {
     parseEpilepcMedName,
     type EpilepcBundle,
 } from './epilepcMapping';
-import type { MedicationSlot } from '$lib/blueprint/types';
+import type { MedicationSlot } from '#lib/blueprint/types.ts';
 
 // ---------------------------------------------------------------------------
 // Helpers

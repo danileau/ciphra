@@ -16,8 +16,8 @@ import {
 } from './monthAggregates';
 import { monthSummaryInsightFor } from './monthSummaryInsight';
 import { aggregatePhaseDistribution } from './pdfPhaseDistribution';
-import type { Blueprint } from '$lib/blueprint';
-import type { CiphraDocument } from '$lib/stores/documents';
+import type { Blueprint } from '#lib/blueprint/index.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 const bp = {
 	conditionId: 'bipolar',

@@ -11,10 +11,10 @@ const docsData = writable<any[]>([]);
 const updateDoc = vi.fn(async () => true);
 const save = vi.fn(async () => true);
 
-vi.mock('$lib/stores/documents', () => ({
+vi.mock('#lib/stores/documents.ts', () => ({
 	documents: { subscribe: docsData.subscribe, updateDoc, save },
 }));
-vi.mock('$lib/stores/auth', () => ({
+vi.mock('#lib/stores/auth.ts', () => ({
 	auth: { subscribe: writable({ masterKey: new Uint8Array(32), username: 'u' }).subscribe },
 }));
 

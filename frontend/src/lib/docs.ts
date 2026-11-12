@@ -12,7 +12,7 @@
  */
 import { marked } from 'marked';
 import { docs as rawDocs } from 'virtual:ciphra-docs';
-import { rewriteDocLinks } from '$lib/docs-links';
+import { rewriteDocLinks } from '#lib/docs-links.ts';
 
 export interface DocMeta {
 	slug: string;

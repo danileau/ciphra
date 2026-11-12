@@ -5,7 +5,7 @@
 #
 # If you decide to switch to adapter-static (fully prerendered SPA), drop the
 # runtime stage entirely and have nginx serve `build/` directly — but that's
-# a code-side decision in svelte.config.js.
+# a code-side decision in vite.config.ts (kitConfig.adapter).
 
 # ─── builder ────────────────────────────────────────────────────────────────
 # Node is pinned to an exact patch (bumped by Dependabot's docker updater).
