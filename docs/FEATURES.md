@@ -170,10 +170,11 @@ Users of the original epilepc tracker can import their history at `/migrate`:
 the old records are re-encrypted in the browser with the user's new ciphra key
 and uploaded as encrypted documents.
 
-epilepc is on a phased decommission. New account registration on epilepc closes
-the moment the `announce` phase starts (2026-07-01); existing accounts keep
-reading and writing through `warn`, become read-only on 2026-10-01, and are fully
-decommissioned on 2026-10-31. Each user can either migrate via `/migrate` or
+epilepc is being phased out. New account registration on epilepc closed on
+2026-07-01, and existing accounts have been read-only since 2026-10-01: they
+can still sign in and read their records until at least the end of 2026. What
+happens after that will be decided from how much epilepc is still used, and
+announced in advance. Until then each user can migrate via `/migrate` or
 download their data as a JSON bundle (byte-identical to the migration bundle)
 or as a PDF.
 

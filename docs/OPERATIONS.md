@@ -19,8 +19,7 @@ If you arrived here because something is broken, jump to
                                 │
                                 ▼
                 ┌───────────────────────────────┐
-                │ Infomaniak VPS Lite           │
-                │  4 vCPU / 4 GB / 80 GB        │
+                │ Infomaniak VPS                │
                 │  Ubuntu 24.04 LTS · Geneva    │
                 │                               │
                 │  nftables (CF-IPs only)       │
@@ -416,10 +415,7 @@ The workflows:
   will not assess the challenge page's headers as ciphra's). That is an
   **accepted state** (decided 2026-08-23, [`backlog.md`](backlog.md) →
   Decided): Free-plan Bot Fight cannot be skipped reliably, the header config
-  is CI-guarded, and the TLS-mode leg runs independently. The script still
-  sends an `x-ciphra-monitor` header when `MONITOR_TOKEN` is set (useful for a
-  local run behind a matching WAF skip rule), but the workflow does not pass
-  that secret.
+  is CI-guarded, and the TLS-mode leg runs independently.
 - `security-digest.yml` — weekly (Mon 06:00 UTC) consolidated posture
   summary (`scripts/security-digest.sh`): aggregates the latest
   `security-scan` + `security-monitor` conclusions and the open-Dependabot
@@ -632,7 +628,7 @@ docker ps
 # or "Exited" = problem.
 
 docker stats --no-stream
-# CPU + memory. RAM usage should be well under 4 GB.
+# CPU + memory. RAM usage should stay well below the VPS's total.
 ```
 
 ### Read logs
