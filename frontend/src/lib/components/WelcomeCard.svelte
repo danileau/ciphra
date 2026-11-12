@@ -160,7 +160,7 @@
 				</li>
 				<li>
 					<strong>{$t('welcome.migrated_readonly_title')}</strong>
-					<span>{$t('welcome.migrated_readonly_body', { date: '2026-10-31' })}</span>
+					<span>{$t('welcome.migrated_readonly_body')}</span>
 				</li>
 			</ul>
 		{:else}

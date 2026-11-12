@@ -19,7 +19,7 @@ export default {
 	'welcome.migrated_verify': 'Vérifier dans le journal',
 	'welcome.migrated_encryption_title': 'Chiffré différemment',
 	'welcome.migrated_encryption_body': 'ciphra chiffre directement dans votre navigateur avec votre mot de passe — nous ne pouvons rien déchiffrer de ce que vous y enregistrez.',
-	'welcome.migrated_readonly_title': 'epilepc ferme le {date}',
+	'welcome.migrated_readonly_title': "epilepc reste consultable au moins jusqu'à fin 2026",
 	'welcome.migrated_readonly_body': "D'ici là, votre ancien compte reste ouvert en lecture et téléchargement. Les nouvelles entrées appartiennent ici à partir de maintenant.",
 
 	'nav.dashboard': 'Tableau de bord',
