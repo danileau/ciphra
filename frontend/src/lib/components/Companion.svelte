@@ -24,6 +24,7 @@
 	import { computeCycleStateToday, hasCycleTracking, PHASE_COLORS } from '#lib/cycleState.ts';
 	import { cohortPalette } from '#lib/cohortPalette.ts';
 	import { conditionInfoMap } from '#lib/conditionInfo.ts';
+	import { hasExportableData } from '#lib/reports/exportPeriods.ts';
 
 	// CIPH-921 — the dashboard condition label must use the SAME per-condition
 	// color as /conditions (the landing #conditions section + condition deep
@@ -704,7 +705,7 @@
 				{rescueMedsThisMonth}
 				{markerGapTrend}
 				markerAccentHex={conditionColor}
-				canExport={!!bp && allDocs.length > 0}
+				canExport={!!bp && hasExportableData(allDocs)}
 				{todayEntries}
 				{bp}
 				allDocsStore={$documents}

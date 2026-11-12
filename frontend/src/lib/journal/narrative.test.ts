@@ -26,6 +26,38 @@ describe('textOf — what counts as writing', () => {
 		expect(textOf(entry('2025-03-04', { notes: 'Aura zuerst' }))?.kind).toBe('note');
 	});
 
+	it('takes a note written on an episode (quick-add / composer)', () => {
+		const t = textOf(entry('2025-03-04', {
+			episodes: { migraine_aura: 1 },
+			episodeNotes: { migraine_aura: '14:05: Aura zuerst, dann Schmerz von links' },
+		}));
+		expect(t?.kind).toBe('note');
+		expect(t?.text).toBe('14:05: Aura zuerst, dann Schmerz von links');
+	});
+
+	it('joins the day note and every episode note, skipping empty ones', () => {
+		const t = textOf(entry('2025-03-04', {
+			notes: 'Schlecht geschlafen',
+			episodeNotes: { migraine_aura: '  Aura  links ', tension: '   ' },
+		}));
+		expect(t?.text).toBe('Schlecht geschlafen · Aura links');
+	});
+
+	it('reads per-occurrence notes, not the time-prefixed legacy mirror', () => {
+		// What quick-add writes for two occurrences on one day.
+		const t = textOf(entry('2025-03-04', {
+			time: '12:53',
+			episodes: { migraine_aura: 2 },
+			episodeInstances: { migraine_aura: [{ time: '12:53', note: 'Aura zuerst' }, { time: '18:10' }] },
+			episodeNotes: { migraine_aura: '12:53: Aura zuerst' },
+		}));
+		expect(t?.text).toBe('Aura zuerst');
+	});
+
+	it('an episode with an EMPTY note is still not writing', () => {
+		expect(textOf(entry('2025-03-04', { episodes: { tension: 1 }, episodeNotes: { tension: '' } }))).toBeNull();
+	});
+
 	it('ignores an entry that only holds measurements', () => {
 		expect(textOf(entry('2025-03-04', { vitals: { mood: 7 }, episodes: { tension: 1 } }))).toBeNull();
 	});
@@ -77,6 +109,19 @@ describe('buildNarrative — only written days appear', () => {
 		// It is real data, and it belongs to the calendar and /reports. Letting
 		// it in here would rebuild the metric list this view replaced.
 		expect(buildNarrative(docs, bp).map((d) => d.dayKey)).not.toContain('2025-03-03');
+	});
+
+	it('an episode WITH a note puts its day in the journal, episode as context', () => {
+		const withNote = [
+			...docs,
+			entry('2025-03-05', { episodes: { migraine_aura: 1 }, episodeNotes: { migraine_aura: 'Aura zuerst' } }),
+		];
+		const day = buildNarrative(withNote, bp).find((d) => d.dayKey === '2025-03-05');
+		expect(day).toBeTruthy();
+		expect(JSON.stringify(day)).toContain('Aura zuerst');
+		expect(JSON.stringify(day)).toContain('migraine_aura');
+		// …and the journal search finds it.
+		expect(buildNarrative(withNote, bp, { query: 'aura zuerst' }).map((d) => d.dayKey)).toEqual(['2025-03-05']);
 	});
 
 	it('newest day first', () => {
