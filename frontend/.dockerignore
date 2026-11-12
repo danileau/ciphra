@@ -1,0 +1,20 @@
+# Dockerfile.prod runs `npm ci` itself and then `COPY . .`. Without this file
+# a LOCAL build copied the host's node_modules over that clean install, along
+# with .vite/.vitest caches and build output (+25 MB, and an image that
+# didn't match what CI builds from a fresh checkout). CI is unaffected
+# either way; this keeps local builds honest.
+#
+# Do NOT ignore _docs-src/: release-images.yml stages the repo docs there for
+# the in-app /docs (an empty /docs once shipped because of it).
+node_modules/
+build/
+.svelte-kit/
+src/.svelte-kit/
+.vite/
+test-results/
+playwright-report/
+e2e/_screenshots/
+.devcerts/
+.env
+.env.*
+!.env.example
