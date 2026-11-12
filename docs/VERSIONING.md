@@ -111,7 +111,8 @@ nothing.
    (`scripts/release-state.sh`). Warnings, not blocks — shipping ahead of a
    release is a legitimate choice; not noticing is not.
 6. **Mint the release tag by hand**, when you decide the release is a release:
-   Actions → **Release tag** → *Run workflow*. It creates the annotated
+   Actions → **Release tag** → *Run workflow*, or from a terminal
+   `gh workflow run release-tag.yml --ref main`. It creates the annotated
    `vX.Y.Z` tag and publishes a GitHub release whose body is that version's
    changelog section — which is what the `[X.Y.Z]` links at the bottom of
    `CHANGELOG.md` point at. Give it a `version` and `sha` to tag something
