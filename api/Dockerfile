@@ -10,7 +10,7 @@
 # Pinned to an exact patch (bumped by Dependabot's docker updater) for the
 # same reason as the frontend's Node: a floating tag is only as fresh as the
 # last rebuild. Minor/major (3.12+) is a runtime upgrade, held in dependabot.yml.
-FROM python:3.11.17-slim AS base
+FROM python:3.11.18-slim AS base
 
 # `apt-get upgrade` patches the Debian base packages (the slim base lags the
 # security repo); install build/runtime extras; then drop the apt lists.
@@ -26,6 +26,12 @@ FROM python:3.11.17-slim AS base
 # unchanged main would reuse the same SHA, replay the cached layer, and
 # republish the identical stale packages — defeating the one control that
 # clears base-layer CVEs (util-linux 2.41-5, 36 HIGHs, 2026-08-21).
+#
+# The upgrade happens at BUILD time only: a live image keeps the packages it
+# was built with. When the daily scan flags a fixed-upstream Debian CVE in the
+# live api image (e.g. apt/libapt-pkg7.0 3.0.3 → 3.0.4, CVE-2026-109518,
+# 2026-11-05), the fix is a release — any merge to main rebuilds — not a
+# Dockerfile change. (apt itself never runs in the running container.)
 ARG CACHEBUST=none
 RUN echo "cachebust: ${CACHEBUST}" \
  && apt-get update \
