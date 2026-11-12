@@ -258,7 +258,7 @@
 		{/if}
 
 		{#if errorKey}
-			<!-- Error text uses --danger to match Input.svelte:84 and to read
+			<!-- Error text uses --danger, the app-wide error colour, to read
 			     as "stop, this is wrong" rather than "warm warning". -->
 			<p class="text-sm" style="color: var(--danger)" data-testid="custom-item-error">
 				{$t(errorKey)}

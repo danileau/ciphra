@@ -2,8 +2,9 @@
  * CIPH-834 — interaction primitives heuristic scan.
  *
  * This test is a soft fence, not a ban. It scans `.svelte` files for
- * duplicated inline patterns that the new primitives
- * (`ConfirmDelete`, `Modal`) were extracted to cover. When it flags
+ * duplicated inline patterns that the `Modal` primitive was
+ * extracted to cover. (A `ConfirmDelete` primitive existed too; no
+ * site ever adopted it and it was removed on 2026-11-12.) When it flags
  * a site, the author has three options:
  *
  *   1. Replace the inline pattern with the primitive (preferred).
@@ -67,39 +68,6 @@ function usesPrimitive(src: string, primitive: string): boolean {
 
 describe('CIPH-834 — interaction primitive adoption', () => {
 	const files = walkSvelte(SRC_ROOT);
-
-	// --- ConfirmDelete heuristic ----------------------------------
-	// The inline pattern we look for: a literal `yes_delete` i18n
-	// key adjacent (within 400 chars) to a `cancel` key. This
-	// catches the red button + cancel button pair used on entry
-	// rows. `common.yes_delete` and `common.cancel` are both
-	// exclusive to this pattern — there's no other use of either
-	// in the codebase. If the caller is using `<ConfirmDelete>`,
-	// those literals live in the primitive, not in the caller.
-	it('every site rendering yes_delete + cancel inline uses <ConfirmDelete> (or is exempt)', () => {
-		const offenders: string[] = [];
-		for (const f of files) {
-			// Skip the primitive's own source and this test file.
-			if (f.endsWith('ConfirmDelete.svelte')) continue;
-			const src = readFileSync(f, 'utf8');
-			if (!src.includes('yes_delete')) continue;
-			// Look for the pair: yes_delete … cancel within a short window.
-			const idx = src.indexOf('yes_delete');
-			const window = src.slice(Math.max(0, idx - 400), idx + 400);
-			if (!/\bcancel\b/.test(window)) continue;
-			// This file references the pattern. Does it use the primitive,
-			// or claim exemption?
-			if (usesPrimitive(src, 'ConfirmDelete')) continue;
-			if (isExempt(src, 'ConfirmDelete')) continue;
-			offenders.push(relative(REPO_ROOT, f));
-		}
-		expect(
-			offenders,
-			`Files render an inline yes-delete/cancel pair but neither import ` +
-				`<ConfirmDelete> nor declare a <!-- primitive-exempt: ConfirmDelete … --> comment:\n  ` +
-				offenders.join('\n  '),
-		).toEqual([]);
-	});
 
 	// --- Modal heuristic ------------------------------------------
 	// A Modal-shaped div has both `fixed inset-0` AND `aria-modal`.

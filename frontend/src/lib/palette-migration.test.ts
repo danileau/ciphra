@@ -101,7 +101,6 @@ describe('CIPH-891 — high-leverage primitives migrated to --accent', () => {
 	// the migration landed and didn't get reverted.
 	const PRIMITIVE_FILES = [
 		'app.css',
-		'lib/components/Button.svelte',
 		'lib/components/BottomNav.svelte',
 	];
 	const SRC_ROOT = resolve(__dirname, '..');

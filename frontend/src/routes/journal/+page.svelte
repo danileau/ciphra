@@ -1,10 +1,3 @@
-<!-- primitive-exempt: ConfirmDelete — the moment-view modal renders an
-	 inline yes-delete/cancel row inside the modal body, with a full-width
-	 confirmation step that swaps the bottom action band. ConfirmDelete
-	 primitive is the compact icon-pair used on journal/calendar rows;
-	 inside a modal that already has its own action chrome, the icon pair
-	 would feel out of register. Pattern matches EntryComposer's banner-
-	 variant exemption. -->
 <!--
 	CIPH-902 — Journal redesign.
 

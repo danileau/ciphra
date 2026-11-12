@@ -60,8 +60,6 @@ export default {
 	'common.date_placeholder_slash': 'JJ/MM/AAAA',
 	'common.date_placeholder_iso': 'AAAA-MM-JJ',
 	'common.date_placeholder_us': 'MM/JJ/AAAA',
-	'common.decrease_label': 'Diminuer {label}',
-	'common.increase_label': 'Augmenter {label}',
 	'common.loading': 'Chargement...',
 	'common.copy': 'Copier',
 	'common.copied': 'Copié',
