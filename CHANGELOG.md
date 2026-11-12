@@ -13,6 +13,29 @@ app at **/docs → Changelog** and here on the public repo.
 
 <!-- Nothing yet. Pending entries live in changelog.d/ — see changelog.d/README.md. -->
 
+## [1.5.3] — 2026-11-12
+
+### Fixed
+- **Notes you write on an episode now appear in your journal.** A note added
+  to a seizure, attack or other episode (in quick-add or on the day page) was
+  saved and shown on that day, but the journal left it out, so the day looked
+  as if nothing had been written. The journal now shows it, and you can find
+  it with the journal search.
+- **"Export for doctor" on the dashboard is only offered when there is
+  something to export.** An account with only diary entries, private entries
+  or notes got the button, then found every export option on the reports page
+  unavailable. The button now follows the same rule as the export itself.
+- On a phone, a long username no longer runs off the edge of the screen. The
+  greeting on the dashboard and "Logged in as" in Settings now wrap onto the
+  next line instead of being cut off.
+- On narrow phones, the current profile card in Settings → Tracking no longer
+  pushes the condition name and its label past the edge of the card.
+- **ciphra no longer fails to load right after an update.** Opening ciphra
+  for the first time after a new version went out could leave you with a
+  blank page, because the server turned away part of the app's files as if
+  they were too many requests. Those files now have their own, larger
+  allowance. The limits that protect sign-in and your data are unchanged.
+
 ## [1.5.2] — 2026-11-12
 
 ### Fixed
@@ -394,7 +417,8 @@ above.
   and the admin surface. (Established feature set — see
   [`docs/FEATURES.md`](docs/FEATURES.md).)
 
-[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.2...HEAD
+[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.3...HEAD
+[1.5.3]: https://github.com/danileau/ciphra/releases/tag/v1.5.3
 [1.5.2]: https://github.com/danileau/ciphra/releases/tag/v1.5.2
 [1.5.1]: https://github.com/danileau/ciphra/releases/tag/v1.5.1
 [1.5.0]: https://github.com/danileau/ciphra/releases/tag/v1.5.0
