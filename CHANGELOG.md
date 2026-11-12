@@ -13,6 +13,24 @@ app at **/docs → Changelog** and here on the public repo.
 
 <!-- Nothing yet. Pending entries live in changelog.d/ — see changelog.d/README.md. -->
 
+## [1.5.4] — 2026-11-12
+
+### Fixed
+- **The welcome note for people who moved over from epilepc is right again.**
+  Its heading showed a raw "{date}" placeholder and pointed to an epilepc
+  shutdown date that has passed. It now says what is true: your epilepc
+  account stays readable until at least the end of 2026.
+
+### Security
+- **Recovering an account and accepting a family invitation no longer send
+  your unlocking key to the server.** Both steps used to send the key that
+  unlocks your data's master key, and the server keeps an encrypted copy of
+  that master key. Anyone able to read that one request on the server side
+  could have unlocked the account. Your browser now sends only a one-way proof
+  derived from the key, and the server stores only a hash of that proof.
+  Existing accounts and invitations are converted automatically; you do not
+  need to do anything.
+
 ## [1.5.3] — 2026-11-12
 
 ### Fixed
@@ -417,7 +435,8 @@ above.
   and the admin surface. (Established feature set — see
   [`docs/FEATURES.md`](docs/FEATURES.md).)
 
-[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.3...HEAD
+[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.4...HEAD
+[1.5.4]: https://github.com/danileau/ciphra/releases/tag/v1.5.4
 [1.5.3]: https://github.com/danileau/ciphra/releases/tag/v1.5.3
 [1.5.2]: https://github.com/danileau/ciphra/releases/tag/v1.5.2
 [1.5.1]: https://github.com/danileau/ciphra/releases/tag/v1.5.1
