@@ -166,7 +166,7 @@ export async function recoverInit(username: string) {
 
 export async function recover(payload: {
 	username: string;
-	recovery_key: string;
+	recovery_proof: string;
 	auth_hash: string;
 	auth_params: string;
 	vault_params: string;
@@ -234,7 +234,7 @@ export async function changePassword(payload: {
 export async function familyGrantCreate(payload: {
 	label: string;
 	grant_params: string;
-	grant_auth: string;
+	grant_verifier: string;
 	wrapped_master: string;
 	/** 1 = everything but the diary and locked entries (default), 3 = everything. */
 	share_mask?: number;
@@ -272,10 +272,10 @@ export async function familyGrantClaimInit(sourceUsername: string) {
 	});
 }
 
-export async function familyGrantClaim(grantId: number, familyKeyB64: string) {
+export async function familyGrantClaim(grantId: number, grantProofB64: string) {
 	return request('/family/grants/claim', {
 		method: 'POST',
-		body: JSON.stringify({ grant_id: grantId, proof: familyKeyB64 }),
+		body: JSON.stringify({ grant_id: grantId, grant_proof: grantProofB64 }),
 	});
 }
 

@@ -640,17 +640,17 @@ class TestRecovery:
     @patch('server.verify_auth')
     def test_recovery_success(self, mock_verify, client, mock_db):
         mock_verify.return_value = True
-        # /api/recover SELECT shape: id, recovery_auth, recovery_attempts, locked_until
+        # /api/recover SELECT shape: id, recovery_verifier, recovery_attempts, locked_until
         mock_db.queue({
             'id': 1,
-            'recovery_auth': 'storedhash',
+            'recovery_verifier': 'storedhash',
             'recovery_attempts': 0,
             'locked_until': None,
         }, {'id': 1})  # the guarded credential swap's RETURNING id
 
         resp = client.post('/api/recover', json={
             'username': 'alice',
-            'recovery_key': VALID_AUTH_KEY,
+            'recovery_proof': VALID_AUTH_KEY,
             'auth_hash': VALID_AUTH_KEY,
             'auth_params': 'ap',
             'vault_params': 'vp',
@@ -668,14 +668,14 @@ class TestRecovery:
         future = datetime.now(timezone.utc) + timedelta(minutes=10)
         mock_db.queue({
             'id': 1,
-            'recovery_auth': 'storedhash',
+            'recovery_verifier': 'storedhash',
             'recovery_attempts': 3,
             'locked_until': future,
         }, {'id': 1})
 
         resp = client.post('/api/recover', json={
             'username': 'alice',
-            'recovery_key': VALID_AUTH_KEY,
+            'recovery_proof': VALID_AUTH_KEY,
             'auth_hash': VALID_AUTH_KEY,
             'auth_params': 'ap',
             'vault_params': 'vp',
@@ -695,14 +695,14 @@ class TestRecovery:
         mock_verify.return_value = False
         mock_db.queue({
             'id': 1,
-            'recovery_auth': 'storedhash',
+            'recovery_verifier': 'storedhash',
             'recovery_attempts': 0,
             'locked_until': None,
         }, {'attempts': 1})
 
         resp = client.post('/api/recover', json={
             'username': 'alice',
-            'recovery_key': VALID_AUTH_KEY,
+            'recovery_proof': VALID_AUTH_KEY,
             'auth_hash': VALID_AUTH_KEY,
             'auth_params': 'ap',
             'vault_params': 'vp',
@@ -712,20 +712,20 @@ class TestRecovery:
         assert 'Invalid recovery code' in resp.get_json()['error']
 
     def test_recovery_not_enabled(self, client, mock_db):
-        # User exists but recovery_auth is None — server.py:820 returns 401 with
+        # User exists but recovery_verifier is None — server.py:820 returns 401 with
         # 'Invalid recovery code' (anti-enumeration: hides 'no-recovery-set' from
         # 'wrong-code'). Test verifies the no-recovery branch reaches the same
         # collapsed response.
         mock_db.queue({
             'id': 1,
-            'recovery_auth': None,
+            'recovery_verifier': None,
             'recovery_attempts': 0,
             'locked_until': None,
         })
 
         resp = client.post('/api/recover', json={
             'username': 'alice',
-            'recovery_key': VALID_AUTH_KEY,
+            'recovery_proof': VALID_AUTH_KEY,
             'auth_hash': VALID_AUTH_KEY,
             'auth_params': 'ap',
             'vault_params': 'vp',

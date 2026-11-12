@@ -121,16 +121,16 @@
 				throw new Error('Init failed');
 			}
 			const candidates = (initRes.data.grants as Array<{
-				id: number; grant_params: string; wrapped_master: string; grant_auth: string;
+				id: number; grant_params: string; wrapped_master: string; grant_verifier: string;
 			}>) || [];
 			// Narrow to the one the link is pointing at when possible.
 			const candidate = candidates.find(c => c.id === grantId) || candidates[0];
 			if (!candidate) throw new Error('no-candidate');
 
-			const { masterKey, familyKeyB64 } = await unwrapFamilyGrant(
+			const { masterKey, grantProofB64 } = await unwrapFamilyGrant(
 				familyCode, candidate.grant_params, candidate.wrapped_master
 			);
-			const claimRes = await api.familyGrantClaim(candidate.id, familyKeyB64);
+			const claimRes = await api.familyGrantClaim(candidate.id, grantProofB64);
 			if (!claimRes.ok) {
 				if (claimRes.status === 409) {
 					status = 'error';

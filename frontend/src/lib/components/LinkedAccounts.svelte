@@ -48,14 +48,14 @@
 				return;
 			}
 			const candidates = (initRes.data.grants as Array<{
-				id: number; grant_params: string; wrapped_master: string; grant_auth: string;
+				id: number; grant_params: string; wrapped_master: string; grant_verifier: string;
 			}>) || [];
 			const match = await matchFamilyGrant(code, candidates);
 			if (!match) {
 				errorMsg = $t('family.error_no_match');
 				return;
 			}
-			const claimRes = await api.familyGrantClaim(match.grantId, match.familyKeyB64);
+			const claimRes = await api.familyGrantClaim(match.grantId, match.grantProofB64);
 			if (!claimRes.ok) {
 				const status = claimRes.status;
 				errorMsg = status === 409

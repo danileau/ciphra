@@ -65,13 +65,13 @@ def _user_row(**overrides):
 
 
 def _recovery_row(**overrides):
-    row = {'id': 1, 'recovery_auth': 'h', 'recovery_attempts': 0, 'locked_until': None}
+    row = {'id': 1, 'recovery_verifier': 'h', 'recovery_attempts': 0, 'locked_until': None}
     row.update(overrides)
     return row
 
 
 RECOVER_BODY = {
-    'username': 'alice', 'recovery_key': VALID_KEY, 'auth_hash': VALID_KEY,
+    'username': 'alice', 'recovery_proof': VALID_KEY, 'auth_hash': VALID_KEY,
     'auth_params': 'ap', 'vault_params': 'vp', 'encrypted_master': 'em',
 }
 
@@ -97,7 +97,7 @@ class TestTypeConfusion:
     def test_non_string_label_is_400(self, client, mock_db, auth_token, field):
         mock_db.queue(AUTH_ROW)
         resp = client.post('/api/family/grants', headers=_bearer(auth_token), json={
-            'label': 42, 'grant_params': 'p', 'grant_auth': VALID_KEY, 'wrapped_master': 'w',
+            'label': 42, 'grant_params': 'p', 'grant_verifier': VALID_KEY, 'wrapped_master': 'w',
         })
         assert resp.status_code == 400
 
@@ -124,7 +124,7 @@ class TestTypeConfusion:
         resp = client.post('/api/register', json={
             'username': 'alice', 'auth_hash': VALID_KEY, 'auth_params': 'ap',
             'vault_params': 'vp', 'encrypted_master': 'em',
-            'recovery_vault': {'a': 1}, 'recovery_params': 'rp', 'recovery_auth': VALID_KEY,
+            'recovery_vault': {'a': 1}, 'recovery_params': 'rp', 'recovery_verifier': VALID_KEY,
         })
         assert resp.status_code == 400
         assert mock_db.executed == []
@@ -134,7 +134,7 @@ class TestTypeConfusion:
         resp = client.post('/api/register', json={
             'username': 'alice', 'auth_hash': VALID_KEY, 'auth_params': 'ap',
             'vault_params': 'vp', 'encrypted_master': 'em',
-            'recovery_vault': [], 'recovery_params': {}, 'recovery_auth': 0,
+            'recovery_vault': [], 'recovery_params': {}, 'recovery_verifier': 0,
         })
         assert resp.status_code == 201
         insert = next(p for s, p in mock_db.executed if 'INSERT INTO users' in s)
@@ -162,7 +162,7 @@ class TestTypeConfusion:
     def test_claim_refuses_a_boolean_grant_id(self, client, mock_db, auth_token):
         mock_db.queue(AUTH_ROW)
         resp = client.post('/api/family/grants/claim', headers=_bearer(auth_token),
-                           json={'grant_id': True, 'proof': VALID_KEY})
+                           json={'grant_id': True, 'grant_proof': VALID_KEY})
         assert resp.status_code == 400
 
     @pytest.mark.parametrize('bad', [True, 1.9, 1e400, [1]])
@@ -206,7 +206,7 @@ class TestShareMaskIsStrict:
     def test_create_refuses_non_int_masks(self, client, mock_db, auth_token, bad):
         mock_db.queue(AUTH_ROW)
         resp = client.post('/api/family/grants', headers=_bearer(auth_token), json={
-            'label': 'Mum', 'grant_params': 'p', 'grant_auth': VALID_KEY,
+            'label': 'Mum', 'grant_params': 'p', 'grant_verifier': VALID_KEY,
             'wrapped_master': 'w', 'share_mask': bad,
         })
         assert resp.status_code == 400
@@ -460,10 +460,10 @@ class TestClaimDecoy:
         grants = resp.get_json()['grants']
         assert len(grants) == 1
         g = grants[0]
-        assert set(g) == {'id', 'grant_params', 'wrapped_master', 'grant_auth'}
+        assert set(g) == {'id', 'grant_params', 'wrapped_master', 'grant_verifier'}
         assert type(g['id']) is int and 1 <= g['id'] <= 500
         assert len(base64.b64decode(g['wrapped_master'])) == 60   # nonce + ct + tag
-        assert len(base64.b64decode(g['grant_auth'])) == 32       # SHA-256
+        assert len(base64.b64decode(g['grant_verifier'])) == 32       # SHA-256
         params = base64.b64decode(g['grant_params']).decode()
         assert ', ' not in params and ': ' not in params          # compact, like the client
 
@@ -480,7 +480,7 @@ class TestClaimDecoy:
     def test_claiming_a_decoy_id_looks_like_a_wrong_code(self, client, mock_db, auth_token):
         mock_db.queue(AUTH_ROW, None)  # no live grant with that id
         resp = client.post('/api/family/grants/claim', headers=_bearer(auth_token),
-                           json={'grant_id': 17, 'proof': VALID_KEY})
+                           json={'grant_id': 17, 'grant_proof': VALID_KEY})
         assert resp.status_code == 401
         assert resp.get_json() == {'error': 'Invalid family code'}
 
@@ -489,7 +489,7 @@ class TestClaimDecoy:
 # 7 — claim race + deterministic scope
 # ═══════════════════════════════════════════════════════════════════
 
-GRANT = {'id': 5, 'source_user_id': 2, 'claimed_by_user_id': None, 'grant_auth': 'h'}
+GRANT = {'id': 5, 'source_user_id': 2, 'claimed_by_user_id': None, 'grant_verifier': 'h'}
 
 
 class TestClaimRaceAndScope:
@@ -497,7 +497,7 @@ class TestClaimRaceAndScope:
     def test_the_claim_write_is_conditional(self, _v, client, mock_db, auth_token):
         mock_db.queue(AUTH_ROW, dict(GRANT), {'id': 5}, {'username': 'pat'})
         resp = client.post('/api/family/grants/claim', headers=_bearer(auth_token),
-                           json={'grant_id': 5, 'proof': VALID_KEY})
+                           json={'grant_id': 5, 'grant_proof': VALID_KEY})
         assert resp.status_code == 200
         update = next(s for s in _sql(mock_db) if s.startswith('UPDATE family_grants'))
         assert 'AND (claimed_by_user_id IS NULL OR claimed_by_user_id = %s)' in update
@@ -508,7 +508,7 @@ class TestClaimRaceAndScope:
         # Saw it unclaimed; someone else's UPDATE committed first.
         mock_db.queue(AUTH_ROW, dict(GRANT), None)
         resp = client.post('/api/family/grants/claim', headers=_bearer(auth_token),
-                           json={'grant_id': 5, 'proof': VALID_KEY})
+                           json={'grant_id': 5, 'grant_proof': VALID_KEY})
         assert resp.status_code == 409
         assert 'FAMILY_CLAIM_SUCCESS:5' not in _audits(mock_db)
 

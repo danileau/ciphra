@@ -283,7 +283,7 @@ def get_db():
 # To add one: append with the next number, set `compatible` honestly, and bump
 # SCHEMA_VERSION. Never renumber or edit a shipped migration — databases in the
 # field have already recorded it.
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 # --- Sharing scope --------------------------------------------------------
 #
@@ -324,6 +324,23 @@ def _valid_share_mask(raw) -> bool:
     return type(raw) is int and raw in VALID_SHARE_MASKS
 
 
+# Converts old-style SHA-256(key) values into verifiers and clears them (see
+# migration 10). Idempotent: only rows with an old value and no verifier yet.
+# It runs inside migration 10 AND on every boot at schema >= 10, because an
+# older image booted after a rollback still writes recovery_auth / grant_auth
+# for new sign-ups and invitations. Without the per-boot pass, the roll-forward
+# would leave those rows with no verifier: recovery and the claim would fail
+# for exactly those people, silently, and SHA-256(key) — a working proof —
+# would stay in the database.
+_PROOF_NOT_KEY_CONVERSION = (
+    " UPDATE users SET recovery_verifier ="
+    " encode(sha256(decode(recovery_auth, 'base64')), 'base64'), recovery_auth = NULL"
+    " WHERE recovery_auth IS NOT NULL AND recovery_verifier IS NULL;"
+    " UPDATE family_grants SET grant_verifier ="
+    " encode(sha256(decode(grant_auth, 'base64')), 'base64'), grant_auth = NULL"
+    " WHERE grant_auth IS NOT NULL AND grant_verifier IS NULL"
+)
+
 # (number, name, sql, compatible)
 MIGRATIONS = [
     (1, 'users.is_admin',
@@ -358,6 +375,22 @@ MIGRATIONS = [
     (9, 'sharing scope: share_class + share_mask',
      "ALTER TABLE encrypted_documents ADD COLUMN IF NOT EXISTS share_class SMALLINT;"
      " ALTER TABLE family_grants ADD COLUMN IF NOT EXISTS share_mask INTEGER NOT NULL DEFAULT 1", True),
+    # Proof, not key (2026-11-12). /recover used to receive the raw
+    # recovery_key and /family/grants/claim the raw family_key — the very keys
+    # that unwrap recovery_vault and wrapped_master, both stored here. Now the
+    # client sends proof = SHA-256(key) and the server stores
+    # verifier = SHA-256(proof). The old column held SHA-256(key), which IS
+    # the new proof, so it is converted to the verifier and cleared; leaving
+    # it would turn a database leak into a working recovery/claim credential.
+    # Idempotent (only rows not yet converted), so a ledger replay is a no-op.
+    # `compatible` = True: an older image still boots and serves everything
+    # else; its recovery and family claims fail closed (they find no
+    # recovery_auth / grant_auth) until the roll-forward.
+    (10, 'proof-not-key: recovery_verifier + grant_verifier',
+     "ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_verifier TEXT;"
+     " ALTER TABLE family_grants ADD COLUMN IF NOT EXISTS grant_verifier TEXT;"
+     " ALTER TABLE family_grants ALTER COLUMN grant_auth DROP NOT NULL;"
+     + _PROOF_NOT_KEY_CONVERSION, True),
 ]
 
 
@@ -493,6 +526,16 @@ def init_db():
             # old (server-side-KDF) auth_hash format, the operator must reset
             # the users table manually.
             applied = _apply_migrations(cur)
+            if applied >= 10:
+                converted = 0
+                for stmt in _PROOF_NOT_KEY_CONVERSION.split(';'):
+                    cur.execute(stmt)
+                    converted += max(cur.rowcount, 0)
+                if converted:
+                    logger.warning(
+                        "proof-not-key: converted %s row(s) written in the old "
+                        "format — an older image ran against this database "
+                        "(rollback?)", converted)
     logger.info("Database initialized (schema version %s)", applied)
 
 
@@ -889,9 +932,47 @@ def verify_auth(b64_auth_key: str, stored_hash: str) -> bool:
         return False
 
 
+def verify_proof(proof_b64, legacy_key_b64, verifier: str) -> bool:
+    """Check a recovery / family-claim proof against its stored verifier.
+
+    verifier = SHA-256(proof), proof = SHA-256(key). A current client sends the
+    proof. A client cached from before 2026-11-12 still sends the raw key; it
+    is hashed once more here so those users are not locked out while their
+    PWA updates. Accepting it changes nothing about exposure — that client has
+    already sent the key — and the legacy branch can go once old clients are
+    gone.
+    """
+    if proof_b64 is not None:
+        return verify_auth(proof_b64, verifier)
+    if legacy_key_b64 is not None:
+        try:
+            return verify_auth(hash_auth_key(legacy_key_b64), verifier)
+        except Exception:
+            return False
+    return False
+
+
+def verifier_from(verifier_b64, legacy_auth_b64):
+    """The verifier to store at creation time.
+
+    Current clients send `*_verifier` = SHA-256(SHA-256(key)). An old client
+    sends `*_auth` = SHA-256(key), which is the proof itself and must never be
+    stored as is — hash it once more.
+    """
+    if verifier_b64 is not None:
+        return verifier_b64
+    if legacy_auth_b64 is not None:
+        return hash_auth_key(legacy_auth_b64)
+    return None
+
+
 _SENSITIVE_FIELDS = (
     'recovery_key',
+    'recovery_proof',
     'recovery_auth',
+    'grant_proof',
+    'grant_auth',
+    'proof',
     'auth_hash',
     'auth_key',
     'current_auth_key',
@@ -983,7 +1064,8 @@ def register():
     encrypted_master = data.get('encrypted_master')
     recovery_vault = data.get('recovery_vault')
     recovery_params = data.get('recovery_params')
-    recovery_auth = data.get('recovery_auth')
+    recovery_verifier = data.get('recovery_verifier')
+    legacy_recovery_auth = data.get('recovery_auth')  # pre-2026-11-12 client
     # Optional metadata-only flag — the /migrate flow passes 'migrate' so
     # the /admin dashboard can count epilepc migrations vs. organic signups.
     # Unknown values are silently coerced to 'web' (no client-driven leak).
@@ -1001,14 +1083,21 @@ def register():
             return jsonify({'error': f'Invalid {field}'}), 400
     # Recovery fields all-or-nothing. Each one is type-checked, not just
     # truthy: `{"recovery_vault": {"a": 1}}` used to reach the INSERT and 500.
-    has_recovery = any([recovery_vault, recovery_params, recovery_auth])
+    has_recovery = any([recovery_vault, recovery_params, recovery_verifier,
+                        legacy_recovery_auth])
+    if recovery_verifier is not None:
+        verifier_ok = valid_b64(recovery_verifier, 32, 32)
+    else:
+        verifier_ok = valid_b64(legacy_recovery_auth, 32, 32)
     if has_recovery and not (_is_text(recovery_vault, 8192)
                              and _is_text(recovery_params, 8192)
-                             and valid_b64(recovery_auth, 32, 32)):
+                             and verifier_ok):
         return jsonify({'error': 'Incomplete recovery bundle'}), 400
-    if not has_recovery:
+    if has_recovery:
+        recovery_verifier = verifier_from(recovery_verifier, legacy_recovery_auth)
+    else:
         # Falsy-but-present values (`[]`, `{}`, `0`) must not reach SQL either.
-        recovery_vault = recovery_params = recovery_auth = None
+        recovery_vault = recovery_params = recovery_verifier = None
 
     _redact_sensitive(data)
 
@@ -1028,11 +1117,11 @@ def register():
                 cur.execute("""
                     INSERT INTO users (username, auth_hash, auth_params, vault_params,
                                        encrypted_master, recovery_vault, recovery_params,
-                                       recovery_auth, registration_source)
+                                       recovery_verifier, registration_source)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
                 """, (
                     username, auth_hash, auth_params, vault_params,
-                    encrypted_master, recovery_vault, recovery_params, recovery_auth,
+                    encrypted_master, recovery_vault, recovery_params, recovery_verifier,
                     registration_source,
                 ))
                 user_id = cur.fetchone()['id']
@@ -1518,7 +1607,7 @@ def recover_init():
     Always returns 200 with structurally valid values — fake deterministic
     blobs for unknown users or users without recovery. Prevents enumeration
     of who has an account and who has recovery enabled. Real attempts fail
-    at the subsequent /api/recover step when the recovery_key hash mismatches."""
+    at the subsequent /api/recover step when the recovery proof mismatches."""
     data = _json_object()
     username = _str_field(data, 'username').strip().lower()
     if not username or not USERNAME_RE.match(username):
@@ -1553,11 +1642,14 @@ def recover_init():
 @limiter.limit("5 per minute")
 def recover():
     """Client has decrypted master_key via recovery code and re-wrapped it with
-    a new password. Server verifies SHA-256(recovery_key) against stored
-    recovery_auth, then swaps auth/vault (recovery_vault stays untouched)."""
+    a new password. The client proves it holds recovery_key by sending
+    proof = SHA-256(recovery_key) — never the key itself, which unwraps the
+    recovery_vault stored here. Server checks SHA-256(proof) against
+    recovery_verifier, then swaps auth/vault (recovery_vault stays untouched)."""
     data = _json_object()
     username = _str_field(data, 'username').strip().lower()
-    recovery_key = data.get('recovery_key')
+    recovery_proof = data.get('recovery_proof')
+    legacy_recovery_key = data.get('recovery_key')  # pre-2026-11-12 client
     auth_hash = data.get('auth_hash')
     auth_params = data.get('auth_params')
     vault_params = data.get('vault_params')
@@ -1565,7 +1657,8 @@ def recover():
 
     if not username or not USERNAME_RE.match(username):
         return jsonify({'error': 'Invalid request'}), 400
-    if not valid_b64(recovery_key, 32, 32) or not valid_b64(auth_hash, 32, 32):
+    presented = recovery_proof if recovery_proof is not None else legacy_recovery_key
+    if not valid_b64(presented, 32, 32) or not valid_b64(auth_hash, 32, 32):
         return jsonify({'error': 'Invalid credentials'}), 401
     for field, val in (('auth_params', auth_params), ('vault_params', vault_params),
                        ('encrypted_master', encrypted_master)):
@@ -1580,11 +1673,11 @@ def recover():
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT id, recovery_auth, recovery_attempts, locked_until
+                    SELECT id, recovery_verifier, recovery_attempts, locked_until
                     FROM users WHERE username = %s
                 """, (username,))
                 user = cur.fetchone()
-                if not user or not user['recovery_auth']:
+                if not user or not user['recovery_verifier']:
                     return jsonify({'error': 'Invalid recovery code'}), 401
 
                 # Same lockout gate as login — 3 failed recoveries → 15 min
@@ -1596,7 +1689,8 @@ def recover():
                 now = datetime.now(timezone.utc)
                 lock = _lock_state(user['locked_until'], now)
 
-                if not verify_auth(recovery_key, user['recovery_auth']):
+                if not verify_proof(recovery_proof, legacy_recovery_key,
+                                    user['recovery_verifier']):
                     if lock:
                         audit(conn, user['id'], 'RECOVERY_FAILED')
                         return jsonify({'error': 'Account temporarily locked'}), 429
@@ -2174,13 +2268,18 @@ def family_grant_create():
     data = _json_object()
     label = _str_field(data, 'label').strip()
     grant_params = data.get('grant_params')
-    grant_auth = data.get('grant_auth')
+    grant_verifier = data.get('grant_verifier')
+    legacy_grant_auth = data.get('grant_auth')  # pre-2026-11-12 client
     wrapped_master = data.get('wrapped_master')
 
     if not _is_text(label, 64):
         return jsonify({'error': 'Invalid label'}), 400
-    if not valid_b64(grant_auth, 32, 32):
-        return jsonify({'error': 'Invalid grant_auth'}), 400
+    if grant_verifier is not None:
+        if not valid_b64(grant_verifier, 32, 32):
+            return jsonify({'error': 'Invalid grant_verifier'}), 400
+    elif not valid_b64(legacy_grant_auth, 32, 32):
+        return jsonify({'error': 'Invalid grant_verifier'}), 400
+    grant_verifier = verifier_from(grant_verifier, legacy_grant_auth)
     for field, val in (('grant_params', grant_params), ('wrapped_master', wrapped_master)):
         if not _is_text(val, 8192):
             return jsonify({'error': f'Invalid {field}'}), 400
@@ -2195,10 +2294,10 @@ def family_grant_create():
             with conn.cursor() as cur:
                 cur.execute("""
                     INSERT INTO family_grants
-                        (source_user_id, label, grant_params, grant_auth, wrapped_master,
+                        (source_user_id, label, grant_params, grant_verifier, wrapped_master,
                          share_mask)
                     VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, created_at
-                """, (request.user_id, label, grant_params, grant_auth, wrapped_master,
+                """, (request.user_id, label, grant_params, grant_verifier, wrapped_master,
                       share_mask))
                 row = cur.fetchone()
                 audit(conn, request.user_id, f'FAMILY_GRANT_CREATED:mask={share_mask}')
@@ -2385,7 +2484,7 @@ def _fake_grants_for_username(username: str, max_grant_id: int = 0):
             'id': _fake_grant_id(seed, max_grant_id),
             'grant_params': _fake_recovery_params(f'{username}:fake:{i}'),
             'wrapped_master': _fake_recovery_vault(f'{username}:fake:{i}'),
-            'grant_auth': base64.b64encode(seed[:32]).decode('ascii'),
+            'grant_verifier': base64.b64encode(seed[:32]).decode('ascii'),
         })
     return fake
 
@@ -2418,7 +2517,7 @@ def family_grant_claim_init():
                 cur.execute("SELECT COALESCE(MAX(id), 0) AS max_id FROM family_grants")
                 max_grant_id = int(cur.fetchone()['max_id'])
                 cur.execute("""
-                    SELECT g.id, g.grant_params, g.wrapped_master, g.grant_auth
+                    SELECT g.id, g.grant_params, g.wrapped_master, g.grant_verifier
                     FROM family_grants g
                     JOIN users u ON u.id = g.source_user_id
                     WHERE u.username = %s AND g.revoked_at IS NULL
@@ -2429,7 +2528,7 @@ def family_grant_claim_init():
                         'id': r['id'],
                         'grant_params': r['grant_params'],
                         'wrapped_master': r['wrapped_master'],
-                        'grant_auth': r['grant_auth'],
+                        'grant_verifier': r['grant_verifier'],
                     } for r in rows]}), 200
         return jsonify({'grants': _fake_grants_for_username(source_username, max_grant_id)}), 200
     except Exception:
@@ -2443,17 +2542,22 @@ def family_grant_claim_init():
 def family_grant_claim():
     data = _json_object()
     grant_id = data.get('grant_id')
-    proof = data.get('proof')  # base64 family_key — server SHA-256s and compares
+    # grant_proof = SHA-256(family_key). Never the key: it unwraps the
+    # wrapped_master stored here. `proof` is the raw key an old client sends.
+    grant_proof = data.get('grant_proof')
+    legacy_key = data.get('proof')
+    presented = grant_proof if grant_proof is not None else legacy_key
     # `type(...) is int`: isinstance(True, int) holds, and `WHERE id = true`
     # is a type error in PostgreSQL — a 500.
-    if type(grant_id) is not int or not valid_b64(proof, 32, 32):
+    if type(grant_id) is not int or not valid_b64(presented, 32, 32):
         return jsonify({'error': 'Invalid request'}), 400
+    _redact_sensitive(data)
 
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT id, source_user_id, claimed_by_user_id, grant_auth
+                    SELECT id, source_user_id, claimed_by_user_id, grant_verifier
                     FROM family_grants
                     WHERE id = %s AND revoked_at IS NULL
                 """, (grant_id,))
@@ -2465,7 +2569,7 @@ def family_grant_claim():
                 # decoy grant for usernames with nothing to claim, so posting
                 # any proof against the decoy's id sorted decoys (404) from real
                 # invitations (401). The client only ever special-cases 409.
-                if not g or not verify_auth(proof, g['grant_auth']):
+                if not g or not verify_proof(grant_proof, legacy_key, g['grant_verifier']):
                     audit(conn, request.user_id, f'FAMILY_CLAIM_FAILED:{grant_id}')
                     return jsonify({'error': 'Invalid family code'}), 401
                 if g['claimed_by_user_id'] and g['claimed_by_user_id'] != request.user_id:

@@ -204,7 +204,7 @@ So the schema carries its own counter, independent of `VERSION`:
 
 - **`api/server.py` → `MIGRATIONS`** — a numbered, ordered ledger. Each entry is
   `(number, name, sql, compatible)`. `SCHEMA_VERSION` is the highest number, and
-  is what an image advertises (9 as of 1.5.3).
+  is what an image advertises (9 as of 1.5.3, 10 from the proof-not-key fix).
 - **`schema_meta`** — one row in the database recording `version` (how far it has
   been migrated) and `min_app_schema` (the lowest image that may still read it).
 - **`init_db()`** applies everything above the recorded version, in order, and
