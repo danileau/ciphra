@@ -66,6 +66,35 @@ function clean(v: unknown): string {
 }
 
 /**
+ * The episode notes on an entry, one string per note.
+ *
+ * `episodeInstances[id][].note` is the source of truth: one clean note per
+ * occurrence. `episodeNotes[id]` is a legacy mirror, and an untidy one:
+ * quick-add appends `HH:MM: <note>` lines, while the composer joins with ' · '.
+ * Reading the mirror when instances exist would print the time twice next to
+ * the entry's own time. So read the mirror only for an episode that has no
+ * instances (documents written before per-occurrence rows existed).
+ */
+function episodeNoteTexts(data: any): string[] {
+	const instances = data?.episodeInstances && typeof data.episodeInstances === 'object'
+		? (data.episodeInstances as Record<string, unknown>)
+		: {};
+	const legacy = data?.episodeNotes && typeof data.episodeNotes === 'object'
+		? (data.episodeNotes as Record<string, unknown>)
+		: {};
+	const out: string[] = [];
+	for (const id of new Set([...Object.keys(instances), ...Object.keys(legacy)])) {
+		const list = instances[id];
+		if (Array.isArray(list) && list.length > 0) {
+			for (const inst of list) out.push(clean((inst as { note?: unknown })?.note));
+		} else {
+			out.push(clean(legacy[id]));
+		}
+	}
+	return out.filter(Boolean);
+}
+
+/**
  * The written content of one document, or null if it carries none.
  *
  * `title` wins over `notes` for markers — the epilepc migration puts the short
@@ -89,7 +118,11 @@ export function textOf(doc: CiphraDocument | { id?: number; data?: any }): Journ
 		return text ? { ...base, kind: 'diary', text } : null;
 	}
 	if (data.type === 'entry') {
-		const text = clean(data.notes);
+		// A note typed on an episode ("Aura zuerst, dann Schmerz von links",
+		// quick-add or the composer) is writing too, and was never shown here
+		// until 2026-11-12. Its episode already rides along as context, so the
+		// text alone keeps its meaning.
+		const text = [clean(data.notes), ...episodeNoteTexts(data)].filter(Boolean).join(' · ');
 		return text ? { ...base, kind: 'note', text } : null;
 	}
 	if (data.type === 'event') {

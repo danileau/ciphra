@@ -10,6 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import {
 	buildMonthIndex,
+	hasExportableData,
 	availablePeriods,
 	formatPeriodLabel,
 	findPeriodForMonth,
@@ -235,5 +236,21 @@ describe('end-to-end from documents', () => {
 		const idx = buildMonthIndex(docs);
 		expect(availablePeriods(idx, 'year').map((o) => o.anchorYear)).toEqual([2025, 2023]);
 		expect(availablePeriods(idx, 'month').map((o) => o.endMonth)).toEqual(['2025-02', '2023-04']);
+	});
+});
+
+describe('hasExportableData — gates the dashboard "Export for doctor" link', () => {
+	it('false with nothing, or only writing / private data', () => {
+		expect(hasExportableData(null)).toBe(false);
+		expect(hasExportableData([])).toBe(false);
+		expect(hasExportableData([
+			{ id: 1, serverCreatedAt: '', data: { type: 'diary', date: '2025-03-04', text: 'x' } },
+			{ id: 2, serverCreatedAt: '', data: { type: 'event', date: '2025-03-04', title: 'note' } },
+			entry('2025-03-05', { private: true, notes: 'locked' }),
+		] as any)).toBe(false);
+	});
+
+	it('true as soon as one exportable entry exists', () => {
+		expect(hasExportableData([entry('2025-03-05', { vitals: { mood: 6 } })] as any)).toBe(true);
 	});
 });

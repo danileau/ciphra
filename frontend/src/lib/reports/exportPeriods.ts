@@ -107,6 +107,17 @@ export function buildMonthIndex(docs: CiphraDocument[] | null | undefined): Mont
 	return index;
 }
 
+/**
+ * Is there anything to export at all? The dashboard's "Export for doctor" link
+ * uses this, so it is enabled exactly when /reports will offer an enabled
+ * period. It used to check "any document exists", so an account holding only
+ * diary entries, notes or private entries got the link and then found every
+ * export card on /reports disabled.
+ */
+export function hasExportableData(docs: CiphraDocument[] | null | undefined): boolean {
+	return buildMonthIndex(docs).size > 0;
+}
+
 function buildOption(index: MonthIndex, scope: ReportScope, anchorYear: number, anchorMonth: number): PeriodOption {
 	const months = SCOPE_MONTHS[scope];
 	let daysLogged = 0;
