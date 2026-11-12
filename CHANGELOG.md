@@ -13,6 +13,37 @@ app at **/docs → Changelog** and here on the public repo.
 
 <!-- Nothing yet. Pending entries live in changelog.d/ — see changelog.d/README.md. -->
 
+## [1.5.2] — 2026-11-12
+
+### Fixed
+- **Signing in with a username your browser filled in works again.** On some
+  phones — reported on an iPhone with Brave — the browser put a saved
+  username in the field without telling the page, so ciphra sent an empty one
+  and answered "wrong username or password" for credentials that were right.
+  ciphra now reads what the field actually shows, also for the password and
+  on the recovery form, and ignores invisible characters a keyboard or
+  password manager can carry along.
+- **When the field holds something that cannot be a username, ciphra says
+  so.** Some password managers saved a recovery code, or nothing, as the
+  username of a ciphra login, and fill it in every time. Instead of trying to
+  sign in with it, ciphra now tells you the value was probably filled in from a
+  saved login and how to correct that entry. Changing your password in
+  Settings also tells the password manager which login it belongs to, so it no
+  longer saves the new password under the wrong name.
+- **ciphra's public pages can now be found by search engines.** Each condition
+  page, the privacy policy, the terms and the documentation now carry their own
+  title and description, and no longer tell search engines they are copies of
+  the homepage.
+
+### Security
+- Rebuilt all three of ciphra's server images on current, patched system
+  packages: the package installer and the compression library in the server,
+  the two XML libraries in the web server that sits in front of ciphra, and
+  the compression library in the app server. The server also moves to the
+  latest Python security release. None of these flaws could be reached by how
+  ciphra runs (it never installs packages or reads XML while serving you), but
+  they are patched regardless.
+
 ## [1.5.1] — 2026-10-26
 
 ### Changed
@@ -363,7 +394,8 @@ above.
   and the admin surface. (Established feature set — see
   [`docs/FEATURES.md`](docs/FEATURES.md).)
 
-[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.2...HEAD
+[1.5.2]: https://github.com/danileau/ciphra/releases/tag/v1.5.2
 [1.5.1]: https://github.com/danileau/ciphra/releases/tag/v1.5.1
 [1.5.0]: https://github.com/danileau/ciphra/releases/tag/v1.5.0
 [1.4.0]: https://github.com/danileau/ciphra/releases/tag/v1.4.0
