@@ -20,8 +20,22 @@ test('setup wizard: asthma grouped-symptoms toggle off (CIPH-740)', async ({ pag
 
     await page.goto('/setup');
 
-    // Pick asthma (locale-agnostic: preset label contains "asthma" across DE/EN/FR/IT).
-    await page.getByText(/asthma/i).first().click();
+    // Step 0 ("How will you use ciphra?" — own health vs caregiver) was added
+    // in ad45859, after this spec was written; a fresh account lands there,
+    // not on the condition list, so asthma was never on screen. Choose own
+    // tracking, then wait for the condition list (step 1). The intro is SSR'd,
+    // so retry the click until hydration has attached the handler.
+    const ownHealth = page.getByRole('button', {
+        name: /track my own health|eigene gesundheit dokumentieren|documenter ma propre santé|documentare la mia salute/i,
+    });
+    const asthmaTile = page.locator('button').filter({ hasText: /asthma|asthme|asma/i }).first();
+    for (let attempt = 0; attempt < 10 && !(await asthmaTile.isVisible().catch(() => false)); attempt++) {
+        if (await ownHealth.first().isVisible().catch(() => false)) await ownHealth.first().click();
+        await page.waitForTimeout(500);
+    }
+
+    // Pick asthma (locale-agnostic: Asthma DE/EN, Asthme FR, Asma IT).
+    await asthmaTile.click();
 
     const groupRow = page.getByTestId('symptom-group-row').first();
     await expect(groupRow).toBeVisible();

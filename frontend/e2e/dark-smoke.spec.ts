@@ -26,6 +26,10 @@ test('dark smoke — discrete cohort, mobile + desktop', async ({ page }) => {
 
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.goto('/login?mode=register');
+	// The signup form renders client-side; a screenshot straight after goto
+	// sometimes caught the page before it had painted (blank PNG). Wait for
+	// the form's first field — the landmark this shot exists to show.
+	await page.locator('#signup-user').waitFor({ state: 'visible', timeout: 30_000 });
 	await page.screenshot({ path: 'e2e/_screenshots/dark/desktop-login.png', fullPage: true });
 
 	await page.locator('#signup-user').fill(user);

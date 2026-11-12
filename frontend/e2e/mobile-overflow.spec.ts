@@ -67,6 +67,7 @@ const AUTHED_ROUTES = [
 	{ path: '/log/today', label: 'log-today' },
 	{ path: '/protocol', label: 'protocol' },
 	{ path: '/stream', label: 'stream' },
+	{ path: '/settings', label: 'settings-account' },
 	{ path: '/settings?tab=tracking', label: 'settings-tracking' },
 ] as const;
 
@@ -89,7 +90,13 @@ interface Offender {
  */
 function detectOverflow() {
 	const docW = document.documentElement.clientWidth;
-	const scrollW = document.documentElement.scrollWidth;
+	// app.css clips the root (`html, body { overflow-x: clip }`) so a stray
+	// overshoot can't make the page draggable on iOS. That pins
+	// documentElement.scrollWidth to the viewport, so on its own it never
+	// reports a shift: content running past the edge is silently cut off
+	// instead. body.scrollWidth still measures the laid-out content, so take
+	// the wider of the two — clipped-at-the-edge content is still a bug.
+	const scrollW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
 	const all = Array.from(document.querySelectorAll('body *'));
 
 	const describe = (el: Element): Offender => {
@@ -255,7 +262,12 @@ async function loginSeeded(page: import('@playwright/test').Page, username: stri
 }
 
 async function registerAndConfigure(page: import('@playwright/test').Page) {
-	const user = 'ovf_' + Math.random().toString(36).slice(2, 10);
+	// Longest username the app accepts (USERNAME_RE: [a-z0-9_]{3,64}), with no
+	// break opportunity. The username is rendered in the dashboard greeting
+	// and on /settings; the seeded personas (hans, elena…) are too short to
+	// ever stress those, so the fresh account carries the worst case.
+	const stem = 'ovf_' + Math.random().toString(36).slice(2, 10) + '_';
+	const user = stem + 'x'.repeat(64 - stem.length);
 	await page.goto('/login?mode=register');
 	await page.locator('#signup-user').fill(user);
 	await page.locator('#signup-pass').fill(TEST_PASSWORD);

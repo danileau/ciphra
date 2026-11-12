@@ -497,9 +497,9 @@
 	<section class="card p-5">
 		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.account')}</h3>
 		<div class="space-y-2">
-			<div class="flex items-center justify-between py-2">
-				<span class="text-sm" style="color: var(--text-secondary)">{$t('settings.logged_in_as')}</span>
-				<span class="text-sm font-medium" style="color: var(--text-primary)">{$auth.username}</span>
+			<div class="flex items-center justify-between gap-3 py-2">
+				<span class="text-sm shrink-0" style="color: var(--text-secondary)">{$t('settings.logged_in_as')}</span>
+				<span class="text-sm font-medium min-w-0 text-right [overflow-wrap:anywhere]" style="color: var(--text-primary)">{$auth.username}</span>
 			</div>
 			<div class="flex items-center justify-between py-2">
 				<span class="text-sm" style="color: var(--text-secondary)">{$t('settings.encryption')}</span>
@@ -712,8 +712,8 @@
 	{#if bp}
 	<section class="card p-5">
 		<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.current_profile')}</h3>
-		<div class="flex items-center justify-between">
-			<div>
+		<div class="flex items-center justify-between gap-3">
+			<div class="min-w-0">
 				{#if editingName}
 					<div class="flex items-center gap-2 flex-wrap">
 						<input
@@ -728,8 +728,8 @@
 						<button on:click={() => { editingName = false; }} class="btn-secondary text-sm min-h-[40px] px-3 rounded-lg">{$t('common.cancel')}</button>
 					</div>
 				{:else}
-					<div class="flex items-center gap-2">
-						<p class="text-lg font-semibold" style="color: var(--text-primary)">{conditionDisplayLabel(bp, $t)}</p>
+					<div class="flex items-center gap-x-2 gap-y-1 flex-wrap">
+						<p class="text-lg font-semibold min-w-0 [overflow-wrap:anywhere]" style="color: var(--text-primary)">{conditionDisplayLabel(bp, $t)}</p>
 						<span class="badge badge-olive">{bp.conditionId}</span>
 						<button
 							on:click={startEditName}
@@ -931,7 +931,7 @@
 		<p class="text-sm mb-4" style="color: var(--text-secondary)">
 			{$t('settings.delete_confirm_text')}
 		</p>
-		<p class="text-xs mb-2" style="color: var(--text-secondary)">
+		<p class="text-xs mb-2 [overflow-wrap:anywhere]" style="color: var(--text-secondary)">
 			{$t('settings.delete_type_to_confirm', { username: $auth.username || '' })}
 		</p>
 		<input
