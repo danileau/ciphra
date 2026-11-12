@@ -51,13 +51,12 @@ else
 fi
 
 # ── Edge header fetch ─────────────────────────────────────────────────────────
-# Fetch as a browser + an optional MONITOR_TOKEN header. A plain datacenter curl
+# Fetch with a browser-like User-Agent. A plain datacenter curl
 # gets Bot-Fight-challenged and the CHALLENGE PAGE carries its own CSP/headers —
 # which must never be mistaken for ciphra's (that produced a 6-finding false
 # alarm, 2026-08-23).
 UA="Mozilla/5.0 (compatible; ciphra-security-monitor; +https://github.com/danileau/ciphra)"
 CURL=(-sS -D - -o /dev/null --max-time 20 -A "$UA")
-[ -n "${MONITOR_TOKEN:-}" ] && CURL+=(-H "x-ciphra-monitor: ${MONITOR_TOKEN}")
 HDR="$(curl "${CURL[@]}" "$URL" 2>/dev/null || true)"
 
 h() { printf '%s' "$HDR" | tr 'A-Z' 'a-z' | grep -i "^$1:" | head -1; }

@@ -42,9 +42,11 @@ The content is written exactly like a slice of the changelog — one or more
 
 - `node scripts/changelog.mjs check` — every fragment parses (CI).
 - `scripts/changelog-guard.sh` — a PR with `feat`/`fix` commits carries a
-  fragment, and only a release PR edits `CHANGELOG.md` (CI). Nothing to tell
-  users? Put `[skip changelog]` in the commit message or PR description.
-  Correcting notes that already shipped? `[changelog edit]`.
+  fragment, and only a release PR (one that changes `VERSION`) edits
+  `CHANGELOG.md` (CI, required for merge). Nothing to tell users? Put
+  `[skip changelog]` in the commit message, PR title or PR description.
+  Correcting notes that already shipped? `[changelog edit]` in a commit message
+  or the PR description.
 - `node scripts/changelog.mjs preview` — what the next release would say.
 
 ## Releasing
@@ -56,4 +58,6 @@ set. The full process is in [`docs/VERSIONING.md`](../docs/VERSIONING.md).
 
 Until then the app already shows pending entries under **Unreleased** at
 `/docs → Changelog`, so a change that is deployed but not yet released is not
-invisible to the people using it.
+invisible to the people using it. The deploy wizard warns before it ships a
+commit that still carries fragments (`scripts/release-state.sh`) — a warning,
+not a block.

@@ -37,16 +37,21 @@ Signals that should reach you without looking (all wired in
 [`OPERATIONS.md` §Health monitoring](OPERATIONS.md#health-monitoring)):
 
 - **HC.io missed-ping email** — `ciphra-liveness` (app down), `ciphra-vps-pulse`
-  (host unreachable), `ciphra-backup` (nightly backup failed).
+  (host unreachable), `ciphra-backup` (nightly backup failed), `ciphra-deploy`
+  (the deploy watcher is dead — prod still serves, but nothing new can ship).
 - **ntfy push** — `security_threshold.sh` (LOGIN_FAILED spike), `host_metrics.sh`
-  (disk/RAM/load), `error_digest.sh` (server errors in last 24h).
+  (disk/RAM/load), `error_digest.sh` (server errors in last 24h, plus any
+  `unattended-upgrades` run on the box), the deploy watcher (OK / BLOCKED /
+  FAILED + auto-rollback), the daily `security-scan` (Trivy) and
+  `security-monitor` (live edge drift), and the weekly `security-digest`
+  heartbeat.
 - **A user report** on the support channel — how [INC-001](incidents/INC-001.md)
   surfaced. A single credible report of a broken core flow is an incident even
   if every dashboard is green (see [§Why nothing detected it](incidents/INC-001.md)).
 
 ### 2. Triage
 
-Answer three questions, in order:
+Answer four questions, in order:
 
 1. **Is data or the ZK guarantee at risk?** → SEV1, jump to
    [Contain](#3-contain) now.
@@ -80,7 +85,8 @@ Stop the bleeding before understanding it.
   ```
   sudo systemctl stop ciphra-app.service     # nginx+api+frontend down; postgres/redis stay up
   ```
-  All traffic gets 503. This buys time without touching the database or
+  nginx goes down with it, so Cloudflare answers every request with a 52x
+  (origin unreachable). This buys time without touching the database or
   destroying forensic state.
 - **Edge-level abuse (scanning/bruteforce) →** tighten at Cloudflare (WAF rule /
   rate-limit) before origin; origin already has flask-limiter + per-account
@@ -103,7 +109,10 @@ Stop the bleeding before understanding it.
 ### 5. Eradicate & recover
 
 - **Code/config fault →** fix on a branch, PR, green CI, deploy. Do not hotfix
-  on the VPS (laptop is canonical — see the golive rsync-drift note).
+  on the VPS: the images come from CI, and `golive/` is canonical on the laptop
+  (rsynced to `/opt/ciphra/golive/`). If a VPS hot-patch was unavoidable, copy
+  it back into the laptop's `golive/` the same day, or the next rsync silently
+  reverts it.
 - **Compromise →** rebuild the VPS from scratch, restore Postgres from the
   latest good backup ([`OPERATIONS.md` §Disaster recovery](OPERATIONS.md#disaster-recovery)),
   and **rotate every secret that could have been exposed** — see
@@ -159,7 +168,9 @@ Stop the bleeding before understanding it.
   incident by itself.
 - If a *signed but malicious* build is suspected (compromised CI): freeze
   deploys, audit the `release-images.yml` run + Rekor log for the digest, and
-  roll back to a known-good SHA. Rotate `GITHUB_TOKEN`/CI secrets.
+  roll back to a known-good SHA. Rotate the repo's Actions secrets
+  (`NTFY_TOPIC_URL`, `CF_API_TOKEN`); `GITHUB_TOKEN` is
+  minted per run and expires with it.
 
 ### Playbook C — account loss-of-control (user side)
 

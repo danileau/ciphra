@@ -7,17 +7,20 @@ model, key hierarchy, what the browser caches — see
 
 ## The shape of it
 
-Five containers, one bridge network:
+Five containers in production (four locally — redis is prod-only), one
+bridge network:
 
 ```
 browser ──► nginx :8080 ──┬──► frontend (SvelteKit) :5173
-                          └──► /api/* ──► api (Flask) :5050 ──┬──► postgres :5432
+                          └──► /api/* ──► api (Flask) :5000 ──┬──► postgres :5432
                                                               └──► redis :6379
 ```
 
-Ports above are the **local dev** layout. In **production** the frontend
-is built to `build/index.js` (adapter-node) and listens on `:3000`;
-nginx (`:443`, Cloudflare-fronted) proxies there. Images are CI-built +
+Ports above are the **local dev** layout, container-internal (on the host,
+the API is published as `:5050` and postgres as `:5433`). In **production**
+the frontend is built to `build/index.js` (adapter-node 6) and listens on
+`:3000`; nginx (`:443`, Cloudflare-fronted, `nginx/ciphra.conf`) proxies
+there. Images are CI-built +
 cosign-signed and deployed via pull-based CD — see
 [OPERATIONS.md](OPERATIONS.md) and [THREAT_MODEL.md](THREAT_MODEL.md).
 
@@ -26,8 +29,11 @@ cosign-signed and deployed via pull-based CD — see
   relies on for rate-limiting and HSTS. In production, also rewrites
   `$remote_addr` from the Cloudflare `CF-Connecting-IP` header and trusts the
   docker bridge gateway so the real client IP reaches the rate-limiter.
-- **frontend** — SvelteKit + TypeScript. All cryptography runs here.
-- **api** — Flask (Python 3.11), run under gunicorn. A thin authenticated
+- **frontend** — SvelteKit 3 + TypeScript. All cryptography runs here. The
+  kit config (including the hash-mode CSP) is the `kitConfig` export of
+  `frontend/vite.config.ts`; there is no `svelte.config.js`.
+- **api** — Flask (Python 3.11), run under gunicorn in production (the
+  local-dev compose runs `python server.py` instead). A thin authenticated
   store: it never decrypts anything. Schema is created and migrated at boot by
   `api/entrypoint.sh` (which calls `init_db()` once before exec-ing gunicorn,
   so workers don't race on `CREATE TABLE IF NOT EXISTS`). Migrations are a
@@ -146,9 +152,14 @@ SvelteKit, file-based routing under `frontend/src/routes/`:
 | `/settings` | Account, language, family sharing |
 | `/migrate`, `/join/[grantId]` | epilepc import; family-sharing claim |
 | `/admin` | Operator dashboard — metadata only |
+| `/docs`, `/docs/[slug]` | In-app viewer for the repo's documentation and pending changelog |
 | `/privacy`, `/terms` | Public legal pages |
+| `/sitemap.xml` | Generated sitemap (server route) |
+| `/protocol`, `/stream` | Legacy URLs — client-side redirects to `/log/…` / `/reports` and `/journal` |
 
-Shared code lives in `frontend/src/lib/`: `stores/` (auth, documents),
+Shared code lives in `frontend/src/lib/` (imported as `#lib/…` via the
+`imports` map in `frontend/package.json` — the `$lib` alias is gone since
+SvelteKit 3): `stores/` (auth, documents),
 `crypto.ts` (all browser-side crypto), `i18n/` (DE/EN/FR/IT), `blueprint/`
 (presets, cohorts, types), `pdf.ts` (the doctor PDF), and `components/` (the
 design-system primitives — see `components/README.md`).
@@ -159,12 +170,15 @@ Flask, defined in `api/server.py`. Grouped roughly as:
 
 - **Auth** — `register`, `login/init` + `login`, `recover/init` + `recover`,
   `change-password`, `delete-account` (GDPR self-service erasure).
-- **Documents** — `GET/POST/PUT/DELETE /api/documents` — encrypted-blob CRUD.
-- **Family sharing** — `family/grants` create/list/revoke, `claim/init` +
-  `claim`, and `family/documents` for caregiver access.
-- **Admin** — `admin/stats`, `admin/users` (+ lock/unlock/promote/demote),
-  `admin/audit`.
-- **`/health`** — liveness probe.
+- **Documents** — `GET/POST/PUT/DELETE /api/documents` — encrypted-blob CRUD,
+  plus `documents/batch` (bulk import, idempotent via `client_key`) and
+  `documents/classify` (backfills `share_class` on the caller's own docs).
+- **Family sharing** — `family/grants` create/list/revoke (+ `revoke-all`,
+  per-grant `scope`), `family/claimed`, `claim/init` + `claim`, and
+  `family/documents` for caregiver access.
+- **Admin** — `admin/stats` (+ `stats/timeseries`), `admin/users`
+  (+ lock/unlock/promote/demote/delete), `admin/audit` (+ `audit/retention`).
+- **`/health`** — liveness probe; also reports `schema` and `app_schema`.
 
 Auth is a JWT bearer token issued at login; `password_version` on the user row
 invalidates old tokens after a password change or recovery.

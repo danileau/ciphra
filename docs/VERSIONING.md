@@ -96,12 +96,14 @@ nothing.
    the link references at the bottom, deletes the fragments, and sets
    [`VERSION`](../VERSION) and `frontend/package.json` `"version"`. Read the new
    section before committing; add a short intro paragraph if the release
-   deserves one. (`node scripts/changelog.mjs preview` shows it beforehand.)
+   deserves one. (`node scripts/changelog.mjs preview` shows it beforehand;
+   `--date YYYY-MM-DD` overrides today's date on the section.)
 3. Commit as `release: X.Y.Z` — the release PR is the one PR that edits
-   `CHANGELOG.md` directly.
+   `CHANGELOG.md` directly (`changelog-guard.sh` recognises it by its `VERSION`
+   change, not by the title).
 4. Open the PR. The `version-guard` CI job checks that `VERSION`,
    `frontend/package.json` and the changelog agree, and that the section is
-   dated. It does not second-guess the number. Merge as usual.
+   dated. It does not second-guess the number. The operator merges it.
 5. `Release images` then tags the three images `:X.Y.Z` (plus `:<sha>` and
    `:latest`) and cosign-signs them. That part is automatic — an image without
    a standardized tag is useless, and there is no judgement in it.
@@ -117,7 +119,9 @@ nothing.
    changelog section — which is what the `[X.Y.Z]` links at the bottom of
    `CHANGELOG.md` point at. Give it a `version` and `sha` to tag something
    other than the current `VERSION` on the default branch; it skips silently
-   if the tag already exists, so re-running is safe.
+   if the tag already exists, so re-running is safe. Until it runs, the new
+   `[X.Y.Z]` link and the `[Unreleased]` compare link are dead — and a merge
+   never creates the tag, so never report one as if it had.
 7. Deploy with `scripts/deploy-wizard.sh` as always (the CD trigger is still the
    `deploy-<sha>` tag; the `:X.Y.Z` image tag is the human-readable name for
    that same build).
@@ -130,9 +134,11 @@ to change" is not that moment. Tagging also never writes to a branch, so
 
 ### Backfilling a release tag
 
-The same workflow backfills a release that shipped before it existed — `0.1.0`
-was never tagged, which is why the `[0.1.0]` link in `CHANGELOG.md` still
-404s. Run it with version `0.1.0` and the commit that was live on 2026-06-11.
+The same workflow backfills a release that was never tagged: give it the
+`version` and the `sha` that shipped it (a short SHA works since #204).
+`0.1.0`, which predates the workflow, was backfilled this way from the commit
+live on 2026-06-11; every release from `v0.1.0` to the current one now has its
+tag, so all `[X.Y.Z]` links in `CHANGELOG.md` resolve.
 
 Users read what shipped at **`/docs` → Changelog** (in-app) and in
 [`CHANGELOG.md`](../CHANGELOG.md) on the public repo.
@@ -151,7 +157,9 @@ all of #192's entries. New files never conflict; the release PR compiles them.
 
 ## Enforcement (this is mechanical, not a convention)
 
-- **`version-guard`** (`.github/workflows/ci.yml`, runs on every PR): fails if
+- **`version-guard`** (`.github/workflows/ci.yml`, runs on every PR and every
+  push to `main`; it also runs the suites `scripts/test-version-next.sh`,
+  `test-changelog.sh` and `test-release-state.sh`): fails if
   `VERSION` isn't valid SemVer, if `frontend/package.json` disagrees, or if
   `CHANGELOG.md` has no dated section for the current `VERSION`. It checks that
   the three places **agree**; it does not judge whether the number is the one
@@ -196,7 +204,7 @@ So the schema carries its own counter, independent of `VERSION`:
 
 - **`api/server.py` → `MIGRATIONS`** — a numbered, ordered ledger. Each entry is
   `(number, name, sql, compatible)`. `SCHEMA_VERSION` is the highest number, and
-  is what an image advertises.
+  is what an image advertises (9 as of 1.5.3).
 - **`schema_meta`** — one row in the database recording `version` (how far it has
   been migrated) and `min_app_schema` (the lowest image that may still read it).
 - **`init_db()`** applies everything above the recorded version, in order, and

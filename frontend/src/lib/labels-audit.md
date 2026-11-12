@@ -25,8 +25,10 @@ or chip row.
 What's NOT covered (stays a plain `$t(...)`):
 - Group labels (`symptom_group.physical`, etc.) — both preset and the
   synthetic `symptom_group.custom` group are i18n keys.
-- Stream filter tabs (`stream.all`, `stream.events`, etc.) — static UI
-  config, not blueprint items.
+- Static UI copy that names a document kind (`stream.events` = "Notiz"
+  on the journal moment view and calendar notes) — not blueprint items.
+  The old `/stream` filter tabs are gone; `/stream` now redirects to
+  `/journal`.
 - Vital units — `translateUnit(t, raw)` already falls back to the raw
   string on miss, which is correct for user-typed units like `0-10`.
 
@@ -35,54 +37,65 @@ What's NOT in scope for CIPH-882 (preserved for future work):
   the literal `$t(m.label)` rendering since custom rescue meds aren't
   shipped yet. When they are, the branch must be added there too.
 
+Line references below were dropped on 2026-11-12: they had drifted by
+hundreds of lines. Find a site by the helper or block it names.
+
+**Branching sites outside the guard.** These also render blueprint labels
+and do branch on `isCustomItem(`, but are not in the test's
+`RENDER_SITES` list, so they are named here in prose rather than as
+file-path bullets (a bullet without a matching `RENDER_SITES` entry fails
+`customItems-render.test.ts`): `lib/components/DayDetail.svelte`
+(calendar day panel), `lib/components/LastEntriesStrip.svelte`,
+`lib/components/TopTriggersCard.svelte`,
+`lib/components/WithinPhaseRollupCard.svelte`,
+`lib/components/MonthMiniSummary.svelte`. Promote each to a bullet when
+it is added to `RENDER_SITES`.
+
 ---
 
 ## Symptom item labels
 
-- `lib/components/EntryPreview.svelte` — `symptomLabelFor(id)` (line ~34)
+- `lib/components/EntryPreview.svelte` — `symptomLabelFor(id)`
   iterates `bp.symptomGroups[].items` to find the matching item and
   returns its label.
 - `lib/components/EntryComposer.svelte` — both the chip rendering loop
-  (line ~493) and the incomplete-symptoms nudge derivation (line ~352).
-- `routes/reports/+page.svelte` — `itemLabel(id)` helper (line ~209)
-  used by the monthly grid, plus the year-most-frequent symptom block
-  (line ~340).
-- `routes/setup/+page.svelte` — step-2 symptom-item preview (line ~414).
+  and the incomplete-symptoms nudge derivation.
+- `routes/reports/+page.svelte` — `itemLabel(id, bp, t)` helper used by
+  the monthly grid, plus the `labelMap` builds for the frequency blocks.
+- `routes/setup/+page.svelte` — step-2 symptom-item preview.
 - `lib/pdf.ts` — every `labelOf(t, item)` call in `drawGridSection`,
   `generateDoctorPdf`, `exportCsv`, frequency
   aggregations.
 
 ## Trigger labels
 
-- `lib/components/EntryPreview.svelte` — `triggerLabelFor(id)` (line ~40).
-- `lib/components/EntryComposer.svelte` — chip loop (line ~520) and the
-  incomplete-triggers nudge (line ~356).
-- `routes/setup/+page.svelte` — step-3 trigger preview (line ~448).
+- `lib/components/EntryPreview.svelte` — `triggerLabelFor(id)`.
+- `lib/components/EntryComposer.svelte` — chip loop and the
+  incomplete-triggers nudge.
+- `routes/setup/+page.svelte` — step-3 trigger preview.
 - `lib/pdf.ts` — frequency aggregations + CSV column headers.
 
 ## Vital labels
 
-- `lib/components/EntryPreview.svelte` — paired vital titles (line ~377),
-  lab pills (line ~392), multi-entry rows (line ~400).
-- `lib/components/EntryComposer.svelte` — paired-vital section header
-  (line ~681), single-vital headers (line ~718, 758).
-- `routes/setup/+page.svelte` — step-3 vital preview (line ~464).
+- `lib/components/EntryPreview.svelte` — paired vital titles, lab pills,
+  multi-entry rows.
+- `lib/components/EntryComposer.svelte` — paired-vital section header,
+  single-vital headers, the incomplete-vitals nudge.
+- `routes/setup/+page.svelte` — step-3 vital preview.
 - `lib/pdf.ts` — `vitalLabelOf(t, v)` is used in chart titles (single
   + paired + AM/PM split), CSV column headers, year aggregations.
 
 ## Episode labels
 
-- `lib/components/EntryPreview.svelte` — `epLabelFor(id)` (line ~44).
-- `lib/components/EntryComposer.svelte` — episode counter rows
-  (line ~593), and `aria-label`s on increment/decrement buttons (line
-  ~609, ~617).
-- `lib/components/PhaseContextCard.svelte` — multiDay phase label
-  (line ~54).
-- `routes/calendar/+page.svelte` — episode-legend chip (line ~402),
-  multiDay band tooltip (line ~475), day-tooltip phase pill (line ~610).
-- `routes/+layout.svelte` — FAB episode chip (line ~931).
-- `routes/reports/+page.svelte` — `itemLabel(id)` for episode columns
-  (line ~212).
+- `lib/components/EntryPreview.svelte` — `epLabelFor(id)`.
+- `lib/components/EntryComposer.svelte` — episode counter rows (`epLabel`,
+  also used in the increment/decrement `aria-label`s).
+- `lib/components/PhaseContextCard.svelte` — multiDay phase label.
+- `routes/calendar/+page.svelte` — episode-legend chip, multiDay band
+  tooltip, day-tooltip phase pill.
+- `routes/+layout.svelte` — quick-add episode chip.
+- `routes/reports/+page.svelte` — `itemLabel(id, bp, t)` for episode
+  columns.
 - `lib/pdf.ts` — episode-breakdown chart series labels, duration table
   rows, "for-doctor" multiDay bullets, CSV column headers.
 
@@ -93,6 +106,6 @@ The helper already falls back to the raw `v.unit` string when the i18n
 lookup misses — which is exactly what a user-typed unit like `0-10`
 needs. No discriminator branch.
 
-Sites that consume `translateUnit`: `EntryPreview.svelte` (377/392/400),
+Sites that consume `translateUnit`: `EntryPreview.svelte` (vital pills),
 `EntryComposer.svelte` (vital headers), `pdf.ts` (chart titles, CSV
 headers, rescue-med columns).

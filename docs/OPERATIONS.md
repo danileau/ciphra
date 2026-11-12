@@ -4,7 +4,7 @@ This is the day-to-day operations runbook for ciphra in production —
 the production deploy at `ciphra.ch`. For local development setup, see
 [DEVELOPING.md](DEVELOPING.md). For the security model and threat
 boundaries, see [SECURITY_MODEL.md](SECURITY_MODEL.md). For initial VPS
-provisioning, see `golive/SECTION1_RUNBOOK.md` (gitignored).
+provisioning, see `golive/archive/SECTION1_RUNBOOK.md` (gitignored).
 
 If you arrived here because something is broken, jump to
 [Troubleshooting](#troubleshooting).
@@ -19,8 +19,7 @@ If you arrived here because something is broken, jump to
                                 │
                                 ▼
                 ┌───────────────────────────────┐
-                │ Infomaniak VPS Lite           │
-                │  4 vCPU / 4 GB / 80 GB        │
+                │ Infomaniak VPS                │
                 │  Ubuntu 24.04 LTS · Geneva    │
                 │                               │
                 │  nftables (CF-IPs only)       │
@@ -51,6 +50,17 @@ Two systemd units own the stack:
 - **`ciphra-app.service`** wraps `golive/docker-compose.app.yml` —
   nginx + frontend + api. `Requires=ciphra-data.service` so app can
   never start before its data dependencies.
+
+A third pair, **`ciphra-deploy.timer`** → `ciphra-deploy.service`, is the
+pull-based deploy watcher (see [Deploying a new version](#deploying-a-new-version)).
+
+The compose files, systemd units, cron scripts and the deploy watcher live in
+`golive/`, which is **gitignored**: the operator keeps it on the laptop and
+rsyncs it to `/opt/ciphra/golive/`. The VPS copies may carry hot-patches that
+never made it back to the laptop, so **diff before you overwrite**
+(`rsync -avn --checksum` for a dry run, or `diff` the file you are about to
+push). The images themselves (frontend, api, nginx config) are built in-repo
+by CI and never rsynced.
 
 ## Where state lives
 
@@ -107,7 +117,7 @@ needs root should be re-examined first.
 
 ### HC.io checks
 
-Three checks at https://healthchecks.io/. Email on missed pings.
+Four checks at https://healthchecks.io/. Email on missed pings.
 
 | Name | UUID source | Period | Grace | What "red" means |
 |---|---|---|---|---|
@@ -163,9 +173,10 @@ pg_dump → gzip → age (asymmetric encrypt → BACKUP_PUBKEY)
 
 No plaintext touches disk: `pg_dump` streams into a unix pipe.
 
-Retention: 90 days on primary (Sunday sweep). A cross-vendor offsite
-secondary is **active** (2026-08) via `RCLONE_SECONDARY` — the nightly
-dump lands on both legs, so no single provider holds the only copy.
+Retention (Sunday sweep): 90 days on primary, 30 days on secondary. The
+cross-vendor offsite secondary is **active** (2026-08) via `RCLONE_SECONDARY`
+— the nightly dump lands on both legs, so no single provider holds the only
+copy. (`backup.sh` skips the secondary leg silently if the variable is unset.)
 
 ### Manual backup (debug / pre-migration sanity)
 
@@ -293,7 +304,7 @@ The hard case: Infomaniak issues, ransomware, anything. Recovery time
 ~2-4 hours including DNS propagation.
 
 1. Provision new Ubuntu 24.04 VPS (Infomaniak or any provider). Follow
-   `golive/SECTION1_RUNBOOK.md` for the VPS hardening steps.
+   `golive/archive/SECTION1_RUNBOOK.md` for the VPS hardening steps.
 2. Install docker + rclone + age.
 3. Push the `golive/` tree from your laptop:
    `rsync -av ~/work/ciphra/golive/ <new-user>@<new-vps>:/opt/ciphra/golive/`
@@ -357,21 +368,27 @@ are fail-loud stubs. Config changes flow through PR + CI, not rsync.
 
 **Versioning is enforced, not conventional** (`docs/VERSIONING.md`): the
 `version-guard` CI job blocks a merge whose `VERSION` isn't valid SemVer,
-disagrees with `package.json`, or lacks a `CHANGELOG.md` entry; and the
+disagrees with `package.json`, or lacks a dated `CHANGELOG.md` section, and a
+feat/fix PR that carries no `changelog.d/` fragment; and the
 `version` job in `release-images.yml` fails the build on an invalid
 `VERSION`, so no image is ever published without a standardized `X.Y.Z`
-tag. Users read what shipped at **`/docs → Changelog`** and in
-`CHANGELOG.md`.
+tag. Users read what shipped at **`/docs → Changelog`** (pending fragments show
+under *Unreleased*) and in `CHANGELOG.md`.
 
 The workflows:
-- `ci.yml` — PR + main gates: `version-guard` (SemVer + changelog),
-  frontend (svelte-check → build → vitest, build-first so
-  `built-css-guard` sees the artifact), api (pytest in the dev image),
-  Trivy fs scan.
+- `ci.yml` — PR + main gates, all four required by `main-protection`:
+  `version-guard` (SemVer + changelog + fragment guard), `frontend`
+  (svelte-check → build → vitest, build-first so `built-css-guard` sees the
+  artifact), `api` (pytest in the dev image against a throwaway Postgres, then
+  a Trivy scan of the prod image), `trivy` (fs scan of the repo).
+  `scripts/resolve-pydeps.sh` first writes the gitignored
+  `ci-pydeps/requirements.txt`: `api/requirements*.txt` are `>=` floors that
+  `trivy fs` cannot read, so without it the scan saw no Python packages.
 - `release-images.yml` — on merge to main: validate `VERSION` → buildx +
   sign + push (tags `X.Y.Z` + `<sha>` + `latest`).
 - `release-tag.yml` — **manual only** (Actions → *Release tag* → *Run
-  workflow*). Creates the annotated **`vX.Y.Z` git tag** and publishes the
+  workflow*, or `gh workflow run release-tag.yml --ref main` once the release
+  PR has merged). Creates the annotated **`vX.Y.Z` git tag** and publishes the
   GitHub release, with that version's `CHANGELOG.md` section as the body.
   Takes an optional version + commit, so it also backfills a release that
   shipped before it existed. Idempotent, and never writes to a branch (a tag is
@@ -380,7 +397,8 @@ The workflows:
   is a decision, not a side effect. See `docs/VERSIONING.md`.
 - `security-scan.yml` — daily Trivy of the repo + the images prod **runs**
   (the newest `deploy-*` tag, resolved like the VPS does — not `:latest`,
-  which can be an undeployed build). Trivy is pinned to the same version as
+  which can be an undeployed build); the repo leg runs
+  `scripts/resolve-pydeps.sh` first, like `ci.yml`. Trivy is pinned to the same version as
   the PR gate in `ci.yml`; bump all four `version:` lines together. Red pushes
   ntfy via `scripts/scan-alert.sh` with the packages, versions and CVEs:
   high priority when it turns red, default while it stays red, one recovery
@@ -392,13 +410,12 @@ The workflows:
   `CF_ZONE_ID` secrets — the Cloudflare TLS mode. Red = a control drifted
   on prod; pushes ntfy when `NTFY_TOPIC_URL` is set. Complements Trivy
   (which sees deps/images, not the running edge).
-  **Getting it through Cloudflare:** the runner is a datacenter IP, so
-  Bot Fight challenges it and the check reports INCONCLUSIVE (a warning, not
-  a red — it will not assess the challenge page's headers as ciphra's). To
-  let it assess: set repo secret `MONITOR_TOKEN` and add a Cloudflare WAF
-  custom rule that **Skips** (Bot Fight / managed challenge) for
-  `http.request.headers["x-ciphra-monitor"][0] eq "<that token>"`. The
-  script sends that header when `MONITOR_TOKEN` is set.
+  **Cloudflare challenges it:** the runner is a datacenter IP, so Bot Fight
+  challenges it and the edge-header leg reports INCONCLUSIVE (not a red — it
+  will not assess the challenge page's headers as ciphra's). That is an
+  **accepted state** (decided 2026-08-23, [`backlog.md`](backlog.md) →
+  Decided): Free-plan Bot Fight cannot be skipped reliably, the header config
+  is CI-guarded, and the TLS-mode leg runs independently.
 - `security-digest.yml` — weekly (Mon 06:00 UTC) consolidated posture
   summary (`scripts/security-digest.sh`): aggregates the latest
   `security-scan` + `security-monitor` conclusions and the open-Dependabot
@@ -437,9 +454,14 @@ carries `changelog.d/` fragments no release has compiled, and when its
 `VERSION` has no `vX.Y.Z` tag — which is how v1.4.0 stayed untagged for three
 days with every `compare/v1.4.0…` link in the user-facing changelog dead.
 Neither blocks the deploy; shipping ahead of a release is a legitimate choice,
-doing it without noticing is not.
+doing it without noticing is not. On a clean release it prints nothing and goes
+straight to the y/N (before #252, 2026-11-12, it exited silently at exactly
+that point).
 
-Under the hood it's still just a tag push, so the manual path also works:
+Under the hood it's still just a tag push. The wizard is the supported path —
+do not hand over a raw `git tag` + `git push`; the lightweight-tag version of it
+is what made rollbacks silently no-op (see below). Only if the wizard itself
+cannot run, the break-glass equivalent is:
 
 ```bash
 git fetch origin main
@@ -460,6 +482,10 @@ alone cannot deploy anything the pipeline didn't sign) → `.env` bump →
 restart → health check. ntfy reports start / OK / BLOCKED / FAILED.
 **On a failed health check it rolls back automatically** to the
 previous registry+tag and says so.
+
+During the container swap Cloudflare can briefly answer **523** (origin
+unreachable) — that is the restart, not a failure; judge the deploy by the
+ntfy result and `/health` a minute later.
 
 Rollback by hand = `r` in the wizard, or push a fresh **annotated** deploy
 tag for the previous SHA (delete the existing `deploy-<sha>` first so it can
@@ -495,7 +521,11 @@ both required and both now in place:
   unaffected either way.
 
 After any deploy, sanity-check: `curl -sI 'https://ciphra.ch/sw.js?x=1' | grep -i
-cache-control` should be `no-cache`. A leftover stale edge entry shows as
+cache-control` should be `no-cache`. Do **not** read deploy freshness off
+`/sw.js` any more: since SvelteKit 3 / adapter-node 6 (1.5.3) it carries no
+`last-modified`, and its `etag` is a content hash that only changes when
+`static/sw.js` does. `/_app/version.json` changes every build — see
+[Post-deploy smoke](#post-deploy-smoke). A leftover stale edge entry shows as
 `cf-cache-status: HIT`; clear it with Caching → Purge Custom URL → `/sw.js`.
 
 ### Fallback: manual ghcr pull
@@ -539,20 +569,38 @@ in-repo at `frontend/Dockerfile.prod`:
 
 ```bash
 cd /opt/ciphra/src && git pull --ff-only
-docker build --network=host -f/opt/ciphra/src/frontend/Dockerfile.prod \
-  -t local/ciphra-frontend:<tag> frontend/
-# (build context already contains docs via the repo clone? NO — stage them:)
+# Stage the docs FIRST — the build context does not contain them (launch
+# lesson: v0.1.0 shipped an empty /docs). Same list as release-images.yml.
 rm -rf frontend/_docs-src && mkdir frontend/_docs-src
-cp -r docs README.md SECURITY.md frontend/_docs-src/
+cp -r docs README.md SECURITY.md CHANGELOG.md changelog.d frontend/_docs-src/
+docker build --network=host -f frontend/Dockerfile.prod \
+  -t local/ciphra-frontend:<tag> frontend/
 ```
 
-(Stage docs BEFORE the build — order above shown for reference, run the
-staging first. See the launch lesson: v0.1.0 shipped an empty /docs.)
+A locally built image is unsigned, so `ciphra-autodeploy` would refuse it;
+this path bypasses the watcher entirely. The compose file reads all three
+images as `${CIPHRA_REGISTRY}/ciphra-<name>:${CIPHRA_TAG}`, so pointing
+`.env` at `local` + `<tag>` needs api and nginx built (`api/Dockerfile`
+target `prod`, `nginx/Dockerfile.prod`) or re-tagged under the same name, then
+`sudo systemctl restart ciphra-app`.
 
 ### Post-deploy smoke
 
-Browser-level, not curl — the app is client-rendered and SSR HTML is an
-empty shell:
+Public reads only — fine to run from the laptop. First the edge:
+
+```bash
+curl -s https://ciphra.ch/health            # {"status":"healthy","schema":9,"app_schema":9}
+curl -s https://ciphra.ch/_app/version.json # changes on every build — compare with before
+curl -sI 'https://ciphra.ch/sw.js?x=1' | grep -i cache-control   # no-cache
+curl -sI https://ciphra.ch/ | grep -iE '^HTTP|strict-transport|content-security|x-content-type'
+```
+
+Static files answer **405** to anything but GET/HEAD (adapter-node 6), so probe
+them with `-I` or a plain GET, not `-X POST`.
+
+Then the app, in a browser — it is client-rendered behind the auth gate, so
+curl only sees the shell (the SSR `<head>` carries titles + canonical since
+#235, the body does not):
 
 ```bash
 cd frontend && PLAYWRIGHT_NO_WEBSERVER=1 PLAYWRIGHT_BASE_URL=https://ciphra.ch \
@@ -580,7 +628,7 @@ docker ps
 # or "Exited" = problem.
 
 docker stats --no-stream
-# CPU + memory. RAM usage should be well under 4 GB.
+# CPU + memory. RAM usage should stay well below the VPS's total.
 ```
 
 ### Read logs
@@ -620,8 +668,9 @@ UPDATE users SET is_admin = TRUE WHERE username = 'YOUR_USERNAME';
 "
 ```
 
-User must log out + back in for the admin flag to take effect (it's
-embedded in the JWT).
+The API reads `is_admin` from the database on every request, so the
+server-side grant is immediate; the app only learns the flag at login, so the
+user logs out + back in to see the admin surface.
 
 ### Check cron is firing
 
@@ -651,7 +700,7 @@ Check in order:
    curl -k -H "CF-Connecting-IP: 127.0.0.1" \
      --resolve "ciphra.ch:8443:127.0.0.1" \
      "https://ciphra.ch:8443/health"
-   # Expected: {"status":"healthy","schema":8,"app_schema":8}
+   # Expected: {"status":"healthy","schema":9,"app_schema":9}
    # `schema` > `app_schema` means a rollback left an older image on a newer
    # (additive) schema — supported, see §Deploying → Rollback and the schema.
    ```
@@ -705,6 +754,27 @@ credentials: `git -c http.version=HTTP/1.1 …` and `git -c protocol.version=0 �
 isolate it, and `/var/log/apt/history.log` says whether a library moved
 underneath you. The watcher pins HTTP/1.1 for exactly this reason (2026-09-01).
 
+### Rate limits (where a 429/503 comes from)
+
+Two layers. **nginx** (`nginx/ciphra.conf`, per client IP after
+`real_ip_header CF-Connecting-IP`) rejects with **503** when a zone overflows:
+
+| Zone | Rate | Location (burst) |
+|---|---|---|
+| `api_login` | 10 r/m | `/api/(login\|register\|recover\|change-password)` (burst 5) |
+| `api_batch` | 120 r/m | `= /api/documents/batch` (burst 20) |
+| `api_general` | 120 r/m | `/api/` (burst 20) |
+| `assets` | 1200 r/m | `/_app/immutable/` (burst 200) |
+| `public` | 300 r/m | `/` (burst 50) |
+
+**flask-limiter** in the API (Redis-backed, survives app restarts) answers
+**429** per route, on top of the per-account login lockout.
+
+`assets` exists since #247 (1.5.3): a cold load after a deploy fetches dozens
+of hashed chunks at once, which used to exhaust the `public` budget — blank
+page, 503s on `/_app/immutable/*`. If that symptom comes back, look at this
+zone first.
+
 ### Rate-limiter doesn't seem to work
 
 Check redis is reachable from api:
@@ -729,6 +799,12 @@ docker logs <container-name> --tail=50
 sudo systemctl status ciphra-app
 sudo journalctl -u ciphra-app --since "5 min ago" --no-pager
 ```
+
+For the frontend specifically: adapter-node reads `ORIGIN` at runtime and
+refuses to start unless it is a **single valid URL**.
+`golive/docker-compose.app.yml` sets `ORIGIN: ${FRONTEND_ORIGIN:-https://ciphra.ch}`
+— deliberately not `CORS_ORIGINS`, which is a comma-separated list for Flask.
+A list there (or a bad `FRONTEND_ORIGIN`) = a crash-looping `ciphra-frontend`.
 
 For api specifically: if logs show `relation "users" does not exist`,
 `init_db()` wasn't called. Check that `api/entrypoint.sh` is the
@@ -838,4 +914,5 @@ repo. They capture lessons + runbooks beyond what's in committed docs.
 - `feedback_nftables_redirect_localhost.md` — why nginx binds 0.0.0.0
 - `feedback_infomaniak_hypervisor_firewall.md` — VPS port-22 default
 - `feedback_docker_build_ipv6.md` — `--network=host` trick for builds
-- `feedback_golive_rsync_drift.md` — laptop is canonical, VPS isn't
+- `feedback_golive_rsync_drift.md` — laptop is canonical; diff the VPS copy
+  before overwriting (it may carry hot-patches)

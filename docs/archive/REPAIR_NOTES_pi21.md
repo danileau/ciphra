@@ -1,5 +1,16 @@
 # API Test Repair Notes (PI v21 LB-4b)
 
+> **Historical record (status as of 2026-11-12).** This is the audit trail
+> of a one-off repair in PI v21; it is not a maintained guide. Every
+> `server.py:NNN` reference below points at the file as it was then
+> (~1,200 lines; it is ~2,800 now) — find the code by the function or
+> check named, not by line. The "Sprint 1 final status" count (48 passed)
+> is that sprint's; the whole API suite is now ~276 passed / 5 skipped
+> across several test modules. The PI v22 follow-up named below, vitest
+> coverage for `validateRecoveryCode`, exists:
+> `frontend/src/lib/wordlist.test.ts`. The taxonomy (Mode 1–4, "never patch
+> a test to match a real server bug") is the part still worth reading.
+
 Audit trail for the TestLogin / TestRecovery / TestDocuments / TestAdmin /
 TestHealth / TestRegister test repairs in `tests/test_api.py`. Per the PI v21
 kickoff rule: **if a test reveals a real server-side bug, ticket it

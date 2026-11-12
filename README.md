@@ -41,7 +41,9 @@ Then open **http://localhost:8080** — nginx serves the app and proxies the API
 | frontend | http://localhost:5173   | SvelteKit dev server (direct) |
 | api      | http://localhost:5050   | Flask API (direct)            |
 | postgres | localhost:5433          | Database                      |
-| redis    | (internal)              | Rate-limit counters (prod)    |
+
+The development stack runs without Redis — the API then keeps rate-limit
+counters in memory. Production adds a Redis container for them (see Tech stack).
 
 A `SECRET_KEY` of 32+ characters is mandatory — the API refuses to start
 without it. Generate one with `python -c 'import secrets; print(secrets.token_hex(32))'`.
@@ -68,7 +70,7 @@ without it. Generate one with `python -c 'import secrets; print(secrets.token_he
 
 ## Tech stack
 
-- **Frontend** — SvelteKit + TypeScript, Vite, client-side WebCrypto + Argon2id (WASM)
+- **Frontend** — SvelteKit 3 (Svelte 5) + TypeScript, Vite 8, served by `@sveltejs/adapter-node`; client-side WebCrypto + Argon2id (WASM)
 - **API** — Flask (Python 3.11), gunicorn (schema initialised via `api/entrypoint.sh`), JWT auth
 - **Database** — PostgreSQL 15, one opaque encrypted-document table
 - **Rate-limit store** — Redis (in-memory only, lives in the data plane so counters survive app restarts)
