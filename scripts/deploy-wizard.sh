@@ -58,7 +58,10 @@ hr()  { printf '%s\n' "${DIM}─────────────────
 release_state() {
   local out
   out="$("$(dirname "$0")/release-state.sh" "$1" "$REMOTE" 2>/dev/null)" || true
-  [ -n "$out" ] && { printf '%s\n' "$out"; echo; }
+  # An `if`, not `[ -n "$out" ] && …`: when the release is clean `out` is empty,
+  # the `&&` list returns 1 as the function's last command, and `set -e` killed
+  # the wizard silently right before its confirm prompt (2026-11-12, 1.5.3).
+  if [ -n "$out" ]; then printf '%s\n' "$out"; echo; fi
 }
 
 # do_deploy <sha> — the actual production trigger. Assumes the caller already
