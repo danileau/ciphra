@@ -19,7 +19,7 @@ export default {
 	'welcome.migrated_verify': 'Im Journal prüfen',
 	'welcome.migrated_encryption_title': 'Anders verschlüsselt',
 	'welcome.migrated_encryption_body': 'ciphra verschlüsselt direkt in deinem Browser mit deinem Passwort — wir können nichts entschlüsseln, was du hier speicherst.',
-	'welcome.migrated_readonly_title': 'epilepc schliesst am {date}',
+	'welcome.migrated_readonly_title': 'epilepc bleibt mindestens bis Ende 2026 lesbar',
 	'welcome.migrated_readonly_body': 'Bis dahin bleibt dein altes Konto für Lesen und Downloads offen. Neue Einträge gehören ab jetzt hierher.',
 
 	// Nav

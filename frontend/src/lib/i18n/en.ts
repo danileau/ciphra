@@ -19,7 +19,7 @@ export default {
 	'welcome.migrated_verify': 'Verify in Journal',
 	'welcome.migrated_encryption_title': 'Encrypted differently',
 	'welcome.migrated_encryption_body': 'ciphra encrypts in your browser with your password — we cannot decrypt anything you save here.',
-	'welcome.migrated_readonly_title': 'epilepc closes {date}',
+	'welcome.migrated_readonly_title': 'epilepc stays readable until at least the end of 2026',
 	'welcome.migrated_readonly_body': 'Until then your old account stays open for reads and downloads. New entries belong here from now on.',
 
 	'nav.dashboard': 'Dashboard',
