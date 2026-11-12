@@ -1,29 +1,29 @@
 <script lang="ts">
-	import { t, locale, plural } from '$lib/i18n';
-	import { todayISO } from '$lib/date';
-	import { auth } from '$lib/stores/auth';
-	import { documents, documentsError, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, hasBedarfMeds, conditionDisplayLabel } from '$lib/blueprint';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import { todayISO } from '#lib/date.ts';
+	import { auth } from '#lib/stores/auth.ts';
+	import { documents, documentsError, type CiphraDocument } from '#lib/stores/documents.ts';
+	import { resolvedBlueprint, hasBedarfMeds, conditionDisplayLabel } from '#lib/blueprint/index.ts';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import Asterisk from '$lib/components/Asterisk.svelte';
-	import CompanionMain from '$lib/components/CompanionMain.svelte';
-	import CompanionRail from '$lib/components/CompanionRail.svelte';
-	import WelcomeCard from '$lib/components/WelcomeCard.svelte';
+	import Asterisk from '#lib/components/Asterisk.svelte';
+	import CompanionMain from '#lib/components/CompanionMain.svelte';
+	import CompanionRail from '#lib/components/CompanionRail.svelte';
+	import WelcomeCard from '#lib/components/WelcomeCard.svelte';
 
 	// CIPH-764 reverted post senior review — country-specific helplines
 	// without explicit user country selection conflict with zero-knowledge.
 	// Replaced by CIPH-790 (settings-based opt-in help section).
-	import { familyLinks, activeVaultReady } from '$lib/stores/familyLinks';
-	import { cohortOf } from '$lib/blueprint/cohort';
+	import { familyLinks, activeVaultReady } from '#lib/stores/familyLinks.ts';
+	import { cohortOf } from '#lib/blueprint/cohort.ts';
 	import {
 		resolvePrimaryDashboardCard,
 		type DashboardSummary,
 		type DashboardCardSpec,
-	} from '$lib/blueprint/dashboardPrimary';
-	import { computeCycleStateToday, hasCycleTracking, PHASE_COLORS } from '$lib/cycleState';
-	import { cohortPalette } from '$lib/cohortPalette';
-	import { conditionInfoMap } from '$lib/conditionInfo';
+	} from '#lib/blueprint/dashboardPrimary.ts';
+	import { computeCycleStateToday, hasCycleTracking, PHASE_COLORS } from '#lib/cycleState.ts';
+	import { cohortPalette } from '#lib/cohortPalette.ts';
+	import { conditionInfoMap } from '#lib/conditionInfo.ts';
 
 	// CIPH-921 — the dashboard condition label must use the SAME per-condition
 	// color as /conditions (the landing #conditions section + condition deep

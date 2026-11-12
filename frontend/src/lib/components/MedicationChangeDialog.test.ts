@@ -13,8 +13,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, fireEvent, cleanup } from '@testing-library/svelte';
 import MedicationChangeDialog from './MedicationChangeDialog.svelte';
-import { periodOn } from '$lib/blueprint/medicationHistory';
-import type { MedicationSlot } from '$lib/blueprint/types';
+import { periodOn } from '#lib/blueprint/medicationHistory.ts';
+import type { MedicationSlot } from '#lib/blueprint/types.ts';
 
 afterEach(() => cleanup());
 

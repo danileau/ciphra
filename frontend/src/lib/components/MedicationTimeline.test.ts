@@ -6,7 +6,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/svelte';
 import MedicationTimeline from './MedicationTimeline.svelte';
-import type { MedicationSlot } from '$lib/blueprint/types';
+import type { MedicationSlot } from '#lib/blueprint/types.ts';
 
 afterEach(() => cleanup());
 

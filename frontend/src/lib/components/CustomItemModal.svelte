@@ -18,22 +18,22 @@
 	 * `customizations.custom*` array and persist via `blueprint.save`.
 	 */
 	import { createEventDispatcher } from 'svelte';
-	import { t } from '$lib/i18n';
-	import Modal from '$lib/components/Modal.svelte';
-	import Listbox from '$lib/components/Listbox.svelte';
-	import { DATA_PALETTE } from '$lib/dataPalette';
+	import { t } from '#lib/i18n/index.ts';
+	import Modal from '#lib/components/Modal.svelte';
+	import Listbox from '#lib/components/Listbox.svelte';
+	import { DATA_PALETTE } from '#lib/dataPalette.ts';
 	import {
 		generateCustomId,
 		validateCustomItem,
 		type CustomKind,
-	} from '$lib/blueprint';
+	} from '#lib/blueprint/index.ts';
 	import type {
 		BlueprintGroup,
 		BlueprintItem,
 		CustomSymptomItem,
 		EpisodeType,
 		VitalField,
-	} from '$lib/blueprint/types';
+	} from '#lib/blueprint/types.ts';
 
 	type EditingItem =
 		| CustomSymptomItem

@@ -23,10 +23,10 @@
  * printed, filed, faxed and re-read a year later. Hence: `pdf.*` only.
  */
 import { describe, it, expect } from 'vitest';
-import de from '$lib/i18n/de';
-import en from '$lib/i18n/en';
-import fr from '$lib/i18n/fr';
-import itDict from '$lib/i18n/it';
+import de from '#lib/i18n/de.ts';
+import en from '#lib/i18n/en.ts';
+import fr from '#lib/i18n/fr.ts';
+import itDict from '#lib/i18n/it.ts';
 
 const DICTS: Array<[string, Record<string, string>]> = [
 	['de', de],

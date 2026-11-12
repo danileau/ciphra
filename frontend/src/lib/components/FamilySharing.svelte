@@ -9,15 +9,15 @@
 	 * notebook by default.
 	 */
 	import { onMount } from 'svelte';
-	import { t, plural, type Locale } from '$lib/i18n';
-	import { auth } from '$lib/stores/auth';
+	import { t, plural, type Locale } from '#lib/i18n/index.ts';
+	import { auth } from '#lib/stores/auth.ts';
 	import { get } from 'svelte/store';
-	import { createFamilyGrant, encryptData, decryptData } from '$lib/crypto';
-	import { locale } from '$lib/i18n';
-	import * as api from '$lib/api';
-	import { SHARE_MASK_SHARED_ONLY, SHARE_MASK_EVERYTHING } from '$lib/utils/shareClass';
+	import { createFamilyGrant, encryptData, decryptData } from '#lib/crypto.ts';
+	import { locale } from '#lib/i18n/index.ts';
+	import * as api from '#lib/api.ts';
+	import { SHARE_MASK_SHARED_ONLY, SHARE_MASK_EVERYTHING } from '#lib/utils/shareClass.ts';
 	import ScopeChoice from './ScopeChoice.svelte';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 
 	interface Grant {
 		id: number;
@@ -239,7 +239,7 @@
 
 	async function downloadPdf() {
 		const state = get(auth);
-		const { generateFamilyInvitePdf } = await import('$lib/pdf');
+		const { generateFamilyInvitePdf } = await import('#lib/pdf.ts');
 		generateFamilyInvitePdf(
 			state.username || '',
 			createdLabel,

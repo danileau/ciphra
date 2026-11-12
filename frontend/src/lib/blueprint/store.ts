@@ -1,9 +1,9 @@
 import { writable, derived, get } from 'svelte/store';
 import type { Blueprint } from './types';
 import { resolveBlueprint } from './customizations';
-import { auth } from '$lib/stores/auth';
-import { documents } from '$lib/stores/documents';
-import type { CiphraDocument } from '$lib/stores/documents';
+import { auth } from '#lib/stores/auth.ts';
+import { documents } from '#lib/stores/documents.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 function createBlueprintStore() {
 	const { subscribe, set } = writable<Blueprint | null>(null);

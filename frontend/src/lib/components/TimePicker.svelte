@@ -13,7 +13,7 @@
 -->
 <script lang="ts">
 	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 
 	// Fires whenever the user changes the value (pick hour/minute or clear).
 	// bind:value already propagates the string; this lets callers run a

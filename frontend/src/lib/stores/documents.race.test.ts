@@ -23,8 +23,8 @@ const h = vi.hoisted(() => {
 	};
 });
 
-vi.mock('$app/environment', () => ({ browser: true }));
-vi.mock('$lib/api', () => ({
+vi.mock('$app/env', () => ({ browser: true }));
+vi.mock('#lib/api.ts', () => ({
 	getDocuments: h.getDocuments,
 	familyDocuments: () => new Promise(() => {}),
 	storeDocument: vi.fn(),
@@ -34,16 +34,16 @@ vi.mock('$lib/api', () => ({
 	familyDocumentUpdate: vi.fn(),
 	familyDocumentDelete: vi.fn(),
 }));
-vi.mock('$lib/crypto', () => ({
+vi.mock('#lib/crypto.ts', () => ({
 	encryptDocument: vi.fn(),
 	decryptDocument: vi.fn(async () => ({ type: 'blueprint' })),
 }));
-vi.mock('$lib/idb', () => ({
+vi.mock('#lib/idb.ts', () => ({
 	getAllDocs: vi.fn(async () => []),
 	putDocs: vi.fn(async () => {}),
 	clearDocs: vi.fn(async () => {}),
 }));
-vi.mock('$lib/outbox', () => ({
+vi.mock('#lib/outbox.ts', () => ({
 	enqueue: vi.fn(async () => 'obx-test'),
 	dequeue: vi.fn(async () => {}),
 	getPending: vi.fn(async () => []),

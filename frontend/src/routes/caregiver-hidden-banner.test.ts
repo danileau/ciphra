@@ -15,10 +15,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import de from '$lib/i18n/de';
-import en from '$lib/i18n/en';
-import fr from '$lib/i18n/fr';
-import itDict from '$lib/i18n/it';
+import de from '#lib/i18n/de.ts';
+import en from '#lib/i18n/en.ts';
+import fr from '#lib/i18n/fr.ts';
+import itDict from '#lib/i18n/it.ts';
 
 const LAYOUT = readFileSync(join(__dirname, '+layout.svelte'), 'utf8');
 const DOCS_STORE = readFileSync(join(__dirname, '..', 'lib', 'stores', 'documents.ts'), 'utf8');
@@ -27,7 +27,7 @@ const ALLOWLIST = readFileSync(join(__dirname, '..', 'lib', 'i18n', 'dynamic-key
 describe('the caregiver banner counts what the server withheld', () => {
 	it('reads the store, not a filter over documents the caregiver never receives', () => {
 		expect(LAYOUT).toMatch(/\{@const hiddenCount = \$caregiverHiddenCount\}/);
-		expect(LAYOUT).toMatch(/import \{[^}]*caregiverHiddenCount[^}]*\} from '\$lib\/stores\/documents'/);
+		expect(LAYOUT).toMatch(/import \{[^}]*caregiverHiddenCount[^}]*\} from '#lib\/stores\/documents\.ts'/);
 		expect(
 			LAYOUT,
 			'counting diary/private documents client-side is what made this dead',

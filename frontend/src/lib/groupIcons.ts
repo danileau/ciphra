@@ -8,7 +8,7 @@
  * including the synthetic "Custom" group and any future preset group — fall
  * back to the generic category icon via iconPath().
  */
-import { iconPath } from '$lib/conditionIcons';
+import { iconPath } from '#lib/conditionIcons.ts';
 
 export const GROUP_ICON: Record<string, string> = {
 	'symptom_group.behavior': 'brain',

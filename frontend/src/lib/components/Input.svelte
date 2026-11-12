@@ -1,5 +1,5 @@
 <script lang="ts">
-	import PasswordField from '$lib/components/PasswordField.svelte';
+	import PasswordField from '#lib/components/PasswordField.svelte';
 
 	export let type: 'text' | 'password' | 'email' = 'text';
 	export let placeholder: string = '';

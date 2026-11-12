@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { docList } from '$lib/docs';
+	import { docList } from '#lib/docs.ts';
 </script>
 
 <main id="main-content" class="layout-reading py-8 space-y-6">

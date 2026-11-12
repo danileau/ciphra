@@ -8,8 +8,8 @@
  * top-level fields. Unknown seizure type_name maps to 'unknown'.
  */
 
-import type { Blueprint, EpisodeType, MedicationSlot } from '$lib/blueprint/types';
-import { epilepsy as epilepsyPreset } from '$lib/blueprint/presets';
+import type { Blueprint, EpisodeType, MedicationSlot } from '#lib/blueprint/types.ts';
+import { epilepsy as epilepsyPreset } from '#lib/blueprint/presets.ts';
 
 export const SUPPORTED_SCHEMA_VERSION = '1.1';
 

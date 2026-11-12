@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 
 	export let value: number = 0;
 	export let label: string = '';

@@ -742,8 +742,8 @@ operator actions** (Cloudflare dashboard / VPS file).
 
 ### 3.1 — CSP: script-src `'unsafe-inline'` dropped ✅ (code)
 
-CSP is now emitted by **SvelteKit per-response** (`frontend/svelte.config.js`
-→ `kit.csp`, mode `hash`), not by nginx. `script-src` no longer allows
+CSP is now emitted by **SvelteKit per-response** (`frontend/vite.config.ts`
+→ `kitConfig.csp`, mode `hash`), not by nginx. `script-src` no longer allows
 `'unsafe-inline'`: SvelteKit hashes its own inline hydration bootstrap, and
 the two `src/app.html` author scripts (dark-mode pre-paint init + SW
 registration) are pinned by sha256 hash. `style-src` KEEPS `'unsafe-inline'`
@@ -753,7 +753,7 @@ second CSP header would intersect with SvelteKit's, and the per-build script
 hashes only live in the app).
 
 - Guard: `frontend/src/app-html-csp.test.ts` fails CI if either app.html
-  inline script is edited without updating its hash in `svelte.config.js`.
+  inline script is edited without updating its hash in `vite.config.ts`.
 - **Deploy:** ships with the normal frontend build + deploy. After deploy,
   verify in a real browser on prod:
   - Network → document response `content-security-policy` header: `script-src`

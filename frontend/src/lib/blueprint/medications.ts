@@ -1,7 +1,7 @@
 import type { Blueprint, MedicationPeriod, MedicationSlot, MedicationStopReason } from './types';
 import { docReferencesMed, isTrackedOn, isUnbounded, medIds, medPeriods, periodOn } from './medicationHistory';
-import { todayISO } from '$lib/date';
-import { translateUnit } from '$lib/i18n';
+import { todayISO } from '#lib/date.ts';
+import { translateUnit } from '#lib/i18n/index.ts';
 
 /**
  * Medication model reconciliation (CIPH-881 follow-up, 2026-06-16).

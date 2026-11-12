@@ -1,55 +1,55 @@
 <script lang="ts">
-	import { t, locale, plural } from '$lib/i18n';
-	import { formatDateChoice, formatISODateChoice } from '$lib/blueprint/preferences';
-	import { rememberFocusMonth, recallFocusMonth } from '$lib/stores/focusMonth';
-	import { anyPhaseDayCount } from '$lib/monthAggregates';
-	import { isAuthenticated, auth, authReady } from '$lib/stores/auth';
-	import { todayISO } from '$lib/date';
-	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, isCustomItem, prettifyCustomId, resolveMedDisplay } from '$lib/blueprint';
-	import { familyLinks, activeVault, activeVaultReady } from '$lib/stores/familyLinks';
-	import Asterisk from '$lib/components/Asterisk.svelte';
-	import ReportsEmpty from '$lib/components/ReportsEmpty.svelte';
-	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
-	import VitalTrendReportsCard from '$lib/components/VitalTrendReportsCard.svelte';
-	import MedicationTimeline from '$lib/components/MedicationTimeline.svelte';
-	import { medHistorySpan, medicationChanges, medPeriods, medStartDate, periodOn, type MedChange } from '$lib/blueprint/medicationHistory';
-	import { chartDoseBands, dayBins, medsChangedIn, monthBins } from '$lib/reports/doseBands';
-	import { toLocalISODate } from '$lib/date';
-	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
-	import { cohortPalette } from '$lib/cohortPalette';
-	import { conditionColorOf } from '$lib/conditionAccent';
-	import { cohortOf } from '$lib/blueprint/cohort';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import { formatDateChoice, formatISODateChoice } from '#lib/blueprint/preferences.ts';
+	import { rememberFocusMonth, recallFocusMonth } from '#lib/stores/focusMonth.ts';
+	import { anyPhaseDayCount } from '#lib/monthAggregates.ts';
+	import { isAuthenticated, auth, authReady } from '#lib/stores/auth.ts';
+	import { todayISO } from '#lib/date.ts';
+	import { documents, type CiphraDocument } from '#lib/stores/documents.ts';
+	import { resolvedBlueprint, isCustomItem, prettifyCustomId, resolveMedDisplay } from '#lib/blueprint/index.ts';
+	import { familyLinks, activeVault, activeVaultReady } from '#lib/stores/familyLinks.ts';
+	import Asterisk from '#lib/components/Asterisk.svelte';
+	import ReportsEmpty from '#lib/components/ReportsEmpty.svelte';
+	import ChartWrapper from '#lib/components/ChartWrapper.svelte';
+	import VitalTrendReportsCard from '#lib/components/VitalTrendReportsCard.svelte';
+	import MedicationTimeline from '#lib/components/MedicationTimeline.svelte';
+	import { medHistorySpan, medicationChanges, medPeriods, medStartDate, periodOn, type MedChange } from '#lib/blueprint/medicationHistory.ts';
+	import { chartDoseBands, dayBins, medsChangedIn, monthBins } from '#lib/reports/doseBands.ts';
+	import { toLocalISODate } from '#lib/date.ts';
+	import LastEntriesStrip from '#lib/components/LastEntriesStrip.svelte';
+	import { cohortPalette } from '#lib/cohortPalette.ts';
+	import { conditionColorOf } from '#lib/conditionAccent.ts';
+	import { cohortOf } from '#lib/blueprint/cohort.ts';
 	import {
 		resolveReportsPrimaryCard,
 		type ReportsSummary,
 		type ReportsCardSpec,
-	} from '$lib/blueprint/reportsPrimary';
-	import type { Blueprint } from '$lib/blueprint';
+	} from '#lib/blueprint/reportsPrimary.ts';
+	import type { Blueprint } from '#lib/blueprint/index.ts';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import type { ReportScope } from '$lib/pdf';
+	import { page } from '$app/state';
+	import type { ReportScope } from '#lib/pdf.ts';
 	// jsPDF + autoTable + pdfkit core add ~152KB gzip. Defer until the user
 	// actually clicks an export action.
 	async function loadPdfLib() {
-		return await import('$lib/pdf');
+		return await import('#lib/pdf.ts');
 	}
-	import { isEpisodeBearing, withEpisodeCountChanged } from '$lib/utils/episodeCounts';
-	import { createKeyedQueue } from '$lib/utils/keyedQueue';
-	import { isExportable } from '$lib/utils/exportable';
-	import ExportPeriodPopover from '$lib/components/ExportPeriodPopover.svelte';
-	import ExportNoteReview from '$lib/components/ExportNoteReview.svelte';
-	import { reportWindow, formatWindowRange } from '$lib/reports/reportWindow';
-	import { noteMarkersInWindow, withSelectedNoteMarkers, type NoteMarker } from '$lib/reports/noteMarkers';
+	import { isEpisodeBearing, withEpisodeCountChanged } from '#lib/utils/episodeCounts.ts';
+	import { createKeyedQueue } from '#lib/utils/keyedQueue.ts';
+	import { isExportable } from '#lib/utils/exportable.ts';
+	import ExportPeriodPopover from '#lib/components/ExportPeriodPopover.svelte';
+	import ExportNoteReview from '#lib/components/ExportNoteReview.svelte';
+	import { reportWindow, formatWindowRange } from '#lib/reports/reportWindow.ts';
+	import { noteMarkersInWindow, withSelectedNoteMarkers, type NoteMarker } from '#lib/reports/noteMarkers.ts';
 	import {
 		buildMonthIndex,
 		availablePeriods,
 		formatPeriodLabel,
 		defaultPeriodIndex,
 		type PeriodOption,
-	} from '$lib/reports/exportPeriods';
-	import { weekdayLabels } from '$lib/i18n/dates';
+	} from '#lib/reports/exportPeriods.ts';
+	import { weekdayLabels } from '#lib/i18n/dates.ts';
 
 	// Design review 2026-06-11 — month context travels from /calendar
 	// via the focus-month handoff; fresh sessions start on today.
@@ -264,13 +264,13 @@
 		// it into view. Previous flow silently generated a current-month PDF
 		// with no scope choice; this respects the existing picker UI and
 		// stops the button from surprising the user.
-		if ($page.url.searchParams.get('action') === 'export') {
+		if (page.url.searchParams.get('action') === 'export') {
 			await tick();
 			document
 				.getElementById('reports-export-section')
 				?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 			// Clean the URL so a refresh doesn't re-trigger.
-			const u = new URL($page.url);
+			const u = new URL(page.url.href);
 			u.searchParams.delete('action');
 			history.replaceState(null, '', u.pathname + (u.search || ''));
 		}

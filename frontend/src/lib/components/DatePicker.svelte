@@ -27,7 +27,7 @@
 -->
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { locale, t } from '$lib/i18n';
+	import { locale, t } from '#lib/i18n/index.ts';
 
 	export let value: string = '';
 	export let id: string = '';

@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { isAuthenticated, authReady } from '$lib/stores/auth';
-	import { t } from '$lib/i18n';
-	import Asterisk from '$lib/components/Asterisk.svelte';
-	import Wordmark from '$lib/components/Wordmark.svelte';
-	import { inview } from '$lib/actions/inview';
-	import { presets } from '$lib/blueprint/presets';
-	import EncryptionDemo from '$lib/components/EncryptionDemo.svelte';
-	import { iconPaths, iconPath } from '$lib/conditionIcons';
-	import { conditionGroups } from '$lib/conditionGroups';
-	import { conditionInfoMap } from '$lib/conditionInfo';
-	import { sourceUrl, sourceLabel } from '$lib/source';
+	import { isAuthenticated, authReady } from '#lib/stores/auth.ts';
+	import { t } from '#lib/i18n/index.ts';
+	import Asterisk from '#lib/components/Asterisk.svelte';
+	import Wordmark from '#lib/components/Wordmark.svelte';
+	import { inview } from '#lib/actions/inview.ts';
+	import { presets } from '#lib/blueprint/presets.ts';
+	import EncryptionDemo from '#lib/components/EncryptionDemo.svelte';
+	import { iconPaths, iconPath } from '#lib/conditionIcons.ts';
+	import { conditionGroups } from '#lib/conditionGroups.ts';
+	import { conditionInfoMap } from '#lib/conditionInfo.ts';
+	import { sourceUrl, sourceLabel } from '#lib/source.ts';
 	import type { ComponentType } from 'svelte';
 	import { onMount } from 'svelte';
 
@@ -32,7 +32,7 @@
 	// are migrated to the Svelte 5 mount() API.
 	let CompanionComponent: ComponentType | null = null;
 	$: if ($authReady && $isAuthenticated && !CompanionComponent) {
-		import('$lib/components/Companion.svelte').then((m) => {
+		import('#lib/components/Companion.svelte').then((m) => {
 			CompanionComponent = m.default as unknown as ComponentType;
 		});
 	}

@@ -19,7 +19,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import ScopeChoice from './ScopeChoice.svelte';
-import { SHARE_MASK_SHARED_ONLY, SHARE_MASK_EVERYTHING } from '$lib/utils/shareClass';
+import { SHARE_MASK_SHARED_ONLY, SHARE_MASK_EVERYTHING } from '#lib/utils/shareClass.ts';
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (p: string) => readFileSync(join(SRC, p), 'utf8');

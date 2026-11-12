@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { monthSummaryInsightFor } from '$lib/monthSummaryInsight';
-import type { Blueprint } from '$lib/blueprint';
-import type { CiphraDocument } from '$lib/stores/documents';
+import { monthSummaryInsightFor } from '#lib/monthSummaryInsight.ts';
+import type { Blueprint } from '#lib/blueprint/index.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 function bipolarBlueprint(): Blueprint {
 	return {

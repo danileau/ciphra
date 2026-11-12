@@ -24,7 +24,7 @@
 	 *   {/if}
 	 * ```
 	 */
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 
 	export let onConfirm: () => void;
 	export let onCancel: () => void;

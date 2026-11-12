@@ -11,8 +11,8 @@
 	yourself is not a deviation.
 -->
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import { SHARE_MASK_SHARED_ONLY, SHARE_MASK_EVERYTHING } from '$lib/utils/shareClass';
+	import { t } from '#lib/i18n/index.ts';
+	import { SHARE_MASK_SHARED_ONLY, SHARE_MASK_EVERYTHING } from '#lib/utils/shareClass.ts';
 
 	/** Bindable. Defaults closed — a privacy control does not pre-open itself. */
 	export let value: number = SHARE_MASK_SHARED_ONLY;

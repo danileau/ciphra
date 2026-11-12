@@ -19,8 +19,8 @@
 	follow-up; it is deliberately not done here, mid-incident.
 -->
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import { activeVault, type FamilyLink } from '$lib/stores/familyLinks';
+	import { t } from '#lib/i18n/index.ts';
+	import { activeVault, type FamilyLink } from '#lib/stores/familyLinks.ts';
 	import { onMount, tick } from 'svelte';
 
 	/** Non-revoked links the caregiver may switch into. */

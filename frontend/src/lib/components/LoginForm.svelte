@@ -7,12 +7,12 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { t } from '$lib/i18n';
-	import * as api from '$lib/api';
-	import { auth } from '$lib/stores/auth';
-	import PasswordField from '$lib/components/PasswordField.svelte';
-	import { decryptMasterKey, deriveAuthKey } from '$lib/crypto';
-	import { canonicalUsername, describeUsername, isValidUsername } from '$lib/username';
+	import { t } from '#lib/i18n/index.ts';
+	import * as api from '#lib/api.ts';
+	import { auth } from '#lib/stores/auth.ts';
+	import PasswordField from '#lib/components/PasswordField.svelte';
+	import { decryptMasterKey, deriveAuthKey } from '#lib/crypto.ts';
+	import { canonicalUsername, describeUsername, isValidUsername } from '#lib/username.ts';
 
 	const dispatch = createEventDispatcher<{ 'login-complete': void }>();
 

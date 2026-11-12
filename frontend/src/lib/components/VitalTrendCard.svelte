@@ -18,10 +18,10 @@
 	draws line segments through whatever bins have values.
 -->
 <script lang="ts">
-	import { t, locale, plural } from '$lib/i18n';
-	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
-	import type { CiphraDocument } from '$lib/stores/documents';
-	import type { Blueprint, VitalField } from '$lib/blueprint/types';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import ChartWrapper from '#lib/components/ChartWrapper.svelte';
+	import type { CiphraDocument } from '#lib/stores/documents.ts';
+	import type { Blueprint, VitalField } from '#lib/blueprint/types.ts';
 
 	export let docs: CiphraDocument[];
 	export let bp: Blueprint | null = null;

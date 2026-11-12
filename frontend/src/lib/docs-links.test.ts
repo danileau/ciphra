@@ -9,7 +9,7 @@
  * page whose whole subject is that ciphra's claims are checkable.
  */
 import { describe, it, expect } from 'vitest';
-import { rewriteDocLinks } from '$lib/docs-links';
+import { rewriteDocLinks } from '#lib/docs-links.ts';
 
 const KNOWN = new Set(['readme', 'architecture', 'security_model']);
 const rw = (html: string) => rewriteDocLinks(html, KNOWN);

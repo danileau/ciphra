@@ -13,8 +13,8 @@
 -->
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { t } from '$lib/i18n';
-	import { blueprint, resolvedBlueprint } from '$lib/blueprint';
+	import { t } from '#lib/i18n/index.ts';
+	import { blueprint, resolvedBlueprint } from '#lib/blueprint/index.ts';
 	import {
 		createMedication,
 		duplicateGroups,
@@ -30,15 +30,15 @@
 		removeReportedPeriod,
 		undoLastChange,
 		type MedChange,
-	} from '$lib/blueprint/medicationHistory';
-	import type { Blueprint, MedicationSlot } from '$lib/blueprint/types';
-	import { formatISODateChoice } from '$lib/blueprint/preferences';
-	import { documents } from '$lib/stores/documents';
-	import { todayISO } from '$lib/date';
-	import MedicationChangeDialog, { type DialogMode } from '$lib/components/MedicationChangeDialog.svelte';
-	import MedicationCombineDialog from '$lib/components/MedicationCombineDialog.svelte';
-	import MedicationHistoryDialog, { type HistoryDialogMode } from '$lib/components/MedicationHistoryDialog.svelte';
-	import DatePicker from '$lib/components/DatePicker.svelte';
+	} from '#lib/blueprint/medicationHistory.ts';
+	import type { Blueprint, MedicationSlot } from '#lib/blueprint/types.ts';
+	import { formatISODateChoice } from '#lib/blueprint/preferences.ts';
+	import { documents } from '#lib/stores/documents.ts';
+	import { todayISO } from '#lib/date.ts';
+	import MedicationChangeDialog, { type DialogMode } from '#lib/components/MedicationChangeDialog.svelte';
+	import MedicationCombineDialog from '#lib/components/MedicationCombineDialog.svelte';
+	import MedicationHistoryDialog, { type HistoryDialogMode } from '#lib/components/MedicationHistoryDialog.svelte';
+	import DatePicker from '#lib/components/DatePicker.svelte';
 
 	// Render from the resolved view (medications are not customized, so it is
 	// the same list); mutate the raw store — see `persist`.

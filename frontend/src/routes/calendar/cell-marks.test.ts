@@ -91,8 +91,8 @@ describe('CIPH-pi19-A rescue-med right-edge bar', () => {
 });
 
 describe('CIPH-pi19-A aria-label suffix uses plural()', () => {
-	it('imports plural from $lib/i18n', () => {
-		expect(CAL).toMatch(/import\s*\{[^}]*\bplural\b[^}]*\}\s*from\s*'\$lib\/i18n'/);
+	it('imports plural from #lib/i18n', () => {
+		expect(CAL).toMatch(/import\s*\{[^}]*\bplural\b[^}]*\}\s*from\s*'#lib\/i18n\/index\.ts'/);
 	});
 
 	it('dayAriaLabel appends trigger + rescue suffixes via plural()', () => {

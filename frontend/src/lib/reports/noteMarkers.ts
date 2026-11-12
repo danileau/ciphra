@@ -15,8 +15,8 @@
  * own KPI tile and CSV columns; note markers are patient narrative and are the
  * only export content authored as free prose.
  */
-import type { CiphraDocument } from '$lib/stores/documents';
-import { isExportable } from '$lib/utils/exportable';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
+import { isExportable } from '#lib/utils/exportable.ts';
 
 export interface NoteMarker {
 	/** Document id — the identity the review dialog selects on. */

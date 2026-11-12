@@ -6,7 +6,7 @@
 
 	Props:
 		tabs: array of { id, label } — id is written to the `tab` query param.
-		current: the currently active tab id (parent reads from $page.url).
+		current: the currently active tab id (parent reads from page.url).
 		onSelect: (id) => void — parent navigates; parent owns the URL.
 		labelledBy: optional id of a heading describing the tabset (for aria-labelledby).
 		ariaLabel: optional fallback label when no heading exists.

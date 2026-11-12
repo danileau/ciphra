@@ -10,12 +10,12 @@
 	// (they're the "how am I doing" + "give to doctor" at-a-glance cards that
 	// belong in the 1/3 rail), "Wie geht's dir?" trend chart moved OUT into
 	// the main 2/3 column alongside the other charts.
-	import { t } from '$lib/i18n';
-	import EntryPreview from '$lib/components/EntryPreview.svelte';
-	import GapTrendSpark from '$lib/components/GapTrendSpark.svelte';
-	import type { CiphraDocument } from '$lib/stores/documents';
-	import type { Blueprint } from '$lib/blueprint/types';
-	import { hasBedarfMeds } from '$lib/blueprint';
+	import { t } from '#lib/i18n/index.ts';
+	import EntryPreview from '#lib/components/EntryPreview.svelte';
+	import GapTrendSpark from '#lib/components/GapTrendSpark.svelte';
+	import type { CiphraDocument } from '#lib/stores/documents.ts';
+	import type { Blueprint } from '#lib/blueprint/types.ts';
+	import { hasBedarfMeds } from '#lib/blueprint/index.ts';
 
 	// CIPH-872 — `todayLogged` + Asterisk import removed with the
 	// redundant Quick-Action rail card.

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy, afterUpdate } from 'svelte';
-	import { browser } from '$app/environment';
-	import { resolvedTheme } from '$lib/stores/theme';
+	import { browser } from '$app/env';
+	import { resolvedTheme } from '#lib/stores/theme.ts';
 
 	export let type: string;
 	export let data: any;

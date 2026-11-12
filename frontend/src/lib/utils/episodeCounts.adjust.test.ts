@@ -11,8 +11,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { withEpisodeCountChanged } from './episodeCounts';
-import EntryComposer from '$lib/components/EntryComposer.svelte';
-import type { Blueprint } from '$lib/blueprint';
+import EntryComposer from '#lib/components/EntryComposer.svelte';
+import type { Blueprint } from '#lib/blueprint/index.ts';
 
 describe('withEpisodeCountChanged — entries with per-occurrence rows', () => {
 	const base = {

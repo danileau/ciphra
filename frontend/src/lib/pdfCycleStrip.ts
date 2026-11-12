@@ -14,9 +14,9 @@
  * Gated by `sectionsForCohort(cohort).includes('cycle-strip')` —
  * phase/discrete/narrative/custom cohorts never call this.
  */
-import type { Blueprint } from '$lib/blueprint';
-import type { CiphraDocument } from '$lib/stores/documents';
-import { computeCycleAnchor, cycleStateForDate, type Phase } from '$lib/cycleState';
+import type { Blueprint } from '#lib/blueprint/index.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
+import { computeCycleAnchor, cycleStateForDate, type Phase } from '#lib/cycleState.ts';
 
 export interface CycleStripCell {
 	/** Day-of-month, 1..daysInMonth. */

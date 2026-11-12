@@ -12,8 +12,8 @@
 	What is left here is the binding: which options, and what picking one does.
 -->
 <script lang="ts">
-	import { locale, locales, localeNames, t, type Locale } from '$lib/i18n';
-	import Listbox from '$lib/components/Listbox.svelte';
+	import { locale, locales, localeNames, t, type Locale } from '#lib/i18n/index.ts';
+	import Listbox from '#lib/components/Listbox.svelte';
 
 	export let buttonClass = '';
 

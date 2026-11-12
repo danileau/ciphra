@@ -26,12 +26,12 @@
 	month read distinctly without a legend.
 -->
 <script lang="ts">
-	import { t, locale, plural } from '$lib/i18n';
-	import { formatDateChoice } from '$lib/blueprint/preferences';
-	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
-	import { chartDoseBands, medsChangedIn, monthBins } from '$lib/reports/doseBands';
-	import type { CiphraDocument } from '$lib/stores/documents';
-	import type { Blueprint, VitalField } from '$lib/blueprint/types';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import { formatDateChoice } from '#lib/blueprint/preferences.ts';
+	import ChartWrapper from '#lib/components/ChartWrapper.svelte';
+	import { chartDoseBands, medsChangedIn, monthBins } from '#lib/reports/doseBands.ts';
+	import type { CiphraDocument } from '#lib/stores/documents.ts';
+	import type { Blueprint, VitalField } from '#lib/blueprint/types.ts';
 
 	export let docs: CiphraDocument[];
 	export let bp: Blueprint | null = null;

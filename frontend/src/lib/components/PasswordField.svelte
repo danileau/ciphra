@@ -7,7 +7,7 @@
 	 PasswordField.test.ts asserts the primitive is the only password
 	 input source in the codebase. -->
 <script lang="ts">
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 
 	export let id: string = `pwf-${Math.random().toString(36).slice(2, 9)}`;
 	export let value: string = '';

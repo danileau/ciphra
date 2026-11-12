@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 
 	onMount(() => {
-		const view = $page.url.searchParams.get('view');
-		const date = $page.url.searchParams.get('date');
+		const view = page.url.searchParams.get('view');
+		const date = page.url.searchParams.get('date');
 		if (view === 'month') {
-			goto('/reports', { replaceState: true });
+			goto('/reports', { replace: true });
 		} else if (date) {
-			goto(`/log/${date}`, { replaceState: true });
+			goto(`/log/${date}`, { replace: true });
 		} else {
-			goto('/log/today', { replaceState: true });
+			goto('/log/today', { replace: true });
 		}
 	});
 </script>

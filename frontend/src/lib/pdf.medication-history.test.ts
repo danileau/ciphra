@@ -34,12 +34,12 @@ import {
 	medicationTimeline,
 	periodRangeText,
 } from './pdfMedicationHistory';
-import { epilepsy } from '$lib/blueprint/presets';
-import type { Blueprint, MedicationSlot } from '$lib/blueprint';
-import de from '$lib/i18n/de';
-import en from '$lib/i18n/en';
-import fr from '$lib/i18n/fr';
-import itDict from '$lib/i18n/it';
+import { epilepsy } from '#lib/blueprint/presets.ts';
+import type { Blueprint, MedicationSlot } from '#lib/blueprint/index.ts';
+import de from '#lib/i18n/de.ts';
+import en from '#lib/i18n/en.ts';
+import fr from '#lib/i18n/fr.ts';
+import itDict from '#lib/i18n/it.ts';
 
 const captured = vi.hoisted(() => ({ outputs: [] as string[] }));
 vi.mock('jspdf', async (importOriginal) => {

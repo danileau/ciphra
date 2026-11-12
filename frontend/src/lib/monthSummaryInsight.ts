@@ -17,10 +17,10 @@
  *
  * The helper is testable in isolation; rendering lives in MonthMiniSummary.svelte.
  */
-import type { Blueprint, EpisodeType } from '$lib/blueprint';
-import type { CiphraDocument } from '$lib/stores/documents';
-import type { Cohort } from '$lib/blueprint/cohort';
-import { multiDayEpisodeDays, episodeCountTotals } from '$lib/monthAggregates';
+import type { Blueprint, EpisodeType } from '#lib/blueprint/index.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
+import type { Cohort } from '#lib/blueprint/cohort.ts';
+import { multiDayEpisodeDays, episodeCountTotals } from '#lib/monthAggregates.ts';
 
 /** Phase-cohort insight: top-N multiDay episode types by day-coverage. */
 export interface PhaseDayCoverageInsight {

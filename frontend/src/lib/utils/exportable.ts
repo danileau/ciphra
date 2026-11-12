@@ -13,7 +13,7 @@
  * Use this everywhere instead of inlining the check, so future export
  * paths (epilepc bundle export, public share link, …) can't drift.
  */
-import type { CiphraDocument } from '$lib/stores/documents';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 export function isExportable(doc: CiphraDocument | { data?: any } | null | undefined): boolean {
 	const data = doc?.data;

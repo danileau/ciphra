@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { t, locale } from '$lib/i18n';
-	import { page } from '$app/stores';
-	import { conditionInfoMap } from '$lib/conditionInfo';
-	import type { ConditionInfo } from '$lib/conditionInfo';
-	import { iconPath } from '$lib/conditionIcons';
-	import Asterisk from '$lib/components/Asterisk.svelte';
-	import { isAuthenticated } from '$lib/stores/auth';
+	import { t, locale } from '#lib/i18n/index.ts';
+	import { pageStore } from '#lib/pageStore.ts';
+	import { conditionInfoMap } from '#lib/conditionInfo.ts';
+	import type { ConditionInfo } from '#lib/conditionInfo.ts';
+	import { iconPath } from '#lib/conditionIcons.ts';
+	import Asterisk from '#lib/components/Asterisk.svelte';
+	import { isAuthenticated } from '#lib/stores/auth.ts';
 
 	// NOTE: this page intentionally has NO in-app condition-switch. The
 	// one-blueprint model treats comorbidity as custom items, and a wholesale
@@ -14,7 +14,8 @@
 	// feedback_blueprint_model. The page is informational; the register CTA
 	// below shows to logged-out visitors only.
 
-	$: conditionId = $page.params.id || '';
+	const idParam = pageStore((p) => p.params.id);
+	$: conditionId = $idParam || '';
 	$: info = conditionId ? conditionInfoMap[conditionId] as ConditionInfo | undefined : undefined;
 	$: title = info ? $t(info.titleKey) : '';
 	$: subtitle = info ? $t(info.subtitleKey) : '';

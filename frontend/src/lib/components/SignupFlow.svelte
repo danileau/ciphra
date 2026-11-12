@@ -15,17 +15,17 @@
 	loss, so the gate is mandatory.
 -->
 <script lang="ts">
-	import { canonicalUsername, isValidUsername } from '$lib/username';
+	import { canonicalUsername, isValidUsername } from '#lib/username.ts';
 	import { createEventDispatcher } from 'svelte';
-	import { t, locale } from '$lib/i18n';
-	import * as api from '$lib/api';
-	import { auth } from '$lib/stores/auth';
-	import { createVault, decryptMasterKey, deriveAuthKey } from '$lib/crypto';
-	import PasswordField from '$lib/components/PasswordField.svelte';
+	import { t, locale } from '#lib/i18n/index.ts';
+	import * as api from '#lib/api.ts';
+	import { auth } from '#lib/stores/auth.ts';
+	import { createVault, decryptMasterKey, deriveAuthKey } from '#lib/crypto.ts';
+	import PasswordField from '#lib/components/PasswordField.svelte';
 
 	// jsPDF is heavy; only load it if the user clicks "download recovery PDF".
 	async function downloadRecoveryPdf() {
-		const { generateRecoveryPdf } = await import('$lib/pdf');
+		const { generateRecoveryPdf } = await import('#lib/pdf.ts');
 		generateRecoveryPdf(canonicalUsername(username), recoveryCode, $t, $locale);
 	}
 

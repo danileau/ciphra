@@ -75,18 +75,18 @@ const api = vi.hoisted(() => ({
 	familyDocumentDelete: vi.fn(),
 }));
 
-vi.mock('$app/environment', () => ({ browser: true }));
-vi.mock('$lib/api', () => api);
-vi.mock('$lib/crypto', () => ({
+vi.mock('$app/env', () => ({ browser: true }));
+vi.mock('#lib/api.ts', () => api);
+vi.mock('#lib/crypto.ts', () => ({
 	encryptDocument: vi.fn(async (data: any) => `ct:${JSON.stringify(data)}`),
 	decryptDocument: vi.fn(async (ct: string) => JSON.parse(ct.slice(3))),
 }));
-vi.mock('$lib/idb', () => ({
+vi.mock('#lib/idb.ts', () => ({
 	getAllDocs: vi.fn(async () => []),
 	putDocs: vi.fn(async () => {}),
 	clearDocs: vi.fn(async () => {}),
 }));
-vi.mock('$lib/outbox', () => ({
+vi.mock('#lib/outbox.ts', () => ({
 	enqueue: h.enqueue,
 	getPending: h.getPending,
 	dequeue: h.dequeue,

@@ -15,8 +15,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, fireEvent, cleanup } from '@testing-library/svelte';
 import MedicationHistoryDialog from './MedicationHistoryDialog.svelte';
-import { medPeriods } from '$lib/blueprint/medicationHistory';
-import type { MedicationSlot } from '$lib/blueprint/types';
+import { medPeriods } from '#lib/blueprint/medicationHistory.ts';
+import type { MedicationSlot } from '#lib/blueprint/types.ts';
 
 afterEach(() => cleanup());
 

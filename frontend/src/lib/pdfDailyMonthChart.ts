@@ -9,7 +9,7 @@
  * Per-day arrays are returned in 1..daysInMonth order so the consumer can
  * map index → day-of-month directly.
  */
-import type { CiphraDocument } from '$lib/stores/documents';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 export interface DailyMonthSeries {
 	dailyTotals: number[];        // length === daysInMonth; episode count per day

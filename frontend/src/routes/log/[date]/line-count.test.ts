@@ -26,9 +26,9 @@ describe('CIPH-850 /log/[date] route — extraction guard', () => {
 		).toBeLessThanOrEqual(300);
 	});
 
-	it('imports EntryComposer from $lib/components', () => {
+	it('imports EntryComposer from #lib/components', () => {
 		expect(SRC).toMatch(
-			/import\s+EntryComposer(?:\s*,\s*\{[^}]*\})?\s+from\s+['"]\$lib\/components\/EntryComposer\.svelte['"]/,
+			/import\s+EntryComposer(?:\s*,\s*\{[^}]*\})?\s+from\s+['"]#lib\/components\/EntryComposer\.svelte['"]/,
 		);
 	});
 

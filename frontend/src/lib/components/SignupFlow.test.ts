@@ -23,31 +23,31 @@ import { render, fireEvent, waitFor } from '@testing-library/svelte';
 
 // ---- Module mocks (must be declared before importing the component) ----
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api.ts', () => ({
     register: vi.fn(),
     loginInit: vi.fn(),
     login: vi.fn(),
 }));
 
-vi.mock('$lib/crypto', () => ({
+vi.mock('#lib/crypto.ts', () => ({
     createVault: vi.fn(),
     decryptMasterKey: vi.fn(),
     deriveAuthKey: vi.fn(),
 }));
 
-vi.mock('$lib/stores/auth', () => ({
+vi.mock('#lib/stores/auth.ts', () => ({
     auth: { login: vi.fn() },
 }));
 
-vi.mock('$lib/pdf', () => ({
+vi.mock('#lib/pdf.ts', () => ({
     generateRecoveryPdf: vi.fn(),
 }));
 
-vi.mock('$app/environment', () => ({ browser: true }));
+vi.mock('$app/env', () => ({ browser: true }));
 
 import SignupFlow from './SignupFlow.svelte';
-import * as api from '$lib/api';
-import * as crypto from '$lib/crypto';
+import * as api from '#lib/api.ts';
+import * as crypto from '#lib/crypto.ts';
 
 // ---- Helpers ----
 

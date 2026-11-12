@@ -19,9 +19,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { generateTherapyPdf } from './pdf';
 import { therapyRows, hasRememberedHistory } from './pdfMedicationHistory';
-import { epilepsy } from '$lib/blueprint/presets';
-import type { Blueprint, MedicationSlot } from '$lib/blueprint';
-import de from '$lib/i18n/de';
+import { epilepsy } from '#lib/blueprint/presets.ts';
+import type { Blueprint, MedicationSlot } from '#lib/blueprint/index.ts';
+import de from '#lib/i18n/de.ts';
 
 const captured = vi.hoisted(() => ({ outputs: [] as string[] }));
 vi.mock('jspdf', async (importOriginal) => {

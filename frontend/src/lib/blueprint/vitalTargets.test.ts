@@ -12,7 +12,7 @@ import {
 	migrateLegacyVitalTargets,
 	readLegacyVitalTargets,
 } from './vitalTargets';
-import { applyVitalTargetOverrides } from '$lib/pdf';
+import { applyVitalTargetOverrides } from '#lib/pdf.ts';
 import type { Blueprint } from './types';
 
 const bp = (over: Partial<Blueprint> = {}): Blueprint =>

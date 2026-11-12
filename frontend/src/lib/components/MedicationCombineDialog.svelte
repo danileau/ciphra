@@ -17,9 +17,9 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { t, locale, plural, type Locale } from '$lib/i18n';
-	import Modal from '$lib/components/Modal.svelte';
-	import DatePicker from '$lib/components/DatePicker.svelte';
+	import { t, locale, plural, type Locale } from '#lib/i18n/index.ts';
+	import Modal from '#lib/components/Modal.svelte';
+	import DatePicker from '#lib/components/DatePicker.svelte';
 	import {
 		combineMedications,
 		docReferencesMed,
@@ -27,9 +27,9 @@
 		medPeriods,
 		medStartDate,
 		medicationsOverlap,
-	} from '$lib/blueprint/medicationHistory';
-	import type { MedicationPeriod, MedicationSlot } from '$lib/blueprint/types';
-	import { formatISODateChoice, type DateFormatChoice } from '$lib/blueprint/preferences';
+	} from '#lib/blueprint/medicationHistory.ts';
+	import type { MedicationPeriod, MedicationSlot } from '#lib/blueprint/types.ts';
+	import { formatISODateChoice, type DateFormatChoice } from '#lib/blueprint/preferences.ts';
 
 	export let open = false;
 	/** The two entries, in list order (the order they were added). */

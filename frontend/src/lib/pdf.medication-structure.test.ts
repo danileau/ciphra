@@ -23,10 +23,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { generateDoctorPdf } from './pdf';
 import { doseBandLayer, gridChangeMarksForMonth, medicationsOnDate } from './pdfMedicationHistory';
-import { dayBins, monthBins } from '$lib/reports/doseBands';
-import { epilepsy } from '$lib/blueprint/presets';
-import type { Blueprint, MedicationSlot } from '$lib/blueprint';
-import de from '$lib/i18n/de';
+import { dayBins, monthBins } from '#lib/reports/doseBands.ts';
+import { epilepsy } from '#lib/blueprint/presets.ts';
+import type { Blueprint, MedicationSlot } from '#lib/blueprint/index.ts';
+import de from '#lib/i18n/de.ts';
 
 const captured = vi.hoisted(() => ({ outputs: [] as string[] }));
 vi.mock('jspdf', async (importOriginal) => {
@@ -205,7 +205,7 @@ describe('dose bands on the charts', () => {
 
 	it('every chart draws through the shared geometry, in its own point math', () => {
 		// Geometry lives in reports/doseBands.ts, shared with /reports.
-		expect(PDF_SRC).toContain("from '$lib/reports/doseBands'");
+		expect(PDF_SRC).toContain("from '#lib/reports/doseBands.ts'");
 		expect(PDF_SRC).toMatch(/doseBandLayer\(reportMeds, dayBins\(year, month\), t\)/);
 		expect(PDF_SRC).toMatch(/monthBins\(monthBuckets\[0\]\.y, monthBuckets\[0\]\.m, MONTHS\)/);
 		// Points: daily i/(N−1), trajectory + trend lines i/(MONTHS−1), bars at slot centres.

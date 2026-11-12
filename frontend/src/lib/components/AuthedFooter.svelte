@@ -11,13 +11,14 @@
 	compete with the active form.
 -->
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { t } from '$lib/i18n';
-	import Wordmark from '$lib/components/Wordmark.svelte';
-	import Asterisk from '$lib/components/Asterisk.svelte';
-	import { sourceUrl } from '$lib/source';
+	import { pageStore } from '#lib/pageStore.ts';
+	import { t } from '#lib/i18n/index.ts';
+	import Wordmark from '#lib/components/Wordmark.svelte';
+	import Asterisk from '#lib/components/Asterisk.svelte';
+	import { sourceUrl } from '#lib/source.ts';
 
-	$: pathname = $page.url.pathname;
+	const urlPathname = pageStore((p) => p.url.pathname);
+	$: pathname = $urlPathname;
 	// Focus surfaces: a sticky save bar / wizard chrome already owns the
 	// bottom of the screen. The footer would sit underneath them and read
 	// as visual debris, not as a closing signature.

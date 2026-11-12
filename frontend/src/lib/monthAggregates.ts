@@ -17,8 +17,8 @@
  * doc in the legacy `seizures` shape that must count identically
  * everywhere.
  */
-import type { Blueprint, EpisodeType } from '$lib/blueprint';
-import type { CiphraDocument } from '$lib/stores/documents';
+import type { Blueprint, EpisodeType } from '#lib/blueprint/index.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 /** THE place that knows the entry-doc episode shape: `data.episodes`
  *  with the legacy migrated-epilepc `data.seizures` fallback. Non-entry

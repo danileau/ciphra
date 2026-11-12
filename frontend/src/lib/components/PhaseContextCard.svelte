@@ -13,8 +13,8 @@
 	doctor needs to know which day. Position: above all charts.
 -->
 <script lang="ts">
-	import { t, locale } from '$lib/i18n';
-	import { isCustomItem } from '$lib/blueprint';
+	import { t, locale } from '#lib/i18n/index.ts';
+	import { isCustomItem } from '#lib/blueprint/index.ts';
 
 	export let phase: {
 		id: string;

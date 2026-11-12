@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { aggregatePhaseDistribution } from '$lib/pdfPhaseDistribution';
-import type { Blueprint } from '$lib/blueprint';
-import type { CiphraDocument } from '$lib/stores/documents';
+import { aggregatePhaseDistribution } from '#lib/pdfPhaseDistribution.ts';
+import type { Blueprint } from '#lib/blueprint/index.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 
 function bipolarBlueprint(): Blueprint {
 	return {

@@ -14,19 +14,19 @@
 	// vertical-bar counts. The single trend that stays is howAreYou,
 	// reshaped here into a sparkline-hero with the headline carrying the
 	// takeaway and a "Verlauf ansehen →" link routing to /reports.
-	import { t } from '$lib/i18n';
-	import ChartWrapper from '$lib/components/ChartWrapper.svelte';
-	import PhaseContextCard from '$lib/components/PhaseContextCard.svelte';
-	import LastEntriesStrip from '$lib/components/LastEntriesStrip.svelte';
-	import VitalTrendCard from '$lib/components/VitalTrendCard.svelte';
-	import InsightsSection from '$lib/components/InsightsSection.svelte';
-	import TopTriggersCard from '$lib/components/TopTriggersCard.svelte';
-	import WithinPhaseRollupCard from '$lib/components/WithinPhaseRollupCard.svelte';
-	import { cohortPalette } from '$lib/cohortPalette';
-	import type { Cohort } from '$lib/blueprint/cohort';
-	import type { DashboardCardSpec } from '$lib/blueprint/dashboardPrimary';
-	import type { CiphraDocument } from '$lib/stores/documents';
-	import type { Blueprint } from '$lib/blueprint/types';
+	import { t } from '#lib/i18n/index.ts';
+	import ChartWrapper from '#lib/components/ChartWrapper.svelte';
+	import PhaseContextCard from '#lib/components/PhaseContextCard.svelte';
+	import LastEntriesStrip from '#lib/components/LastEntriesStrip.svelte';
+	import VitalTrendCard from '#lib/components/VitalTrendCard.svelte';
+	import InsightsSection from '#lib/components/InsightsSection.svelte';
+	import TopTriggersCard from '#lib/components/TopTriggersCard.svelte';
+	import WithinPhaseRollupCard from '#lib/components/WithinPhaseRollupCard.svelte';
+	import { cohortPalette } from '#lib/cohortPalette.ts';
+	import type { Cohort } from '#lib/blueprint/cohort.ts';
+	import type { DashboardCardSpec } from '#lib/blueprint/dashboardPrimary.ts';
+	import type { CiphraDocument } from '#lib/stores/documents.ts';
+	import type { Blueprint } from '#lib/blueprint/types.ts';
 
 	// CIPH-854 — cohort drives ordering + which extra cards render.
 	export let cohort: Cohort;

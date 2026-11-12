@@ -1,11 +1,11 @@
 import { writable, get } from 'svelte/store';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { auth } from './auth';
 import { familyLinks, activeVault } from './familyLinks';
-import * as api from '$lib/api';
-import { encryptDocument, decryptDocument } from '$lib/crypto';
-import { getAllDocs, putDocs, type CachedDoc } from '$lib/idb';
-import { shareClassOf, isVisibleUnderMask, SHARE_MASK_SHARED_ONLY } from '$lib/utils/shareClass';
+import * as api from '#lib/api.ts';
+import { encryptDocument, decryptDocument } from '#lib/crypto.ts';
+import { getAllDocs, putDocs, type CachedDoc } from '#lib/idb.ts';
+import { shareClassOf, isVisibleUnderMask, SHARE_MASK_SHARED_ONLY } from '#lib/utils/shareClass.ts';
 import {
 	enqueue as outboxEnqueue,
 	dequeue as outboxDequeue,
@@ -13,7 +13,7 @@ import {
 	updateCiphertext as outboxUpdateCiphertext,
 	refreshPendingCount,
 	type OutboxRecord,
-} from '$lib/outbox';
+} from '#lib/outbox.ts';
 
 /**
  * What the last load/save failed at, as a code — the shell translates it.

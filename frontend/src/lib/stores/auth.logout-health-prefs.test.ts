@@ -19,8 +19,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-vi.mock('$app/environment', () => ({ browser: true }));
-vi.mock('$lib/idb', () => ({ clearAllPartitions: vi.fn(async () => {}) }));
+vi.mock('$app/env', () => ({ browser: true }));
+vi.mock('#lib/idb.ts', () => ({ clearAllPartitions: vi.fn(async () => {}) }));
 
 describe('auth.logout — health-derived preferences', () => {
 	beforeEach(() => {

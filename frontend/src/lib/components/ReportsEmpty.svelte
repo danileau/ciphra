@@ -7,7 +7,7 @@
 	even when empty.
 -->
 <script lang="ts">
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 
 	/** Number of days of data the user actually has. The threshold copy
 	 *  surfaces this so the user knows how much more logging is needed. */

@@ -39,7 +39,7 @@ describe('CIPH-895 — landing motion', () => {
 			resolve(SRC_ROOT, 'routes/+page.svelte'),
 			'utf8',
 		);
-		expect(src).toMatch(/import\s*\{\s*inview\s*\}\s*from\s*['"]\$lib\/actions\/inview['"]/);
+		expect(src).toMatch(/import\s*\{\s*inview\s*\}\s*from\s*['"]#lib\/actions\/inview\.ts['"]/);
 	});
 
 	it('landing page applies use:inview to at least 4 sections', () => {

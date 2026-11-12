@@ -28,7 +28,7 @@
 	 *   </HelpHint>
 	 * ```
 	 */
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 
 	export let open = false;
 	export let onDismiss: (() => void) | undefined = undefined;

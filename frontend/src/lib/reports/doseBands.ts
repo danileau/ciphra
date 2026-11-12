@@ -14,8 +14,8 @@
  * in bin units where bin k spans [k − 0.5, k + 0.5], so it maps onto a
  * category axis (bin centres at 0, 1, 2 …) with one linear step.
  */
-import type { MedicationSlot } from '$lib/blueprint/types';
-import { medicationChanges, medPeriods, type MedChange } from '$lib/blueprint/medicationHistory';
+import type { MedicationSlot } from '#lib/blueprint/types.ts';
+import { medicationChanges, medPeriods, type MedChange } from '#lib/blueprint/medicationHistory.ts';
 
 /** One x-axis bin: the local dates it covers, inclusive. */
 export interface AxisBin {

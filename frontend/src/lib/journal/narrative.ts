@@ -25,8 +25,8 @@
  * mattered being invisible. Episodes are context on a written day; they never
  * make an unwritten day appear.
  */
-import type { CiphraDocument } from '$lib/stores/documents';
-import type { Blueprint } from '$lib/blueprint/types';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
+import type { Blueprint } from '#lib/blueprint/types.ts';
 
 export type JournalTextKind = 'diary' | 'note' | 'marker';
 

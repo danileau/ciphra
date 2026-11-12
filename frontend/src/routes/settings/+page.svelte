@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { t, locale, locales, localeNames } from '$lib/i18n';
-	import type { Locale } from '$lib/i18n';
-	import { auth, isAuthenticated } from '$lib/stores/auth';
-	import { documents } from '$lib/stores/documents';
-	import { familyLinks, activeVault } from '$lib/stores/familyLinks';
-	import { blueprint, hasBlueprint, presets, resolvedBlueprint, isCustomItem, conditionDisplayLabel } from '$lib/blueprint';
+	import { t, locale, locales, localeNames } from '#lib/i18n/index.ts';
+	import type { Locale } from '#lib/i18n/index.ts';
+	import { auth, isAuthenticated } from '#lib/stores/auth.ts';
+	import { documents } from '#lib/stores/documents.ts';
+	import { familyLinks, activeVault } from '#lib/stores/familyLinks.ts';
+	import { blueprint, hasBlueprint, presets, resolvedBlueprint, isCustomItem, conditionDisplayLabel } from '#lib/blueprint/index.ts';
 	import {
 		applyDateFormatChoice,
 		type DateFormatChoice,
-	} from '$lib/blueprint/preferences';
-	import { themeChoice, setThemeChoice, type ThemeChoice } from '$lib/stores/theme';
+	} from '#lib/blueprint/preferences.ts';
+	import { themeChoice, setThemeChoice, type ThemeChoice } from '#lib/stores/theme.ts';
 	import type {
 		Blueprint,
 		BlueprintItem,
@@ -17,38 +17,40 @@
 		EpisodeType,
 		MedicationSlot,
 		VitalField,
-	} from '$lib/blueprint';
-	import type { CustomKind } from '$lib/blueprint';
-	import CustomItemModal from '$lib/components/CustomItemModal.svelte';
-	import MedicationManager from '$lib/components/MedicationManager.svelte';
-	import { changePassword, deleteAccount } from '$lib/api';
+	} from '#lib/blueprint/index.ts';
+	import type { CustomKind } from '#lib/blueprint/index.ts';
+	import CustomItemModal from '#lib/components/CustomItemModal.svelte';
+	import MedicationManager from '#lib/components/MedicationManager.svelte';
+	import { changePassword, deleteAccount } from '#lib/api.ts';
 	import { get } from 'svelte/store';
-	import { deriveAuthKey, rewrapMasterKey } from '$lib/crypto';
-	import PasswordField from '$lib/components/PasswordField.svelte';
+	import { deriveAuthKey, rewrapMasterKey } from '#lib/crypto.ts';
+	import PasswordField from '#lib/components/PasswordField.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import FamilySharing from '$lib/components/FamilySharing.svelte';
-	import LinkedAccounts from '$lib/components/LinkedAccounts.svelte';
-	import Tabs from '$lib/components/Tabs.svelte';
-	import Listbox from '$lib/components/Listbox.svelte';
-	import { iconPath } from '$lib/conditionIcons';
-	import { page } from '$app/stores';
-	import { getCohort } from '$lib/blueprint/cohort';
+	import FamilySharing from '#lib/components/FamilySharing.svelte';
+	import LinkedAccounts from '#lib/components/LinkedAccounts.svelte';
+	import Tabs from '#lib/components/Tabs.svelte';
+	import Listbox from '#lib/components/Listbox.svelte';
+	import { iconPath } from '#lib/conditionIcons.ts';
+	import { page } from '$app/state';
+	import { pageStore } from '#lib/pageStore.ts';
+	import { getCohort } from '#lib/blueprint/cohort.ts';
 
 	$: currentPreset = bp ? presets.find(p => p.id === bp.conditionId) : null;
 
 	// CIPH-857 — tab query param (?tab=account|tracking|sharing). Default: account.
 	type SettingsTab = 'account' | 'tracking' | 'sharing';
 	const VALID_TABS: SettingsTab[] = ['account', 'tracking', 'sharing'];
-	$: tab = (VALID_TABS.includes(($page.url.searchParams.get('tab') ?? '') as SettingsTab)
-		? ($page.url.searchParams.get('tab') as SettingsTab)
+	const tabParam = pageStore((p) => p.url.searchParams.get('tab'));
+	$: tab = (VALID_TABS.includes(($tabParam ?? '') as SettingsTab)
+		? ($tabParam as SettingsTab)
 		: 'account') as SettingsTab;
 
 	function selectTab(id: string) {
-		const url = new URL($page.url);
+		const url = new URL(page.url.href);
 		if (id === 'account') url.searchParams.delete('tab');
 		else url.searchParams.set('tab', id);
-		goto(url.pathname + (url.search ? url.search : ''), { replaceState: true, noScroll: true });
+		goto(url.pathname + (url.search ? url.search : ''), { replace: true, reset: false });
 	}
 
 	$: tabList = [
@@ -113,7 +115,7 @@
 				cachedDocCount = 0;
 				return;
 			}
-			const m = await import('$lib/idb');
+			const m = await import('#lib/idb.ts');
 			// Cache partitions are keyed `${username}:self` / `:linked:N`, never
 			// the bare username — the old `getAllDocs(username)` always returned 0,
 			// understating the on-device plaintext disclosure. Count the user's own

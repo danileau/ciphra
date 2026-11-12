@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { getDoc } from '$lib/docs';
+	import { pageStore } from '#lib/pageStore.ts';
+	import { getDoc } from '#lib/docs.ts';
 
-	$: doc = getDoc($page.params.slug ?? '');
+	const slugParam = pageStore((p) => p.params.slug);
+	$: doc = getDoc($slugParam ?? '');
 </script>
 
 <main id="main-content" class="layout-reading py-8 space-y-5">

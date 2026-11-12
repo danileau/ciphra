@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { resolveSourceUrl, sourceLabel, UPSTREAM_SOURCE_URL } from '$lib/source';
+import { resolveSourceUrl, sourceLabel, UPSTREAM_SOURCE_URL } from '#lib/source.ts';
 
 describe('resolveSourceUrl', () => {
 	it('falls back to upstream when unset', () => {
@@ -100,7 +100,7 @@ describe('AGPL §13 — no surface hardcodes the upstream repository', () => {
 			offenders,
 			`These files hardcode the upstream repository. On a fork they would tell users\n` +
 				`to inspect code that is not what the fork is serving — AGPL §13 requires the\n` +
-				`source of THIS deployment. Import { sourceUrl } from '$lib/source' instead.\n` +
+				`source of THIS deployment. Import { sourceUrl } from '#lib/source.ts' instead.\n` +
 				`Offending files:\n  ${offenders.join('\n  ')}\n`,
 		).toEqual([]);
 	});

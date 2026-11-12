@@ -10,11 +10,12 @@
   no UI duplication, single source of truth.
 -->
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { t } from '$lib/i18n';
-	import { quickAddOpen } from '$lib/stores/quickAdd';
+	import { pageStore } from '#lib/pageStore.ts';
+	import { t } from '#lib/i18n/index.ts';
+	import { quickAddOpen } from '#lib/stores/quickAdd.ts';
 
-	$: pathname = $page.url.pathname;
+	const urlPathname = pageStore((p) => p.url.pathname);
+	$: pathname = $urlPathname;
 
 	// Hide on auth / marketing / wizard surfaces. /conditions, /privacy,
 	// /terms are not hidden here because authenticated users can deep-link
@@ -31,7 +32,7 @@
 	// CIPH-870 — Active-state must be reactive. Previous version used an
 	// isActive(path) function closing over `pathname`; Svelte's template
 	// dependency tracking cannot see through a function body, so the
-	// class binding never re-evaluated when $page.url.pathname changed.
+	// class binding never re-evaluated when the URL pathname changed.
 	// Mobile nav appeared stuck on the first-rendered tab — the user hit
 	// this as "Heute stays lit after I navigate".
 	//

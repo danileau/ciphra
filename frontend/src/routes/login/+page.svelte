@@ -1,27 +1,27 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import * as api from '$lib/api';
+	import { t } from '#lib/i18n/index.ts';
+	import * as api from '#lib/api.ts';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { decryptMasterKeyWithRecovery, rewrapMasterKey } from '$lib/crypto';
-	import { validateRecoveryCode } from '$lib/wordlist';
-	import { canonicalUsername, describeUsername, isValidUsername } from '$lib/username';
-	import SignupFlow from '$lib/components/SignupFlow.svelte';
-	import LoginForm from '$lib/components/LoginForm.svelte';
-	import Wordmark from '$lib/components/Wordmark.svelte';
-	import PasswordField from '$lib/components/PasswordField.svelte';
-	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
+	import { page } from '$app/state';
+	import { decryptMasterKeyWithRecovery, rewrapMasterKey } from '#lib/crypto.ts';
+	import { validateRecoveryCode } from '#lib/wordlist.ts';
+	import { canonicalUsername, describeUsername, isValidUsername } from '#lib/username.ts';
+	import SignupFlow from '#lib/components/SignupFlow.svelte';
+	import LoginForm from '#lib/components/LoginForm.svelte';
+	import Wordmark from '#lib/components/Wordmark.svelte';
+	import PasswordField from '#lib/components/PasswordField.svelte';
+	import LocaleSelect from '#lib/components/LocaleSelect.svelte';
 
 	// Default to the register tab when arriving via /login?mode=register
 	// (primary landing-page CTA routes here). Anything else → login.
-	const initialMode = $page.url.searchParams.get('mode');
+	const initialMode = page.url.searchParams.get('mode');
 	let tab: 'login' | 'register' | 'recovery' =
 		initialMode === 'register' ? 'register'
 		: initialMode === 'recovery' ? 'recovery'
 		: 'login';
 	// Shown when the app shell bounced the user here after a 401 (expired /
 	// revoked session). Dismissed as soon as they switch tabs.
-	let sessionExpired = $page.url.searchParams.get('session') === 'expired';
+	let sessionExpired = page.url.searchParams.get('session') === 'expired';
 	let error = '';
 	let technicalError = '';
 	let loading = false;

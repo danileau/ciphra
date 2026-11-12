@@ -19,8 +19,8 @@
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Blueprint, VitalField } from '$lib/blueprint';
-import { addDaysISO, canonicalMedId, isCustomItem, medHistorySpan, resolveBlueprint, resolveMedDisplay, bedarfMedColumns } from '$lib/blueprint';
+import type { Blueprint, VitalField } from '#lib/blueprint/index.ts';
+import { addDaysISO, canonicalMedId, isCustomItem, medHistorySpan, resolveBlueprint, resolveMedDisplay, bedarfMedColumns } from '#lib/blueprint/index.ts';
 import {
 	adherenceRowsForWindow,
 	csvDoseCell,
@@ -40,28 +40,28 @@ import {
 	type DayMedMark,
 	type DoseBandLayer,
 	type TimelineLane,
-} from '$lib/pdfMedicationHistory';
-import { dayBins, monthBins } from '$lib/reports/doseBands';
-import { toLocalISODate } from '$lib/date';
-import { cohortOf } from '$lib/blueprint/cohort';
-import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '$lib/cohortPalette';
-import { sectionsForCohort } from '$lib/cohortSections';
-import { effectiveVitalTargets } from '$lib/blueprint/vitalTargets';
-import { aggregatePhaseDistribution } from '$lib/pdfPhaseDistribution';
-import { aggregateCycleStrip } from '$lib/pdfCycleStrip';
-import { aggregateDailyMonthSeries } from '$lib/pdfDailyMonthChart';
-import { PHASE_COLORS, type Phase } from '$lib/cycleState';
-import type { CiphraDocument } from '$lib/stores/documents';
-import { translateUnit } from '$lib/i18n';
-import { isExportable } from '$lib/utils/exportable';
-import { noteMarkerText, noteMarkersInWindow } from '$lib/reports/noteMarkers';
-import { formatDateChoice, formatISODateChoice, type DateFormatChoice } from '$lib/blueprint/preferences';
+} from '#lib/pdfMedicationHistory.ts';
+import { dayBins, monthBins } from '#lib/reports/doseBands.ts';
+import { toLocalISODate } from '#lib/date.ts';
+import { cohortOf } from '#lib/blueprint/cohort.ts';
+import { COHORT_PALETTE_RGB, CHART_ONLY_TONES } from '#lib/cohortPalette.ts';
+import { sectionsForCohort } from '#lib/cohortSections.ts';
+import { effectiveVitalTargets } from '#lib/blueprint/vitalTargets.ts';
+import { aggregatePhaseDistribution } from '#lib/pdfPhaseDistribution.ts';
+import { aggregateCycleStrip } from '#lib/pdfCycleStrip.ts';
+import { aggregateDailyMonthSeries } from '#lib/pdfDailyMonthChart.ts';
+import { PHASE_COLORS, type Phase } from '#lib/cycleState.ts';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
+import { translateUnit } from '#lib/i18n/index.ts';
+import { isExportable } from '#lib/utils/exportable.ts';
+import { noteMarkerText, noteMarkersInWindow } from '#lib/reports/noteMarkers.ts';
+import { formatDateChoice, formatISODateChoice, type DateFormatChoice } from '#lib/blueprint/preferences.ts';
 import {
 	reportWindow,
 	formatWindowRange,
 	scopeFileTag,
 	type ReportScope,
-} from '$lib/reports/reportWindow';
+} from '#lib/reports/reportWindow.ts';
 
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 

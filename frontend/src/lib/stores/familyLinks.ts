@@ -11,12 +11,12 @@
  * reconciles the local cache against it on load.
  */
 import { writable, derived, get } from 'svelte/store';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { auth } from './auth';
-import { storeDocument, updateDocument, deleteDocument, getDocuments, familyClaimedList } from '$lib/api';
+import { storeDocument, updateDocument, deleteDocument, getDocuments, familyClaimedList } from '#lib/api.ts';
 import {
 	b64ToBytes, bytesToB64, encryptDocument, decryptDocument,
-} from '$lib/crypto';
+} from '#lib/crypto.ts';
 
 export interface FamilyLink {
 	documentId: number;            // the caregiver's own encrypted_document row holding this link

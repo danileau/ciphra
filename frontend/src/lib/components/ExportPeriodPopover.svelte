@@ -27,9 +27,9 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher, onMount, tick } from 'svelte';
-	import { t, locale, plural } from '$lib/i18n';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
 	import BottomSheet from './BottomSheet.svelte';
-	import { formatPeriodLabel, type PeriodOption } from '$lib/reports/exportPeriods';
+	import { formatPeriodLabel, type PeriodOption } from '#lib/reports/exportPeriods.ts';
 
 	export let open = false;
 	export let options: PeriodOption[] = [];

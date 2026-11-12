@@ -22,10 +22,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import de from '$lib/i18n/de';
-import en from '$lib/i18n/en';
-import fr from '$lib/i18n/fr';
-import itDict from '$lib/i18n/it';
+import de from '#lib/i18n/de.ts';
+import en from '#lib/i18n/en.ts';
+import fr from '#lib/i18n/fr.ts';
+import itDict from '#lib/i18n/it.ts';
 
 const ROOT = join(__dirname, '..', '..', '..');
 const SERVER = readFileSync(join(ROOT, 'api', 'server.py'), 'utf8');
@@ -110,7 +110,7 @@ describe('what the app says the server keeps', () => {
 	}
 
 	it('the docs shipped in the app still include the one that lists everything', async () => {
-		const { IN_APP_DOCS } = await import('$lib/docs-manifest');
+		const { IN_APP_DOCS } = await import('#lib/docs-manifest.ts');
 		expect(IN_APP_DOCS).toContain('docs/SECURITY_MODEL.md');
 	});
 });

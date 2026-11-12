@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { t, locale } from '$lib/i18n';
-	import { auth, isAuthenticated } from '$lib/stores/auth';
+	import { t, locale } from '#lib/i18n/index.ts';
+	import { auth, isAuthenticated } from '#lib/stores/auth.ts';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import * as api from '$lib/api';
-	import Asterisk from '$lib/components/Asterisk.svelte';
-	import Sparkline from '$lib/components/Sparkline.svelte';
+	import * as api from '#lib/api.ts';
+	import Asterisk from '#lib/components/Asterisk.svelte';
+	import Sparkline from '#lib/components/Sparkline.svelte';
 
 	// Redirect non-admins
 	$: if ($auth.ready && (!$isAuthenticated || !$auth.isAdmin)) {

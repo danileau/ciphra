@@ -19,9 +19,9 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher, tick } from 'svelte';
-	import { t, locale, plural } from '$lib/i18n';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
 	import Modal from './Modal.svelte';
-	import type { NoteMarker } from '$lib/reports/noteMarkers';
+	import type { NoteMarker } from '#lib/reports/noteMarkers.ts';
 
 	export let open = false;
 	export let notes: NoteMarker[] = [];

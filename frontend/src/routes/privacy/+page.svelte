@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 </script>
 
 <main id="main-content" class="layout-reading py-8 space-y-6">

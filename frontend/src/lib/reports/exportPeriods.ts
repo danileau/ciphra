@@ -36,14 +36,14 @@
  * would offer a month of purely private entries and then export an empty
  * PDF — the drift `isExportable` exists to prevent.
  */
-import type { CiphraDocument } from '$lib/stores/documents';
+import type { CiphraDocument } from '#lib/stores/documents.ts';
 // `ReportScope` and the window maths live in reportWindow.ts, not in
 // `$lib/pdf` — that module pulls jsPDF + autoTable (~152KB gzip) and the
 // reports page defers it behind `loadPdfLib()`. Importing the type from its
 // own small module removes the dependency entirely rather than relying on
 // `import type` erasure to hide it.
 import { SCOPE_MONTHS, type ReportScope } from './reportWindow';
-import { isExportable } from '$lib/utils/exportable';
+import { isExportable } from '#lib/utils/exportable.ts';
 
 // Re-exported so existing importers keep a single entry point.
 export { SCOPE_MONTHS };

@@ -1,5 +1,5 @@
 import type { MedicationPeriod, MedicationSlot, MedicationStopReason } from './types';
-import { toLocalISODate } from '$lib/date';
+import { toLocalISODate } from '#lib/date.ts';
 
 /**
  * Medication dose history (2026-09-16).

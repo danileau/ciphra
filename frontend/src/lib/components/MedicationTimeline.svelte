@@ -20,15 +20,15 @@
 	Render-only: the caller passes the medications and the window.
 -->
 <script lang="ts">
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 	import {
 		addDaysISO,
 		medPeriods,
 		medicationChanges,
 		type MedChange,
-	} from '$lib/blueprint/medicationHistory';
-	import type { MedicationSlot } from '$lib/blueprint/types';
-	import { formatISODateChoice, type DateFormatChoice } from '$lib/blueprint/preferences';
+	} from '#lib/blueprint/medicationHistory.ts';
+	import type { MedicationSlot } from '#lib/blueprint/types.ts';
+	import { formatISODateChoice, type DateFormatChoice } from '#lib/blueprint/preferences.ts';
 
 	export let meds: MedicationSlot[];
 	/** Inclusive local `YYYY-MM-DD` bounds of the window. */

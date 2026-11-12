@@ -1,28 +1,28 @@
 <script lang="ts">
-	import { t, locale, plural } from '$lib/i18n';
-	import { todayISO } from '$lib/date';
-	import { isAuthenticated } from '$lib/stores/auth';
-	import { documents, type CiphraDocument } from '$lib/stores/documents';
-	import { resolvedBlueprint, isCustomItem, hasBedarfMeds, medicationChanges } from '$lib/blueprint';
+	import { t, locale, plural } from '#lib/i18n/index.ts';
+	import { todayISO } from '#lib/date.ts';
+	import { isAuthenticated } from '#lib/stores/auth.ts';
+	import { documents, type CiphraDocument } from '#lib/stores/documents.ts';
+	import { resolvedBlueprint, isCustomItem, hasBedarfMeds, medicationChanges } from '#lib/blueprint/index.ts';
 	import { onMount, tick } from 'svelte';
-	import { rememberFocusMonth, recallFocusMonth } from '$lib/stores/focusMonth';
+	import { rememberFocusMonth, recallFocusMonth } from '#lib/stores/focusMonth.ts';
 	import { goto } from '$app/navigation';
 	import { fade, fly } from 'svelte/transition';
-	import Asterisk from '$lib/components/Asterisk.svelte';
+	import Asterisk from '#lib/components/Asterisk.svelte';
 	// CIPH-910 — EntryPreview + ConfirmDelete dropped from calendar after
 	// the day-detail panel switched to the new <DayDetail> sectioned view.
-	import DayDetail from '$lib/components/DayDetail.svelte';
+	import DayDetail from '#lib/components/DayDetail.svelte';
 	// CIPH-pi19-B — month-summary tail of the lg+ persistent rail.
-	import MonthMiniSummary from '$lib/components/MonthMiniSummary.svelte';
-	import { cohortOf } from '$lib/blueprint/cohort';
-	import { monthSummaryInsightFor } from '$lib/monthSummaryInsight';
+	import MonthMiniSummary from '#lib/components/MonthMiniSummary.svelte';
+	import { cohortOf } from '#lib/blueprint/cohort.ts';
+	import { monthSummaryInsightFor } from '#lib/monthSummaryInsight.ts';
 	import {
 		computeCycleAnchor,
 		cycleStateForDate,
 		PHASE_COLORS,
 		type Phase,
-	} from '$lib/cycleState';
-	import { weekdayLabels } from '$lib/i18n/dates';
+	} from '#lib/cycleState.ts';
+	import { weekdayLabels } from '#lib/i18n/dates.ts';
 
 	let selectedDate: string | null = null;
 	// Design review 2026-06-11 — recall the month the user was browsing
