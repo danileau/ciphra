@@ -131,7 +131,7 @@
 			const res = await api.familyGrantCreate({
 				label: encryptedLabel,
 				grant_params: bundle.grant_params,
-				grant_auth: bundle.grant_auth,
+				grant_verifier: bundle.grant_verifier,
 				wrapped_master: bundle.wrapped_master,
 				share_mask: newShareMask,
 			});

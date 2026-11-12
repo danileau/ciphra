@@ -100,14 +100,14 @@
 				return;
 			}
 			const initData = initRes.data as { recovery_params: string; recovery_vault: string };
-			const { masterKey, recoveryKeyB64 } = await decryptMasterKeyWithRecovery(
+			const { masterKey, recoveryProofB64 } = await decryptMasterKeyWithRecovery(
 				username, recCode, initData.recovery_params, initData.recovery_vault
 			);
 			phase = $t('auth.phase_building_vault');
 			const wrap = await rewrapMasterKey(masterKey, recNewPass);
 			const res = await api.recover({
 				username,
-				recovery_key: recoveryKeyB64,
+				recovery_proof: recoveryProofB64,
 				auth_hash: wrap.auth_hash,
 				auth_params: wrap.auth_params,
 				vault_params: wrap.vault_params,

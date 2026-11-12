@@ -62,11 +62,11 @@ Every entry (daily log, blueprint, family link, etc.) is `AES-256-GCM(JSON.strin
 
 ### Recovery code
 
-A 12-word code from a 300-word list, shown once at registration: eleven random words and a checksum word, so about 90 bits of entropy (the ~99 bits a 12-word count suggests includes the checksum word, which adds none). Derives a `recovery_key` via `Argon2id(code + ":{username}:RECOVERY", recovery_salt)`. Used to wrap the master_key into a `recovery_vault` blob. Lost code = irretrievable account. We cannot reset it.
+A 12-word code from a 300-word list, shown once at registration: eleven random words and a checksum word, so about 90 bits of entropy (the ~99 bits a 12-word count suggests includes the checksum word, which adds none). Derives a `recovery_key` via `Argon2id(code + ":{username}:RECOVERY", recovery_salt)`. Used to wrap the master_key into a `recovery_vault` blob, which the server stores. To recover, your browser fetches that blob, unwraps it locally, and proves to the server that it holds `recovery_key` by sending `SHA-256(recovery_key)`; the server keeps only `SHA-256` of that proof. The key itself never leaves your browser. (Until November 2026 the browser sent the key itself, which would have let whoever saw that one request unwrap the vault; see the changelog.) Lost code = irretrievable account. We cannot reset it.
 
 ### Family sharing
 
-Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from a separate "family code" — six random words plus a checksum word (about 49 bits; the key derivation is Argon2id, and claim attempts are rate-limited). The wrapped blob is stored server-side (`family_grants.wrapped_master`). To use it, the caregiver must know the family code and present a SHA-256(family_key) proof to the server. **Important:** revoking a grant stops new server-side access but does not retract data the caregiver already downloaded — we cannot reach into their device.
+Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from a separate "family code" — six random words plus a checksum word (about 49 bits; the key derivation is Argon2id, and claim attempts are rate-limited). The wrapped blob is stored server-side (`family_grants.wrapped_master`). To use it, the caregiver must know the family code; their browser derives `family_key`, unwraps the blob locally, and claims the grant by sending `SHA-256(family_key)`. The server stores only `SHA-256` of that proof and never receives `family_key` itself. (Until November 2026 the browser sent `family_key` itself.) **Important:** revoking a grant stops new server-side access but does not retract data the caregiver already downloaded — we cannot reach into their device.
 
 ---
 
@@ -115,6 +115,7 @@ Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from 
 
 We **cannot** see:
 - Your password.
+- Your recovery code or family codes, or the keys derived from them.
 - The plaintext of any health entry.
 - Which condition you track.
 - When you had a symptom or episode (only when you uploaded a blob).

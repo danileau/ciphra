@@ -24,7 +24,7 @@ const api = vi.hoisted(() => ({
 
 vi.mock('#lib/api.ts', () => api);
 vi.mock('#lib/crypto.ts', () => ({
-	createFamilyGrant: vi.fn(async () => ({ grant_params: 'p', grant_auth: 'a', wrapped_master: 'w', family_code: 'eins zwei drei vier fünf sechs' })),
+	createFamilyGrant: vi.fn(async () => ({ grant_params: 'p', grant_verifier: 'a', wrapped_master: 'w', family_code: 'eins zwei drei vier fünf sechs' })),
 	encryptData: vi.fn(async (s: string) => `enc:${s}`),
 	decryptData: vi.fn(async (s: string) => s.replace(/^enc:/, '')),
 }));

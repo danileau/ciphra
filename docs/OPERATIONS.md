@@ -589,7 +589,7 @@ target `prod`, `nginx/Dockerfile.prod`) or re-tagged under the same name, then
 Public reads only — fine to run from the laptop. First the edge:
 
 ```bash
-curl -s https://ciphra.ch/health            # {"status":"healthy","schema":9,"app_schema":9}
+curl -s https://ciphra.ch/health            # {"status":"healthy","schema":10,"app_schema":10}
 curl -s https://ciphra.ch/_app/version.json # changes on every build — compare with before
 curl -sI 'https://ciphra.ch/sw.js?x=1' | grep -i cache-control   # no-cache
 curl -sI https://ciphra.ch/ | grep -iE '^HTTP|strict-transport|content-security|x-content-type'
@@ -700,7 +700,7 @@ Check in order:
    curl -k -H "CF-Connecting-IP: 127.0.0.1" \
      --resolve "ciphra.ch:8443:127.0.0.1" \
      "https://ciphra.ch:8443/health"
-   # Expected: {"status":"healthy","schema":9,"app_schema":9}
+   # Expected: {"status":"healthy","schema":10,"app_schema":10}
    # `schema` > `app_schema` means a rollback left an older image on a newer
    # (additive) schema — supported, see §Deploying → Rollback and the schema.
    ```

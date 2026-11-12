@@ -26,7 +26,10 @@
  *     recovery_key = Argon2id(recovery_code + ":{username}:RECOVERY", recovery_salt)
  *     master_key = AES-256-GCM-decrypt(recovery_vault, recovery_key)
  *     → re-run "registration" with new password, preserving recovery_vault.
- *     Authenticates to server with recovery_key (SHA-256 check).
+ *     Authenticates with proof = SHA-256(recovery_key); the server stores
+ *     SHA-256(proof). The key itself never leaves the browser: it unwraps
+ *     recovery_vault, which the server holds. Family grants work the same
+ *     way (see proofOf / verifierOf).
  *
  *   AES-256-GCM wire format (matches Python cryptography lib):
  *     nonce(12) | tag(16) | ciphertext
@@ -198,6 +201,24 @@ async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
 
 // --- Public API: registration / login / recovery ---
 
+/**
+ * Proof and verifier for a key the server must never see.
+ *
+ * recovery_key and family_key each unwrap a copy of the master key that the
+ * server stores (recovery_vault, wrapped_master). So the browser proves it
+ * holds one by sending proof = SHA-256(key), and at creation sends
+ * verifier = SHA-256(proof) for the server to keep. Until 2026-11-12 the raw
+ * key was sent as the proof, which let whoever saw that request unwrap the
+ * master key.
+ */
+export async function proofOf(key: Uint8Array): Promise<Uint8Array> {
+	return sha256(key);
+}
+
+export async function verifierOf(key: Uint8Array): Promise<string> {
+	return bytesToB64(await sha256(await proofOf(key)));
+}
+
 export interface RegistrationBundle {
 	username: string;
 	auth_hash: string;            // b64 SHA-256(auth_key) — what server stores
@@ -206,7 +227,7 @@ export interface RegistrationBundle {
 	encrypted_master: string;
 	recovery_vault: string | null;
 	recovery_params: string | null;
-	recovery_auth: string | null; // b64 SHA-256(recovery_key) — authorizes recovery
+	recovery_verifier: string | null; // b64 SHA-256(SHA-256(recovery_key)) — checks the recovery proof
 	recovery_code: string | null; // plaintext, shown to user once, never sent
 }
 
@@ -233,7 +254,7 @@ export async function createVault(
 
 	let recoveryVault: string | null = null;
 	let recoveryParams: string | null = null;
-	let recoveryAuth: string | null = null;
+	let recoveryVerifier: string | null = null;
 	let recoveryCode: string | null = null;
 
 	if (enableRecovery) {
@@ -244,7 +265,7 @@ export async function createVault(
 		);
 		recoveryVault = bytesToB64(await aesEncrypt(masterKey, recoveryKey));
 		recoveryParams = encodeVaultParams(recoverySalt);
-		recoveryAuth = bytesToB64(await sha256(recoveryKey));
+		recoveryVerifier = await verifierOf(recoveryKey);
 	}
 
 	return {
@@ -255,7 +276,7 @@ export async function createVault(
 		encrypted_master: encryptedMaster,
 		recovery_vault: recoveryVault,
 		recovery_params: recoveryParams,
-		recovery_auth: recoveryAuth,
+		recovery_verifier: recoveryVerifier,
 		recovery_code: recoveryCode,
 	};
 }
@@ -290,15 +311,16 @@ export async function decryptMasterKey(
 }
 
 /**
- * Decrypt the master key via recovery code. Also returns the raw recovery_key
- * (base64) which the caller sends to the server as authorization for the recovery.
+ * Decrypt the master key via recovery code. Also returns the recovery proof,
+ * SHA-256(recovery_key) in base64, which the caller sends to the server to
+ * authorize the recovery. Never the key: it unwraps the server-held vault.
  */
 export async function decryptMasterKeyWithRecovery(
 	username: string,
 	recoveryCode: string,
 	recoveryParamsB64: string,
 	recoveryVaultB64: string
-): Promise<{ masterKey: Uint8Array; recoveryKeyB64: string }> {
+): Promise<{ masterKey: Uint8Array; recoveryProofB64: string }> {
 	const params = decodeVaultParams(recoveryParamsB64);
 	const salt = b64ToBytes(params.salt);
 	const recoveryKey = await deriveArgon2Key(
@@ -306,7 +328,7 @@ export async function decryptMasterKeyWithRecovery(
 	);
 	const recoveryVault = b64ToBytes(recoveryVaultB64);
 	const masterKey = await aesDecrypt(recoveryVault, recoveryKey);
-	return { masterKey, recoveryKeyB64: bytesToB64(recoveryKey) };
+	return { masterKey, recoveryProofB64: bytesToB64(await proofOf(recoveryKey)) };
 }
 
 /**
@@ -340,7 +362,7 @@ export async function rewrapMasterKey(
 
 export interface FamilyGrantBundle {
 	grant_params: string;
-	grant_auth: string;      // SHA-256(family_key)
+	grant_verifier: string;  // SHA-256(SHA-256(family_key))
 	wrapped_master: string;  // AES-GCM(master_key, family_key)
 	family_code: string;     // shown once, never sent to server
 }
@@ -356,10 +378,9 @@ export async function createFamilyGrant(masterKey: Uint8Array): Promise<FamilyGr
 	const grantSalt = generateSalt();
 	const familyKey = await deriveArgon2Key(familyCode, grantSalt, ':FAMILY');
 	const wrappedMaster = bytesToB64(await aesEncrypt(masterKey, familyKey));
-	const grantAuth = bytesToB64(await sha256(familyKey));
 	return {
 		grant_params: encodeVaultParams(grantSalt),
-		grant_auth: grantAuth,
+		grant_verifier: await verifierOf(familyKey),
 		wrapped_master: wrappedMaster,
 		family_code: familyCode,
 	};
@@ -367,38 +388,39 @@ export async function createFamilyGrant(masterKey: Uint8Array): Promise<FamilyGr
 
 /**
  * Caregiver-side: given a family code and a grant candidate, derive the
- * family_key and return both the unwrapped master_key and the raw key
- * (needed for the server-side claim proof).
+ * family_key and return the unwrapped master_key plus the claim proof,
+ * SHA-256(family_key). The key itself is never returned to callers, so it
+ * cannot end up in a request.
  */
 export async function unwrapFamilyGrant(
 	familyCode: string,
 	grantParamsB64: string,
 	wrappedMasterB64: string
-): Promise<{ masterKey: Uint8Array; familyKeyB64: string }> {
+): Promise<{ masterKey: Uint8Array; grantProofB64: string }> {
 	const params = decodeVaultParams(grantParamsB64);
 	const salt = b64ToBytes(params.salt);
 	const familyKey = await deriveArgon2Key(canonicalWordCode(familyCode), salt, ':FAMILY', params);
 	const masterKey = await aesDecrypt(b64ToBytes(wrappedMasterB64), familyKey);
-	return { masterKey, familyKeyB64: bytesToB64(familyKey) };
+	return { masterKey, grantProofB64: bytesToB64(await proofOf(familyKey)) };
 }
 
 /**
  * Caregiver-side: given a list of candidate grants for a patient, find the
- * one whose grant_auth matches the derived family_key. Useful when the
+ * one whose grant_verifier matches the derived family_key. Useful when the
  * patient has multiple active grants.
  */
 export async function matchFamilyGrant(
 	familyCode: string,
-	candidates: Array<{ id: number; grant_params: string; wrapped_master: string; grant_auth: string }>
-): Promise<{ grantId: number; masterKey: Uint8Array; familyKeyB64: string } | null> {
+	candidates: Array<{ id: number; grant_params: string; wrapped_master: string; grant_verifier: string }>
+): Promise<{ grantId: number; masterKey: Uint8Array; grantProofB64: string } | null> {
 	for (const c of candidates) {
 		try {
-			const { masterKey, familyKeyB64 } = await unwrapFamilyGrant(
+			const { masterKey, grantProofB64 } = await unwrapFamilyGrant(
 				familyCode, c.grant_params, c.wrapped_master
 			);
-			const derivedAuth = bytesToB64(await sha256(b64ToBytes(familyKeyB64)));
-			if (derivedAuth === c.grant_auth) {
-				return { grantId: c.id, masterKey, familyKeyB64 };
+			const derivedVerifier = bytesToB64(await sha256(b64ToBytes(grantProofB64)));
+			if (derivedVerifier === c.grant_verifier) {
+				return { grantId: c.id, masterKey, grantProofB64 };
 			}
 		} catch {
 			// wrong salt pair or tampered wrapped_master — try next

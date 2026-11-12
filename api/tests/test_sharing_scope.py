@@ -126,7 +126,7 @@ class TestGrantScope:
             json={
                 'label': 'x' * 10,
                 'grant_params': 'p',
-                'grant_auth': 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',  # 32 raw bytes, so validation reaches the mask
+                'grant_verifier': 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',  # 32 raw bytes, so validation reaches the mask
                 'wrapped_master': 'w',
                 'share_mask': 7,
             },
@@ -175,7 +175,7 @@ class TestLedger:
             'both columns are additive; marking this incompatible would make an ' \
             'auto-rollback refuse to boot'
         assert 'share_class' in sql and 'share_mask' in sql
-        assert server.SCHEMA_VERSION == 9
+        assert server.SCHEMA_VERSION >= 9
 
     def test_existing_grants_default_to_the_narrow_scope(self):
         import server
