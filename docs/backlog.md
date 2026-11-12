@@ -5,7 +5,7 @@ they come up; this file holds the **larger items that each deserve their own
 session**, plus the operator-only actions and the decisions already made (so
 nothing gets re-proposed).
 
-Last reviewed: 2026-08-30. Day-to-day state lives in git + the operator's
+Last reviewed: 2026-11-12 (1.5.3). Day-to-day state lives in git + the operator's
 memory; this is the forward-looking list.
 
 ---
@@ -14,8 +14,8 @@ memory; this is the forward-looking list.
 
 Every prompt below is self-contained: paste it to start a fresh session. All
 three respect the repo's hard rules (branch off fresh `origin/main`,
-`/green-gate` before push, never merge/deploy — the operator does that, CHANGELOG
-+ `version-guard` for user-facing changes).
+`/green-gate` before push, never merge/deploy — the operator does that, a
+`changelog.d/` fragment + `version-guard` for user-facing changes).
 
 ### 1 — Reproducible builds (JS-swap mitigation) · security · HIGH residual
 
@@ -27,8 +27,8 @@ Goal: make ciphra's frontend build byte-reproducible and publish a verifiable
 bundle digest, so the JavaScript actually served can be checked against the
 public source.
 
-Context: ciphra is a browser-served zero-knowledge PWA (SvelteKit + adapter-node,
-Node 24, Vite 8). THREAT_MODEL.md §2.H/§5 names the JS-swap attack as the ONLY
+Context: ciphra is a browser-served zero-knowledge PWA (SvelteKit 3 +
+adapter-node 6, Node 24, Vite 8). THREAT_MODEL.md §2.H/§5 names the JS-swap attack as the ONLY
 structural residual gap rated HIGH: a server-side attacker who swaps the bundle
 can exfiltrate keys on the next login. The mitigation is reproducible builds plus
 published, signed hashes, so third parties and watchdogs can detect a swap.
@@ -47,8 +47,8 @@ Scope (design first — a short concept, then build):
   makes a swap detectable.
 
 Rules: branch off fresh origin/main; /green-gate before push; do NOT merge or
-deploy (the operator does that); CHANGELOG entry for anything user-visible;
-respect version-guard and the changelog guardrail. Update THREAT_MODEL.md §7 P3
+deploy (the operator does that); a changelog.d/ fragment for anything
+user-visible; respect version-guard and the changelog guardrail. Update THREAT_MODEL.md §7 P3
 "Reproducible-build pipeline" when done.
 Acceptance: a reproducible build demonstrated, the verify procedure documented,
 SRI wired as far as feasible.
@@ -67,7 +67,8 @@ Context: THREAT_MODEL.md §2.D + §7 P2. Backups run pg_dump → gzip → age-en
 (cross-vendor, active since 2026-08). The gap: no tamper-evidence — a swapped or
 truncated backup only surfaces at restore time. The script is
 golive/backup/backup.sh (gitignored, runs on the VPS; the laptop copy is
-canonical and is rsynced to the VPS).
+canonical and is rsynced to /opt/ciphra/golive/ — but the VPS copy may carry
+hot-patches, so diff the two before preparing changes).
 
 Scope:
 - Extend backup.sh: after the age-encrypted dump, write its SHA-256 to an
@@ -88,7 +89,11 @@ verify step exists; docs updated.
 ### 3 — SEO / SSR-landing architectural fix · product
 
 The biggest product lever. A prior SSR landing was shipped then reverted because
-it broke registration (operator memory `project_seo_state`).
+it broke registration (operator memory `project_seo_state`). Partly addressed
+since: #235 (1.5.2) renders each public page's `<title>`, description and
+canonical in the SSR `<head>`, outside the auth gate, and fixed the site-wide
+`canonical=/`. The page **body** is still gated behind `$authReady` and empty
+in SSR, so crawlers see metadata but no content — that is what is left.
 
 ```
 Goal: server-render or prerender the public landing page (and the public docs)
@@ -96,9 +101,12 @@ for SEO, WITHOUT breaking the client-side zero-knowledge registration and auth
 flow.
 
 Context: memory project_seo_state — an SSR landing was shipped once and then
-REVERTED because it broke registration. The SEO foundation is shipped (PR #40).
-Stack: SvelteKit + adapter-node; crypto and registration run client-side by
-design (WebCrypto / Argon2 WASM).
+REVERTED because it broke registration. The SEO foundation is shipped (PR #40),
+and #235 moved per-page <title>/description/canonical into the root layout's
+head, outside the $authReady gate (lib/seoMeta.ts). The body is still gated, so
+SSR HTML has metadata but no indexable content. Stack: SvelteKit 3 +
+adapter-node 6; crypto and registration run client-side by design (WebCrypto /
+Argon2 WASM).
 
 Scope (design first — start by establishing why the earlier attempt was
 reverted, from the git history):
@@ -114,8 +122,8 @@ contains indexable content and meta tags; visual smoke (green ≠ shipped — a 
 browser eyeball, e2e/visual-smoke.spec.ts).
 
 Rules: branch off fresh origin/main; /green-gate and visual smoke before push;
-do NOT merge or deploy; i18n parity across 4 locales and a CHANGELOG entry for
-anything user-visible. This is a product change, not a security one.
+do NOT merge or deploy; i18n parity across 4 locales and a changelog.d/ fragment
+for anything user-visible. This is a product change, not a security one.
 Acceptance: the public landing is prerendered/SSR with indexable content; the
 registration and login flow is intact per e2e; CSP unchanged; documented.
 ```

@@ -9,7 +9,7 @@ production deploy stack (`golive/`) and how each is bounded.
 If you only have time for one, read `SECURITY_MODEL.md` first. This document
 assumes you've read it.
 
-**Last updated:** 2026-09-16
+**Last updated:** 2026-11-12
 **Deploy stack reviewed:** `golive/` + CI/CD revision 2026-08-30
 (pull-based CD, cosign-signed images, scanner edge-blocking, daily edge-drift
 monitor, weekly posture digest, recorded schema migrations)
@@ -102,8 +102,8 @@ sees a valid certificate.
 
 **Mitigations:**
 - Cloudflare account uses unique password + TOTP 2FA.
-- TLS mode locked at "Full (strict)" in `golive/CHECKLIST.md`
-  pre-cutover step, and `security-monitor.yml` re-checks it daily
+- TLS mode locked at "Full (strict)" in the pre-cutover checklist
+  (`golive/archive/CHECKLIST_prelaunch_2026-06-07.md`), and `security-monitor.yml` re-checks it daily
   against the Cloudflare API — a drift alerts rather than waiting to
   be noticed. That leg needs `CF_API_TOKEN` + `CF_ZONE_ID` as repo
   secrets; without them it skips with a notice. See §7.
@@ -154,7 +154,8 @@ trusts (rare but documented).
 
 **Out of scope** per `SECURITY_MODEL.md`. Documented for completeness:
 IndexedDB plaintext cache + localStorage JWT are both readable from
-an unlocked browser profile. Logout wipes both. The Settings →
+an unlocked browser profile (the master key sits in tab-scoped
+`sessionStorage` while the tab is open). Logout wipes all three. The Settings →
 "Clear local cache" affordance (CIPH-pi20-LB-2, shipped) lets users
 trigger the same wipe without logging out.
 
@@ -194,7 +195,7 @@ products.
             │  Sees: request bodies (ciphertext payloads)     │
             │  Logs: IP, path, status, ts                     │
             └─────────────────────────────────────────────────┘
-                              │ localhost:8000
+                              │ docker network → api:5000
                               ▼
             ┌─────────────────────────────────────────────────┐
             │       VPS API (api/server.py) (PARTIAL)         │
@@ -202,7 +203,7 @@ products.
             │        usernames, JWT contents                  │
             │  Stores: nothing plaintext-health-data          │
             └─────────────────────────────────────────────────┘
-                              │ socket
+                              │ docker network → postgres:5432
                               ▼
             ┌─────────────────────────────────────────────────┐
             │       POSTGRES (UNTRUSTED-AT-REST)              │
@@ -222,10 +223,10 @@ itself. The master key never leaves the BROWSER layer.
 
 | Surface | Component | Adversary | Mitigation status |
 |---|---|---|---|
-| Login bruteforce | API /login | E (network) | ✅ Per-account lockout (5/15min) + Cloudflare rate-limit |
-| Recovery bruteforce | API /recover | E | ✅ Per-account lockout (3/15min) |
+| Login bruteforce | API /login | E (network) | ✅ Per-account lockout (5 fails → 15 min) + per-IP limits (nginx `api_login` zone, flask-limiter) + Cloudflare rate-limit |
+| Recovery bruteforce | API /recover | E | ✅ Per-account lockout (3 fails → 15 min) |
 | Account enumeration | API /login, /recover, /register, /family/claim | E | ⚠️ Fake params / decoy grants on `/login/init`, `/recover/init`, `/family/grants/claim/init`. Residual, accepted: `/register` 409 on a taken name (inherent; 3/min), a 429 lockout only a real account can reach, and a claim-init list longer than the decoy's one entry. SECURITY_MODEL.md → Hardening |
-| XSS → key theft | Frontend | E + B+C compromise paths | ✅ CSP strict (SvelteKit hash mode) + no inline script; only `'wasm-unsafe-eval'` for Argon2 WASM, no `unsafe-eval` |
+| XSS → key theft | Frontend | E + B+C compromise paths | ✅ CSP strict (SvelteKit hash mode, configured in `frontend/vite.config.ts`) — no unhashed inline script; the two `app.html` inline scripts are hash-pinned (`src/app-html-csp.test.ts`); only `'wasm-unsafe-eval'` for Argon2 WASM, no `unsafe-eval`. `style-src` keeps `'unsafe-inline'` (dynamic inline styles) |
 | CSRF | API mutating endpoints | E | ✅ JWT-bearer auth (not cookie) → no automatic credential attachment |
 | SQL injection | API/Postgres | E | ✅ Parameterized queries (psycopg) |
 | TLS downgrade | Edge | C (CF takeover) | ⚠️ Locked at Full (strict); `security-monitor.yml` re-checks it daily via the CF API — needs `CF_API_TOKEN` + `CF_ZONE_ID` to be set, else that leg skips |
@@ -234,9 +235,9 @@ itself. The master key never leaves the BROWSER layer.
 | Backup leak | R2 / Swiss Backup | D | ✅ age-encrypted + protocol-layer ciphertext underneath |
 | Postgres dump leak | VPS compromise | A, B | ✅ Patient health data is ciphertext at rest |
 | Container CVE | Docker base images | E (sophisticated) | ✅ Daily Trivy scan of repo + published ghcr images (`security-scan.yml`), fresh DB, fails on HIGH/CRITICAL |
-| Supply-chain (npm/pip) | Build-time | E (sophisticated) | ⚠️ Lockfiles + `trivy fs` in CI + grouped Dependabot (majors solo-PR'd); images cosign-signed (keyless, Rekor-logged) so the registry→VPS hop is verified; SBOM declined 2026-08-23 (Trivy covers detection; provenance has no consumer here) |
+| Supply-chain (npm/pip) | Build-time | E (sophisticated) | ⚠️ Lockfiles + `trivy fs` in CI (Python deps resolved first by `scripts/resolve-pydeps.sh`, since `trivy fs` reads only `==` pins and `api/requirements*.txt` carry `>=` floors) + grouped Dependabot (majors solo-PR'd); images cosign-signed (keyless, Rekor-logged) so the registry→VPS hop is verified; SBOM declined 2026-08-23 (Trivy covers detection; provenance has no consumer here) |
 | Tampered deploy image | Registry → VPS | C, E | ✅ Pull-based CD digest-verifies the cosign signature (workflow identity on `main`) before restart; a tag alone cannot deploy unsigned bits |
-| Side-channel (timing) | API auth verification | A, E (sophisticated) | ✅ Constant-time hash compare in auth_verify |
+| Side-channel (timing) | API auth verification | A, E (sophisticated) | ✅ Constant-time hash compare (`hmac.compare_digest` in `verify_auth`) |
 
 Legend: ✅ mitigated · ⚠️ partial / open follow-up · ❌ structural
 
@@ -265,9 +266,12 @@ to detect this; the page looks identical.
    via SvelteKit's normal mechanism without SRI on every chunk.
 3. **No third-party CDNs for app code.** Everything is same-origin.
    This shrinks the attack to "our server" (or anyone in front of it
-   — i.e. Cloudflare).
-4. **CSP restricts script sources.** `default-src 'self'`. Injected
-   scripts from any other origin are blocked.
+   — i.e. Cloudflare). The one third-party script is Cloudflare's Web
+   Analytics beacon (`static.cloudflareinsights.com`), which is not app
+   code and is served by the party already in the path.
+4. **CSP restricts script sources.** `default-src 'self'`; `script-src`
+   is `'self'` + per-build hashes + `'wasm-unsafe-eval'` + the Cloudflare
+   beacon origin. Injected scripts from any other origin are blocked.
 
 **Mitigations not implemented:**
 
@@ -309,7 +313,8 @@ can decrypt backups. It lives:
 
 ### Backup integrity verification
 
-Per `golive/CHECKLIST.md` §5, a restore drill MUST be performed
+Per the pre-launch checklist
+(`golive/archive/CHECKLIST_prelaunch_2026-06-07.md`) §5, a restore drill MUST be performed
 against a staging VM before the production cutover. "A backup
 you've never restored from is not a backup." Re-drill scheduled
 quarterly (calendar reminder, not automated).
@@ -412,10 +417,11 @@ incident-record format. In brief:
    encrypted_data FROM encrypted_documents LIMIT 1` returns opaque
    bytes, not JSON.
 5. **Audit log is filling:** `SELECT count(*) FROM audit_log WHERE
-   ts > now() - interval '1 day'` returns a non-zero number after
+   created_at > now() - interval '1 day'` returns a non-zero number after
    the first real user activity.
-6. **SAST is clean:** `trivy fs . --severity HIGH,CRITICAL` on the
-   repo + `trivy image ghcr.io/.../ciphra-api:<sha>` returns zero
+6. **SAST is clean:** `scripts/resolve-pydeps.sh` (resolves the API's
+   Python deps into the gitignored `ci-pydeps/requirements.txt`), then
+   `trivy fs . --severity HIGH,CRITICAL` on the repo + `trivy image ghcr.io/.../ciphra-api:<sha>` returns zero
    HIGH/CRITICAL findings.
 
 Last verified: 2026-06-07 (trivy clean on repo, frontend deps,

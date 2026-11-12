@@ -6,7 +6,7 @@ This document is the honest description of what ciphra protects, what it doesn't
 > [`SECURITY.md`](../SECURITY.md) at the repository root: where to send it,
 > what's in scope, and what response you can realistically expect.
 
-**Last updated:** 2026-09-16
+**Last updated:** 2026-11-12
 
 ---
 
@@ -62,11 +62,11 @@ Every entry (daily log, blueprint, family link, etc.) is `AES-256-GCM(JSON.strin
 
 ### Recovery code
 
-A 12-word code from a 300-word list (~99 bits of entropy), shown once at registration. Derives a `recovery_key` via `Argon2id(code + ":{username}:RECOVERY", recovery_salt)`. Used to wrap the master_key into a `recovery_vault` blob. Lost code = irretrievable account. We cannot reset it.
+A 12-word code from a 300-word list, shown once at registration: eleven random words and a checksum word, so about 90 bits of entropy (the ~99 bits a 12-word count suggests includes the checksum word, which adds none). Derives a `recovery_key` via `Argon2id(code + ":{username}:RECOVERY", recovery_salt)`. Used to wrap the master_key into a `recovery_vault` blob. Lost code = irretrievable account. We cannot reset it.
 
 ### Family sharing
 
-Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from a separate 6-word "family code." The wrapped blob is stored server-side (`family_grants.wrapped_master`). To use it, the caregiver must know the family code and present a SHA-256(family_key) proof to the server. **Important:** revoking a grant stops new server-side access but does not retract data the caregiver already downloaded — we cannot reach into their device.
+Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from a separate "family code" — six random words plus a checksum word (about 49 bits; the key derivation is Argon2id, and claim attempts are rate-limited). The wrapped blob is stored server-side (`family_grants.wrapped_master`). To use it, the caregiver must know the family code and present a SHA-256(family_key) proof to the server. **Important:** revoking a grant stops new server-side access but does not retract data the caregiver already downloaded — we cannot reach into their device.
 
 ---
 
@@ -99,8 +99,8 @@ Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from 
   account deletion — **and every time a document is created, updated or
   deleted** (`DOC_CREATED`, `DOC_UPDATED`, `DOC_DELETED`, `DOC_BATCH_CREATED`).
   When someone you share with writes to your record, their row
-  (`FAMILY_DOC_CREATED` / `_UPDATED` / `_DELETED`) names your account and the
-  document's id. So the log is a record of *when* you wrote to ciphra and *from
+  (`FAMILY_DOC_CREATED` / `_UPDATED` / `_DELETED`) names your account, and for a
+  change or deletion also the document's id. So the log is a record of *when* you wrote to ciphra and *from
   which address* — never of what you wrote.
 - **IP addresses in that log** are kept raw for 30 days. After that they are
   truncated — an IPv4 address to its /24 (the last octet zeroed), an IPv6
@@ -128,13 +128,13 @@ This list is exhaustive. If we discover otherwise, we will update this document 
 
 The server-side promise above is the strong leg of the threat model. The local-device leg is weaker and we want you to see exactly why.
 
-While you are logged in, three different browser storage locations hold material relevant to your data:
+While you are logged in, several browser storage locations hold material relevant to your data:
 
 ### 1. `sessionStorage` — `ciphra_master_key`
 
 The 32-byte master key, base64-encoded. **Cleared automatically when the browser tab closes** — that's the whole reason it's in `sessionStorage` and not `localStorage`. If a tab reloads mid-session the key survives; if you close the browser, you'll be asked to log in again on the next visit. This shrinks the XSS-stolen-key blast radius from "forever" to "this tab session."
 
-Code: `frontend/src/lib/stores/auth.ts:48-83`.
+Code: `frontend/src/lib/stores/auth.ts` (`SS_MASTER_KEY`, `loadFromStorage`, `saveToStorage`).
 
 ### 2. `localStorage` — `ciphra_auth`
 
@@ -142,12 +142,12 @@ A JSON blob with: JWT bearer token, username, encrypted vault metadata (auth par
 
 This **persists across browser restarts** by design — without it, every visit would require a fresh login. It is, however, the broadest local-attack surface:
 
-- An XSS hole anywhere in the app could read the JWT and call our APIs as you. Our CSP (`default-src 'self'`, no inline scripts, no `eval`) is the structural mitigation; we eliminate injection sinks rather than rely on token-storage tricks.
+- An XSS hole anywhere in the app could read the JWT and call our APIs as you. Our CSP (`default-src 'self'`, no un-hashed inline scripts, no JavaScript `eval` — details under Hardening) is the structural mitigation; we eliminate injection sinks rather than rely on token-storage tricks.
 - Browser-profile theft (someone with disk access to your unlocked machine) gets the token and the encrypted-vault metadata. They still need your password to unlock the master key, but they have a head start.
 
 We chose this tradeoff explicitly. An "always re-login" alternative would be more secure but materially worse UX for a daily journal. If the calculus matters for your threat model, log out manually after each session — that wipes both stores.
 
-Code: `frontend/src/lib/stores/auth.ts:34-83`.
+Code: `frontend/src/lib/stores/auth.ts` (`LS_KEY`, `SS_MASTER_KEY`, `loadFromStorage`).
 
 ### 3. `IndexedDB` — `ciphra_cache` / `decrypted_documents`
 
@@ -159,16 +159,16 @@ Code: `frontend/src/lib/idb.ts:1-90`.
 
 **Wipe semantics** — what removes this plaintext, and when:
 
-- **Logout** (the "Abmelden" button): wipes IndexedDB completely via `indexedDB.deleteDatabase`, and as a fallback also clears the live store contents if a tab still has the database open. Logout is `async` and the wipe is awaited before the UI confirms. Code: `frontend/src/lib/stores/auth.ts:127-149`, `frontend/src/lib/idb.ts:125-151`.
+- **Logout** (the "Abmelden" button): wipes IndexedDB completely via `indexedDB.deleteDatabase`, and as a fallback also clears the live store contents if a tab still has the database open. Logout is `async` and the wipe is awaited before the UI confirms. Code: `frontend/src/lib/stores/auth.ts` (`logout()`), `frontend/src/lib/idb.ts` (`clearAllPartitions`).
 - **Browser tab close**: does **not** wipe IndexedDB. The plaintext stays. Re-opening the tab requires re-login (because the master key in `sessionStorage` is gone), but a forensic examination of the browser profile in that interval would surface the cached plaintext.
 - **Browser-profile compromise on an unlocked device**: out of scope. An attacker with disk access to your unlocked browser profile can read IndexedDB. This is the same threat model as any browser-served E2E app and is one of the listed exclusions at the top of this document.
 - **Caregiver / family-sharing context**: PI v13 security review caught a related bug where switching between linked vaults left the prior vault's plaintext on disk. Fixed in PI v16 (`clearAllPartitions` deletes the entire database, not just the active partition).
 
-If you want plaintext gone right now without losing your session, log out — the wipe is awaited before the UI confirms. Or use the **"Cache jetzt leeren" button in Settings → Konto → "Daten auf diesem Gerät"** which triggers the same wipe path (IndexedDB + service-worker cache) while keeping you logged in. Code: `frontend/src/lib/stores/auth.ts:188-204` (`clearLocalCache`). The button is always available — it is your action to invoke regardless of the displayed cache count.
+If you want plaintext gone right now without losing your session, log out — the wipe is awaited before the UI confirms. Or use the **"Cache jetzt leeren" button in Settings → Konto → "Daten auf diesem Gerät"** which triggers the same wipe path (IndexedDB + service-worker cache) while keeping you logged in. Code: `frontend/src/lib/stores/auth.ts` (`clearLocalCache`). The button is always available — it is your action to invoke regardless of the displayed cache count.
 
 ### 4. Service worker cache
 
-Same wipe contract as IndexedDB on logout — every cache whose key starts with `ciphra-` is deleted. SvelteKit currently ships render-only HTML shells via the SW, so today there is no patient data sitting in this cache; the wipe is defensive against future loader-injected content. Code: `frontend/src/lib/stores/auth.ts:142-149`.
+Same wipe contract as IndexedDB on logout — every cache whose key starts with `ciphra-` is deleted. SvelteKit currently ships render-only HTML shells via the SW, so today there is no patient data sitting in this cache; the wipe is defensive against future loader-injected content. Code: `frontend/src/lib/stores/auth.ts` (the `ciphra-` cache purge in `logout()`).
 
 ### 5. Small preference + bookkeeping keys
 
@@ -193,6 +193,14 @@ Kept (no health data):
 - `sessionStorage.ciphra_active_vault` — the numeric id of the linked account you are viewing, so a reload stays in it. Tab-scoped; reset to your own account on logout.
 - `sessionStorage.ciphra_pending_family_claim` — an invitation link opened before logging in: the grant id and family code, held until you have logged in and are sent on to the claim (then removed), or until the tab closes.
 
+### 6. `IndexedDB` — `ciphra_outbox` (writes waiting for the network)
+
+When a save cannot reach the server — you are offline — the entry is encrypted at the moment you save it and the **ciphertext** waits here until the connection returns. No plaintext is written to this store. Each queued write is tagged with your username (and, when you write into an account shared with you, that account's id), the kind of change, the sharing bit described above, and when it was queued, so that a different account signing in on the same device never sends your writes.
+
+This database is deliberately **not** wiped on logout or by "Cache jetzt leeren": a write you made offline and have not yet sent would otherwise be lost. It empties itself as the queued writes reach the server.
+
+Code: `frontend/src/lib/outbox.ts`.
+
 ### What this means in practice
 
 If your device is yours alone and locked when you walk away, the IndexedDB cache buys you faster page loads at no real-world cost. If a roommate, partner, hotel housekeeper, IT department, or border officer can sit at your unlocked browser, the cache is one of several things they can read. The structural defenses (sessionStorage-bound master key, logout wipe, "Clear local cache" button) bound the exposure; they do not eliminate it.
@@ -206,7 +214,7 @@ We will not pretend otherwise.
 - **JWT secret:** required env var, ≥ 32 chars, no fallback. Server fails to start without it.
 - **Argon2 WASM library:** loaded with [Subresource Integrity](https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity) (SHA-384 hash pinned in `crypto.ts`). A tampered library is refused by the browser.
 - **CORS:** restricted to configured origins; no wildcard.
-- **CSP:** `default-src 'self'`, no inline scripts, no `eval`, `frame-ancestors 'none'`.
+- **CSP:** `default-src 'self'`; scripts only from our own origin, Cloudflare's Web Analytics beacon, and inline scripts whose hash is pinned in the policy (no `'unsafe-inline'` for scripts); no JavaScript `eval` — only `'wasm-unsafe-eval'`, which the Argon2 WebAssembly needs; `frame-ancestors 'none'`. Emitted per response by SvelteKit (`frontend/vite.config.ts`).
 - **Master key in browser:** lives in `sessionStorage` only — cleared when the browser closes. Limits the XSS window to "this tab session."
 - **Per-account lockout:** 5 failed login attempts → 15-minute lock; 3 failed recovery attempts → 15-minute lock. Once a lock has run out, the count starts again from zero. The right password or recovery code still gets through this automatic lock — otherwise anyone who knows your username could keep you locked out. A lock set by an administrator is different: it holds even against the right password or recovery code, and it ends every session already open.
 - **JWT invalidation:** `password_version` column incremented on password change, recovery, or an admin lock; old tokens are rejected. Every authenticated request checks its token against the database: a deleted account's token stops working at once, admin rights are read from the database rather than from the token, and if the database cannot be reached the request is refused (503), not let through.

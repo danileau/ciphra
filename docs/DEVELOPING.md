@@ -7,9 +7,12 @@ Local setup, demo data, tests, and project layout. For the system design see
 
 - Docker + Docker Compose — the supported way to run the stack.
 - For running frontend tooling directly on the host: Node.js **22** (the
-  baseline — `frontend/Dockerfile` is `node:22-alpine`; Vite 8 requires
-  ≥20.19/22.12 and crashes on Node 18). See the vitest note under
-  [Tests](#tests).
+  baseline — the dev `frontend/Dockerfile` is `node:22.x-alpine`; the
+  production `frontend/Dockerfile.prod` builds and runs on `node:24.x-alpine`;
+  Vite 8 requires ≥20.19/22.12 and crashes on Node 18). See the vitest note
+  under [Tests](#tests).
+- For running the API tests directly on the host: Python **3.11** (the API
+  image is `python:3.11.18-slim`).
 
 ## First run
 
@@ -37,17 +40,18 @@ docker compose up --build
 | frontend | 5173      | 5173         | SvelteKit dev server, HMR |
 | api      | 5050      | 5000         | Flask; host port avoids the macOS :5000 AirPlay collision |
 | postgres | 5433      | 5432         | host port 5433 avoids a local Postgres clash |
-| redis    | —         | 6379         | rate-limit counter store (optional in dev — falls back to `memory://` if `REDIS_URL` is unset) |
+| redis    | —         | —            | **not in the dev compose** — prod only. Locally the rate limiter falls back to `memory://` because `REDIS_URL` is unset |
 
 The database schema is created automatically by the API on first start.
 
 ### How schema init runs
 
 - **Dev (`python server.py`):** Flask's built-in server triggers the
-  `if __name__ == '__main__': init_db()` block at the bottom of `server.py`.
+  `if __name__ == '__main__':` block at the bottom of `server.py`, which runs
+  `init_db()` + `apply_audit_retention()`.
 - **Production (gunicorn):** the `__main__` block never fires — gunicorn
   imports `server:app` as a module. Instead `api/entrypoint.sh` calls
-  `init_db()` once and then `exec`s gunicorn, so the schema is guaranteed
+  `init_db()` + `apply_audit_retention()` once and then `exec`s gunicorn, so the schema is guaranteed
   to exist before any worker accepts a request and workers don't race on
   `CREATE TABLE IF NOT EXISTS`.
 
@@ -59,9 +63,12 @@ Both paths are intentional. Don't remove the `__main__` block — it keeps
 The `api/seed_*.py` scripts create demo accounts with realistic multi-year
 histories — one per persona/condition (`seed_hans_epilepsy.py`,
 `seed_anna_bipolar.py`, `seed_thomas_burnout.py`, …). All use the password
-`Test$12345_`.
+`Test$12345_`. The persona scripts are **gitignored** (`api/seed_*.py`), so
+a fresh clone does not have them; only the guard they import,
+`api/seed_guardrail.py`, is tracked.
 
-Seeding is gated behind an env flag so it can never run by accident:
+Seeding is gated behind an env flag (enforced by `api/seed_guardrail.py`)
+so it can never run by accident:
 
 ```bash
 cd api && CIPHRA_ALLOW_DEMO_SEED=1 \
@@ -79,8 +86,16 @@ password is whatever you set for `POSTGRES_PASSWORD` in `.env`.
 ```bash
 cd frontend
 npm run test      # vitest (unit/component)
-npm run check     # svelte-check — type + Svelte diagnostics
+npm run check     # svelte-kit sync + svelte-check — type + Svelte diagnostics
+npm run build     # vite build (adapter-node)
 ```
+
+The SvelteKit config lives in `frontend/vite.config.ts` (the exported
+`kitConfig`, passed to `sveltekit(kitConfig)` and reused by
+`vitest.config.ts`); there is no `svelte.config.js` since SvelteKit 3. The
+CSP is in there too (`csp.mode: 'hash'`), pinned by
+`src/app-html-csp.test.ts`. Shared code is imported as `#lib/…` with an
+explicit file extension (the `imports` map in `package.json`), not `$lib`.
 
 > **Gotcha:** run vitest via `npm run test` or `./node_modules/.bin/vitest`,
 > **not** `npx vitest`. A cached npx vitest can require a newer Node than the
@@ -88,7 +103,7 @@ npm run check     # svelte-check — type + Svelte diagnostics
 > `rm -rf ~/.npm/_npx` clears the cache.
 
 The bar before shipping: vitest green, `svelte-check` 0 errors / 0 warnings,
-`vite build` clean.
+`vite build` clean, `pytest` green.
 
 ### Frontend — end-to-end (Playwright)
 
@@ -151,10 +166,13 @@ The API test tooling ships only in the Docker `dev` build target:
 docker compose run --rm --build api pytest -q
 ```
 
+Or on the host, with `requirements-dev.txt` installed:
+`cd api && python -m pytest tests/ -v`.
+
 ## Building for production
 
 ```bash
-cd frontend && npm run build      # static SvelteKit build
+cd frontend && npm run build      # adapter-node build → build/index.js
 docker build --target prod ./api  # minimal API image (no test tooling)
 ```
 
@@ -172,7 +190,10 @@ production deploys should build `--target prod`.
 ciphra/
 ├── README.md                 project overview + quick start
 ├── SECURITY.md               vulnerability reporting policy
-├── docker-compose.yml        the 4-service stack
+├── VERSION                   the product's SemVer (see docs/VERSIONING.md)
+├── CHANGELOG.md              compiled at release time from changelog.d/
+├── changelog.d/              one fragment per user-facing change
+├── docker-compose.yml        the 4-service dev stack
 ├── .env.example              env template
 ├── docs/                     ARCHITECTURE, DEVELOPING, FEATURES, OPERATIONS,
 │                             SECURITY_MODEL, THREAT_MODEL, INCIDENT_RESPONSE,
@@ -181,6 +202,8 @@ ciphra/
 │   ├── server.py             the whole Flask API
 │   ├── seed_*.py             demo-data seed scripts
 │   └── tests/                pytest suite
+├── nginx/                    edge config (default.conf dev, ciphra.conf prod)
+├── scripts/                  deploy wizard, changelog + version tooling, scan helpers
 └── frontend/
     └── src/
         ├── routes/           SvelteKit pages

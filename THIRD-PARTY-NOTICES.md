@@ -5,10 +5,15 @@ file covers third-party code that ships *inside* ciphra and therefore carries
 its own license along with it.
 
 Ordinary dependencies are not listed here. npm and pip packages ship their own
-`LICENSE` files inside `node_modules/` and `site-packages/`, and the resolved
-set is pinned in `frontend/package-lock.json` and `api/requirements.txt`. Every
-one of them is MIT, BSD-3-Clause, Apache-2.0, or LGPL-3.0+ — all compatible
-with AGPL-3.0.
+`LICENSE` files inside `node_modules/` and `site-packages/`. The frontend set is
+pinned in `frontend/package-lock.json`; `api/requirements.txt` sets minimum
+versions, and the API image resolves them when it is built. The licenses in
+that set are permissive — MIT, MIT-0, BSD-2-Clause, BSD-3-Clause,
+Apache-2.0, Zlib (`pako`) and PSF-2.0 (`typing_extensions`) — plus
+`dompurify`, offered under MPL-2.0 *or* Apache-2.0 (ciphra takes it under
+Apache-2.0), and `psycopg2-binary`, under LGPL-3.0-or-later. All are compatible
+with AGPL-3.0. The base images (Node.js on Alpine, Python on Debian, nginx on
+Alpine) carry their own license information inside the image.
 
 ---
 
@@ -68,5 +73,5 @@ SOFTWARE.
 ## Brand assets
 
 `brand_assets/` and the ciphra wordmark, asterisk and icons in
-`frontend/static/` are **not** covered by the AGPL. The code is free; the name
+`frontend/static/` (`wordmark-*.svg`, `icon*`, `favicon*`, `og-image.png`) are **not** covered by the AGPL. The code is free; the name
 and the marks are not. See the trademark note in [`README.md`](README.md#license).

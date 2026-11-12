@@ -95,12 +95,13 @@ describe('CIPH-pi20-LB-8 browser-storage section claims', () => {
 		expect(SECURITY).toMatch(/[Ss]ervice worker cache/);
 	});
 
-	it('SECURITY_MODEL.md cites auth.ts:34-83 region for the storage discipline', () => {
-		// The doc's file:line cite must point to a region that still
-		// contains the relevant logic.
-		expect(SECURITY).toMatch(/frontend\/src\/lib\/stores\/auth\.ts:34-83/);
-		// And auth.ts must still have the LS_KEY + SS_MASTER_KEY constants
-		// in roughly that region (lines 34-50).
+	it('SECURITY_MODEL.md cites the auth.ts storage discipline by name', () => {
+		// Cites name symbols, not line ranges: line ranges drifted silently
+		// (2026-11-12, logout() had moved 40 lines). The doc names them, and
+		// auth.ts must still define them.
+		expect(SECURITY).toMatch(/frontend\/src\/lib\/stores\/auth\.ts` \(`LS_KEY`, `SS_MASTER_KEY`, `loadFromStorage`\)/);
+		expect(AUTH).toMatch(/function loadFromStorage\(/);
+		expect(AUTH).toMatch(/function saveToStorage\(/);
 		expect(AUTH).toMatch(/const LS_KEY = 'ciphra_auth'/);
 		expect(AUTH).toMatch(/const SS_MASTER_KEY = 'ciphra_master_key'/);
 	});
@@ -113,7 +114,9 @@ describe('CIPH-pi20-LB-8 browser-storage section claims', () => {
 	});
 
 	it('SECURITY_MODEL.md cites the logout wipe call site', () => {
-		expect(SECURITY).toMatch(/auth\.ts:127-149/);
+		expect(SECURITY).toMatch(/auth\.ts` \(`logout\(\)`\)/);
+		expect(AUTH).toMatch(/clearLocalCache/);
+		expect(SECURITY).not.toMatch(/auth\.ts:\d+-\d+/);
 		// auth.ts must still call clearAllPartitions inside logout.
 		expect(AUTH).toMatch(/async logout\(\)\s*\{[\s\S]{0,800}clearAllPartitions\(\)/);
 	});
