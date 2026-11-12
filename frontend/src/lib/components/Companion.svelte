@@ -636,7 +636,7 @@
 		<section class="card p-6">
 			<div class="flex items-center justify-between gap-3">
 				<div class="min-w-0">
-					<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('companion.greeting', { name: $auth.username || '' })}</h1>
+					<h1 class="text-2xl font-bold [overflow-wrap:anywhere]" style="color: var(--text-primary)">{$t('companion.greeting', { name: $auth.username || '' })}</h1>
 					<p class="text-sm mt-0.5" style="color: var(--text-secondary)">{new Date().toLocaleDateString($locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
 				</div>
 				{#if bp}<span class="badge shrink-0" style="background: {conditionColor}1a; color: {conditionColor}; border: 1px solid {conditionColor}33;">{conditionDisplayLabel(bp, $t)}</span>{/if}
