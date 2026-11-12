@@ -170,6 +170,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # api/requirements*.txt are `>=` floors, which Trivy's fs scan cannot
+      # read, so it saw no Python packages at all. Resolve them (runtime + dev)
+      # to a pinned file the scan below picks up. The runtime deps are also in
+      # the prod-image scan (api job); the dev deps are scanned only here.
+      # Python minor = the api image's, so environment markers resolve alike.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Resolve Python deps for the scan
+        run: scripts/resolve-pydeps.sh ci-pydeps
       - name: Trivy fs scan (HIGH/CRITICAL fail)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
