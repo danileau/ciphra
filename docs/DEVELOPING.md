@@ -215,6 +215,13 @@ ciphra/
 - **Commits** - short, technical messages; no `Co-Authored-By` trailers.
 - **Swiss German** - generated German copy uses `ss`, never `ß`; pinned by
   `frontend/src/lib/i18n/swiss-orthography.test.ts`.
+- **No em dash** - write a plain hyphen (`-`), never the em dash (U+2014), in
+  app copy (all four locales), PDF text, code, comments, docs and changelog
+  entries; it isn't on a normal keyboard. Changelog release headings read
+  `## [X.Y.Z] - YYYY-MM-DD`. Pinned by `frontend/src/lib/no-em-dash.test.ts`,
+  which scans every tracked text file; its short allowlist holds the PDF
+  tests' WinAnsi decoders and the unit-scale check that accepts the character
+  in user input.
 - **Scratch stays out of the repo** - PI-cycle planning notes, review memos,
   and session hand-offs are not committed; they belong in the assistant's
   `memory/`, not the repository. The repo's `.md` files are durable
