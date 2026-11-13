@@ -2,11 +2,11 @@
   Mobile bottom-tab navigation (CIPH-201).
 
   5 slots: Today / Calendar / [+ FAB] / Journal / Reports.
-  Settings stays in the header (Hiroshi's vote — settings is not a primary
+  Settings stays in the header (Hiroshi's vote - settings is not a primary
   daily action). Hidden on >=md and on auth/marketing chrome routes.
 
   The center "+" FAB triggers the existing quick-add bottom sheet that
-  lives in +layout.svelte by flipping the global `quickAddOpen` store —
+  lives in +layout.svelte by flipping the global `quickAddOpen` store -
   no UI duplication, single source of truth.
 -->
 <script lang="ts">
@@ -19,7 +19,7 @@
 
 	// Hide on auth / marketing / wizard surfaces. /conditions, /privacy,
 	// /terms are not hidden here because authenticated users can deep-link
-	// to them from inside the app — the layout already gates BottomNav
+	// to them from inside the app - the layout already gates BottomNav
 	// mounting on `$isAuthenticated`, so reaching this component at all
 	// means we're in the app chrome branch.
 	$: hidden =
@@ -29,11 +29,11 @@
 		pathname === '/migrate' ||
 		pathname.startsWith('/migrate/');
 
-	// CIPH-870 — Active-state must be reactive. Previous version used an
+	// CIPH-870 - Active-state must be reactive. Previous version used an
 	// isActive(path) function closing over `pathname`; Svelte's template
 	// dependency tracking cannot see through a function body, so the
 	// class binding never re-evaluated when the URL pathname changed.
-	// Mobile nav appeared stuck on the first-rendered tab — the user hit
+	// Mobile nav appeared stuck on the first-rendered tab - the user hit
 	// this as "Heute stays lit after I navigate".
 	//
 	// Fix: reactive declarations per tab. Each references `pathname`
@@ -158,17 +158,17 @@
 	.bn-tab:hover {
 		color: var(--text-secondary);
 	}
-	/* Active tab — three layered cues so it's unmistakable on every theme:
+	/* Active tab - three layered cues so it's unmistakable on every theme:
 	   1. label + icon switch to brand color
 	   2. label becomes bold
 	   3. a 3px brand-colored pill sits at the very top of the tab as an
 	      indicator (mirrors iOS-style tab affordance) */
 	.bn-tab--active {
-		/* CIPH-891 — cohort-aware nav active state. */
+		/* CIPH-891 - cohort-aware nav active state. */
 		color: var(--accent);
 	}
 	/* Active state is marked by accent color + the 3px brand pill below; no
-	   font-weight bump — bolding the label widened it and nudged sibling tabs
+	   font-weight bump - bolding the label widened it and nudged sibling tabs
 	   (1px layout shift) on every navigation. */
 	.bn-tab--active::before {
 		content: '';
@@ -200,7 +200,7 @@
 		line-height: 1;
 	}
 
-	/* CIPH-201b — Aria's note: the FAB must read as "the +1 way to add from
+	/* CIPH-201b - Aria's note: the FAB must read as "the +1 way to add from
 	   anywhere", not just another tab icon. Solid brand-fill circle, white
 	   plus glyph, raised above the bar with a brand-tinted shadow, and ~52px
 	   so it visually outweighs the 22px side-tab icons. */
@@ -211,7 +211,7 @@
 		width: 52px;
 		height: 52px;
 		border-radius: 9999px;
-		/* CIPH-891 — cohort-aware FAB. */
+		/* CIPH-891 - cohort-aware FAB. */
 		background: var(--accent);
 		color: #fff;
 		box-shadow:

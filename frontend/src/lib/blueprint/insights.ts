@@ -1,14 +1,14 @@
 /**
- * CIPH-920 — Dashboard insight engine.
+ * CIPH-920 - Dashboard insight engine.
  *
  * The dashboard was "naked": for most cohorts the 2/3 column held a single
  * episode/symptom-day line and nothing else, while the app *captures* far
- * more than it shows — per-episode time-of-day, per-episode duration, sleep
+ * more than it shows - per-episode time-of-day, per-episode duration, sleep
  * hours, triggers, seizure-type mix. This module crosses those signals into
  * compact, plain-language INSIGHTS (a takeaway + a small viz), not raw
  * charts (the CIPH-900 declutter lesson: insight over noise).
  *
- * Everything here is CAPABILITY-DRIVEN, never condition-hardcoded — each
+ * Everything here is CAPABILITY-DRIVEN, never condition-hardcoded - each
  * insight gates on what the active Blueprint declares (trackTimeOfDay,
  * trackDuration, episodeTypes, a sleep vital, triggers, markerEvent) plus a
  * minimum-data threshold so day-1 / sparse users never see noise. The same
@@ -22,7 +22,7 @@
  */
 import type { Blueprint, EpisodeType } from './types';
 
-// Loosely-typed entry doc — documents.ts stores `data: any`.
+// Loosely-typed entry doc - documents.ts stores `data: any`.
 export interface InsightDoc {
 	data: {
 		type?: string;
@@ -70,7 +70,7 @@ function episodeCount(d: InsightDoc, epIds: string[]): number {
 }
 
 /**
- * Triggers carry a dual write shape — array (DayDetail) or object map
+ * Triggers carry a dual write shape - array (DayDetail) or object map
  * (EntryComposer, Record<string,boolean>). EntryComposer's spread-merge can
  * graft list ids onto numeric keys with truthy string values, so for the
  * object shape we only trust known blueprint ids (mirrors Companion.svelte).
@@ -87,7 +87,7 @@ function triggersOnDay(d: InsightDoc, triggerIds: string[]): Set<string> {
 	return out;
 }
 
-/** Numeric reading for a vital — handles number, numeric string, and the
+/** Numeric reading for a vital - handles number, numeric string, and the
  *  multi-entry time-keyed object shape (averaged). Returns null if absent. */
 function vitalNumber(d: InsightDoc, vitalId: string): number | null {
 	const raw = (d.data?.vitals || {})[vitalId];
@@ -125,7 +125,7 @@ function pct(n: number): number {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Capability predicates — what the blueprint CAN support
+// Capability predicates - what the blueprint CAN support
 // ─────────────────────────────────────────────────────────────────────────
 
 function episodeIds(bp: Blueprint): string[] {
@@ -168,8 +168,8 @@ const MIN_OUTCOME_DAYS = 3;
  * trigger) from the DATA, not just the blueprint shape.
  *
  * Episode cohorts normally key off "a day with an episode". But some
- * blueprints declare episode types that are RARE emergencies — hypertensive
- * crisis, orthostatic drop — which in a 180-day window barely occur. Keying
+ * blueprints declare episode types that are RARE emergencies - hypertensive
+ * crisis, orthostatic drop - which in a 180-day window barely occur. Keying
  * off them starves every card and leaves the dashboard empty (the Klaus
  * case). When the episode signal is too thin, fall back to "a day with any
  * symptom" so the same correlation still surfaces. Episodeless blueprints
@@ -203,7 +203,7 @@ function sleepVitalId(bp: Blueprint): string | null {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 1. Trigger lift — which triggers coincide with more episode days
+// 1. Trigger lift - which triggers coincide with more episode days
 // ─────────────────────────────────────────────────────────────────────────
 
 export interface TriggerLiftRow {
@@ -220,7 +220,7 @@ export interface TriggerLiftRow {
 
 export interface TriggerLiftInsight {
 	kind: 'trigger-lift';
-	/** 'episode' or 'symptom' — drives the outcome noun in the UI. */
+	/** 'episode' or 'symptom' - drives the outcome noun in the UI. */
 	outcome: 'episode' | 'symptom';
 	rows: TriggerLiftRow[];
 }
@@ -291,7 +291,7 @@ export function computeTriggerLift(
 
 export interface SleepLinkInsight {
 	kind: 'sleep-link';
-	/** 'episode' or 'symptom' — drives the outcome noun in the UI. */
+	/** 'episode' or 'symptom' - drives the outcome noun in the UI. */
 	outcome: 'episode' | 'symptom';
 	thresholdH: number;
 	shortRate: number; // adverse-outcome incidence on short-sleep days (0..1)
@@ -351,7 +351,7 @@ export function computeSleepEpisodeLink(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 3. Circadian — when in the day episodes cluster
+// 3. Circadian - when in the day episodes cluster
 // ─────────────────────────────────────────────────────────────────────────
 
 export type DaypartKey = 'night' | 'morning' | 'afternoon' | 'evening';
@@ -533,7 +533,7 @@ export function computeDurationSignal(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 7. Top symptoms — frequency, for episodeless blueprints (custom/lab)
+// 7. Top symptoms - frequency, for episodeless blueprints (custom/lab)
 // ─────────────────────────────────────────────────────────────────────────
 
 export interface TopSymptomRow {
@@ -556,7 +556,7 @@ export function computeTopSymptoms(
 ): TopSymptomsInsight | null {
 	// Universal low-priority backstop (last in INSIGHT_ORDER): episode cohorts
 	// fill the card cap with their richer episode-based cards first, so this
-	// only surfaces when there's spare room — which is exactly the sparse /
+	// only surfaces when there's spare room - which is exactly the sparse /
 	// episodeless case where the dashboard would otherwise be naked.
 	const items = symptomItems(bp);
 	if (items.length === 0) return null;
@@ -599,7 +599,7 @@ export type Insight =
 
 export type InsightKind = Insight['kind'];
 
-/** Priority order for the dashboard — most clinically actionable first. */
+/** Priority order for the dashboard - most clinically actionable first. */
 export const INSIGHT_ORDER: InsightKind[] = [
 	'sleep-link',
 	'trigger-lift',
@@ -611,13 +611,13 @@ export const INSIGHT_ORDER: InsightKind[] = [
 	'top-symptoms',
 ];
 
-/** Max cards rendered at once — keeps the column rich but not a wall (CIPH-900). */
+/** Max cards rendered at once - keeps the column rich but not a wall (CIPH-900). */
 export const MAX_INSIGHT_CARDS = 4;
 
 /**
  * Compute every applicable insight for a blueprint + its data, ordered by
  * clinical priority and capped. Returns [] when nothing qualifies (the
- * section then renders nothing — no gaslighting empty state).
+ * section then renders nothing - no gaslighting empty state).
  */
 export function computeInsights(
 	docs: InsightDoc[],
@@ -641,14 +641,14 @@ export function computeInsights(
 /**
  * Static capability matrix: which insight kinds a blueprint CAN ever show,
  * independent of how much data the user has logged. This is the
- * "analysis for every blueprint" surface — pinned by insights.test.ts so a
+ * "analysis for every blueprint" surface - pinned by insights.test.ts so a
  * new preset's coverage is a conscious decision, not an accident.
  */
 export function insightCapabilityMatrix(bp: Blueprint): Record<InsightKind, boolean> {
 	const hasEpisodes = (bp.episodeTypes || []).length > 0;
 	const symptoms = hasSymptoms(bp);
 	// Correlation cards key off an adverse-outcome day: an episode day when the
-	// blueprint logs episodes, else (or when episodes are too rare in-window —
+	// blueprint logs episodes, else (or when episodes are too rare in-window -
 	// decided at compute time by resolveOutcome) a symptom day.
 	const outcomeAvailable = hasEpisodes || symptoms;
 	return {

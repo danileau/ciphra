@@ -1,5 +1,5 @@
 /**
- * CIPH-741 / CIPH-751 — doctor PDF export happy path: assert a PDF download.
+ * CIPH-741 / CIPH-751 - doctor PDF export happy path: assert a PDF download.
  *
  * Signs up a fresh user, adds one entry through quick-add, follows the
  * dashboard's "export for doctor" CTA and asserts a PDF download. We do not
@@ -23,13 +23,13 @@ import { openQuickAddDesktop } from './_helpers/quickAdd';
 test.setTimeout(120_000);
 
 test('doctor PDF export triggers a download', async ({ page }) => {
-    // CIPH-pi20-LB-3 — shared helper: 12-char password, registers + clicks
+    // CIPH-pi20-LB-3 - shared helper: 12-char password, registers + clicks
     // through the recovery-code gate, lands on `/`.
     await registerNewUser(page);
     await selectCohort(page, /epilepsy|epilepsie|epilessia/i);
 
     // Seed one exportable doc. It must be an `entry` (episode chip): the
-    // export counts entries only (lib/reports/exportPeriods.ts — "what counts
+    // export counts entries only (lib/reports/exportPeriods.ts - "what counts
     // as data"), so a note-only quick-add (an `event`) leaves every export
     // card disabled even though the dashboard CTA appears.
     await openQuickAddDesktop(page);

@@ -1,9 +1,9 @@
 /**
- * CIPH-pi20-LB-8 — security-model doc-vs-code drift test.
+ * CIPH-pi20-LB-8 - security-model doc-vs-code drift test.
  *
  * The model moved to docs/SECURITY_MODEL.md when SECURITY.md became the
  * vulnerability-reporting policy GitHub expects under that name. The
- * claims pinned here are unchanged — only the file they live in.
+ * claims pinned here are unchanged - only the file they live in.
  *
  * The PI v20 operating rule: SECURITY_MODEL.md cannot make a claim the code
  * doesn't enforce. This test pins each load-bearing claim against
@@ -11,7 +11,7 @@
  *
  * If a claim here breaks because the doc is wrong, fix the doc.
  * If it breaks because the CODE changed, the doc must be updated to
- * match — `SECURITY_MODEL.md` is a contract with users, not a sketch.
+ * match - `SECURITY_MODEL.md` is a contract with users, not a sketch.
  *
  * Sister test: `src/lib/stores/auth.clear-cache.test.ts` covers the
  * LB-2 wipe contract specifically. This file covers the broader

@@ -9,7 +9,7 @@ export default defineConfig({
     // Svelte 5 ships separate client/server builds selected via export
     // conditions. Without 'browser', vitest resolves the SERVER build and
     // every component render dies with "mount(...) is not available on the
-    // server" — which silently broke all component tests after the Svelte 5
+    // server" - which silently broke all component tests after the Svelte 5
     // bump (2026-06-07). jsdom tests are browser tests; say so.
     resolve: {
         conditions: ['browser'],

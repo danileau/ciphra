@@ -33,5 +33,5 @@ mkdir -p "$out"
   > "$out/requirements.txt"
 
 n="$(grep -c '==' "$out/requirements.txt" || true)"
-[ "$n" -gt 0 ] || { echo "resolve-pydeps: resolved 0 packages — refusing to report an empty scan as clean" >&2; exit 1; }
+[ "$n" -gt 0 ] || { echo "resolve-pydeps: resolved 0 packages - refusing to report an empty scan as clean" >&2; exit 1; }
 echo "resolve-pydeps: $n packages pinned in $out/requirements.txt ($("$py" -V 2>&1))"

@@ -1,15 +1,15 @@
 <script lang="ts">
 	/**
-	 * CIPH-882 — CustomItemModal.
+	 * CIPH-882 - CustomItemModal.
 	 *
 	 * Single kind-driven primitive for adding a user's own symptom,
 	 * trigger, vital, or episode type. Wraps the existing `Modal.svelte`.
 	 *
 	 * Form fields by kind:
-	 *   symptom  — label + optional group select
-	 *   trigger  — label
-	 *   vital    — label + unit + optional min + optional max
-	 *   episode  — label + color picker (6 chips from DATA_PALETTE)
+	 *   symptom  - label + optional group select
+	 *   trigger  - label
+	 *   vital    - label + unit + optional min + optional max
+	 *   episode  - label + color picker (6 chips from DATA_PALETTE)
 	 *
 	 * Validation lives in `validateCustomItem` so the modal and any other
 	 * caller surface the same error keys. On save, the dispatcher emits
@@ -127,7 +127,7 @@
 			dispatch('save', { kind, item });
 		} else if (kind === 'vital') {
 			// `bind:value` on a `type=number` input coerces minStr/maxStr
-			// to a number — coerce back to string before trimming.
+			// to a number - coerce back to string before trimming.
 			const minRaw = String(minStr ?? '').trim();
 			const maxRaw = String(maxStr ?? '').trim();
 			const min = minRaw === '' ? undefined : Number(minRaw);

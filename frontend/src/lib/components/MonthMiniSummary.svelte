@@ -1,12 +1,12 @@
 <!--
-	MonthMiniSummary — calendar right-rail tail (CIPH-pi19-B + C).
+	MonthMiniSummary - calendar right-rail tail (CIPH-pi19-B + C).
 
 	Sits at the bottom of the persistent rail (lg:+ only, hidden via the
 	parent's `hidden lg:block` wrapper). Counts trigger-days and rescue-
 	med-days for the visible month so the rail says something even when
 	no day is selected.
 
-	CIPH-pi19-C — adds a 28-31-cell trigger-pressure strip above the
+	CIPH-pi19-C - adds a 28-31-cell trigger-pressure strip above the
 	count rows when the blueprint declares triggers. Each cell maps a
 	day of the visible month; opacity buckets the trigger-count into
 	5 levels (none / 1 / 2 / 3-4 / 5+). Click dispatches `selectday`
@@ -26,7 +26,7 @@
 	export let rescueMedDayCount: number;
 	export let showTrigger: boolean;
 	export let showRescue: boolean;
-	// CIPH-pi19-C — heatmap inputs. monthPrefix is the YYYY-MM string the
+	// CIPH-pi19-C - heatmap inputs. monthPrefix is the YYYY-MM string the
 	// parent already computes (e.g. "2026-05"); daysInMonth is 28-31.
 	// triggerCountByDay maps the same `${monthPrefix}-DD` keys used in
 	// the calendar's per-cell tally. Defaulted so older callers still
@@ -34,7 +34,7 @@
 	export let monthPrefix: string = '';
 	export let daysInMonth: number = 0;
 	export let triggerCountByDay: Map<string, number> = new Map();
-	// CIPH-pi23-A3a/A3b — cohort-conditional insight chip. null means the
+	// CIPH-pi23-A3a/A3b - cohort-conditional insight chip. null means the
 	// cohort doesn't have a defined insight surface (cycle/narrative/custom
 	// today; future PIs add their own branches). When null, the chip section
 	// is hidden entirely rather than rendering empty chrome.
@@ -64,7 +64,7 @@
 <section class="cal-mini" aria-label={$t('calendar.mini_summary_aria', { month: monthName })}>
 	<h3 class="cal-mini-title">{$t('calendar.this_month')}</h3>
 
-	<!-- CIPH-pi23-A3a/A3b — cohort-conditional insight chip. Phase cohort
+	<!-- CIPH-pi23-A3a/A3b - cohort-conditional insight chip. Phase cohort
 	     (Anna's anchor) gets day-coverage segments for top multiDay episode
 	     types; discrete cohort (Hans's anchor) gets the top point-event
 	     count. Cycle / narrative / custom render nothing here. -->
@@ -97,7 +97,7 @@
 	{/if}
 
 	{#if showHeatmap}
-		<!-- CIPH-pi19-C — trigger pressure strip. One cell per day of the
+		<!-- CIPH-pi19-C - trigger pressure strip. One cell per day of the
 			 visible month, colored ochre at bucketed opacity. Click jumps
 			 to that day via the `selectday` event. Empty days render as a
 			 hairline so the column position stays readable. -->
@@ -170,7 +170,7 @@
 		color: var(--text-secondary);
 		margin: 0;
 	}
-	/* CIPH-pi23-A3a/A3b — cohort insight chip. Sits between the title
+	/* CIPH-pi23-A3a/A3b - cohort insight chip. Sits between the title
 	   and the trigger heatmap; hidden entirely when insight is null. */
 	.cal-mini-insight {
 		display: flex;
@@ -260,7 +260,7 @@
 		font-style: italic;
 	}
 
-	/* CIPH-pi19-C — trigger heatmap. Row of day-cells, ochre at bucketed
+	/* CIPH-pi19-C - trigger heatmap. Row of day-cells, ochre at bucketed
 	   opacity. Empty cells render as a hairline so the strip's spatial
 	   meaning (left = day 1 → right = day N) is preserved even on a
 	   silent month. Cell heights are intentionally squat to read as a

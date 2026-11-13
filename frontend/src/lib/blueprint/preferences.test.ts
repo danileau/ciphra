@@ -1,5 +1,5 @@
 /**
- * CIPH-pi18-3 — Unset-discriminator contract for the two settings-driven
+ * CIPH-pi18-3 - Unset-discriminator contract for the two settings-driven
  * blueprint preferences.
  *
  * Both `dateFormat` and `primaryBrowseSurface` use the same persistence
@@ -64,7 +64,7 @@ describe('applyPrimarySurfaceChoice', () => {
 	});
 });
 
-describe('applyWelcomeDismissed (2026-06-12 — durable welcome dismissal)', () => {
+describe('applyWelcomeDismissed (2026-06-12 - durable welcome dismissal)', () => {
 	const bp = { conditionId: 'epilepsy', episodeTypes: [] } as unknown as Blueprint;
 
 	it('records a variant without mutating the input', () => {
@@ -81,7 +81,7 @@ describe('applyWelcomeDismissed (2026-06-12 — durable welcome dismissal)', () 
 	});
 });
 
-describe('formatDateChoice — the canonical day-precision formatter', () => {
+describe('formatDateChoice - the canonical day-precision formatter', () => {
 	const d = new Date(2026, 7, 4, 12); // 4 August 2026
 
 	it('renders each choice', () => {
@@ -103,7 +103,7 @@ describe('formatDateChoice — the canonical day-precision formatter', () => {
 
 	it('every choice carries the year', () => {
 		// The PDF drops locale month names in favour of this, so the year has
-		// to come from the format itself — a 2-year report spans two.
+		// to come from the format itself - a 2-year report spans two.
 		for (const c of ['dd.mm.yyyy', 'dd/mm/yyyy', 'iso', 'us'] as const) {
 			expect(formatDateChoice(d, c)).toContain('2026');
 		}

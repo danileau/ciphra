@@ -1,5 +1,5 @@
 /**
- * CIPH-833 — route-shell registry.
+ * CIPH-833 - route-shell registry.
  *
  * One place to answer three questions per route:
  *   1. Which layout shell wraps it?
@@ -8,7 +8,7 @@
  *
  * Before this module, `+layout.svelte` had a long `currentPath !== …`
  * chain for every redirect guard. Each new route meant patching the
- * chain in several reactive blocks, and we kept forgetting one —
+ * chain in several reactive blocks, and we kept forgetting one -
  * `/migrate` had to be added to the auth allow-list, the blueprint
  * allow-list, and the public-chrome match separately.
  *
@@ -17,15 +17,15 @@
  * `routeShells.test.ts`. That is the single touchpoint.
  *
  * Shell types:
- *   - `landing`      — public marketing shell (/).
- *   - `auth-flow`    — login / migrate / stream join. Centred card,
+ *   - `landing`      - public marketing shell (/).
+ *   - `auth-flow`    - login / migrate / stream join. Centred card,
  *                      public top-nav, no bottom nav.
- *   - `authed-app`   — the signed-in app: top header + optional
+ *   - `authed-app`   - the signed-in app: top header + optional
  *                      bottom nav + main slot.
- *   - `public-doc`   — public reading pages (privacy, terms,
+ *   - `public-doc`   - public reading pages (privacy, terms,
  *                      conditions catalogue).
- *   - `admin`        — authed-app variant for /admin.
- *   - `family-claim` — /join/* family-code claim flow (public,
+ *   - `admin`        - authed-app variant for /admin.
+ *   - `family-claim` - /join/* family-code claim flow (public,
  *                      transitions to authed after claim).
  *
  * `requiresAuth` and `requiresBlueprint` drive the redirect guards
@@ -50,7 +50,7 @@ export interface RouteShellRule {
 }
 
 /**
- * Order matters — the first matching pattern wins. Put narrow
+ * Order matters - the first matching pattern wins. Put narrow
  * patterns before broader catch-alls.
  *
  * The catch-all at the bottom (`/^\//`) resolves to a safe default
@@ -58,7 +58,7 @@ export interface RouteShellRule {
  * rather than leaking past auth/blueprint guards.
  */
 export const ROUTE_SHELLS: RouteShellRule[] = [
-	// Landing — public marketing page at exactly "/" for unauthenticated
+	// Landing - public marketing page at exactly "/" for unauthenticated
 	// visitors. For authed users, "/" is the dashboard and it requires a
 	// blueprint: fresh registrants without one are redirected to /setup so
 	// they don't land on the caregiver-fallback page meant for users who
@@ -77,7 +77,7 @@ export const ROUTE_SHELLS: RouteShellRule[] = [
 	{ pattern: /^\/terms(\/|$)/, shell: 'public-doc', requiresAuth: false, requiresBlueprint: false },
 	{ pattern: /^\/protocol(\/|$)/, shell: 'public-doc', requiresAuth: false, requiresBlueprint: false },
 	{ pattern: /^\/conditions(\/|$)/, shell: 'public-doc', requiresAuth: false, requiresBlueprint: false },
-	// In-app documentation viewer — renders the repo's docs/*.md.
+	// In-app documentation viewer - renders the repo's docs/*.md.
 	{ pattern: /^\/docs(\/|$)/, shell: 'public-doc', requiresAuth: false, requiresBlueprint: false },
 
 	// Family-claim flow. Public: the invitee might not have an account
@@ -90,10 +90,10 @@ export const ROUTE_SHELLS: RouteShellRule[] = [
 	{ pattern: /^\/admin(\/|$)/, shell: 'admin', requiresAuth: true, requiresBlueprint: false },
 
 	// Setup wizard itself is authed-shell but must not require a
-	// blueprint — that is what it is creating.
+	// blueprint - that is what it is creating.
 	{ pattern: /^\/setup(\/|$)/, shell: 'authed-app', requiresAuth: true, requiresBlueprint: false },
 
-	// Settings also does not require a blueprint — caregivers linked
+	// Settings also does not require a blueprint - caregivers linked
 	// to another vault may never set up their own.
 	{ pattern: /^\/settings(\/|$)/, shell: 'authed-app', requiresAuth: true, requiresBlueprint: false },
 

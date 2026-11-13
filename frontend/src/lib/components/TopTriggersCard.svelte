@@ -1,13 +1,13 @@
 <!--
-	pi24 dashboard — TopTriggersCard.
+	pi24 dashboard - TopTriggersCard.
 
 	Rendered when resolvePrimaryDashboardCard returns kind='top-triggers'.
-	Used by migraine and dermatology — cohorts whose clinical workflow IS
+	Used by migraine and dermatology - cohorts whose clinical workflow IS
 	trigger-hunting (see cohort.ts:60). Lists the top 5 recorded triggers
 	with occurrence counts across the last 12 months.
 
 	OBSERVATIONAL copy only. Title is "Top recorded triggers" / "Häufigste
-	erfasste Auslöser" — never "Your triggers" / "Causes" / "What's hitting
+	erfasste Auslöser" - never "Your triggers" / "Causes" / "What's hitting
 	you". Codex flagged this constraint on the campfire round: the
 	dashboard mirrors what the patient has noted, never claims causality
 	the app cannot know. Counts the patient's own observation pattern;
@@ -15,7 +15,7 @@
 
 	Trigger data is dual-shape (array of ids from DayDetail OR object-map
 	from EntryComposer). Only blueprint-declared trigger ids count when
-	reading the object shape — naive truthy scans over-count because
+	reading the object shape - naive truthy scans over-count because
 	EntryComposer's spread-merge grafts list ids onto numeric keys with
 	truthy string values.
 -->
@@ -30,7 +30,7 @@
 	export let bp: Blueprint | null = null;
 	export let windowMonths = 12;
 	export let limit = 5;
-	// CIPH-921b — dashboard accent (the condition color). Falls back to the
+	// CIPH-921b - dashboard accent (the condition color). Falls back to the
 	// global brand accent so the card still renders standalone in tests.
 	export let accentHex: string | null = null;
 

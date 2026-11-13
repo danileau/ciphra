@@ -1,5 +1,5 @@
 /**
- * CIPH-870 — Mobile BottomNav active-state must be reactive.
+ * CIPH-870 - Mobile BottomNav active-state must be reactive.
  *
  * Static parse guards three things:
  *
@@ -8,12 +8,12 @@
  *      (`isActive('/')`). Svelte's template dependency tracking cannot
  *      see through a function body, so the function-call variant never
  *      re-evaluates when the URL pathname changes. That's the bug
- *      the user hit in the field — "Heute" stays lit on every route.
+ *      the user hit in the field - "Heute" stays lit on every route.
  *
  *   2. Each reactive declaration must reference `pathname` directly so
  *      Svelte tracks the dependency.
  *
- *   3. The `/log` matcher must not accidentally shadow `/login` — it
+ *   3. The `/log` matcher must not accidentally shadow `/login` - it
  *      should match `/log` exactly OR paths starting with `/log/`, never
  *      `startsWith('/log')` unqualified.
  */
@@ -36,7 +36,7 @@ describe('CIPH-870 BottomNav reactive active state', () => {
 		({ varName }) => {
 			// Must be a `$:` reactive declaration. The right-hand side may
 			// reference `pathname` directly or a reactive alias of it
-			// (currently `$: p = pathname`) — either way Svelte tracks it.
+			// (currently `$: p = pathname`) - either way Svelte tracks it.
 			const re = new RegExp(`\\$:\\s+${varName}\\s*=`, 'm');
 			expect(SOURCE).toMatch(re);
 		},
@@ -45,7 +45,7 @@ describe('CIPH-870 BottomNav reactive active state', () => {
 	it('has a reactive alias of pathname (or uses pathname directly)', () => {
 		// Ensure the chain actually reaches the URL pathname. SvelteKit 3's
 		// `page` (`$app/state`) is a runes object a `$:` statement cannot
-		// track, so it must come through a store (pageStore) — see
+		// track, so it must come through a store (pageStore) - see
 		// BottomNav.reactivity.test.ts for the behavioural proof.
 		expect(SOURCE).toContain('const urlPathname = pageStore((p) => p.url.pathname);');
 		expect(SOURCE).toContain('$: pathname = $urlPathname');
@@ -61,7 +61,7 @@ describe('CIPH-870 BottomNav reactive active state', () => {
 	);
 
 	it('never calls isActive() from the template (regression guard)', () => {
-		// The old bug: `class:bn-tab--active={isActive('/')}` — the function
+		// The old bug: `class:bn-tab--active={isActive('/')}` - the function
 		// closed over `pathname` but Svelte could not trace the dependency.
 		expect(SOURCE).not.toMatch(/class:bn-tab--active=\{isActive\(/);
 	});

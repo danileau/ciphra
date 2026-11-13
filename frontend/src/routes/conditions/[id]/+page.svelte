@@ -9,7 +9,7 @@
 
 	// NOTE: this page intentionally has NO in-app condition-switch. The
 	// one-blueprint model treats comorbidity as custom items, and a wholesale
-	// switch plain-resets the blueprint — orphaning custom symptoms/triggers
+	// switch plain-resets the blueprint - orphaning custom symptoms/triggers
 	// (the last custom-data-loss vector). Removed 2026-06-20; see
 	// feedback_blueprint_model. The page is informational; the register CTA
 	// below shows to logged-out visitors only.
@@ -39,7 +39,7 @@
 	     subtree (back link, vitals tile, PubMed links, scale chevrons,
 	     CTA shadow) re-resolves to info.color without per-site edits.
 	     The layout's nav header sits OUTSIDE this wrapper so it keeps
-	     invariant rust — nav chrome stays brand. -->
+	     invariant rust - nav chrome stays brand. -->
 	<div
 		class="min-h-screen"
 		style="background: var(--surface);
@@ -208,7 +208,7 @@
 				<Asterisk size={14} color="muted" />
 			</div>
 
-			<!-- CTA — register prompt, logged-out visitors only. A logged-in
+			<!-- CTA - register prompt, logged-out visitors only. A logged-in
 				 user on a condition page just reads the info; no switch, no
 				 register nag. -->
 			{#if !$isAuthenticated}
@@ -226,7 +226,7 @@
 			{/if}
 		</main>
 
-		<!-- CIPH-917 — inline footer (cross-link to other conditions +
+		<!-- CIPH-917 - inline footer (cross-link to other conditions +
 			 disclaimer) removed. PublicFooter from +layout.svelte now
 			 covers the disclaimer (`landing.disclaimer_medical`); the
 			 cross-link list was the "sumup layer" duplicated against

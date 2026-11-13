@@ -3,7 +3,7 @@
  *
  * Creating an invitation and modifying one have to offer the same two options
  * with the same wording. If they drifted, "modify" would show a different
- * promise from the one the person agreed to when they sent the invitation —
+ * promise from the one the person agreed to when they sent the invitation -
  * and the whole point of the modify flow is that they can trust what it says.
  *
  * The behaviour that matters when modifying: the CURRENT scope is preselected.
@@ -41,7 +41,7 @@ describe('the chooser', () => {
 		expect(checked?.value).toBe(String(SHARE_MASK_SHARED_ONLY));
 	});
 
-	it('preselects the scope it is given — the modify case', () => {
+	it('preselects the scope it is given - the modify case', () => {
 		const { container } = render(ScopeChoice, { value: SHARE_MASK_EVERYTHING });
 		const checked = container.querySelector<HTMLInputElement>('input[type="radio"]:checked');
 		expect(

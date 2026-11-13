@@ -10,14 +10,14 @@ memory; this is the forward-looking list.
 
 ---
 
-## Larger items — each is its own project
+## Larger items - each is its own project
 
 Every prompt below is self-contained: paste it to start a fresh session. All
 three respect the repo's hard rules (branch off fresh `origin/main`,
-`/green-gate` before push, never merge/deploy — the operator does that, a
+`/green-gate` before push, never merge/deploy - the operator does that, a
 `changelog.d/` fragment + `version-guard` for user-facing changes).
 
-### 1 — Reproducible builds (JS-swap mitigation) · security · HIGH residual
+### 1 - Reproducible builds (JS-swap mitigation) · security · HIGH residual
 
 The one structural HIGH residual risk in [`THREAT_MODEL.md`](THREAT_MODEL.md)
 (§2.H / §5 / §7 P3). Highest-value security investment left.
@@ -34,7 +34,7 @@ can exfiltrate keys on the next login. The mitigation is reproducible builds plu
 published, signed hashes, so third parties and watchdogs can detect a swap.
 cosign (keyless) already signs the images; CSP runs in mode:'hash'.
 
-Scope (design first — a short concept, then build):
+Scope (design first - a short concept, then build):
 - Eliminate non-determinism in the Vite/SvelteKit output (timestamps, build ids,
   chunk order). Proof: two clean builds of the same commit are byte-identical,
   or the remaining non-determinism is documented.
@@ -54,53 +54,53 @@ Acceptance: a reproducible build demonstrated, the verify procedure documented,
 SRI wired as far as feasible.
 ```
 
-### 2 — Backup tamper-evidence (third hash store) · ops · P2
+### 2 - Backup tamper-evidence (third hash store) · ops · P2
 
 [`THREAT_MODEL.md`](THREAT_MODEL.md) §2.D / §7 P2. Medium size, code-side buildable.
 
 ```
-Goal: tamper-evidence for ciphra's backups — an independent, append-only hash
+Goal: tamper-evidence for ciphra's backups - an independent, append-only hash
 log that lets any backup be verified as unaltered.
 
 Context: THREAT_MODEL.md §2.D + §7 P2. Backups run pg_dump → gzip → age-encrypt
 → rclone to RCLONE_PRIMARY (Infomaniak Swiss Backup) and RCLONE_SECONDARY
-(cross-vendor, active since 2026-08). The gap: no tamper-evidence — a swapped or
+(cross-vendor, active since 2026-08). The gap: no tamper-evidence - a swapped or
 truncated backup only surfaces at restore time. The script is
 golive/backup/backup.sh (gitignored, runs on the VPS; the laptop copy is
-canonical and is rsynced to /opt/ciphra/golive/ — but the VPS copy may carry
+canonical and is rsynced to /opt/ciphra/golive/ - but the VPS copy may carry
 hot-patches, so diff the two before preparing changes).
 
 Scope:
 - Extend backup.sh: after the age-encrypted dump, write its SHA-256 to an
   append-only log in a THIRD location, INDEPENDENT of both backup stores (a
   separate provider, a transparency-style append log, an HC.io or ntfy archive).
-  Independence is the whole point — not Infomaniak, not R2/B2.
+  Independence is the whole point - not Infomaniak, not R2/B2.
 - Add a verify step to the quarterly restore drill: check the restored dump's
   hash against the log.
 - Keep it workable for a solo operator; the age PRIVATE key stays off the VPS.
 
-Rules: golive/ is gitignored, so prepare the script and hand it over — the
+Rules: golive/ is gitignored, so prepare the script and hand it over - the
 OPERATOR installs and rsyncs it (the assistant never SSHes to the VPS). Update
 OPERATIONS.md (backup section) and THREAT_MODEL.md §7 P2 when done (P2 → done).
 Acceptance: backup.sh writes one hash per run to the independent store; the
 verify step exists; docs updated.
 ```
 
-### 3 — SEO / SSR-landing architectural fix · product
+### 3 - SEO / SSR-landing architectural fix · product
 
 The biggest product lever. A prior SSR landing was shipped then reverted because
 it broke registration (operator memory `project_seo_state`). Partly addressed
 since: #235 (1.5.2) renders each public page's `<title>`, description and
 canonical in the SSR `<head>`, outside the auth gate, and fixed the site-wide
 `canonical=/`. The page **body** is still gated behind `$authReady` and empty
-in SSR, so crawlers see metadata but no content — that is what is left.
+in SSR, so crawlers see metadata but no content - that is what is left.
 
 ```
 Goal: server-render or prerender the public landing page (and the public docs)
 for SEO, WITHOUT breaking the client-side zero-knowledge registration and auth
 flow.
 
-Context: memory project_seo_state — an SSR landing was shipped once and then
+Context: memory project_seo_state - an SSR landing was shipped once and then
 REVERTED because it broke registration. The SEO foundation is shipped (PR #40),
 and #235 moved per-page <title>/description/canonical into the root layout's
 head, outside the $authReady gate (lib/seoMeta.ts). The body is still gated, so
@@ -108,7 +108,7 @@ SSR HTML has metadata but no indexable content. Stack: SvelteKit 3 +
 adapter-node 6; crypto and registration run client-side by design (WebCrypto /
 Argon2 WASM).
 
-Scope (design first — start by establishing why the earlier attempt was
+Scope (design first - start by establishing why the earlier attempt was
 reverted, from the git history):
 - Likely cause: SSR of the landing touched auth stores or browser-only crypto
   during render, or a hydration mismatch. Verify before building.
@@ -118,7 +118,7 @@ reverted, from the git history):
   prerendering is the safest option: no runtime SSR, no auth interference.
 - CSP must not loosen; no new origins without a matching connect-src entry.
 Verification: registration and login demonstrably intact (e2e); the landing HTML
-contains indexable content and meta tags; visual smoke (green ≠ shipped — a real
+contains indexable content and meta tags; visual smoke (green ≠ shipped - a real
 browser eyeball, e2e/visual-smoke.spec.ts).
 
 Rules: branch off fresh origin/main; /green-gate and visual smoke before push;
@@ -130,29 +130,29 @@ registration and login flow is intact per e2e; CSP unchanged; documented.
 
 ---
 
-## Operator-only actions (no code — the assistant can't do these)
+## Operator-only actions (no code - the assistant can't do these)
 
-- **Age-key rotation reminder** — currently manual; add a calendar entry or a
+- **Age-key rotation reminder** - currently manual; add a calendar entry or a
   cron→ntfy (Dec 15 / Jun 15). [`OPERATIONS.md`](OPERATIONS.md) Future work.
 - **Hardware-key 2FA** for the Cloudflare + Infomaniak accounts
-  ([`THREAT_MODEL.md`](THREAT_MODEL.md) §7 P3) — "when the YubiKey arrives".
+  ([`THREAT_MODEL.md`](THREAT_MODEL.md) §7 P3) - "when the YubiKey arrives".
 - **Verify logrotate is installed** on the VPS (rotated `ciphra-*.log.1` files
   suggest it runs; confirm `/etc/logrotate.d/ciphra` exists).
 
-## Decided — do NOT re-propose
+## Decided - do NOT re-propose
 
-- **Per-invite sharing scope** — built and merged (#176, 2026-08-30). The owner
+- **Per-invite sharing scope** - built and merged (#176, 2026-08-30). The owner
   picks at invitation time whether a family grant may read the diary and locked
   entries, and the server enforces it via one metadata bit per document. The
   operator approved that one-bit disclosure; **a full per-type label is NOT
-  approved** — it would tell the server the type of every document. Encrypting
+  approved** - it would tell the server the type of every document. Encrypting
   the personal class under a separate key remains the unbuilt endgame (MAJOR:
   key hierarchy + re-encryption migration).
 
-- **SBOM generation in CI** — declined (Trivy already covers CVE detection; SBOM
+- **SBOM generation in CI** - declined (Trivy already covers CVE detection; SBOM
   is provenance-only and not wanted). 2026-08-23.
-- **HSTS preload list submission** — skipped; the `preload` header stays (protects
+- **HSTS preload list submission** - skipped; the `preload` header stays (protects
   returning visitors), no ~2-year list lock-in. 2026-08-23.
-- **security-monitor edge-header leg** — accepted as inconclusive from CI
+- **security-monitor edge-header leg** - accepted as inconclusive from CI
   (Free-plan Bot Fight can't be reliably skipped; the header config is CI-guarded
   and the CF-only TLS drift is covered). 2026-08-23.

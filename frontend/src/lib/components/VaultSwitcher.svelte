@@ -1,17 +1,17 @@
 <!--
-	Vault switcher — "Ansicht: <account>" in the app header.
+	Vault switcher - "Ansicht: <account>" in the app header.
 
 	Was a native <select> with `bg-transparent`. That is the trap app.css
 	documents at ═══ STYLED SELECT ═══ and the one LocaleSelect was built for:
 	a <select> can be styled at rest, but the OPTIONS PANEL is browser chrome
 	the cascade cannot reach. With no background of its own the panel fell back
-	to UA defaults — worst in dark mode, where the options rendered light
+	to UA defaults - worst in dark mode, where the options rendered light
 	chrome under near-white text and the whole thing read as broken.
 
 	So it follows LocaleSelect: a role="combobox" trigger plus a role="listbox"
 	popover, every pixel ours and identical in both themes. The README's rule
-	for when to do this — custom listbox for high-visibility chrome, native
-	<select> only in form context — puts the switcher here: it is header
+	for when to do this - custom listbox for high-visibility chrome, native
+	<select> only in form context - puts the switcher here: it is header
 	chrome, and it is the caregiver's primary mode control.
 
 	Third listbox in the codebase after LocaleSelect and ExportPeriodPopover.
@@ -171,7 +171,7 @@
 		display: inline-block;
 	}
 
-	/* Trigger — the closed pill. Same shape as before; the colours now come
+	/* Trigger - the closed pill. Same shape as before; the colours now come
 	   from tokens in both themes rather than a hardcoded light-ochre tint. */
 	.vault-trigger {
 		display: inline-flex;
@@ -240,7 +240,7 @@
 		transform: rotate(180deg);
 	}
 
-	/* The label is the first thing to go when the header gets tight — the
+	/* The label is the first thing to go when the header gets tight - the
 	   account name and the eye icon still say what this is. */
 	@media (max-width: 639px) {
 		.vault-viewing {
@@ -248,7 +248,7 @@
 		}
 	}
 
-	/* Panel — ours, not the browser's. Every colour is a token, so it is
+	/* Panel - ours, not the browser's. Every colour is a token, so it is
 	   correct in both themes by construction. */
 	.vault-listbox {
 		position: absolute;

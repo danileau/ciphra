@@ -1,10 +1,10 @@
 <!--
-	CIPH-920 — Dashboard "Muster" (patterns) section.
+	CIPH-920 - Dashboard "Muster" (patterns) section.
 
 	Renders the capability-driven insight cards computed by
 	$lib/blueprint/insights.ts below the dashboard's primary card. Each card
 	is a plain-language takeaway + a small CSS/SVG viz (deliberately NOT
-	Chart.js — the CIPH-900 declutter lesson was "insight over raw charts").
+	Chart.js - the CIPH-900 declutter lesson was "insight over raw charts").
 	The section renders nothing when no insight qualifies (no gaslighting
 	empty state). Cohort-agnostic: the engine gates per blueprint capability,
 	so this same component enriches epilepsy, migraine, parkinson, diabetes …
@@ -77,7 +77,7 @@
 					<p class="insight-sub">{$t('insight.trigger_sub')}</p>
 					<!-- Bars encode the relative LIFT (how much more often the
 					     outcome occurs with the trigger), normalised to the
-					     strongest row — not the absolute incidence. Absolute
+					     strongest row - not the absolute incidence. Absolute
 					     incidence saturates near 100% for everything when the
 					     outcome is common, so the bars all read full and convey
 					     nothing; lift is the differentiator the badge shows. A
@@ -176,7 +176,7 @@
 			</div>
 		{/each}
 
-		<!-- CIPH-920 — observational disclaimer. These cards surface
+		<!-- CIPH-920 - observational disclaimer. These cards surface
 		     associations in the user's own logged data; they are NOT a
 		     diagnosis or medical evidence. One note for the whole section
 		     keeps it honest without nagging per card. Aligns with the

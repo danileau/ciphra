@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { t } from '#lib/i18n/index.ts';
 	/**
-	 * CIPH-834 — Modal primitive.
+	 * CIPH-834 - Modal primitive.
 	 *
 	 * Centred dialog over a translucent backdrop. Used for short,
 	 * focused tasks that need to block the rest of the UI (the
 	 * `/migrate` post-import tour is the canonical site). The
-	 * bottom-sheet quick-add on the dashboard is NOT a modal — it
+	 * bottom-sheet quick-add on the dashboard is NOT a modal - it
 	 * uses its own mobile-bottom chrome.
 	 *
 	 * Esc + backdrop click both close when `dismissable` (default
 	 * true). Set `dismissable={false}` for modals that require an
-	 * explicit action (rare — prefer a button that writes state and
+	 * explicit action (rare - prefer a button that writes state and
 	 * then the caller flips `open=false`).
 	 *
 	 * `title` is used for both the visible `<h1>` and the
@@ -112,7 +112,7 @@
 	     (z-[70]) so feedback stays visible. The overlay scrolls and the card
 	     centres with `m-auto` rather than `items-center`: flex-centring a card
 	     taller than the viewport clips its top and bottom with no way to
-	     scroll to them — the medication change dialog on a phone. -->
+	     scroll to them - the medication change dialog on a phone. -->
 	<div
 		class="fixed inset-0 z-[65] flex overflow-y-auto p-4"
 		style="background: rgba(0,0,0,0.45)"

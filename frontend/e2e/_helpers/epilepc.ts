@@ -1,5 +1,5 @@
 /**
- * INC-001 — helpers for driving the REAL epilepc stack from Playwright.
+ * INC-001 - helpers for driving the REAL epilepc stack from Playwright.
  *
  * The point of this file is fidelity. The reproduction does not stub epilepc:
  * it logs in through the real `LoginFormAuthenticator`, mints the token
@@ -8,7 +8,7 @@
  * what lets the test assert the reporter's exact database fingerprint rather
  * than a lookalike.
  *
- * Stack: `epilepc/docker-compose.yml` — app on :8081, MariaDB on :3307.
+ * Stack: `epilepc/docker-compose.yml` - app on :8081, MariaDB on :3307.
  *   docker compose up -d --build
  *   docker compose exec app bin/console app:seed-demo --users=1
  */
@@ -18,7 +18,7 @@ import type { Page } from '@playwright/test';
 export const EPILEPC_COMPOSE =
 	process.env.EPILEPC_COMPOSE || '/home/danileau/work/epilepc/docker-compose.yml';
 
-/** Host:port the epilepc container actually serves on — the "www" side. */
+/** Host:port the epilepc container actually serves on - the "www" side. */
 export const EPILEPC_HOST = process.env.EPILEPC_HOST || 'localhost:8081';
 
 /** Seeded demo credentials (`SeedDemoDataCommand`). */
@@ -82,7 +82,7 @@ export function countSourceRecords(email: string = DEMO_EMAIL): {
 	medications: number;
 	diary: number;
 } {
-	// `event` and `user` are reserved words in MariaDB — always backtick.
+	// `event` and `user` are reserved words in MariaDB - always backtick.
 	const q = (table: string) =>
 		Number(
 			epilepcSql(
@@ -102,8 +102,8 @@ export function countSourceRecords(email: string = DEMO_EMAIL): {
 /**
  * Put epilepc into a known pre-migration state for the demo user.
  *
- * `profile.html.twig` renders the "already migrated" completion card — with
- * NO create-link button — whenever `user.migrated_at` is set. A previous run
+ * `profile.html.twig` renders the "already migrated" completion card - with
+ * NO create-link button - whenever `user.migrated_at` is set. A previous run
  * that completed a migration therefore makes the next run unrunnable. Clearing
  * it (and the user's old tokens) keeps the reconstruction deterministic and
  * repeatable, which is the whole point of a regression test.
@@ -111,7 +111,7 @@ export function countSourceRecords(email: string = DEMO_EMAIL): {
 export function resetMigrationState(email: string = DEMO_EMAIL): void {
 	const safe = email.replace(/'/g, "''");
 	// Expire prior tokens rather than deleting them. `findActiveForUser`
-	// requires `expires_at > now`, so an expired row is never handed back —
+	// requires `expires_at > now`, so an expired row is never handed back -
 	// but it survives for the evidence table at the end of the run, which is
 	// the whole point: the RED row (all NULL) next to the GREEN row (fully
 	// stamped) is what gets compared against the production table.
@@ -125,7 +125,7 @@ export function resetMigrationState(email: string = DEMO_EMAIL): void {
 }
 
 /**
- * Log into epilepc and mint a migration link through the real UI — the exact
+ * Log into epilepc and mint a migration link through the real UI - the exact
  * path the reporter took. Returns the raw URL from the `#migrate-url` field of
  * `migrate_link.html.twig`.
  *
@@ -145,14 +145,14 @@ export async function mintMigrationLink(page: Page): Promise<string> {
 	// Fail loudly and specifically instead of timing out on a missing button:
 	// the two realistic causes are a failed login and an already-migrated user.
 	if (/\/login/.test(page.url())) {
-		throw new Error(`epilepc login failed for ${DEMO_EMAIL} — landed on ${page.url()}`);
+		throw new Error(`epilepc login failed for ${DEMO_EMAIL} - landed on ${page.url()}`);
 	}
 	const mintButton = page.getByRole('button', { name: /Migrationslink erstellen/i });
 	if ((await mintButton.count()) === 0) {
 		const migrated = await page.getByText(/zu ciphra übertragen/i).count();
 		throw new Error(
 			migrated > 0
-				? 'user is already migrated (migrated_at set) — call resetMigrationState() first'
+				? 'user is already migrated (migrated_at set) - call resetMigrationState() first'
 				: 'mint button not found on /app/account (lifecycle phase?)',
 		);
 	}
@@ -180,7 +180,7 @@ export async function withBrokenSourceTable<T>(fn: () => Promise<T>): Promise<T>
 	try {
 		return await fn();
 	} finally {
-		// finally, not catch — the table comes back even if the assertion throws.
+		// finally, not catch - the table comes back even if the assertion throws.
 		epilepcSql('RENAME TABLE `seizure_inc001_tmp` TO `seizure`');
 	}
 }

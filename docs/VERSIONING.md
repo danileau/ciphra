@@ -2,7 +2,7 @@
 
 ciphra uses [Semantic Versioning](https://semver.org): **`MAJOR.MINOR.PATCH`**.
 One version number covers the whole product (frontend + API + nginx ship
-together as one release — they are versioned in lockstep, never independently).
+together as one release - they are versioned in lockstep, never independently).
 
 The single source of truth is the [`VERSION`](../VERSION) file at the repo
 root. `frontend/package.json` mirrors it, and CI fails if they disagree
@@ -11,9 +11,9 @@ root. `frontend/package.json` mirrors it, and CI fails if they disagree
 ## What each bump means
 
 The question that decides the bump is **"what does this change do to a user's
-data or workflow?"** — not how much code moved.
+data or workflow?"** - not how much code moved.
 
-### MAJOR (`X`) — breaking
+### MAJOR (`X`) - breaking
 
 Bump MAJOR when an existing user must do something, or could lose access to
 data, if they don't. In a zero-knowledge app that is a high bar, and most of it
@@ -30,7 +30,7 @@ is about the encrypted data contract:
 
 MAJOR releases must name the required user/operator action in the changelog.
 
-### MINOR (`Y`) — feature, backward compatible
+### MINOR (`Y`) - feature, backward compatible
 
 Bump MINOR for a **new user-facing capability** that older data keeps working
 under:
@@ -41,7 +41,7 @@ under:
 
 If a user would notice "ciphra can now do X", it's a MINOR.
 
-### PATCH (`Z`) — fix, no new capability
+### PATCH (`Z`) - fix, no new capability
 
 Bump PATCH for changes that make the **same** product work correctly or
 better:
@@ -66,7 +66,7 @@ contributed since the last release:
 | `perf`, `refactor`, `style`, `a11y` | PATCH |
 | `docs`, `test`, `chore`, `build`, `ci` | none on their own (fold into the next release) |
 
-`0.y.z` caveat — **no longer in force.** While the major was `0`, a breaking
+`0.y.z` caveat - **no longer in force.** While the major was `0`, a breaking
 change bumped MINOR (`0.1.0 → 0.2.0`) rather than MAJOR. ciphra moved to the
 `1.x` line at **1.3.0** (2026-08-30), so the table above now applies in full: a
 break in the encrypted-data or API contract bumps MAJOR.
@@ -86,41 +86,41 @@ implements that table, case by case. It prints a suggestion and changes
 nothing.
 
 1. On your feature branch, decide the bump. `scripts/version-next.sh` will
-   suggest one from the commit prefixes — it is **advisory**, and nothing fails
+   suggest one from the commit prefixes - it is **advisory**, and nothing fails
    if you disagree with it. What a version says to a user is a judgement, and
    the operator makes it.
 2. Run `node scripts/changelog.mjs release X.Y.Z`. It moves every pending
-   entry — the fragments in [`changelog.d/`](../changelog.d/README.md), plus
-   anything still under `[Unreleased]` in [`CHANGELOG.md`](../CHANGELOG.md) —
-   into a new `## [X.Y.Z] — YYYY-MM-DD` section, resets `[Unreleased]`, updates
+   entry - the fragments in [`changelog.d/`](../changelog.d/README.md), plus
+   anything still under `[Unreleased]` in [`CHANGELOG.md`](../CHANGELOG.md) -
+   into a new `## [X.Y.Z] - YYYY-MM-DD` section, resets `[Unreleased]`, updates
    the link references at the bottom, deletes the fragments, and sets
    [`VERSION`](../VERSION) and `frontend/package.json` `"version"`. Read the new
    section before committing; add a short intro paragraph if the release
    deserves one. (`node scripts/changelog.mjs preview` shows it beforehand;
    `--date YYYY-MM-DD` overrides today's date on the section.)
-3. Commit as `release: X.Y.Z` — the release PR is the one PR that edits
+3. Commit as `release: X.Y.Z` - the release PR is the one PR that edits
    `CHANGELOG.md` directly (`changelog-guard.sh` recognises it by its `VERSION`
    change, not by the title).
 4. Open the PR. The `version-guard` CI job checks that `VERSION`,
    `frontend/package.json` and the changelog agree, and that the section is
    dated. It does not second-guess the number. The operator merges it.
 5. `Release images` then tags the three images `:X.Y.Z` (plus `:<sha>` and
-   `:latest`) and cosign-signs them. That part is automatic — an image without
+   `:latest`) and cosign-signs them. That part is automatic - an image without
    a standardized tag is useless, and there is no judgement in it.
    The deploy wizard warns about both halves of this before it pushes
    anything: a commit carrying `changelog.d/` fragments that no release has
    compiled, and a `VERSION` whose tag was never minted
-   (`scripts/release-state.sh`). Warnings, not blocks — shipping ahead of a
+   (`scripts/release-state.sh`). Warnings, not blocks - shipping ahead of a
    release is a legitimate choice; not noticing is not.
 6. **Mint the release tag by hand**, when you decide the release is a release:
    Actions → **Release tag** → *Run workflow*, or from a terminal
    `gh workflow run release-tag.yml --ref main`. It creates the annotated
    `vX.Y.Z` tag and publishes a GitHub release whose body is that version's
-   changelog section — which is what the `[X.Y.Z]` links at the bottom of
+   changelog section - which is what the `[X.Y.Z]` links at the bottom of
    `CHANGELOG.md` point at. Give it a `version` and `sha` to tag something
    other than the current `VERSION` on the default branch; it skips silently
    if the tag already exists, so re-running is safe. Until it runs, the new
-   `[X.Y.Z]` link and the `[Unreleased]` compare link are dead — and a merge
+   `[X.Y.Z]` link and the `[Unreleased]` compare link are dead - and a merge
    never creates the tag, so never report one as if it had.
 7. Deploy with `scripts/deploy-wizard.sh` as always (the CD trigger is still the
    `deploy-<sha>` tag; the `:X.Y.Z` image tag is the human-readable name for
@@ -146,7 +146,7 @@ Users read what shipped at **`/docs` → Changelog** (in-app) and in
 ## Changelog entries: one file per change
 
 A change a user would notice gets its changelog entry **in the same PR**, as a
-new file in [`changelog.d/`](../changelog.d/README.md) — written like a slice of
+new file in [`changelog.d/`](../changelog.d/README.md) - written like a slice of
 the changelog (`### Fixed` + `- ` entries). Not in `CHANGELOG.md`: every PR that
 edited its `[Unreleased]` block conflicted with every other open PR, and on
 2026-09-16 resolving one of those conflicts in GitHub's editor silently dropped
@@ -163,7 +163,7 @@ all of #192's entries. New files never conflict; the release PR compiles them.
   `VERSION` isn't valid SemVer, if `frontend/package.json` disagrees, or if
   `CHANGELOG.md` has no dated section for the current `VERSION`. It checks that
   the three places **agree**; it does not judge whether the number is the one
-  the commits imply. That check existed briefly and was removed on 2026-08-30 —
+  the commits imply. That check existed briefly and was removed on 2026-08-30 -
   see the release process above.
 - **Changelog fragments** (same job): `scripts/changelog-guard.sh` fails a PR
   that has `feat`/`fix` commits (or a `feat`/`fix` title) but adds no
@@ -175,7 +175,7 @@ all of #192's entries. New files never conflict; the release PR compiles them.
   `scripts/test-changelog.sh` proves both scripts do what this section says.
 - **Why those two block a merge**: `version-guard` is a *required status check*
   in the `main-protection` ruleset (added 2026-09-19). Until then the job ran,
-  went red on a PR with no fragment, and the merge button stayed green anyway —
+  went red on a PR with no fragment, and the merge button stayed green anyway -
   the guard was advisory by accident, which is exactly what it was written to
   stop. A job that is not in that list cannot enforce anything, whatever its
   comment says.
@@ -185,7 +185,7 @@ The operator additionally runs a local pre-commit guard that refuses a
 `feat:`/`fix:` commit which stages neither a `changelog.d/` fragment nor
 `CHANGELOG.md`, so the entry gets written *as the change is made* rather than
 remembered at release time. That guard is workstation-local and not part of
-this repository, and it never sees a conflict resolved in GitHub's web editor —
+this repository, and it never sees a conflict resolved in GitHub's web editor -
 CI is what binds everyone.
 
 So an image without a standardized `X.Y.Z` tag cannot be produced, a version
@@ -195,17 +195,17 @@ without one.
 ## The database schema has its own version
 
 The product version above says what changed *for a user*. It says nothing about
-whether a given database can be read by a given image — and that question has a
+whether a given database can be read by a given image - and that question has a
 real answer here, because the deploy rolls back on its own when a health check
 fails. A release that adds a column and then fails leaves the **previous** image
 running against the **newer** schema.
 
 So the schema carries its own counter, independent of `VERSION`:
 
-- **`api/server.py` → `MIGRATIONS`** — a numbered, ordered ledger. Each entry is
+- **`api/server.py` → `MIGRATIONS`** - a numbered, ordered ledger. Each entry is
   `(number, name, sql, compatible)`. `SCHEMA_VERSION` is the highest number, and
   is what an image advertises (9 as of 1.5.3, 10 from the proof-not-key fix).
-- **`schema_meta`** — one row in the database recording `version` (how far it has
+- **`schema_meta`** - one row in the database recording `version` (how far it has
   been migrated) and `min_app_schema` (the lowest image that may still read it).
 - **`init_db()`** applies everything above the recorded version, in order, and
   stamps the result. Statements stay idempotent because databases that predate
@@ -215,8 +215,8 @@ So the schema carries its own counter, independent of `VERSION`:
 
 | | Meaning | Effect on an older image |
 |---|---|---|
-| `True` | additive — a nullable column, a new index | It runs. Code that predates the column never selects it. A warning is logged, because it means a rollback happened. |
-| `False` | destructive or semantic — the old code would misread it | It **refuses to start**, and says to roll forward or restore from the pre-release backup. |
+| `True` | additive - a nullable column, a new index | It runs. Code that predates the column never selects it. A warning is logged, because it means a rollback happened. |
+| `False` | destructive or semantic - the old code would misread it | It **refuses to start**, and says to roll forward or restore from the pre-release backup. |
 
 Refusing on *any* mismatch would be the wrong reflex: it would turn the
 auto-rollback safety net into an outage, since the rollback target would refuse
@@ -228,6 +228,6 @@ the box. A mismatch there is the tell that a rollback left an older image on a
 newer schema.
 
 **To add a migration:** append with the next number, set `compatible` honestly,
-bump `SCHEMA_VERSION`. Never renumber or edit a shipped migration — databases in
+bump `SCHEMA_VERSION`. Never renumber or edit a shipped migration - databases in
 the field have already recorded it. `api/tests/test_schema_version.py` enforces
 the contiguity, the idempotence, and the compatibility behaviour.

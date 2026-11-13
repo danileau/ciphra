@@ -1,5 +1,5 @@
 /**
- * Offline-write outbox — documents.save/updateDoc/remove must queue (not lose)
+ * Offline-write outbox - documents.save/updateDoc/remove must queue (not lose)
  * a write when the server is unreachable, render it optimistically, and replay
  * it in order on flushOutbox(). See lib/outbox.ts + the offline branches in
  * documents.ts.
@@ -124,7 +124,7 @@ describe('documents offline outbox', () => {
 		expect(h.rows[0].op).toBe('create');
 	});
 
-	it('does NOT queue a genuine client error (401) — it fails', async () => {
+	it('does NOT queue a genuine client error (401) - it fails', async () => {
 		const documents = await freshStore();
 		api.state.store = async () => ({ ok: false, status: 401, data: { error: 'unauthorized' } });
 
@@ -207,7 +207,7 @@ describe('documents offline outbox', () => {
 		const ok = await documents.updateDoc(tempDoc.id, { type: 'entry', text: 'final' });
 		expect(ok).toBe(true);
 
-		// Still a single create, now carrying the edited ciphertext — not a
+		// Still a single create, now carrying the edited ciphertext - not a
 		// separate update op against a bogus negative server id.
 		expect(h.rows.length).toBe(1);
 		expect(h.rows[0].op).toBe('create');

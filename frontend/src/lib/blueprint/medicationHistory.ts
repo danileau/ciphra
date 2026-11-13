@@ -6,8 +6,8 @@ import { toLocalISODate } from '#lib/date.ts';
  *
  * Before this, a medication was one `{ dose, schedule }` record and no logged
  * day stored a dose. Editing "10 mg" to "12 mg" therefore rewrote every past
- * day to 12 mg — the doctor PDF showed a titration that never happened as a
- * dose that was always taken — and deleting the medication dropped it from
+ * day to 12 mg - the doctor PDF showed a titration that never happened as a
+ * dose that was always taken - and deleting the medication dropped it from
  * every report, although the days logged against it were still there.
  *
  * The model now: a medication keeps ONE id for life and carries `periods`,
@@ -18,7 +18,7 @@ import { toLocalISODate } from '#lib/date.ts';
  * visible wherever a date is.
  *
  * History runs backwards too (2026-09-19): a medication's development before
- * ciphra — earlier doses, and drugs tried and stopped long ago — is entered
+ * ciphra - earlier doses, and drugs tried and stopped long ago - is entered
  * afterwards and marked `reported`. Those periods say what applied; they
  * never say a day was logged. See `prependPeriod` / `createPastMedication`.
  *
@@ -44,7 +44,7 @@ function byFrom(a: MedicationPeriod, b: MedicationPeriod): number {
 
 /** The medication's periods, oldest first. A medication saved before dose
  *  history existed has none stored; it reads as a single period with no start
- *  and no end, carrying its one dose — which is exactly what the old model
+ *  and no end, carrying its one dose - which is exactly what the old model
  *  asserted about it. */
 export function medPeriods(med: MedicationSlot): MedicationPeriod[] {
 	if (med.periods && med.periods.length > 0) return coalesce([...med.periods].sort(byFrom));
@@ -58,7 +58,7 @@ const sameRegimen = (a: MedicationPeriod, b: MedicationPeriod) =>
  *  to what already applied (10 mg → 8 mg, then 8 mg → 8 mg the next day) is
  *  not a step anyone took; showing it as one misstates the history. Applied on
  *  read, so data saved with such a step reads cleanly, and on write, so it is
- *  not stored again. A switch boundary is kept even with equal doses — it
+ *  not stored again. A switch boundary is kept even with equal doses - it
  *  links two different medications, and so is a boundary between remembered
  *  and tracked history: joining those would claim days were logged that never
  *  were. */
@@ -127,7 +127,7 @@ export function isTrackedOn(med: MedicationSlot, date: string): boolean {
 	return !!p && !p.reported;
 }
 
-/** True for a medication with one period and no recorded start or end — the
+/** True for a medication with one period and no recorded start or end - the
  *  shape of everything saved before dose history, and of a medication added
  *  without a start date. It applies on any day, known or not. */
 export function isUnbounded(med: MedicationSlot): boolean {
@@ -144,9 +144,9 @@ export function medStartDate(med: MedicationSlot): string | null {
 export type MedStatus = 'active' | 'upcoming' | 'stopped';
 
 /** Where the medication stands on `date`:
- *  - `active` — a period covers the day;
- *  - `upcoming` — every period starts later (added with a future start);
- *  - `stopped` — it was taken before and nothing covers the day (stopped, or
+ *  - `active` - a period covers the day;
+ *  - `upcoming` - every period starts later (added with a future start);
+ *  - `stopped` - it was taken before and nothing covers the day (stopped, or
  *    paused in a gap before a planned resume). */
 export function medStatusOn(med: MedicationSlot, date: string): MedStatus {
 	if (isActiveOn(med, date)) return 'active';
@@ -161,7 +161,7 @@ export interface PlannedChange {
 	next: MedicationPeriod | null;
 }
 
-/** The next change after `date` that is already recorded — a dose change or
+/** The next change after `date` that is already recorded - a dose change or
  *  stop entered ahead of time ("ab morgen 12 mg"). Null when nothing is
  *  planned. */
 export function plannedChange(med: MedicationSlot, date: string): PlannedChange | null {
@@ -280,7 +280,7 @@ export function applyDoseChange(med: MedicationSlot, change: DoseChange): Medica
 
 /** Record that the medication is no longer taken from `from` on (the first day
  *  WITHOUT it). Returns null when that would leave no day on which it was ever
- *  taken — that is not a stop, it is a mistaken medication, and the caller
+ *  taken - that is not a stop, it is a mistaken medication, and the caller
  *  should offer delete instead. */
 export function applyStop(
 	med: MedicationSlot,
@@ -297,7 +297,7 @@ export function applyStop(
 
 /** Earliest valid effective date for a stop or change: the day after the
  *  medication's recorded start (a change ON the start day would replace the
- *  whole history — that is a correction, not a change). Null = no lower bound
+ *  whole history - that is a correction, not a change). Null = no lower bound
  *  (start unknown). */
 export function earliestChangeDate(med: MedicationSlot): string | null {
 	const start = medStartDate(med);
@@ -322,7 +322,7 @@ export function applySwitch(
 }
 
 /** Fix a typo: rename, and/or overwrite the dose + schedule of the LATEST
- *  period in place. Deliberately retroactive — every day in that period now
+ *  period in place. Deliberately retroactive - every day in that period now
  *  reads the corrected value. The guided dialog labels it as such. */
 export function applyCorrection(
 	med: MedicationSlot,
@@ -337,7 +337,7 @@ export function applyCorrection(
 
 /** Undo the most recent recorded step: a stop is lifted (the last period runs
  *  on), otherwise the newest period is removed and the one before it re-opens
- *  — unless a gap separated them, in which case the earlier stop stands.
+ *  - unless a gap separated them, in which case the earlier stop stands.
  *  Null when there is nothing to undo. */
 export function undoLastChange(med: MedicationSlot): MedicationSlot | null {
 	const periods = clonePeriods(med);
@@ -363,7 +363,7 @@ export function undoLastChange(med: MedicationSlot): MedicationSlot | null {
 /**
  * What the person remembers about a dose they took before ciphra recorded
  * anything. `to` defaults to the day before the earliest recorded day, so the
- * usual case — "and before that I was on 10 mg" — needs one date, or none at
+ * usual case - "and before that I was on 10 mg" - needs one date, or none at
  * all when the start is a blur.
  */
 export interface HistoryEntry {
@@ -380,16 +380,16 @@ export interface HistoryEntry {
 
 /**
  * Add a dose period BEFORE everything already recorded, and return the new
- * medication — or null when the dates cannot be squared with the history that
+ * medication - or null when the dates cannot be squared with the history that
  * exists.
  *
  * Deliberately not `applyDoseChange` with an old date: that one runs through
  * `truncateBefore` and drops every period from the given day on, because a
  * change is the truth from that day forward. Backfilling is the opposite
- * claim — it says what came before, and must leave every recorded day alone.
+ * claim - it says what came before, and must leave every recorded day alone.
  *
  * A medication whose start ciphra never learned (no `from` on its first
- * period — the shape of every medication added without a start date) covers
+ * period - the shape of every medication added without a start date) covers
  * all of the past, so nothing can sit in front of it. Recording earlier
  * history therefore gives that period the start it was missing: the day after
  * the remembered one ends. The dialog says so before saving.
@@ -431,7 +431,7 @@ export interface PastMedication {
 	asNeeded: boolean;
 	/** First day taken; omit when it is no longer known. */
 	from?: string;
-	/** Last day taken — a medication from the past has one by definition. */
+	/** Last day taken - a medication from the past has one by definition. */
 	to: string;
 	fromPrecision?: 'month';
 	toPrecision?: 'month';
@@ -464,7 +464,7 @@ export function createPastMedication(id: string, input: PastMedication): Medicat
 	);
 }
 
-/** Drop one remembered period — the undo for a backfill that came out wrong.
+/** Drop one remembered period - the undo for a backfill that came out wrong.
  *  Only a remembered period can go: recorded history is never removed this
  *  way. Dates on the other periods stay as they are, including a start that
  *  the backfill established: that is what the person said, and guessing it
@@ -480,7 +480,7 @@ export function removeReportedPeriod(med: MedicationSlot, index: number): Medica
 
 /** The span every medication together covers, for a report about the therapy
  *  itself rather than about a month. `from` is null when any period has no
- *  recorded start — the history reaches further back than anyone can say.
+ *  recorded start - the history reaches further back than anyone can say.
  *  `knownFrom` is the earliest date that IS recorded, so a drawing still has
  *  a left edge to work from. `to` runs to today, or further when a change is
  *  already planned. */
@@ -526,7 +526,7 @@ const regimen = (p: MedicationPeriod) => ({ dose: p.dose, schedule: p.schedule }
 
 /** Every recorded start, dose change and stop, oldest first, optionally
  *  limited to changes taking effect within `[range.from, range.to]`. An
- *  unknown start produces no event — there is no date to put it on. */
+ *  unknown start produces no event - there is no date to put it on. */
 export function medicationChanges(
 	meds: MedicationSlot[],
 	range: { from?: string; to?: string } = {},
@@ -580,7 +580,7 @@ export function medIds(med: MedicationSlot): string[] {
 	return [med.id, ...(med.mergedIds ?? [])];
 }
 
-/** The id of the configured medication an id logged on some day belongs to —
+/** The id of the configured medication an id logged on some day belongs to -
  *  itself, or the medication it was combined into. Unknown ids pass through
  *  (preset rescue medications, deleted medications). */
 export function canonicalMedId(meds: MedicationSlot[] | null | undefined, id: string): string {
@@ -588,7 +588,7 @@ export function canonicalMedId(meds: MedicationSlot[] | null | undefined, id: st
 	return owner ? owner.id : id;
 }
 
-/** Does this logged document mention the medication explicitly — a missed
+/** Does this logged document mention the medication explicitly - a missed
  *  scheduled dose, an as-needed "taken" toggle, or an intake event? A
  *  medication also answers for the duplicates combined into it. */
 export function docReferencesMed(doc: DayDoc, med: MedicationSlot | string): boolean {
@@ -603,8 +603,8 @@ export function docReferencesMed(doc: DayDoc, med: MedicationSlot | string): boo
 }
 
 /** How many distinct days of history hang off this medication: days that
- *  mention it explicitly, plus — for a scheduled medication, which is assumed
- *  taken — every logged day it was active. This is what deleting it would
+ *  mention it explicitly, plus - for a scheduled medication, which is assumed
+ *  taken - every logged day it was active. This is what deleting it would
  *  strip the name and dose from. */
 export function medHistoryDays(med: MedicationSlot, docs: DayDoc[]): number {
 	const days = new Set<string>();
@@ -629,13 +629,13 @@ const DOSE_TOKEN = /\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?\s*(?:mcg|µg|ug|mg|kg|
 
 /** A name's identity for spotting duplicates: case- and whitespace-
  *  insensitive, ignoring an embedded dose ("Fycompa 8mg" = "fycompa"). Exact
- *  otherwise — a near-miss spelling may be a different drug, and combining
+ *  otherwise - a near-miss spelling may be a different drug, and combining
  *  two drugs would be a medical-safety bug. */
 export function medNameKey(name: string): string {
 	return name.replace(DOSE_TOKEN, ' ').toLowerCase().replace(/\s+/g, '');
 }
 
-/** Groups of two or more medications that look like the same drug — what
+/** Groups of two or more medications that look like the same drug - what
  *  the pre-dose-history workaround produced: one entry per dose. In list
  *  order, which is the order they were added. */
 export function duplicateGroups(meds: MedicationSlot[]): MedicationSlot[][] {
@@ -663,7 +663,7 @@ export function medicationsOverlap(a: MedicationSlot, b: MedicationSlot): boolea
 }
 
 /** One history out of two: before `switchDate` whatever the EARLIER entry
- *  says applied, from `switchDate` on whatever the LATER one says — each
+ *  says applied, from `switchDate` on whatever the LATER one says - each
  *  falling back to the other on days it has nothing. So "10 mg (original
  *  entry) + 8 mg (duplicate added on 01.08.)" with switchDate 01.08. reads
  *  10 mg until 31.07. and 8 mg after, including days after the duplicate was

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# version-next — SUGGEST the version this release could carry.
+# version-next - SUGGEST the version this release could carry.
 #
 # Advisory only. Nothing enforces the answer: `version-guard` checks that
 # VERSION, package.json and the changelog agree, not that the number matches
 # what the commits imply. The operator decides what a version means to a user
-# (2026-08-30) — this exists so that decision starts from the facts instead of
+# (2026-08-30) - this exists so that decision starts from the facts instead of
 # from memory.
 #
 # Reads the commit subjects since the last release tag and applies the
@@ -17,7 +17,7 @@
 #
 # The release's bump is the LARGEST any commit contributes. While the major
 # is 0 the public contract is unstable, so a breaking change bumps MINOR
-# (0.1.0 → 0.2.0), not MAJOR — same carve-out the doc states.
+# (0.1.0 → 0.2.0), not MAJOR - same carve-out the doc states.
 #
 # Prints the computed version on stdout and its reasoning on stderr, so
 #   NEXT="$(scripts/version-next.sh)"
@@ -25,7 +25,7 @@
 #
 # Baseline is the highest `vX.Y.Z` tag. Before the first one exists there is
 # no range to read, so this prints the current VERSION unchanged and says so
-# on stderr — callers treat that as "cannot compute", not as an answer.
+# on stderr - callers treat that as "cannot compute", not as an answer.
 # Override the baseline with `scripts/version-next.sh <ref>`.
 set -euo pipefail
 
@@ -42,7 +42,7 @@ latest_tag() {
 BASE="${1-$(latest_tag)}"
 
 if [ -z "$BASE" ]; then
-	echo "version-next: no vX.Y.Z tag yet — nothing to compute a bump from." >&2
+	echo "version-next: no vX.Y.Z tag yet - nothing to compute a bump from." >&2
 	echo "version-next: printing the current VERSION ($VERSION) unchanged." >&2
 	printf '%s\n' "$VERSION"
 	exit 0
@@ -101,6 +101,6 @@ else
 fi
 
 NEXT="${MAJOR}.${MINOR}.${PATCH}"
-echo "version-next: $COUNT commit(s) since $BASE — $REASON" >&2
+echo "version-next: $COUNT commit(s) since $BASE - $REASON" >&2
 echo "version-next: $BASE_VERSION → $NEXT" >&2
 printf '%s\n' "$NEXT"

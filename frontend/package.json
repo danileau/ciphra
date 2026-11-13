@@ -2,7 +2,7 @@
   "name": "ciphra",
   "version": "1.5.4",
   "private": true,
-  "description": "Zero-knowledge health notebook for chronic conditions — data is encrypted in the browser, the server only ever stores ciphertext.",
+  "description": "Zero-knowledge health notebook for chronic conditions - data is encrypted in the browser, the server only ever stores ciphertext.",
   "license": "AGPL-3.0-only",
   "homepage": "https://ciphra.ch",
   "repository": {

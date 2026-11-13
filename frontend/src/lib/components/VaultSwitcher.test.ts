@@ -1,16 +1,16 @@
 /**
- * Vault switcher — the caregiver's "Ansicht: <account>" control.
+ * Vault switcher - the caregiver's "Ansicht: <account>" control.
  *
  * Reported from production: clicking it opened an unstyled, broken dropdown.
  * It was a native `<select>` carrying `bg-transparent`, so the open options
- * panel had no background of its own and fell back to UA chrome — worst in
+ * panel had no background of its own and fell back to UA chrome - worst in
  * dark mode, where a light panel sat under near-white option text.
  *
  * app.css (═══ STYLED SELECT ═══) and LocaleSelect.svelte both already say why
  * this cannot be fixed with CSS: the options panel is browser chrome the
  * cascade cannot reach. So the guards here are (a) the native control does not
  * come back, (b) the replacement is a real listbox, and (c) neither this
- * component nor the caregiver banner paints a hardcoded light-theme ochre —
+ * component nor the caregiver banner paints a hardcoded light-theme ochre -
  * that is the half of the bug that only shows in dark mode.
  *
  * @vitest-environment jsdom
@@ -54,7 +54,7 @@ describe('the panel is ours, not the browser’s', () => {
 		expect(scope.getAllByRole('option')).toHaveLength(3); // self + hans + elena
 	});
 
-	it('renders no native <select> — the panel it could not style', () => {
+	it('renders no native <select> - the panel it could not style', () => {
 		const { container } = render(VaultSwitcher, { links: LINKS });
 		expect(container.querySelector('select')).toBeNull();
 	});
@@ -100,7 +100,7 @@ describe('the native control does not come back', () => {
 		expect(src).toContain('<VaultSwitcher');
 		expect(
 			src,
-			'a native <select> cannot style its options panel — see VaultSwitcher.svelte',
+			'a native <select> cannot style its options panel - see VaultSwitcher.svelte',
 		).not.toMatch(/<select[\s\S]{0,400}?family\.switcher/);
 	});
 });
@@ -125,7 +125,7 @@ describe('both themes', () => {
 		const src = read('lib/components/VaultSwitcher.svelte');
 		const styles = src.slice(src.indexOf('<style>'));
 		// A raw hex in the panel is how one theme ends up right and the other
-		// wrong — the whole shape of the reported bug.
+		// wrong - the whole shape of the reported bug.
 		expect(styles).not.toMatch(/:\s*#[0-9a-fA-F]{3,8}\b/);
 	});
 });

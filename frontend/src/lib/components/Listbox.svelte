@@ -1,8 +1,8 @@
 <!--
-	Listbox — one dropdown for the whole app (2026-09-20).
+	Listbox - one dropdown for the whole app (2026-09-20).
 
-	ciphra had two kinds of dropdown. Its own — LocaleSelect, VaultSwitcher,
-	the export period popover — opened below the field, stayed open on a
+	ciphra had two kinds of dropdown. Its own - LocaleSelect, VaultSwitcher,
+	the export period popover - opened below the field, stayed open on a
 	click, and looked like ciphra. Everywhere a form needed a choice there was
 	a native `<select>` instead, and the options panel of a `<select>` is
 	browser chrome: not in the DOM, unreachable by CSS, placed by the platform
@@ -18,7 +18,7 @@
 	`<select>` was.
 
 	Deliberately still native below 640px: a phone's own picker is the better
-	control — big targets, no tiny panel to place — and that is the same call
+	control - big targets, no tiny panel to place - and that is the same call
 	ExportPeriodPopover already made. The difference is that it is now one
 	decision in one file instead of a per-field accident.
 -->
@@ -47,7 +47,7 @@
 	export let variant: 'field' | 'chip' = 'field';
 	/** Which edge of the trigger the panel lines up with. */
 	export let align: 'start' | 'end' = 'start';
-	/** Extra classes for the trigger — callers keep their own form styling. */
+	/** Extra classes for the trigger - callers keep their own form styling. */
 	export let buttonClass = '';
 	export let testid: string | undefined = undefined;
 	/** Hand over to the platform picker on a phone. See the header comment. */
@@ -60,7 +60,7 @@
 	let open = false;
 	let activeIdx = -1;
 	let isNarrow = false;
-	/** Below unless the panel genuinely does not fit there — measured, not
+	/** Below unless the panel genuinely does not fit there - measured, not
 	 *  guessed, because a guessed height flips lists that would have fit. */
 	let placement: 'below' | 'above' = 'below';
 
@@ -354,7 +354,7 @@
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
-		/* Above a Modal's own stacking context (z-[65]) — a dropdown inside a
+		/* Above a Modal's own stacking context (z-[65]) - a dropdown inside a
 		   dialog must not open behind it. */
 		z-index: 70;
 	}

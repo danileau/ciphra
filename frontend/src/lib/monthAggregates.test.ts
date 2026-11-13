@@ -1,9 +1,9 @@
 /**
- * Shared month-aggregate math — parity tests (design review 2026-06-11).
+ * Shared month-aggregate math - parity tests (design review 2026-06-11).
  *
  * Pins the property that motivated the extraction: the calendar-rail
  * insight, the /reports stat block, and the doctor PDF must compute the
- * same numbers from the same docs — INCLUDING migrated epilepc docs in
+ * same numbers from the same docs - INCLUDING migrated epilepc docs in
  * the legacy `data.seizures` shape, which previously counted on two of
  * the four call sites and not the others.
  */
@@ -32,7 +32,7 @@ function entry(date: string, episodes: Record<string, number>): CiphraDocument {
 	return { id: date, data: { type: 'entry', date, episodes } } as unknown as CiphraDocument;
 }
 
-/** Migrated epilepc shape — counts live under `seizures`. */
+/** Migrated epilepc shape - counts live under `seizures`. */
 function legacyEntry(date: string, seizures: Record<string, number>): CiphraDocument {
 	return { id: date, data: { type: 'entry', date, seizures } } as unknown as CiphraDocument;
 }
@@ -46,7 +46,7 @@ const docs: CiphraDocument[] = [
 	{ id: 'ev', data: { type: 'event', date: '2026-03-07', episodes: { manic: 9 } } } as unknown as CiphraDocument,
 ];
 
-describe('episodeValuesOf — the one shape reader', () => {
+describe('episodeValuesOf - the one shape reader', () => {
 	it('reads episodes, falls back to legacy seizures, ignores non-entries', () => {
 		expect(episodeValuesOf(entry('2026-03-02', { manic: 1 }))).toEqual({ manic: 1 });
 		expect(episodeValuesOf(legacyEntry('2026-03-05', { manic: 1 }))).toEqual({ manic: 1 });
@@ -81,7 +81,7 @@ describe('parity across the three consumer surfaces', () => {
 		expect(insight?.kind).toBe('phase-day-coverage');
 		if (insight?.kind !== 'phase-day-coverage') throw new Error('unreachable');
 		const manic = insight.segments.find((s) => s.id === 'manic')!;
-		// 3 manic days — including the legacy-shape 2026-03-05, which this
+		// 3 manic days - including the legacy-shape 2026-03-05, which this
 		// surface previously dropped.
 		expect(manic.days).toBe(3);
 		expect(manic.pct).toBeCloseTo(3 / 31);

@@ -1,5 +1,5 @@
 /**
- * CIPH-876 — Monthly report grid auto-expands episode columns.
+ * CIPH-876 - Monthly report grid auto-expands episode columns.
  *
  * The curated `bp.gridEpisodeColumns` always render (stable grid), plus any
  * non-curated `bp.episodeTypes` with ≥1 occurrence in the visible month.

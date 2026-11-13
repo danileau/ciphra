@@ -2,18 +2,18 @@
 #
 # Complements the daily Trivy scan (CVEs in deps/images) with the checks Trivy
 # can't do: the LIVE prod edge posture. Asserts a small set of invariants that
-# must always hold on https://ciphra.ch — CSP shape (no unsafe-inline/eval),
+# must always hold on https://ciphra.ch - CSP shape (no unsafe-inline/eval),
 # HSTS+preload, the other security headers, no framework leak, and (when the CF
 # secrets are set) that the Cloudflare TLS mode is Full (strict).
 #
 # A red run = a security control drifted on prod. It is NOT exploratory
-# red-teaming — that stays human-triggered (the DAST workflow). See
+# red-teaming - that stays human-triggered (the DAST workflow). See
 # docs/INCIDENT_RESPONSE.md and scripts/security-monitor.sh.
 name: Security monitor
 
 on:
   schedule:
-    - cron: '40 4 * * *'   # daily 04:40 UTC — just after the Trivy scan
+    - cron: '40 4 * * *'   # daily 04:40 UTC - just after the Trivy scan
   workflow_dispatch:
 
 permissions:

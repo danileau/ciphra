@@ -10,7 +10,7 @@
  * The load-bearing property is that withholding is a FILTER on the document
  * set, not a display flag. `generateDoctorPdf` has no concept of a selection;
  * it simply never sees a withheld note. That is what makes the monthly count
- * row agree with the list — a count of 2 beside one printed note would tell
+ * row agree with the list - a count of 2 beside one printed note would tell
  * the reader a note was withheld, which is its own disclosure.
  */
 import { describe, it, expect } from 'vitest';
@@ -86,7 +86,7 @@ describe('withholding is a filter, not a flag', () => {
 describe('recorded data is never on the table', () => {
 	it('only note markers can be withheld', () => {
 		// `withSelectedNoteMarkers` passes everything that is not a note
-		// marker through untouched — pinned behaviourally in
+		// marker through untouched - pinned behaviourally in
 		// lib/reports/noteMarkers.test.ts. Here: the page must not reach past
 		// it and filter the document set itself.
 		const fn = PAGE.slice(PAGE.indexOf('async function exportForDoctor'));

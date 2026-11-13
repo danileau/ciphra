@@ -1,5 +1,5 @@
 /**
- * Track 3 P0 (3.1) — CSP script-src hardening guard.
+ * Track 3 P0 (3.1) - CSP script-src hardening guard.
  *
  * script-src dropped `'unsafe-inline'` (vite.config.ts → kitConfig.csp, mode
  * 'hash'; svelte.config.js `kit.csp` until SvelteKit 3). SvelteKit hashes
@@ -9,7 +9,7 @@
  * sha256 hashes are pinned by hand in kitConfig.csp.directives['script-src'].
  *
  * This test recomputes those hashes from app.html and asserts each is present
- * in vite.config.ts — so editing either inline script without updating the
+ * in vite.config.ts - so editing either inline script without updating the
  * CSP hash fails CI instead of silently breaking the script in production
  * (blocked inline script → e.g. white flash for OS-dark users, no SW).
  */
@@ -24,7 +24,7 @@ const viteConfig = readFileSync(resolve(ROOT, 'vite.config.ts'), 'utf8');
 
 // Bare `<script> … </script>` (no attributes) = executable inline scripts that
 // CSP script-src governs. `type="application/ld+json"` etc. carry an attribute,
-// are not executed, and are not subject to script-src — the attribute-less
+// are not executed, and are not subject to script-src - the attribute-less
 // match correctly skips them.
 function inlineScriptHashes(html: string): string[] {
 	const re = /<script>([\s\S]*?)<\/script>/g;
@@ -36,7 +36,7 @@ function inlineScriptHashes(html: string): string[] {
 	return out;
 }
 
-describe('Track 3 P0 — app.html inline scripts pinned in CSP', () => {
+describe('Track 3 P0 - app.html inline scripts pinned in CSP', () => {
 	it('every executable inline <script> in app.html has its hash in script-src', () => {
 		const hashes = inlineScriptHashes(appHtml);
 		expect(hashes.length).toBeGreaterThan(0);
@@ -45,7 +45,7 @@ describe('Track 3 P0 — app.html inline scripts pinned in CSP', () => {
 				viteConfig,
 				`app.html inline script hash ${h} is not in vite.config.ts. ` +
 					`script-src dropped 'unsafe-inline' (Track 3 P0 / 3.1), so each author ` +
-					`inline script must be hashed — add '${h}' to kitConfig.csp.directives['script-src'].`,
+					`inline script must be hashed - add '${h}' to kitConfig.csp.directives['script-src'].`,
 			).toContain(h);
 		}
 	});

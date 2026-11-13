@@ -1,12 +1,12 @@
 /**
  * The privacy hint must follow the state it describes.
  *
- * `private.tooltip` reads "Privater Eintrag — wird nie exportiert oder
+ * `private.tooltip` reads "Privater Eintrag - wird nie exportiert oder
  * geteilt." Two surfaces rendered it UNCONDITIONALLY next to a state label
  * that is "Standard" (exportable) by default, so the row directly under the
  * note field read:
  *
- *     Standard — Privater Eintrag — wird nie exportiert oder geteilt.
+ *     Standard - Privater Eintrag - wird nie exportiert oder geteilt.
  *
  * while the note was in fact printed verbatim on the PDF handed to a doctor.
  * That is not a vague hint; it is an affirmative false statement about where
@@ -14,7 +14,7 @@
  *
  * It matters more than a normal copy bug because ciphra's whole promise is
  * about disclosure. docs/SECURITY_MODEL.md is scoped to server + device and
- * says nothing about the export — the one channel where the text genuinely
+ * says nothing about the export - the one channel where the text genuinely
  * leaves the user's control, by design and by their own action.
  *
  * `EntryPreview.svelte` was already correct: it renders the tooltip inside
@@ -84,7 +84,7 @@ describe('the section hint cannot contradict the toggle', () => {
 	it('the quick-add mode hint is gated on the same flag', () => {
 		// First pass at this fix left the section hint unconditional, so the
 		// private state read "Appears in the trend and in the doctor export"
-		// directly above "never exported or shared" — a new instance of the
+		// directly above "never exported or shared" - a new instance of the
 		// very bug being fixed, two lines apart.
 		const src = read('routes/+layout.svelte');
 		expect(src).toMatch(
@@ -103,10 +103,10 @@ describe('the section hint cannot contradict the toggle', () => {
 
 describe('the diary is not offered a switch it does not have', () => {
 	/**
-	 * `isExportable` drops every `type: 'diary'` document unconditionally —
+	 * `isExportable` drops every `type: 'diary'` document unconditionally -
 	 * there is no toggle, by design. The journal's moment view rendered the
 	 * private switch for diary entries anyway, and its default state reads
-	 * "Standard — Erscheint im Export für die Ärztin."
+	 * "Standard - Erscheint im Export für die Ärztin."
 	 *
 	 * So the surface built for the things people do not want read told them
 	 * their entry was on its way to a doctor, and the switch that appeared to

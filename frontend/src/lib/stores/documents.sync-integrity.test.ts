@@ -1,9 +1,9 @@
 /**
- * Offline-sync integrity — the failure modes of the write path that lose,
+ * Offline-sync integrity - the failure modes of the write path that lose,
  * duplicate, or mis-share data without anybody noticing.
  *
  *  A. A queued write must carry the sharing class. The flush has only
- *     ciphertext, and the server keeps the OLD class on a PUT without one —
+ *     ciphertext, and the server keeps the OLD class on a PUT without one -
  *     so an entry locked while offline synced still SHAREABLE and was served
  *     to a narrow-scope caregiver. The owner's load reconciles any drift.
  *  E. Overlapping flushes (`online` + `visibilitychange` on wake) each
@@ -13,7 +13,7 @@
  *  G. With the active vault's link not loaded, writes silently went to the
  *     user's OWN vault; a load finishing after a vault switch rendered the
  *     old vault under the new banner.
- *  J. A batch is chunked by bytes as well as count — Flask 413s at 2 MiB.
+ *  J. A batch is chunked by bytes as well as count - Flask 413s at 2 MiB.
  *
  * Same in-memory outbox + controllable API approach as
  * documents.outbox.test.ts.
@@ -127,7 +127,7 @@ async function freshStore() {
 
 beforeEach(() => { vi.clearAllMocks(); });
 
-describe('A — queued writes keep the sharing class', () => {
+describe('A - queued writes keep the sharing class', () => {
 	it('an existing entry locked while offline replays as PERSONAL', async () => {
 		const documents = await freshStore();
 		const entry = { type: 'entry', date: '2026-09-01', notes: 'x' };
@@ -160,7 +160,7 @@ describe('A — queued writes keep the sharing class', () => {
 		expect(api.storeDocument).toHaveBeenLastCalledWith(expect.stringContaining('"private":true'), 2);
 	});
 
-	it('a caregiver\'s queued writes carry no class — the server forces those', async () => {
+	it('a caregiver\'s queued writes carry no class - the server forces those', async () => {
 		const documents = await freshStore();
 		h.state.vault = PATIENT;
 		h.state.links = [patientLink];
@@ -234,7 +234,7 @@ describe('A — queued writes keep the sharing class', () => {
 	});
 });
 
-describe('E — flushOutbox is single-flight', () => {
+describe('E - flushOutbox is single-flight', () => {
 	it('overlapping triggers replay each queued create exactly once', async () => {
 		const documents = await freshStore();
 		api.storeDocument.mockImplementation(offline);
@@ -273,7 +273,7 @@ describe('E — flushOutbox is single-flight', () => {
 	});
 });
 
-describe('F — one vault cannot wedge another', () => {
+describe('F - one vault cannot wedge another', () => {
 	function queue(rec: Partial<any>) {
 		h.rows.push({ username: 'hans', createdAt: h.rows.length + 1, tempId: `obx-q${h.rows.length + 1}`, ...rec });
 	}
@@ -334,7 +334,7 @@ describe('F — one vault cannot wedge another', () => {
 	});
 });
 
-describe('G — no silent fallback to the own vault', () => {
+describe('G - no silent fallback to the own vault', () => {
 	it('with the active vault\'s link not loaded, reads and writes refuse instead of using the own vault', async () => {
 		const documents = await freshStore();
 		h.state.vault = PATIENT; // restored from sessionStorage; links not loaded yet
@@ -366,7 +366,7 @@ describe('G — no silent fallback to the own vault', () => {
 	});
 });
 
-describe('J — batches respect the byte budget', () => {
+describe('J - batches respect the byte budget', () => {
 	it('chunkForBatch splits by count and by serialised size', async () => {
 		const { chunkForBatch } = await import('./documents');
 		const small = Array.from({ length: 250 }, (_, i) => ({ encrypted_data: `c${i}` }));

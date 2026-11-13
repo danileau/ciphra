@@ -1,5 +1,5 @@
 /**
- * FAB quick-add + /log/[date] — a save that did not happen must not look
+ * FAB quick-add + /log/[date] - a save that did not happen must not look
  * like one, a double press must not write twice, and "today" is local.
  *
  * Source-parse, like quickAdd-merge.test.ts: the runtime paths live in
@@ -35,7 +35,7 @@ describe('quick-add save results', () => {
 		expect(LAYOUT).toMatch(/\{#if quickAddError\}[\s\S]{0,300}\$t\('quickadd\.save_failed'\)/);
 	});
 
-	it('a save already running ignores another press — button, Enter, whatever', () => {
+	it('a save already running ignores another press - button, Enter, whatever', () => {
 		expect(quickAddSave).toMatch(/^async function quickAddSave\(\) \{[\s\S]{0,200}if \(quickAddSaving\) return;/);
 		expect(LAYOUT).toMatch(/e\.key === 'Enter' && !quickAddSaving/);
 	});

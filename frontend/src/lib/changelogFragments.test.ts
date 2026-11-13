@@ -3,7 +3,7 @@
  *
  * Pending entries live in changelog.d/, one file per change, because every PR
  * editing CHANGELOG.md's [Unreleased] block conflicted with every other open
- * PR — and resolving one lost #192's entries. These tests pin the compiler
+ * PR - and resolving one lost #192's entries. These tests pin the compiler
  * that the release script and the in-app /docs view share.
  */
 import { describe, it, expect } from 'vitest';
@@ -29,7 +29,7 @@ Intro.
 
 ${UNRELEASED_PLACEHOLDER}
 
-## [1.3.0] — 2026-08-30
+## [1.3.0] - 2026-08-30
 
 ### Added
 - Something old.
@@ -122,7 +122,7 @@ describe('pending entries', () => {
 	});
 });
 
-describe('withPendingFragments — the in-app view', () => {
+describe('withPendingFragments - the in-app view', () => {
 	it('shows fragments under [Unreleased] without touching released sections', () => {
 		const out = withPendingFragments(CHANGELOG, [doseHistory]);
 		const unreleased = out.slice(out.indexOf('## [Unreleased]'), out.indexOf('## [1.3.0]'));
@@ -140,7 +140,7 @@ describe('withPendingFragments — the in-app view', () => {
 describe('releaseChangelog', () => {
 	it('moves everything pending into a dated section and updates the links', () => {
 		const out = releaseChangelog(CHANGELOG, [doseHistory, syncFix], '1.4.0', '2026-09-20');
-		expect(out).toContain(`## [Unreleased]\n\n${UNRELEASED_PLACEHOLDER}\n\n## [1.4.0] — 2026-09-20\n\n### Added\n`);
+		expect(out).toContain(`## [Unreleased]\n\n${UNRELEASED_PLACEHOLDER}\n\n## [1.4.0] - 2026-09-20\n\n### Added\n`);
 		expect(out.indexOf('## [1.4.0]')).toBeLessThan(out.indexOf('## [1.3.0]'));
 		expect(out).toContain('[Unreleased]: https://git.example.org/you/ciphra/compare/v1.4.0...HEAD\n[1.4.0]: https://git.example.org/you/ciphra/releases/tag/v1.4.0\n[1.3.0]:');
 		// Nothing is dropped.

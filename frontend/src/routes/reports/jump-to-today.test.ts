@@ -1,7 +1,7 @@
 /**
- * CIPH-883 — Reports jump-to-current-month pill. Mirror of CIPH-878
+ * CIPH-883 - Reports jump-to-current-month pill. Mirror of CIPH-878
  * (calendar). Pin via source-parse so the shortcut can't be silently
- * removed — both surfaces must offer the same affordance.
+ * removed - both surfaces must offer the same affordance.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

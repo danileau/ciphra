@@ -4,7 +4,7 @@
  * The operator's scenario, end to end through the dialog: 2× 10 mg today,
  * 2× 12 mg from tomorrow. What has to hold:
  *   - the preview says, before saving, that earlier days keep 10 mg;
- *   - what is dispatched is exactly that — a new period, same id;
+ *   - what is dispatched is exactly that - a new period, same id;
  *   - "delete" on a medication with logged days leads with "stop instead";
  *   - a typo correction is a separate, explicitly retroactive action.
  *

@@ -1,5 +1,5 @@
 <script lang="ts">
-	// CIPH-750 / CIPH-781 — Dashboard right-rail (≥1024px).
+	// CIPH-750 / CIPH-781 - Dashboard right-rail (≥1024px).
 	// Rebalanced in CIPH-781: compliance + reports moved IN from CompanionMain
 	// (they're the "how am I doing" + "give to doctor" at-a-glance cards that
 	// belong in the 1/3 rail), "Wie geht's dir?" trend chart moved OUT into
@@ -11,7 +11,7 @@
 	import type { Blueprint } from '#lib/blueprint/types.ts';
 	import { hasBedarfMeds } from '#lib/blueprint/index.ts';
 
-	// CIPH-872 — `todayLogged` + Asterisk import removed with the
+	// CIPH-872 - `todayLogged` + Asterisk import removed with the
 	// redundant Quick-Action rail card.
 
 	// Today's entries moved into rail per CIPH-781 follow-up.
@@ -24,12 +24,12 @@
 	export let onRequestDelete: (id: number) => void;
 	export let onCancelDelete: () => void;
 
-	// CIPH-881b — count of rescue-medication events this month. Renders only
+	// CIPH-881b - count of rescue-medication events this month. Renders only
 	// when the active blueprint declares rescueMedications AND count > 0,
 	// so the card stays out of presets without a clinical rescue protocol.
 	export let rescueMedsThisMonth: number = 0;
 
-	// CIPH-pi24-5c — Marker-event gap-trend sparkline data. Null when the
+	// CIPH-pi24-5c - Marker-event gap-trend sparkline data. Null when the
 	// active preset doesn't declare `markerEvent` or when <3 events have
 	// been logged yet (gate enforced upstream in Companion.svelte).
 	export let markerGapTrend: {
@@ -42,18 +42,18 @@
 
 	// Reports / export. Doctor PDF + Open reports. Moved in from CompanionMain.
 	export let canExport: boolean;
-	// CIPH-873 — `onExportForDoctor` prop removed. Export is now a deep-link
+	// CIPH-873 - `onExportForDoctor` prop removed. Export is now a deep-link
 	// to /reports?action=export so the scope picker drives the export.
 </script>
 
 <div class="space-y-6">
 	<!-- ═══ MARKER GAP TREND (CIPH-pi24-5c) ═══
-		 Top of the rail: the morbus-AI signal — "is the treatment working?"
+		 Top of the rail: the morbus-AI signal - "is the treatment working?"
 		 Reordered above compliance because the clinically-meaningful gap
 		 trend should anchor the rail; data-reliability is supporting
 		 context. Renders only when the preset declares `markerEvent` AND
 		 ≥3 marker events have been logged. Gap trend (treatment efficacy)
-		 wraps Klara's prior streak objection (Companion.svelte:124) — show
+		 wraps Klara's prior streak objection (Companion.svelte:124) - show
 		 trend, not a resetting counter. -->
 	{#if markerGapTrend}
 		<GapTrendSpark
@@ -65,13 +65,13 @@
 		/>
 	{/if}
 
-	<!-- CIPH-872 — Rail "quick action" card removed. User dogfood feedback
+	<!-- CIPH-872 - Rail "quick action" card removed. User dogfood feedback
 		 flagged it as redundant with (a) the prominent "Fill today" card in
 		 main column when !todayLog and (b) the global + FAB that handles
 		 add-entry everywhere. Three entry points for the same action broke
 		 the "one canonical add affordance" rule from PI v6. -->
 
-	<!-- CIPH-881b — Rescue-medications counter. Only surfaced for blueprints
+	<!-- CIPH-881b - Rescue-medications counter. Only surfaced for blueprints
 		 that declare `rescueMedications` AND have at least one event in the
 		 current month, so presets without a clinical rescue protocol stay
 		 clean and the card stays out of empty months. -->
@@ -121,12 +121,12 @@
 				<p class="text-[11px]" style="color: var(--text-muted)">{$t('reports.analytics_desc')}</p>
 			</div>
 		</div>
-		<!-- CIPH-873 — Single primary CTA that routes to /reports with the
+		<!-- CIPH-873 - Single primary CTA that routes to /reports with the
 			 export menu auto-opened. Previous version had two buttons:
 			 (a) "Export for doctor" generating a current-month PDF silently
 			 with no scope choice, and (b) "Open reports" → plain route. Both
 			 collapsed into one action because `/reports` already has the
-			 scope picker (month/year/2-year). Secondary button dropped —
+			 scope picker (month/year/2-year). Secondary button dropped -
 			 navigation to /reports is also in the BottomNav. -->
 		<div class="flex flex-col gap-2">
 			{#if canExport}

@@ -1,5 +1,5 @@
 /**
- * Focus-month handoff — contract tests. Pins the YYYY-MM validation
+ * Focus-month handoff - contract tests. Pins the YYYY-MM validation
  * (garbage in storage must not propagate into date math) and the
  * remember/recall roundtrip.
  */

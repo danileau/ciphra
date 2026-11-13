@@ -1,5 +1,5 @@
 /**
- * ciphra — data-backed export periods for the /reports doctor export.
+ * ciphra - data-backed export periods for the /reports doctor export.
  *
  * WHY THIS EXISTS
  *
@@ -27,18 +27,18 @@
  * anchor month" (pdf.ts:3854). So a calendar year IS a trailing-12 window
  * anchored at December, and a calendar year pair IS a trailing-24 window
  * anchored at December of the later year. Picking a period is therefore
- * just picking an anchor — no change to the PDF generator at all.
+ * just picking an anchor - no change to the PDF generator at all.
  *
  * WHAT COUNTS AS DATA
  *
  * Exactly what the export itself counts: `isExportable()` (diary and
  * per-entry `private` excluded) AND `type === 'entry'`. Anything looser
  * would offer a month of purely private entries and then export an empty
- * PDF — the drift `isExportable` exists to prevent.
+ * PDF - the drift `isExportable` exists to prevent.
  */
 import type { CiphraDocument } from '#lib/stores/documents.ts';
 // `ReportScope` and the window maths live in reportWindow.ts, not in
-// `$lib/pdf` — that module pulls jsPDF + autoTable (~152KB gzip) and the
+// `$lib/pdf` - that module pulls jsPDF + autoTable (~152KB gzip) and the
 // reports page defers it behind `loadPdfLib()`. Importing the type from its
 // own small module removes the dependency entirely rather than relying on
 // `import type` erasure to hide it.
@@ -49,7 +49,7 @@ import { isExportable } from '#lib/utils/exportable.ts';
 export { SCOPE_MONTHS };
 export type { ReportScope };
 
-/** `YYYY-MM`. Lexicographic order is chronological order — relied on below. */
+/** `YYYY-MM`. Lexicographic order is chronological order - relied on below. */
 export type MonthKey = string;
 
 /** Month → number of distinct days that hold at least one exportable entry. */
@@ -59,7 +59,7 @@ export interface PeriodOption {
 	scope: ReportScope;
 	/** Stable identity for keyed `{#each}` and for `selectedId` comparisons. */
 	id: string;
-	/** Anchor for `generateDoctorPdf` — the END month of the window. */
+	/** Anchor for `generateDoctorPdf` - the END month of the window. */
 	anchorYear: number;
 	/** 0-based, as `Date#getMonth()`. Always 11 for year / 2-year windows. */
 	anchorMonth: number;
@@ -146,15 +146,15 @@ function buildOption(index: MonthIndex, scope: ReportScope, anchorYear: number, 
 /**
  * The periods offered for a scope, newest first.
  *
- *   month   — every calendar month holding data.
- *   year    — every calendar year holding data. A gap year is simply absent:
+ *   month   - every calendar month holding data.
+ *   year    - every calendar year holding data. A gap year is simply absent:
  *             data in 2023 and 2025 offers 2023 and 2025, never 2024.
- *   2years  — sliding consecutive year pairs across the data's year range,
+ *   2years  - sliding consecutive year pairs across the data's year range,
  *             anchored at December of the later year. Data in 2023 and 2025
  *             offers 2024–2025 and 2023–2024: both are partly empty and both
  *             are offered, because a pair straddling the gap is a legitimate
  *             thing to hand a doctor. `monthsWithData` / `daysLogged` carry
- *             the honesty — the UI shows coverage on every row rather than
+ *             the honesty - the UI shows coverage on every row rather than
  *             hiding the sparse ones.
  *             A single year of data yields no pair, so the card locks: a
  *             24-month window over one year is the year export plus 12 empty

@@ -15,7 +15,7 @@
 
 	let showTechnicalDetails = false;
 
-	// CIPH-917 — custom-preset card lives at the bottom of the merged
+	// CIPH-917 - custom-preset card lives at the bottom of the merged
 	// conditions section as the open-ended alternative to the named
 	// conditions. Hoisted from a template `{@const}` to the script so
 	// it can sit between `{/each}` and `{#if}` (which Svelte's
@@ -26,7 +26,7 @@
 	// ChartWrapper + chart.js together pulled ~250 KB gzip into the
 	// landing chunk despite only rendering when authenticated. Dynamic-
 	// import + reactive load keeps unauth visitors at a tight bundle.
-	// 2026-06-07 — Svelte 5 changed component typings (legacy ComponentType
+	// 2026-06-07 - Svelte 5 changed component typings (legacy ComponentType
 	// is not assignable from the new __sveltets_2_IsomorphicComponent shape).
 	// Cast through unknown for the dynamic-import path until tests + types
 	// are migrated to the Svelte 5 mount() API.
@@ -37,10 +37,10 @@
 		});
 	}
 
-	// CIPH-916 — `setLocale` removed: locale switcher moved into the
+	// CIPH-916 - `setLocale` removed: locale switcher moved into the
 	// shared <PublicFooter /> mounted from +layout.svelte.
 
-	// Hero choreography — three quiet signature moments. Originally
+	// Hero choreography - three quiet signature moments. Originally
 	// drafted on motion.one, but the Web Animations API (built into
 	// every modern browser) gives us identical capability for keyframe
 	// + cubic-bezier easing with zero bundle cost and no dev-mode
@@ -68,7 +68,7 @@
 		const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 		const EASE_OUT = 'cubic-bezier(0.16, 1, 0.3, 1)';
 
-		// Asterisk settle — the brand-identity moment. The mark wobble-
+		// Asterisk settle - the brand-identity moment. The mark wobble-
 		// rotates around its 8° rest pose and ticks back, like it just
 		// landed. Delayed to t=720ms so the draw-in (CSS, finishes at
 		// ~620ms) plays cleanly first; the wobble then takes over the
@@ -90,7 +90,7 @@
 			);
 		}
 
-		// CTA pulse — one soft scale tick. Draws the eye to "Get started
+		// CTA pulse - one soft scale tick. Draws the eye to "Get started
 		// for free" without nagging. No repeat, no glow, no color shift.
 		const cta = document.querySelector<HTMLElement>(
 			'.hero-section [data-anim="hero-cta"]',
@@ -106,7 +106,7 @@
 			);
 		}
 
-		// (The condition-tile stagger was dropped — relying on
+		// (The condition-tile stagger was dropped - relying on
 		// IntersectionObserver firing during fullPage screenshots /
 		// hydration is fragile, and on a tile-grid that's already mostly
 		// above the fold the entrance read as a flicker rather than as
@@ -126,8 +126,8 @@
      inherit it. <main id="main-content"> below is the target. -->
 
 <!-- Top nav now lives in `+layout.svelte` (the unified public nav),
-     so every unauth public route — landing, /login, /migrate,
-     /conditions, /privacy, /terms, /join/* — renders the same
+     so every unauth public route - landing, /login, /migrate,
+     /conditions, /privacy, /terms, /join/* - renders the same
      header. The previous local <nav> here was redundant. -->
 
 <main id="main-content" style="background: var(--surface);">
@@ -136,7 +136,7 @@
 	<section class="relative overflow-hidden hero-section" style="background: var(--surface);">
 		<div class="relative layout-landing py-24 sm:py-32 md:py-40 lg:py-48">
 			<div class="max-w-2xl hero-content">
-				<!-- Wordmark — `drawIn` triggers the asterisk-arms draw-in
+				<!-- Wordmark - `drawIn` triggers the asterisk-arms draw-in
 				     entrance only here (the landing hero), so chrome
 				     wordmarks elsewhere don't replay the animation on
 				     every page navigation. -->
@@ -145,7 +145,7 @@
 					<span class="hidden sm:inline"><Wordmark size={64} drawIn /></span>
 				</div>
 
-				<!-- Tagline + subtagline — one brand line, one "what" line.
+				<!-- Tagline + subtagline - one brand line, one "what" line.
 					 Subtagline replaces the audit-risky "for every condition"
 					 claim with a specific, defensible promise. -->
 				<h1 class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-3" style="color: var(--text-primary);">
@@ -168,7 +168,7 @@
 					</a>
 					<!-- Secondary path for the skeptic: a privacy product's second-most
 					     important hero action is checking the claim, not signing up.
-					     Deliberately a text link, not a button — the CTA stays the
+					     Deliberately a text link, not a button - the CTA stays the
 					     only dominant element. -->
 					<a href="#security" class="inline-flex items-center gap-1.5 min-h-[52px] px-2 font-medium text-base rounded-xl transition-colors hover:underline" style="color: var(--text-secondary);">
 						{$t('landing.hero_verify_link')}
@@ -201,7 +201,7 @@
 							</a>
 						{/each}
 					</div>
-					<p class="mt-2" style="color: var(--text-muted);">— {$t('landing.chips_custom')}</p>
+					<p class="mt-2" style="color: var(--text-muted);">- {$t('landing.chips_custom')}</p>
 				</div>
 
 				<!-- Encryption badges -->
@@ -215,7 +215,7 @@
 					<div class="flex items-center gap-2">
 						<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style="background: var(--olive-light); color: var(--olive);">
 							<!-- Zero-knowledge = the password mask. The brand mark IS the
-							     claim — no generic icon says it better. -->
+							     claim - no generic icon says it better. -->
 							<Asterisk size={14} color="olive" />
 							<span class="text-xs font-medium">{$t('landing.hero_badge_zk')}</span>
 						</div>
@@ -230,7 +230,7 @@
 			</div>
 		</div>
 
-		<!-- "More below" affordance — replaces the old "Read the story"
+		<!-- "More below" affordance - replaces the old "Read the story"
 		     secondary button that jumped past the now-promoted Conditions
 		     grid. This sits at the hero's bottom edge, gently bobs to
 		     signal there's more content, and scrolls smoothly to the
@@ -247,7 +247,7 @@
 	</section>
 
 	<!-- ===== CONDITIONS GRID =====
-	     CIPH-917 — was a flat 4-col preset grid + a "See all conditions →"
+	     CIPH-917 - was a flat 4-col preset grid + a "See all conditions →"
 	     link to a separate /conditions page. The standalone page duplicated
 	     the same content with a slightly different layout (categorised). The
 	     two have been merged here: full 19-condition catalogue grouped by
@@ -292,7 +292,7 @@
 				</section>
 			{/each}
 
-			<!-- "Build your own" — final group, surfaced visually via the
+			<!-- "Build your own" - final group, surfaced visually via the
 				 dashed-border treatment so it reads as the open-ended
 				 alternative to the named conditions. -->
 			{#if customPreset}
@@ -312,7 +312,7 @@
 				</section>
 			{/if}
 
-			<!-- pi24 P-Land-1 — Blueprint-request escape hatch. The "is this
+			<!-- pi24 P-Land-1 - Blueprint-request escape hatch. The "is this
 			     for me?" question peaks here; if the visitor's condition
 			     isn't in the grid above, this is where they need a path.
 			     Mailto (not a server form) because a server endpoint here
@@ -335,7 +335,7 @@
 	</section>
 
 	<!-- ===== HOW IT WORKS =====
-	     Demoted from the slot right after the hero — the user has now
+	     Demoted from the slot right after the hero - the user has now
 	     seen "yes my condition is here" via the conditions grid; this
 	     is the "how does it work?" follow-up. Background flipped to
 	     surface (was surface-card) for the alternation rhythm. -->
@@ -543,11 +543,11 @@
 							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6zm5.2 0 4.6-4.6-4.6-4.6L16 6l6 6-6 6z"/></svg>
 							{sourceLabel(sourceUrl)}
 						</a>
-						<!-- 3-step verification list — condensed from docs/SECURITY_MODEL.md
+						<!-- 3-step verification list - condensed from docs/SECURITY_MODEL.md
 							 §"How to verify our claims yourself". Each step is
 							 verifiable in <2 minutes by anyone with browser
 							 DevTools. Inline <code> spans live in i18n values
-							 (XSS-safe — static strings, not user input). -->
+							 (XSS-safe - static strings, not user input). -->
 						<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted);">{$t('tech.verify_steps_heading')}</h3>
 						<ol class="verify-steps mb-6 space-y-3 list-none p-0">
 							<li class="flex gap-3 text-sm leading-relaxed" style="color: var(--text-secondary);">
@@ -578,9 +578,9 @@
 								</div>
 								<code class="font-mono text-xs px-2 py-0.5 rounded" style="background: var(--surface-inset); color: var(--text-secondary);">api/server.py</code>
 							</div>
-							<!-- 2026-06-07 — card was a duplicate of #1 (both pointed
+							<!-- 2026-06-07 - card was a duplicate of #1 (both pointed
 								 at crypto.ts under two different labels). Now the
-								 storage-layer anchor — the most common question from
+								 storage-layer anchor - the most common question from
 								 privacy-conscious readers ("but where does the
 								 plaintext actually live?"). Database icon replaces the
 								 generic code-arrow that read as identical to other
@@ -620,18 +620,18 @@
 
 </main>
 
-<!-- CIPH-916 — Footer extracted to <PublicFooter /> and mounted from
+<!-- CIPH-916 - Footer extracted to <PublicFooter /> and mounted from
 	 +layout.svelte for landing + public-doc shells. -->
 
 {/if}
 
 <style>
-	/* CIPH-895 — Landing motion.
+	/* CIPH-895 - Landing motion.
 	   Hero content fades up + asterisk wordmark settles on page mount.
 	   Sections marked `.reveal use:inview` fade up when scrolled into
 	   view. Trust-app motion budget: 500ms duration, 12px translate, no
 	   parallax, no scroll-linked transforms, no looping animations. The
-	   inview action handles `prefers-reduced-motion` — when reduced,
+	   inview action handles `prefers-reduced-motion` - when reduced,
 	   the class is added immediately so content is visible without
 	   transition. */
 	.hero-content {
@@ -658,10 +658,10 @@
 		transform: none;
 	}
 
-	/* Hero scroll cue — chevron at the hero's bottom edge that gently
+	/* Hero scroll cue - chevron at the hero's bottom edge that gently
 	   bobs to signal there's more below. Replaces the old "Read the
 	   story" button that pre-empted the conditions section. Bob is
-	   slow (2.4s), low-amplitude (6px), infinite — but kept under
+	   slow (2.4s), low-amplitude (6px), infinite - but kept under
 	   reduced-motion via the @media block. Smooth-scroll on click is
 	   inherited from the html selector via app.css if set; the anchor
 	   navigates to #conditions either way. */

@@ -3,7 +3,7 @@
  *
  * Operator ruling 2026-08-21: *"Ciphra ist nur eine Dokumentationsplattform."*
  * The trajectory chart used to carry a label reading "Mehr Ereignisse" /
- * "Weniger Ereignisse" / "Stabil" — a derived verdict on which way the
+ * "Weniger Ereignisse" / "Stabil" - a derived verdict on which way the
  * patient's course was going.
  *
  * This is the third time that verdict has been narrowed, so it is worth
@@ -11,12 +11,12 @@
  *
  *   pre-pi24  a coloured pill (improving / stable / worsening) for every
  *             cohort. The five-doctor campfire flagged it as the single
- *             most-cited concern — STABIL on Helena mid-titration,
+ *             most-cited concern - STABIL on Helena mid-titration,
  *             VERBESSERUNG on Hans with a recent GTC, VERSCHLECHTERUNG on
  *             Anna's normal-rhythm bipolar quarter. "A wrong pill is worse
  *             than no pill."
  *   pi24      made cohort-aware and allowed to return null.
- *   DSPEC-2   colour removed, neutral text kept — the claim survived the
+ *   DSPEC-2   colour removed, neutral text kept - the claim survived the
  *             thing that was supposed to fix it.
  *   2026-08-21 removed entirely.
  *
@@ -84,13 +84,13 @@ describe('the PDF makes no directional assessment', () => {
 	it('the label chrome that read as a button is gone', () => {
 		// White rounded rect + hairline border + short centred label is the
 		// visual grammar of a control. A user reported it as "a 'Mehr
-		// Ereignisse' button that isn't one" — in a PDF, where nothing is.
+		// Ereignisse' button that isn't one" - in a PDF, where nothing is.
 		expect(PDF).not.toMatch(/roundedRect\([^)]*labelW/);
 	});
 
 	it('no delta is graded good or bad', () => {
 		// Second front of the same rule, closed 2026-08-21. The KPI tile delta
-		// painted "three fewer episodes" olive and "three more" brick — the
+		// painted "three fewer episodes" olive and "three more" brick - the
 		// trajectory verdict again, in colour rather than words, two
 		// centimetres from where the label used to sit.
 		//
@@ -117,7 +117,7 @@ describe('the PDF makes no directional assessment', () => {
 		// draw a boundary at the change and label the dose, and page 1 states
 		// the regimen on the end date. The doctor compares by eye. ciphra
 		// prints no per-period count, rate, average or delta, and no word
-		// about what happened after the change — "before/after" is the
+		// about what happened after the change - "before/after" is the
 		// layout, never a sentence.
 		const STRUCTURE_KEYS = [
 			'pdf.dose_band_caption',
@@ -169,7 +169,7 @@ describe('the PDF makes no directional assessment', () => {
 			// from the OUTCOME vocabulary ("Nebenwirkungen" contains "wirk").
 			// What must hold is that they are a CLOSED set: five keys, resolved
 			// inside the row builder. `therapyRows` used to take the resolver
-			// as a callback — a caller could have passed `p => p.endNote` and
+			// as a callback - a caller could have passed `p => p.endNote` and
 			// put free text on a clinical document.
 			const REASONS = ['side_effects', 'ineffective', 'doctor', 'pregnancy', 'other'];
 			for (const [name, dict] of DICTS) {
@@ -203,7 +203,7 @@ describe('the PDF makes no directional assessment', () => {
 			}
 		});
 
-		it('the band drawing reads no series data — it cannot count per period', () => {
+		it('the band drawing reads no series data - it cannot count per period', () => {
 			for (const fn of ['planDoseBands', 'drawDoseBandFills', 'drawDoseBandMarks', 'drawDoseBandCaption']) {
 				const i = PDF.indexOf(`function ${fn}(`);
 				expect(i, `${fn} missing`).toBeGreaterThan(0);
@@ -215,7 +215,7 @@ describe('the PDF makes no directional assessment', () => {
 		});
 	});
 
-	it('measured facts are untouched — this guard is not a blanket ban', () => {
+	it('measured facts are untouched - this guard is not a blanket ban', () => {
 		// Guards against over-correcting: the report must still state what
 		// was recorded.
 		expect(de['pdf.days_logged_short']).toBeDefined();

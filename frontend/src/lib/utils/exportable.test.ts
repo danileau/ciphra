@@ -1,5 +1,5 @@
 /**
- * ciphra — isExportable predicate tests (CIPH-741).
+ * ciphra - isExportable predicate tests (CIPH-741).
  *
  * Guards the privacy boundary: diary docs and private-flagged docs must
  * never be eligible for export (PDF / CSV / share link / reports).

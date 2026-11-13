@@ -1,5 +1,5 @@
 /**
- * INC-001 — let the test's local source origins through CSP.
+ * INC-001 - let the test's local source origins through CSP.
  *
  * ciphra ships a real Content-Security-Policy (vite.config.ts `kitConfig.csp`, `mode:
  * 'hash'`) whose `connect-src` names the production epilepc hosts:
@@ -10,7 +10,7 @@
  *
  * The dev server emits it too. So in a test, a bundle fetch to
  * `http://127.0.0.1:<port>` is refused by the renderer before a packet leaves
- * the browser — it never reaches the network layer, never reaches the source,
+ * the browser - it never reaches the network layer, never reaches the source,
  * and surfaces as the same `TypeError: Failed to fetch` that a CORS failure
  * produces. Identical symptom, completely different cause.
  *
@@ -19,8 +19,8 @@
  * `api/fixtures/epilepc/README.md` cannot pass. They have been inert since CSP
  * hardening shipped, which is a large part of why INC-001 reached a user.
  *
- * In PRODUCTION, CSP allows `https://epilepc.ch` — verified against the live
- * header — so CSP plays no part in the incident. Relaxing it here restores
+ * In PRODUCTION, CSP allows `https://epilepc.ch` - verified against the live
+ * header - so CSP plays no part in the incident. Relaxing it here restores
  * production's posture for the test: the source origin is permitted, and the
  * ONLY thing that can break the fetch is the redirect's missing CORS header.
  * Without this the reproduction would prove the wrong mechanism.
@@ -59,7 +59,7 @@ export async function allowConnectOrigins(page: Page, origins: string[]): Promis
 			}
 
 			// Pass status and body explicitly rather than relying on `response`
-			// merge semantics — those differ across Playwright versions, and a
+			// merge semantics - those differ across Playwright versions, and a
 			// silent no-op here makes CSP look like a CORS failure.
 			await route.fulfill({
 				status: response.status(),

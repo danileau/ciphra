@@ -1,5 +1,5 @@
 /**
- * Note markers — the shared definition behind the PDF and the pre-export
+ * Note markers - the shared definition behind the PDF and the pre-export
  * review.
  *
  * The contract that matters: the set the review dialog offers must be exactly
@@ -26,7 +26,7 @@ describe('isNoteMarker', () => {
 	});
 
 	it('rejects a rescue-medication administration', () => {
-		// Structured clinical act — its own KPI tile and CSV columns.
+		// Structured clinical act - its own KPI tile and CSV columns.
 		expect(isNoteMarker(doc(2, { type: 'event', kind: 'medication', date: '2025-03-01' }))).toBe(false);
 	});
 
@@ -85,7 +85,7 @@ describe('noteMarkersInWindow', () => {
 	});
 
 	it('excludes per-entry private markers', () => {
-		// The dialog must not offer a choice the user does not have — the
+		// The dialog must not offer a choice the user does not have - the
 		// export would drop these anyway.
 		const withPrivate = [...docs, note(5, '2025-04-01', { private: true })];
 		expect(noteMarkersInWindow(withPrivate, '2025-01-01', '2025-12-31').map((n) => n.id))

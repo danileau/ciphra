@@ -3,7 +3,7 @@
  *
  * `privacy.data_body` promises the server stores "only the following
  * categories". The list named credentials, the encrypted vault, and an audit
- * log "of authentication events" — while `api/server.py` also writes a row
+ * log "of authentication events" - while `api/server.py` also writes a row
  * every time a document is created, updated or deleted, plus family-sharing
  * and admin events, and stores account/invitation bookkeeping that the list
  * did not mention at all. `docs/SECURITY_MODEL.md` had already been corrected;
@@ -11,7 +11,7 @@
  * contradictory disclosures, one of them the GDPR page.
  *
  * These tests read the server, not a copy of it, so the page cannot quietly
- * drift back — or fall behind a new class of audit event.
+ * drift back - or fall behind a new class of audit event.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -43,7 +43,7 @@ function auditEvents(): string[] {
 }
 
 describe('the audit log the page describes is the one the server writes', () => {
-	it('the server does log document writes — the fact the page has to carry', () => {
+	it('the server does log document writes - the fact the page has to carry', () => {
 		const events = auditEvents();
 		expect(events).toContain('DOC_CREATED');
 		expect(events).toContain('DOC_UPDATED');
@@ -83,7 +83,7 @@ describe('the audit log the page describes is the one the server writes', () => 
 		});
 
 		it(`${name}: names the account and invitation bookkeeping as its own category`, () => {
-			// Invitation labels are stored in plain text — nothing on the page
+			// Invitation labels are stored in plain text - nothing on the page
 			// said so, while "only the following categories" claimed the list
 			// was complete.
 			const book = dict['privacy.data_item_bookkeeping'];

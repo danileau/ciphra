@@ -3,21 +3,21 @@
  *
  * Reported from the running app: a custom symptom you had just created did
  * not appear in Settings until the page was reloaded. The list came from
- * `{@const items = customsForKind(section.kind)}` — a function that reads the
+ * `{@const items = customsForKind(section.kind)}` - a function that reads the
  * blueprint, called from an expression naming only the section. Svelte tracks
  * what an expression *names*, so nothing told it to re-run when the blueprint
  * changed. The `{#if bp}` around the list does not help: an if-block whose
  * condition stays truthy is never re-created.
  *
  * The same shape had shipped twice before anyone connected the two: the
- * calendar's day labels (#201, where the stale value was a translation) and —
- * found while fixing this one — the /reports totals row, which kept the
+ * calendar's day labels (#201, where the stale value was a translation) and -
+ * found while fixing this one - the /reports totals row, which kept the
  * previous month's sums under the new month's grid.
  *
  * So this is a baseline, not a ban. Every entry below is a template
  * expression calling a function that reads reactive state the expression does
  * not name. Most are harmless today, because the value cannot change while
- * the block is mounted — but each is one data change away from showing a
+ * the block is mounted - but each is one data change away from showing a
  * stale number, and the list only shrinks by someone checking one and passing
  * the dependency in.
  *
@@ -141,7 +141,7 @@ function scan(): Set<string> {
 			const isEvent =
 				inEvent || node.type === 'EventHandler' || (node.type === 'Attribute' && /^on/.test(node.name));
 			// {#each} re-renders its items and {#key} rebuilds outright. {#if}
-			// does neither once its condition is truthy — which is exactly how
+			// does neither once its condition is truthy - which is exactly how
 			// the custom-item list came to freeze.
 			if (['EachBlock', 'KeyBlock', 'AwaitBlock'].includes(node.type) && node.expression) {
 				ctx = `${ctx} ${src.slice(node.expression.start, node.expression.end)}`;
@@ -183,13 +183,13 @@ describe('a template expression names what it depends on', () => {
 		expect(
 			added,
 			'These call a function that reads reactive state the expression does not name, so ' +
-				'Svelte will not re-run them when it changes — the custom-symptom list and the ' +
+				'Svelte will not re-run them when it changes - the custom-symptom list and the ' +
 				'/reports totals row both froze this way. Pass the dependency in (a reactive map, ' +
 				'or the value as an argument), or add the entry to KNOWN with a reason.',
 		).toEqual([]);
 	});
 
-	it('shrinks only — a fixed call is deleted from KNOWN', () => {
+	it('shrinks only - a fixed call is deleted from KNOWN', () => {
 		const gone = [...KNOWN].filter((k) => !found.has(k)).sort();
 		expect(gone, `Fixed, so delete from KNOWN: ${gone.join(', ')}`).toEqual([]);
 	});

@@ -1,6 +1,6 @@
 /**
  * Public-page head metadata (lib/seoMeta.ts). The root layout renders
- * this outside its auth gate so it reaches the SSR HTML — these pin that
+ * this outside its auth gate so it reaches the SSR HTML - these pin that
  * every public page gets its own title and a SELF-referencing canonical
  * (a site-wide canonical=/ once folded every page into the homepage).
  */

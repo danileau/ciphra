@@ -1,5 +1,5 @@
 /**
- * Track-3 3.4 — bulk-import idempotency key.
+ * Track-3 3.4 - bulk-import idempotency key.
  *
  * The server is zero-knowledge: it can't read the epilepc `source_id` inside a
  * document's ciphertext, so the CLIENT supplies an opaque, deterministic,

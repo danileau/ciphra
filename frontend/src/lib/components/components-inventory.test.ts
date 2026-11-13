@@ -1,5 +1,5 @@
 /**
- * CIPH-832 — Component inventory discipline.
+ * CIPH-832 - Component inventory discipline.
  *
  * Every `.svelte` file in `frontend/src/lib/components/` must be
  * listed in `README.md` under the "Component inventory" section.
@@ -27,7 +27,7 @@ function componentFiles(): string[] {
 
 function inventorySection(): string {
 	// Everything from "## Component inventory" up to the next `## `
-	// (top-level) heading — we deliberately include the
+	// (top-level) heading - we deliberately include the
 	// "Primitives defined but not yet wired" and "Patterns flagged"
 	// subsections because components living there are still
 	// inventoried, just not actively wired.

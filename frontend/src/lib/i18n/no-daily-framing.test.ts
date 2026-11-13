@@ -1,5 +1,5 @@
 /**
- * Landing brand-voice guard — `landing.how_step*` must not frame the
+ * Landing brand-voice guard - `landing.how_step*` must not frame the
  * product as a daily-habit tracker.
  *
  * ciphra is positioned as an episodic diary for chronic illness. The
@@ -32,13 +32,13 @@ const HOW_STEP_KEYS = [
 	'landing.how_step3_desc',
 ] as const;
 
-// (The landing notapp_* "what an entry looks like" cluster — once a "Die
-// Abendroutine / Le rituel du soir" daily-ritual pitch — was deleted
+// (The landing notapp_* "what an entry looks like" cluster - once a "Die
+// Abendroutine / Le rituel du soir" daily-ritual pitch - was deleted
 // entirely in the 2026-06-20 storyline sweep along with the other unmounted
 // landing keys, so it no longer needs a guard.)
 
 // Authed-app surfaces (2026-06-20 storyline sweep). The dashboard/setup
-// must keep the same no-daily-habit voice the landing promises — a
+// must keep the same no-daily-habit voice the landing promises - a
 // "Tägliche Einträge" tile or a "jeden Abend" setup pitch contradicted
 // the public "keine Erinnerungen, kein schlechtes Gewissen" line. These
 // are the first authed touchpoints (welcome card, setup wizard, quick
@@ -51,7 +51,7 @@ const AUTHED_KEYS = [
 
 // Locale-specific banned phrases. Match is case-insensitive. Each
 // pattern targets phrasing that asserts a daily cadence or evening
-// ritual — both of which violate the no-gaslight stance for the
+// ritual - both of which violate the no-gaslight stance for the
 // product's own self-description.
 const FORBIDDEN: Record<string, RegExp> = {
 	de: /\btäglich\b|\bjeden\s+(?:abend|tag)\b|\babendroutine\b/i,
@@ -67,7 +67,7 @@ const DICTS: Array<[string, Record<string, string>]> = [
 	['it', itDict],
 ];
 
-describe('landing brand voice — must not frame ciphra as daily-habit', () => {
+describe('landing brand voice - must not frame ciphra as daily-habit', () => {
 	for (const [name, dict] of DICTS) {
 		const pattern = FORBIDDEN[name];
 		for (const key of [...HOW_STEP_KEYS, ...AUTHED_KEYS]) {
@@ -78,7 +78,7 @@ describe('landing brand voice — must not frame ciphra as daily-habit', () => {
 				expect(
 					match,
 					`${name}: ${key} matches forbidden daily-frequency pattern ${pattern}. ` +
-						`Value: "${value}". See feedback_no_gaslight_good_days.md — landing ` +
+						`Value: "${value}". See feedback_no_gaslight_good_days.md - landing ` +
 						`copy describes the product as an episodic diary, not a daily routine.`,
 				).toBeNull();
 			});

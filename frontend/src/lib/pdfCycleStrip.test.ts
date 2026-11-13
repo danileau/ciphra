@@ -86,13 +86,13 @@ describe('aggregateCycleStrip', () => {
 	});
 
 	it('handles anchor docs from outside the focus month', () => {
-		// Anchor in March, focus month is April — strip must still resolve.
+		// Anchor in March, focus month is April - strip must still resolve.
 		const docs = [entryWithCycle(1, '2026-03-20', 1, 28)];
 		const { cells } = aggregateCycleStrip(endoBlueprint(), docs, 2026, 3, 30);
 		expect(cells.every((c) => c.phase !== null)).toBe(true);
 	});
 
-	// 2026-06-07 clinician review P1-4 — anchor staleness guard.
+	// 2026-06-07 clinician review P1-4 - anchor staleness guard.
 
 	it('returns anchorDate + anchorAgeDays metadata for a fresh anchor', () => {
 		const docs = [entryWithCycle(1, '2026-04-15', 1, 28)];

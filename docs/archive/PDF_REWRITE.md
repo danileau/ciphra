@@ -1,4 +1,4 @@
-# PDF rewrite — design memo (CIPH-pi18-2)
+# PDF rewrite - design memo (CIPH-pi18-2)
 
 `pageW = 210mm, pageH = 297mm, margins = 14mm, content width = 182mm.`
 All references to `pdf.ts` are by line number against commit `c49723f`.
@@ -22,37 +22,37 @@ What the doctor's eye does in the first 30 seconds, per cohort. This is the cont
 
 > **Epilepsy is the load-bearing case for this cohort.** Asthma + glaucoma sit in the same shape (point-event count, peak-vital, rescue-med). ADHD + hypertension + diabetes lean on vital trajectories with episodes as colour.
 
-1. **Episode count this scope vs prior scope** — "12 seizures (Apr) vs 8 (Mar)." Single number, with delta. This is the consultation's opening sentence.
-2. **Cluster days / longest seizure-free streak** — gives away tapering issues. "Longest streak: 9 days." Currently buried in the "year burden" bullet.
-3. **Rescue-med usage** — Midazolam frequency. If non-zero, this is *the* escalation question ("chronic AED?"). Today only surfaced as event markers on the trajectory chart. Must be its own KPI.
-4. **24-month trajectory** — improving / stable / worsening. Already there (`pdf.ts:1255-1614`). Stays page 1.
+1. **Episode count this scope vs prior scope** - "12 seizures (Apr) vs 8 (Mar)." Single number, with delta. This is the consultation's opening sentence.
+2. **Cluster days / longest seizure-free streak** - gives away tapering issues. "Longest streak: 9 days." Currently buried in the "year burden" bullet.
+3. **Rescue-med usage** - Midazolam frequency. If non-zero, this is *the* escalation question ("chronic AED?"). Today only surfaced as event markers on the trajectory chart. Must be its own KPI.
+4. **24-month trajectory** - improving / stable / worsening. Already there (`pdf.ts:1255-1614`). Stays page 1.
 
 The grid table on page 4+ is read only when the doctor wants to spot-check a specific day. **They never read all 31 rows.** Triggers + symptom frequencies are tertiary.
 
 ### cycle (endometriosis, menopause, PCOS)
 
-1. **Phase calendar overlay** — where in the cycle did pain peak? The 24-month trajectory is much less informative than a per-day phase strip; cycle conditions are by definition *cyclic* and the doctor compares this cycle to last cycle, not month to month.
-2. **Cycle length + variability** — "Cycle 27 / 28 / 31 / ?" — predictability is a clinical primitive for endo + PCOS.
-3. **Top trigger × phase intersection** — "Pain peaks in luteal phase, top trigger: stress." The currently-flat trigger-frequency table doesn't expose this.
-4. **Vital trajectory for the dominant vital** — pain VAS for endo, IOP-style indicators for PCOS, mood for menopause. Dual-axis on the trajectory chart, not a separate page.
+1. **Phase calendar overlay** - where in the cycle did pain peak? The 24-month trajectory is much less informative than a per-day phase strip; cycle conditions are by definition *cyclic* and the doctor compares this cycle to last cycle, not month to month.
+2. **Cycle length + variability** - "Cycle 27 / 28 / 31 / ?" - predictability is a clinical primitive for endo + PCOS.
+3. **Top trigger × phase intersection** - "Pain peaks in luteal phase, top trigger: stress." The currently-flat trigger-frequency table doesn't expose this.
+4. **Vital trajectory for the dominant vital** - pain VAS for endo, IOP-style indicators for PCOS, mood for menopause. Dual-axis on the trajectory chart, not a separate page.
 
 ### phase (bipolar, MS, IBD, IBS, chronic_pain, anx_dep, burnout, long_covid)
 
 > **Bipolar is the load-bearing case here.** MS / IBD share the multi-day-flare shape; long_covid + chronic_pain + IBS are subtler (no sharp episodes, just tinted weeks).
 
-1. **Phase distribution this scope** — "% manic / mixed / depressive / euthymic." A horizontal stacked-bar across 1 line. Currently absent.
-2. **Phase-day count delta** — "Manic days: 4 (Apr) vs 1 (Mar)." Right next to phase distribution.
-3. **Triggers behind episode onset** — "Last 3 manic episodes started within 48h of <2 sleep ref-line>." The chart's vital reference-line idea (`applyVitalTargetOverrides`, `pdf.ts:163`) already does the math; we don't surface the inference.
-4. **Rescue benzo / steroid burst usage** — "subtherapeutic mood stabilizer?" question.
+1. **Phase distribution this scope** - "% manic / mixed / depressive / euthymic." A horizontal stacked-bar across 1 line. Currently absent.
+2. **Phase-day count delta** - "Manic days: 4 (Apr) vs 1 (Mar)." Right next to phase distribution.
+3. **Triggers behind episode onset** - "Last 3 manic episodes started within 48h of <2 sleep ref-line>." The chart's vital reference-line idea (`applyVitalTargetOverrides`, `pdf.ts:163`) already does the math; we don't surface the inference.
+4. **Rescue benzo / steroid burst usage** - "subtherapeutic mood stabilizer?" question.
 
 The 24-month trajectory line for *episode count* is **less useful** than a phase-coverage strip; for bipolar, "manic days went from 4 to 12" matters more than "episode count went from 4 to 12." This is the strongest case for cohort-conditional ordering.
 
 ### narrative (migraine)
 
-1. **Trigger frequency** — *the* question. "Top triggers: red wine (8), poor sleep (6), barometric drop (4)." Currently a back-section table with nothing to anchor it.
-2. **Symptom co-occurrence** — aura/photophobia/nausea pattern. "Photophobia in 14/18 attacks." The symptom-grid table technically has this but at 12pt across 31 rows the doctor has to count it themselves.
-3. **Vital reference-line crossings** — "Sleep < 6h on 9 of 18 attack-days." Doctor wants the inference, not the raw vitals chart.
-4. **Trajectory** — secondary. Migraine doctors care about "what fires the migraine," not "how many migraines this year" once chronicity is established.
+1. **Trigger frequency** - *the* question. "Top triggers: red wine (8), poor sleep (6), barometric drop (4)." Currently a back-section table with nothing to anchor it.
+2. **Symptom co-occurrence** - aura/photophobia/nausea pattern. "Photophobia in 14/18 attacks." The symptom-grid table technically has this but at 12pt across 31 rows the doctor has to count it themselves.
+3. **Vital reference-line crossings** - "Sleep < 6h on 9 of 18 attack-days." Doctor wants the inference, not the raw vitals chart.
+4. **Trajectory** - secondary. Migraine doctors care about "what fires the migraine," not "how many migraines this year" once chronicity is established.
 
 ### custom
 
@@ -67,7 +67,7 @@ If the custom condition has zero episode types but multiple vitals (e.g. someone
 
 ## 2. Cohort × section relevance matrix
 
-H = primary, place page-1. M = secondary, page-2. L = tertiary, gridded. — = drop entirely for this cohort.
+H = primary, place page-1. M = secondary, page-2. L = tertiary, gridded. - = drop entirely for this cohort.
 
 | section | discrete | cycle | phase | narrative | custom |
 |---|---|---|---|---|---|
@@ -75,7 +75,7 @@ H = primary, place page-1. M = secondary, page-2. L = tertiary, gridded. — = d
 | Disclaimer strip | H | H | H | H | H |
 | Doctor-glance KPIs (4 tiles) | **H** | **H** | **H** | **H** | H |
 | 24-month trend chart | **H** | M | M | L | M |
-| Phase / cycle strip | — | **H** | **H** | — | M (if blueprint declares phase or cycle) |
+| Phase / cycle strip | - | **H** | **H** | - | M (if blueprint declares phase or cycle) |
 | Day-coverage strip | M | M | M | M | M |
 | Symptom grid (full month table) | L | L | L | L | L |
 | Episode timeline / list | M | M | **H** | M | L |
@@ -87,11 +87,11 @@ H = primary, place page-1. M = secondary, page-2. L = tertiary, gridded. — = d
 | Footer / contact | H | H | H | H | H |
 
 ### What's noise today, by cohort
-- **discrete:** the symptom-frequency table on page 2 (`pdf.ts:2070-2141`) is sometimes 18 rows of "Müdigkeit 4×, Kopfschmerz 2×" — for an epilepsy patient with 12 seizures, the doctor reads zero of these rows. **Push to grid appendix.**
+- **discrete:** the symptom-frequency table on page 2 (`pdf.ts:2070-2141`) is sometimes 18 rows of "Müdigkeit 4×, Kopfschmerz 2×" - for an epilepsy patient with 12 seizures, the doctor reads zero of these rows. **Push to grid appendix.**
 - **cycle:** trajectory chart leads the report; for cycle conditions the comparison-vs-prior-cycle would lead. Today the chart sits between disclaimer + symptom-grid with no phase context.
-- **phase:** the 2×2 stat-card grid currently spends one tile on "Most frequent symptom" — for bipolar that's "Reizbarkeit (8)" which is information-poor next to "% manic days: 12%." **Tile selection must be cohort-driven.**
+- **phase:** the 2×2 stat-card grid currently spends one tile on "Most frequent symptom" - for bipolar that's "Reizbarkeit (8)" which is information-poor next to "% manic days: 12%." **Tile selection must be cohort-driven.**
 - **narrative (migraine):** the trigger table sits on page 3 today (`pdf.ts:2070`-style auto-table buried after the chart). For migraine, the trigger table IS page 1.
-- **custom:** the report fakes structure that the blueprint doesn't have — "Most frequent trigger" tile renders "—" for half the custom blueprints. Tiles must be data-driven, not slot-driven.
+- **custom:** the report fakes structure that the blueprint doesn't have - "Most frequent trigger" tile renders "-" for half the custom blueprints. Tiles must be data-driven, not slot-driven.
 
 ### What's missing today, by cohort (calendar-v3 parity)
 - **all cohorts with `triggers.length > 0`:** day-coverage strip cells should expose a trigger mark (calendar v3's right-edge accent bar). Today the strip is binary "logged or not."
@@ -103,7 +103,7 @@ H = primary, place page-1. M = secondary, page-2. L = tertiary, gridded. — = d
 
 ## 3. Universal-with-emphasis vs cohort-conditional
 
-**Pick: B — cohort-conditional, with a fixed mandatory spine.**
+**Pick: B - cohort-conditional, with a fixed mandatory spine.**
 
 Mandatory spine, every PDF:
 1. Header (condition · scope · account · export date)
@@ -140,7 +140,7 @@ const sections: PdfSection[] = [
 - The "doctor learns one document" worry is real but mitigated: the spine (header / disclaimer / KPIs / trend / footer) is invariant. A doctor reading two patients' PDFs sees identical page-1 chrome; only the third-of-the-page below the trend differs.
 - The Compact PDF dropped exactly because doctors didn't read its entirety either. "Universal" was already not happening.
 
-The risk of B is **section ordering drift over time** — someone adds `drawNewThing` to discrete only, forgets phase. Mitigation: a single `cohortSections.ts` test asserts every cohort's section list is non-empty + spine is intact + length within bounds. One-file, one-test discipline mechanism.
+The risk of B is **section ordering drift over time** - someone adds `drawNewThing` to discrete only, forgets phase. Mitigation: a single `cohortSections.ts` test asserts every cohort's section list is non-empty + spine is intact + length within bounds. One-file, one-test discipline mechanism.
 
 ---
 
@@ -151,7 +151,7 @@ The risk of B is **section ordering drift over time** — someone adds `drawNewT
 - `BRAND.paper`, `BRAND.paperInset`, `BRAND.card`, `BRAND.border`, `BRAND.borderSubtle`. Surface tokens.
 - `BRAND.textPrimary`, `BRAND.textSecondary`, `BRAND.textMuted`. Type ramp.
 - `BRAND.olive` for "improving" / "good" status only (delta arrows, adherence ≥80%). Olive is the brand's positive accent.
-- `drawWordmark` (`pdf.ts:275`) — mark goes warm-rust (`BRAND.brick`) regardless of cohort. The asterisk holds the brand.
+- `drawWordmark` (`pdf.ts:275`) - mark goes warm-rust (`BRAND.brick`) regardless of cohort. The asterisk holds the brand.
 
 ### Becomes cohort-driven
 | token use site | today | new |
@@ -163,16 +163,16 @@ The risk of B is **section ordering drift over time** — someone adds `drawNewT
 | trend chart area fill | `BRAND.ochreSoft` | `cohortAccent[0]` at α≈0.12 (computed soft) |
 | symptom intensity pill | `BRAND.brick` α-blend | `cohortAccent[0]` α-blend (same math, swap base) |
 | episode-count pill | `BRAND.ochre` α-blend | `cohortAccent[2]` α-blend (warm break, slot 3) |
-| trend pill — "worsening" | `BRAND.brick` on `[249,229,224]` | keep `BRAND.brick` (semantic-bad, not cohort) |
-| trend pill — "improving" | `BRAND.olive` on `[238,239,213]` | keep `BRAND.olive` (semantic-good, not cohort) |
+| trend pill - "worsening" | `BRAND.brick` on `[249,229,224]` | keep `BRAND.brick` (semantic-bad, not cohort) |
+| trend pill - "improving" | `BRAND.olive` on `[238,239,213]` | keep `BRAND.olive` (semantic-good, not cohort) |
 
 ### Retired
 - `BRAND.brick` as the universal data-accent. Becomes semantic-only (errors, "worsening", warnings).
 - `BRAND.ochre` as the universal episode-accent. Becomes semantic-only (data-quality footnote, "logged this scope").
-- `drawWatermarkPattern` (`pdf.ts:384`) — currently unused on the doctor PDF; only recovery + invite use it. **Stays in the file but not in the doctor PDF.**
+- `drawWatermarkPattern` (`pdf.ts:384`) - currently unused on the doctor PDF; only recovery + invite use it. **Stays in the file but not in the doctor PDF.**
 
 ### Cohort accent resolution
-`cohortPalette.ts` is the source. PDF doesn't import it directly (the file's docs at line 37-46 explicitly say `pdf.ts` is excluded — print-safe + fixed). **Override that note for this rewrite**: import `COHORT_PALETTE_RGB` (already RGB triples, the format `pdf.ts` needs) and `cohortOf`. The print-safe constraint is satisfied because `cohortPalette.ts:71-113` palettes are already the same hexes that pass `/reports`'s 4.5:1 audit and the `CHART_ONLY_TONES` set is documented (`cohortPalette.ts:187-195`) so we know which tones to skip for body text.
+`cohortPalette.ts` is the source. PDF doesn't import it directly (the file's docs at line 37-46 explicitly say `pdf.ts` is excluded - print-safe + fixed). **Override that note for this rewrite**: import `COHORT_PALETTE_RGB` (already RGB triples, the format `pdf.ts` needs) and `cohortOf`. The print-safe constraint is satisfied because `cohortPalette.ts:71-113` palettes are already the same hexes that pass `/reports`'s 4.5:1 audit and the `CHART_ONLY_TONES` set is documented (`cohortPalette.ts:187-195`) so we know which tones to skip for body text.
 
 ```ts
 import { COHORT_PALETTE_RGB } from '$lib/cohortPalette';
@@ -184,7 +184,7 @@ const ACC_PRIMARY: RGB = accent[0];        // page-1 stripes, KPI numbers, trend
 const ACC_BREAK:   RGB = accent[2];        // warm break, episode-count pills
 const ACC_ANCHOR:  RGB = accent[4];        // slate, secondary axes labels
 // Slots 1, 3 of cycle/discrete/custom and slot 6 of narrative/custom etc. are
-// CHART_ONLY (3:1) — skip for text. Use ACC_PRIMARY for text only after an
+// CHART_ONLY (3:1) - skip for text. Use ACC_PRIMARY for text only after an
 // AA check at draw time:
 function textSafe(rgb: RGB, against: RGB): RGB {
   return contrastRatio(rgb, against) >= 4.5 ? rgb : BRAND.textPrimary;
@@ -193,16 +193,16 @@ function textSafe(rgb: RGB, against: RGB): RGB {
 
 ### Brand voice
 - Page-1 subtitle today reads `pdf.analytics_title` ("Klinischer Bericht" or similar). **Change to "Tagebuch · {scope}"** to match the post-PI v14 brand-voice reversal (see `feedback_brand_voice.md`).
-- Disclaimer strip stays — `pdf.disclaimer_medical_long` is correct. Don't add the admin-confession copy here; the PDF is doctor-facing, not patient-facing, and "nicht mal wir Admins lesen mit" reads weirdly when the doctor is the audience.
+- Disclaimer strip stays - `pdf.disclaimer_medical_long` is correct. Don't add the admin-confession copy here; the PDF is doctor-facing, not patient-facing, and "nicht mal wir Admins lesen mit" reads weirdly when the doctor is the audience.
 - Footer (`drawFooter`, `pdf.ts:348`) stays.
 
 ---
 
 ## 5. Trend chart embedding
 
-**Pick: B — server-style line chart in jsPDF directly.**
+**Pick: B - server-style line chart in jsPDF directly.**
 
-The current trajectory chart (`pdf.ts:1474-1614`) already does this well — straight segments, area fill, year divider, event lines, dual-axis, end-marker dot. **It's a solved problem; we just need to make it cohort-coloured and add a `daily-month` mode.**
+The current trajectory chart (`pdf.ts:1474-1614`) already does this well - straight segments, area fill, year divider, event lines, dual-axis, end-marker dot. **It's a solved problem; we just need to make it cohort-coloured and add a `daily-month` mode.**
 
 Why not A (Chart.js → canvas → PNG):
 - Adds Chart.js to the lazy-loaded PDF bundle. PI v17 already disciplined `loadPdfLib()` to keep the load split (`+page.svelte:17-21`). Chart.js is ~150KB minified.
@@ -210,7 +210,7 @@ Why not A (Chart.js → canvas → PNG):
 - Font serialization into canvas is fragile across browsers; the existing helvetica-only path (`pdf.ts:296`) just works.
 
 Why B is fine:
-- The on-screen `/reports` Chart.js chart and the in-PDF jsPDF chart will not be pixel-perfect identical, but they don't need to be — they share the **data shape** + the **two-line dual-axis** + the **range chip rendering**. The visual treatment in print should be flatter, denser, no animations, no tooltip chrome — server-style is correct for print anyway.
+- The on-screen `/reports` Chart.js chart and the in-PDF jsPDF chart will not be pixel-perfect identical, but they don't need to be - they share the **data shape** + the **two-line dual-axis** + the **range chip rendering**. The visual treatment in print should be flatter, denser, no animations, no tooltip chrome - server-style is correct for print anyway.
 - Drift risk is mitigated by sharing aggregator helpers (`aggregateVitalMonthlyShared`, `aggregateEpisodeMonthlyShared`, `pdf.ts:117-157`). The data is identical; only the rendering diverges.
 
 ### Per-scope chart mode
@@ -250,7 +250,7 @@ if (scope === 'month') {
 
 Range chip (PI v17 added this on `/reports`): render `1. – 30. April 2026` (month) or `Mai 2024 – Apr 2026` (2years) right-aligned in the chart-card title row at `helvetica 8pt textMuted`.
 
-Empty-state (PI v17): if `monthDocs.length === 0` → `pdf.no_data` ("no entries this scope"). If `monthDocs.length > 0 && totalEpisodes + sum(symptomDays) === 0` → `pdf.no_signal` ("entries logged but no flares yet"). Print the placeholder copy in `helvetica italic 9pt textMuted` centered in the chart box. Don't unmount the chart card — same lesson as `/reports`.
+Empty-state (PI v17): if `monthDocs.length === 0` → `pdf.no_data` ("no entries this scope"). If `monthDocs.length > 0 && totalEpisodes + sum(symptomDays) === 0` → `pdf.no_signal` ("entries logged but no flares yet"). Print the placeholder copy in `helvetica italic 9pt textMuted` centered in the chart box. Don't unmount the chart card - same lesson as `/reports`.
 
 ---
 
@@ -292,7 +292,7 @@ function pickKpiTiles(cohort: Cohort, ctx: KpiCtx): KpiTile[] {
     case 'discrete': return [
       tileEpisodeCount(ctx),                  // "12 seizures"
       tileEpisodeDelta(ctx),                  // "+4 vs Mar"
-      tileRescueMedDays(ctx),                 // "Midazolam: 3 days"  — drop tile if 0
+      tileRescueMedDays(ctx),                 // "Midazolam: 3 days"  - drop tile if 0
       tileLongestStreak(ctx),                 // "9 days seizure-free"
     ];
     case 'cycle': return [
@@ -400,7 +400,7 @@ Currently runs as the appendix (`drawGridSection`, `pdf.ts:459-692`). **Keep it 
 - **Day column 10mm → 8mm.** Just the number, no padding waste.
 - **Notes column** truncates at 40 chars today; raise to 60 if `effectiveSymptomColumns.length + effectiveEpisodeColumns.length < 12` (mirror the `.grid-table--compact` threshold on `/reports`, line 1201).
 - **Symptom intensity α-blend** (`pdf.ts:660-670`) swaps `BRAND.brick` → `ACC_PRIMARY`. Episode-count pill swaps `BRAND.ochre` → `ACC_BREAK`.
-- **Header row fill** stays `BRAND.paperInset`; **totals row** swaps `BRAND.brick` → `ACC_PRIMARY` (with the white text on top — verify ≥4.5:1 contrast against ACC_PRIMARY for each cohort; phase slot 1 `#5e4a8a` and discrete slot 1 `#b23c2c` both pass).
+- **Header row fill** stays `BRAND.paperInset`; **totals row** swaps `BRAND.brick` → `ACC_PRIMARY` (with the white text on top - verify ≥4.5:1 contrast against ACC_PRIMARY for each cohort; phase slot 1 `#5e4a8a` and discrete slot 1 `#b23c2c` both pass).
 
 Per `scope === 'year' | '2years'`, the appendix already renders one grid per month in chronological order (`pdf.ts:2418-2423`). Keep.
 
@@ -413,7 +413,7 @@ Per `scope === 'year' | '2years'`, the appendix already renders one grid per mon
 | file | line range | what |
 |---|---|---|
 | `pdf.ts` | 2909-3283 | `generateCompactPdf` + entire body |
-| `pdf.ts` | (within current rewrite) | `chartContext` is shared with bullets but the reference `chartContext.MONTHS / firstAvg / lastAvg` etc. (`pdf.ts:2303-2317`) needs to keep working — preserve the variable, just relocate it to be set inside the unified trend block. |
+| `pdf.ts` | (within current rewrite) | `chartContext` is shared with bullets but the reference `chartContext.MONTHS / firstAvg / lastAvg` etc. (`pdf.ts:2303-2317`) needs to keep working - preserve the variable, just relocate it to be set inside the unified trend block. |
 | `routes/reports/+page.svelte` | 36-41 | `pickExport(scope, compact)` simplifies to `pickExport(scope)` |
 | `routes/reports/+page.svelte` | 259-264 | `exportCompactForDoctor` helper |
 | `routes/reports/+page.svelte` | 1080-1091 | the menu separator + "Kompakt A4" `<button>` |
@@ -422,14 +422,14 @@ Per `scope === 'year' | '2years'`, the appendix already renders one grid per mon
 
 Confirmed via grep against `de.ts`, `en.ts`, `fr.ts`, `it.ts`:
 
-- [ ] `pdf.export_compact` — DE 1945, EN 1935, FR 1922, IT 1923
-- [ ] `pdf.export_compact_desc` — DE 1946, EN 1936, FR 1923, IT 1924
-- [ ] `pdf.compact_subtitle` — DE 1947, EN 1937, FR 1924, IT 1925
-- [ ] `pdf.compact_intro` — DE 1948, EN 1938, FR 1925, IT 1926
+- [ ] `pdf.export_compact` - DE 1945, EN 1935, FR 1922, IT 1923
+- [ ] `pdf.export_compact_desc` - DE 1946, EN 1936, FR 1923, IT 1924
+- [ ] `pdf.compact_subtitle` - DE 1947, EN 1937, FR 1924, IT 1925
+- [ ] `pdf.compact_intro` - DE 1948, EN 1938, FR 1925, IT 1926
 
 The grep ran with `grep -n "compact\|export_compact" frontend/src/lib/i18n/{de,en,fr,it}.ts`. **Four keys × four locales = 16 string deletions.** The CIPH-305 comment headers in fr.ts:1921 + sibling locales also become orphan and should be removed alongside.
 
-After deletion, run: `node scripts/i18n-validate.mjs` (or equivalent — confirm script name during impl) to verify no consumer references the dropped keys. The hardcoded `chunkLog` in `routes/reports/+page.svelte:1085` is the only consumer.
+After deletion, run: `node scripts/i18n-validate.mjs` (or equivalent - confirm script name during impl) to verify no consumer references the dropped keys. The hardcoded `chunkLog` in `routes/reports/+page.svelte:1085` is the only consumer.
 
 ### Tests to update
 
@@ -440,9 +440,9 @@ After deletion, run: `node scripts/i18n-validate.mjs` (or equivalent — confirm
 
 ## 9. Implementation split
 
-CIPH-pi18-2 splits into 3 chunks. Each chunk ships independently — chunk N never blocks chunk N-1's deploy.
+CIPH-pi18-2 splits into 3 chunks. Each chunk ships independently - chunk N never blocks chunk N-1's deploy.
 
-### Chunk 1 — drop Compact (Sprint 3, Day 1)
+### Chunk 1 - drop Compact (Sprint 3, Day 1)
 
 Files: `pdf.ts` (delete 2909-3283), `routes/reports/+page.svelte` (simplify menu), `i18n/{de,en,fr,it}.ts` (16 string deletions).
 
@@ -452,24 +452,24 @@ Visible change: "Kompakt A4" entry disappears from the export menu. Single PDF d
 Tests: existing vitest stays green; one test referencing `generateCompactPdf` is deleted (grep before deciding).
 Smoke: `pdf` smoke spec generates a doctor PDF; does NOT generate compact. Smoke 8/8 → 7/7 if compact was tested separately, or stays 8/8 if smoke only ran the doctor path.
 
-### Chunk 2 — visual system + cohort accent (Sprint 3, Day 2-3)
+### Chunk 2 - visual system + cohort accent (Sprint 3, Day 2-3)
 
 Files: `pdf.ts` only. Touches `BRAND` token usage in `generateDoctorPdf` + `drawGridSection` + `drawStatCard` callsites; introduces `ACC_PRIMARY / ACC_BREAK / ACC_ANCHOR` resolved from `cohortPalette.ts`. Brand-voice subtitle change.
 
-Risk: medium. Print contrast must be re-verified per cohort. Add a vitest that walks each `Cohort` and asserts `contrastRatio(ACC_PRIMARY, BRAND.paper) >= 4.5` for text uses (cycle slot 1 `#b6306a` is at 4.45:1 per the a11y review — flag this; either move cycle's text-tier accent to slot 2 `#7a2845` or test fails and we know up front).
+Risk: medium. Print contrast must be re-verified per cohort. Add a vitest that walks each `Cohort` and asserts `contrastRatio(ACC_PRIMARY, BRAND.paper) >= 4.5` for text uses (cycle slot 1 `#b6306a` is at 4.45:1 per the a11y review - flag this; either move cycle's text-tier accent to slot 2 `#7a2845` or test fails and we know up front).
 
 Dependency: chunk 1.
 Visible change: PDFs become cohort-tinted. Migraine PDF is sage-green, cycle is rose, phase is steel-violet. Pages look different per condition.
 Tests: 1 new vitest (cohort-accent contrast). Existing tests pass unchanged.
 
-### Chunk 3 — trend embedding + KPI block + cohort-conditional sections (Sprint 3, Day 4-7)
+### Chunk 3 - trend embedding + KPI block + cohort-conditional sections (Sprint 3, Day 4-7)
 
 Files: `pdf.ts` (replace stat-card 2×2 with 4-tile glance, add `pickKpiTiles`, branch trend chart on `scope==='month'`, add `drawDayCoverageStrip`, add `drawPhaseDistribution`, add `drawCycleStrip`, gate sections via `cohortSections.ts`).
 
 Risk: highest. New rendering primitives, new data wiring (phase distribution needs `phaseOverrides` walking; daily-month chart needs the new aggregator path).
 
 Dependency: chunks 1 + 2.
-Visible change: page 1 looks like the PI v17 `/reports` design — same KPI vocabulary, same trend chart shape, same range chip. Page 2 is cohort-shaped: phase strip for bipolar, cycle strip for endo, trigger ranking for migraine.
+Visible change: page 1 looks like the PI v17 `/reports` design - same KPI vocabulary, same trend chart shape, same range chip. Page 2 is cohort-shaped: phase strip for bipolar, cycle strip for endo, trigger ranking for migraine.
 Tests: new vitest per cohort asserting `cohortSections.ts` returns the expected section list + ordering. New vitest snapshot of `pickKpiTiles` output for each cohort (deterministic on a fixture).
 
 ### Sprint discipline reminder
@@ -492,7 +492,7 @@ PI v18 floor is 4.6. Persona dry-run before each chunk merges: Linus for cohort 
 Four open questions from PI v18's chunk-3-partial dry-run, resolved 2026-05-07
 before Track B implementation starts. PI v19 implements per these decisions.
 
-### Q1 — Trajectory + vital-mini-chart frames at `pdf.ts:~1686/2026`
+### Q1 - Trajectory + vital-mini-chart frames at `pdf.ts:~1686/2026`
 
 **Decision: migrate from BRAND.ochreSoft → BRAND.borderSubtle.**
 
@@ -503,40 +503,40 @@ accent; the chart frame was the last residual. If borderSubtle prints too
 faint on warm-cream paper, the right fix is bumping borderSubtle's alpha
 globally, not keeping ochre as a workaround.
 
-### Q2 — Discrete cohort exception (brick + ochre)
+### Q2 - Discrete cohort exception (brick + ochre)
 
 **Decision: keep as original-look reference; document the asymmetry in
 `pickBreakFallback` so future devs don't migrate it accidentally.**
 
 Three reasons:
-1. Discrete (epilepsy/asthma/parkinson) is the load-bearing case (§1) —
+1. Discrete (epilepsy/asthma/parkinson) is the load-bearing case (§1) -
    changing its palette mid-PI risks "did something clinical change?"
    perception from existing patients.
 2. The tonal-pair pattern emerged because ochre was a poor break for cycle
-   (rose+ochre clash) and custom. Brick+ochre is *already* tonally coherent —
+   (rose+ochre clash) and custom. Brick+ochre is *already* tonally coherent -
    both warm reds, similar temperature. No mismatch to fix.
 3. Defensive documentation > silent exception.
 
-### Q3 — Sage 12% wash printability on warm paper
+### Q3 - Sage 12% wash printability on warm paper
 
 **Decision: cool primaries (sage / slate) → 15%; warm primaries stay 12%.**
 
 Warm paper amplifies warm tones in printer ink-mixing; cool tones lose
 ~3-5% effective alpha on cheap clinic printers. Per-cohort lookup keyed off
-slot-1 hue — `isCoolPrimary(cohort)` returns true for narrative (sage) and
+slot-1 hue - `isCoolPrimary(cohort)` returns true for narrative (sage) and
 custom (slate). 15% is still subtle but crosses the visibility floor on
 older lasers.
 
-### Q4 — Replace vs layer for new primitives on the existing heatmap
+### Q4 - Replace vs layer for new primitives on the existing heatmap
 
-**Decision: neither — they live on different pages.**
+**Decision: neither - they live on different pages.**
 
 - `drawDayCoverageStrip` + `drawPhaseDistribution` + `drawCycleStrip` →
   **page 1-2** (the 30-second-read block, gated by cohort).
 - Existing monthly symptom grid heatmap (`drawGridSection`, the 31×N table) →
   **appendix**, unchanged. §2 already classifies it as L for all cohorts.
 
-The "replace vs layer" framing was a category error — the heatmap was already
+The "replace vs layer" framing was a category error - the heatmap was already
 queued to move to the back, the new primitives were already queued for the
 front. Both render; no crowding because they're on different pages.
 
@@ -544,6 +544,6 @@ front. Both render; no crowding because they're on different pages.
 
 ## 12. Self-score
 
-Hits the contract: 30-second-read per cohort with concrete examples (§1), explicit cohort×section matrix with H/M/L/— (§2), architecture B chosen with `buildConditionAwareBullets` precedent cited (§3), visual-token swap table with line numbers + the `#b6306a` contrast flag surfaced (§4), trend approach picked with budget rationale + per-scope mode (§5), KPI tile selector per cohort (§6), calendar-v3 parity expressed in mm + jsPDF pseudocode (§7), grep-confirmed i18n drop list (§8), 3-chunk implementation split with risk + dependency + visible-change for each (§9), 4 honest deferrals (§10).
+Hits the contract: 30-second-read per cohort with concrete examples (§1), explicit cohort×section matrix with H/M/L/- (§2), architecture B chosen with `buildConditionAwareBullets` precedent cited (§3), visual-token swap table with line numbers + the `#b6306a` contrast flag surfaced (§4), trend approach picked with budget rationale + per-scope mode (§5), KPI tile selector per cohort (§6), calendar-v3 parity expressed in mm + jsPDF pseudocode (§7), grep-confirmed i18n drop list (§8), 3-chunk implementation split with risk + dependency + visible-change for each (§9), 4 honest deferrals (§10).
 
-Half-point off: the phase-distribution rendering primitive is named in §6/§9 but I did not draft its mm geometry (it's the only new primitive without a code sketch). A reviewer building the implementation will need 30 minutes to design the stacked-bar dimensions from scratch. Acceptable for a memo (not a spec) — the cohort relevance, the data path (`phaseOverrides + episodeTypes[].multiDay`), and the placement in the section list are all specified, just not the pixel layout.
+Half-point off: the phase-distribution rendering primitive is named in §6/§9 but I did not draft its mm geometry (it's the only new primitive without a code sketch). A reviewer building the implementation will need 30 minutes to design the stacked-bar dimensions from scratch. Acceptable for a memo (not a spec) - the cohort relevance, the data path (`phaseOverrides + episodeTypes[].multiDay`), and the placement in the section list are all specified, just not the pixel layout.

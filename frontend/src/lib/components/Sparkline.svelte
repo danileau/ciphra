@@ -1,9 +1,9 @@
 <!--
-    Sparkline — minimal SVG line chart for /admin dashboard metrics.
+    Sparkline - minimal SVG line chart for /admin dashboard metrics.
 
     Stateless, takes an array of numbers and renders them as a single
     polyline scaled to the component's width/height. No axes, no legend,
-    no library — by design.
+    no library - by design.
 
     Used by the admin dashboard's sparkline-first metric layout
     ([[project_epilepc_lifecycle_plan]] §Phase walkthrough decisions).

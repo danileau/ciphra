@@ -1,7 +1,7 @@
 import type { Blueprint } from './types';
 
 /**
- * Personal vital targets (a blood-pressure goal, an HbA1c target) — where they
+ * Personal vital targets (a blood-pressure goal, an HbA1c target) - where they
  * live.
  *
  * The setup wizard used to write them to `localStorage.ciphra_vital_targets:
@@ -10,7 +10,7 @@ import type { Blueprint } from './types';
  * it neither followed the user to another device nor survived clearing site
  * data. They now live on the blueprint (`vitalTargets`), encrypted like
  * everything else. The old key is read once, folded into the blueprint, and
- * removed only after that save succeeded — removing it any earlier (e.g. on
+ * removed only after that save succeeded - removing it any earlier (e.g. on
  * the logout that runs when a closed browser is reopened) would lose targets
  * that were never migrated.
  */
@@ -47,12 +47,12 @@ export function clearLegacyVitalTargets(username: string | null | undefined): vo
 	try {
 		localStorage.removeItem(legacyVitalTargetsKey(username));
 	} catch {
-		/* storage blocked — nothing to remove */
+		/* storage blocked - nothing to remove */
 	}
 }
 
-/** The targets that apply to a blueprint: its own, or — for a blueprint not
- *  yet migrated — the legacy key for `legacyUsername` ('' = none, e.g. a
+/** The targets that apply to a blueprint: its own, or - for a blueprint not
+ *  yet migrated - the legacy key for `legacyUsername` ('' = none, e.g. a
  *  caregiver viewing a patient, whose device-local targets are their own). */
 export function effectiveVitalTargets(
 	bp: Blueprint,
@@ -62,7 +62,7 @@ export function effectiveVitalTargets(
 }
 
 /** The blueprint with legacy targets folded in, or null when there is nothing
- *  to migrate (no legacy key, or the blueprint already carries targets — the
+ *  to migrate (no legacy key, or the blueprint already carries targets - the
  *  encrypted copy wins). Pure apart from the localStorage read; the caller
  *  saves and then calls `clearLegacyVitalTargets`. */
 export function migrateLegacyVitalTargets(bp: Blueprint | null, username: string | null | undefined): Blueprint | null {

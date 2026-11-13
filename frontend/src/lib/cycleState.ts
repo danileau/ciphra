@@ -1,14 +1,14 @@
 /**
- * CIPH-855a — Shared cycle-state module.
+ * CIPH-855a - Shared cycle-state module.
  *
  * Extracted from Companion.svelte so Calendar can use the same
  * computation to render a phase-per-day overlay without reinventing
  * the math or duplicating the anchor-lookup + wrap logic.
  *
  * Consumed by:
- *   - `CompanionMain` (indirectly via Companion.svelte) — renders the
+ *   - `CompanionMain` (indirectly via Companion.svelte) - renders the
  *     cycle-phase card for today.
- *   - `routes/calendar/+page.svelte` — renders a 15% phase-colored
+ *   - `routes/calendar/+page.svelte` - renders a 15% phase-colored
  *     background on each day cell (cycle cohort only).
  */
 import type { Blueprint } from './blueprint/types';
@@ -146,7 +146,7 @@ export function cycleStateForDate(
 	const a = new Date(anchor.anchorDate + 'T12:00:00');
 	const t = new Date(targetDate + 'T12:00:00');
 	const elapsed = Math.round((t.getTime() - a.getTime()) / 86400000);
-	// Signed elapsed — cycle day arithmetic must work both forward and
+	// Signed elapsed - cycle day arithmetic must work both forward and
 	// backward so calendar cells before the anchor render correctly.
 	let day = anchor.anchorDay + elapsed;
 	day = (((day - 1) % anchor.cycleLength) + anchor.cycleLength) %

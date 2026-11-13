@@ -1,5 +1,5 @@
 /**
- * CIPH-890 — Cohort palette.
+ * CIPH-890 - Cohort palette.
  *
  * Adds a per-cohort tonal family on top of `DATA_PALETTE`, so a glance
  * at the page reads the condition (cohort).
@@ -8,7 +8,7 @@
  *     cycle    → roses
  *     phase    → indigos
  *     narrative→ sages
- *     discrete → warm-rust (= today's DATA_PALETTE, verbatim — keeps every
+ *     discrete → warm-rust (= today's DATA_PALETTE, verbatim - keeps every
  *                shipped preset working without migration)
  *     custom   → slates
  *
@@ -16,20 +16,20 @@
  * 2026-06-11 design review: it shipped with zero consumers on both the
  * CSS side (`--route-l/s-shift` vars, only ever referenced in comments)
  * and the TS side (`applyRouteShift*`, only referenced by its own
- * tests) — and the two sides had already drifted apart (CSS said
+ * tests) - and the two sides had already drifted apart (CSS said
  * reports −10% S after the PI v13 critique, TS still said −4%). Route
  * identity comes from content + the CIPH-892 rhythm tokens; cohort
  * identity keeps `--accent-*`. Guard: `route-shift-removed.test.ts`.
- * `pathToRoute()` survives — it drives `data-route` for rhythm tokens.
+ * `pathToRoute()` survives - it drives `data-route` for rhythm tokens.
  *
  * Consumers of this module:
- *   - CSS — uses `--cohort-<family>-<n>` vars from `app.css`.
- *   - JS / Chart.js — chart libraries take hex strings, not CSS vars.
+ *   - CSS - uses `--cohort-<family>-<n>` vars from `app.css`.
+ *   - JS / Chart.js - chart libraries take hex strings, not CSS vars.
  *     Use `cohortPalette(cohort)` for the base tones.
  *
  * NOT TOUCHED by this story:
  *   - `pdf.ts` BRAND + DATA_HEX (print-safe, fixed).
- *   - `cycleState.ts` PHASE_COLORS — menstrual-cycle phase encoding is
+ *   - `cycleState.ts` PHASE_COLORS - menstrual-cycle phase encoding is
  *     a state-within-cohort signal, not a cohort palette. Keeping the
  *     existing rust/ochre/olive/slate phase mapping preserves the
  *     established clinical-color intuition.
@@ -42,7 +42,7 @@ export type Cohort = 'cycle' | 'phase' | 'narrative' | 'discrete' | 'custom';
 export type RouteName = 'calendar' | 'journal' | 'reports' | 'dashboard';
 export type Hex = string;
 
-/** Existing 6-token DATA_PALETTE — the discrete cohort row.
+/** Existing 6-token DATA_PALETTE - the discrete cohort row.
  *  Kept verbatim from `dataPalette.ts` to guarantee zero migration. */
 const DISCRETE_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
 	'#b23c2c', // 1 brand rust
@@ -53,24 +53,24 @@ const DISCRETE_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
 	'#a87559', // 6 clay terracotta
 ];
 
-/** Cycle row — roses + warm/cool breaks. Slots 1/2/6 are roses; slot 3
- *  is a warm clay-rose (chart-only — see CHART_ONLY_TONES); slot 4
+/** Cycle row - roses + warm/cool breaks. Slots 1/2/6 are roses; slot 3
+ *  is a warm clay-rose (chart-only - see CHART_ONLY_TONES); slot 4
  *  olive and slot 5 anchor slate are cool counterpoints.
  *  Slot 1 was shifted from `#a83a5b` to `#b6306a` (frontend-designer
- *  critique 2026-04-28) — the previous rose sat 14° hue / 18% sat away
+ *  critique 2026-04-28) - the previous rose sat 14° hue / 18% sat away
  *  from discrete slot 1 `#b23c2c`, making cycle and discrete cohorts
  *  feel like tinted siblings. `#b6306a` pulls cycle clearly into
  *  magenta-rose territory and out of the warm-rust family. */
 const CYCLE_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
 	'#b6306a', // 1 magenta-rose primary
 	'#7a2845', // 2 mulberry
-	'#b06a4a', // 3 clay-rose (chart only — 3.6:1 against cream)
+	'#b06a4a', // 3 clay-rose (chart only - 3.6:1 against cream)
 	'#7f821b', // 4 olive
 	'#5c6b73', // 5 anchor slate
 	'#9a4f6b', // 6 dusty rose
 ];
 
-/** Phase row — steel-violet family with warm + cool breaks.
+/** Phase row - steel-violet family with warm + cool breaks.
  *  Slot 1 was shifted from `#3f4a8a` (cool navy-indigo) to `#5e4a8a`
  *  (warmer steel violet) on user feedback 2026-04-28: navy felt too
  *  institutional / cold for the "as private as a notebook" brand.
@@ -85,7 +85,7 @@ const PHASE_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
 	'#7a5e8a', // 6 dusty violet (was #6b6b9a periwinkle)
 ];
 
-/** Narrative row — sages with warm + cool breaks. */
+/** Narrative row - sages with warm + cool breaks. */
 const NARRATIVE_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
 	'#4a6b3f', // 1 sage primary
 	'#2f4a28', // 2 forest
@@ -95,7 +95,7 @@ const NARRATIVE_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
 	'#6b8a5c', // 6 moss
 ];
 
-/** Custom row — slates with warm + cool breaks. */
+/** Custom row - slates with warm + cool breaks. */
 const CUSTOM_TONES: readonly [Hex, Hex, Hex, Hex, Hex, Hex] = [
 	'#475569', // 1 slate primary
 	'#334155', // 2 deep slate
@@ -115,7 +115,7 @@ export const COHORT_PALETTES: Readonly<
 	custom: CUSTOM_TONES,
 };
 
-/** All cohort names — exported for tests + iteration. */
+/** All cohort names - exported for tests + iteration. */
 export const ALL_COHORTS_PALETTE: readonly Cohort[] = [
 	'cycle',
 	'phase',
@@ -124,7 +124,7 @@ export const ALL_COHORTS_PALETTE: readonly Cohort[] = [
 	'custom',
 ];
 
-/** RGB triples per cohort — mirrors `DATA_PALETTE_RGB`. Used by
+/** RGB triples per cohort - mirrors `DATA_PALETTE_RGB`. Used by
  *  `rgba(var(--cohort-X-N-rgb), alpha)` callers for alpha tinting
  *  (selected-chip backgrounds, soft hover fills). The CSS layer
  *  emits matching `--cohort-X-N-rgb` vars in `app.css`. */
@@ -176,18 +176,18 @@ export const COHORT_PALETTE_RGB: Readonly<
 /** Tones that pass the chart-use floor (3:1) but fail the text-use
  *  floor (4.5:1) against the cream surface. Document so future
  *  consumers don't accidentally use them for body text. The list is
- *  exhaustive — `cohortPalette.test.ts` enforces it stays so. */
+ *  exhaustive - `cohortPalette.test.ts` enforces it stays so. */
 export const CHART_ONLY_TONES: ReadonlySet<Hex> = new Set([
-	'#b06a4a', // cycle slot 3 — clay-rose, ~3.6:1
+	'#b06a4a', // cycle slot 3 - clay-rose, ~3.6:1
 	'#7f821b', // olive (cycle/narrative/discrete/custom slot 4) ~4:1
 	'#a87559', // clay (discrete slot 6, custom slot 3) ~4.1:1
-	'#6b8a5c', // narrative slot 6 — moss ~3.9:1
-	'#6b7b8a', // custom slot 6 — blue-slate ~4.4:1
-	'#5c7a4a', // phase slot 4 — muted sage, borderline
+	'#6b8a5c', // narrative slot 6 - moss ~3.9:1
+	'#6b7b8a', // custom slot 6 - blue-slate ~4.4:1
+	'#5c7a4a', // phase slot 4 - muted sage, borderline
 	'#5c6b73', // anchor slate (slot 5 across cohorts) ~4.4:1
 ]);
 
-/** Named exports — mirror DATA_1..DATA_6 ergonomics. */
+/** Named exports - mirror DATA_1..DATA_6 ergonomics. */
 export const CYCLE_1 = CYCLE_TONES[0];
 export const CYCLE_2 = CYCLE_TONES[1];
 export const CYCLE_3 = CYCLE_TONES[2];

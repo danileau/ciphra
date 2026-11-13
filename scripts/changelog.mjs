@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// changelog — pending changelog entries live in changelog.d/, one file per
+// changelog - pending changelog entries live in changelog.d/, one file per
 // change; this compiles them.
 //
 //   node scripts/changelog.mjs check              validate every fragment (CI runs this)
@@ -9,7 +9,7 @@
 // `release` is the release PR's one step: it moves CHANGELOG.md's
 // [Unreleased] entries plus every fragment into a dated `## [X.Y.Z]` section,
 // resets [Unreleased], updates the link references, deletes the fragments and
-// sets VERSION + frontend/package.json. Choosing X.Y.Z stays a judgement —
+// sets VERSION + frontend/package.json. Choosing X.Y.Z stays a judgement -
 // `scripts/version-next.sh` suggests one (docs/VERSIONING.md).
 //
 // Why fragments: see changelog.d/README.md. The parsing and rendering live in
@@ -43,7 +43,7 @@ if (command === 'check') {
 	const problems = list.flatMap(checkFragment);
 	if (problems.length > 0) {
 		for (const p of problems) {
-			console.error(`❌ changelog.d/${p.file}${p.line ? `:${p.line}` : ''} — ${p.message}`);
+			console.error(`❌ changelog.d/${p.file}${p.line ? `:${p.line}` : ''} - ${p.message}`);
 		}
 		console.error('\nFormat: changelog.d/README.md');
 		process.exit(1);
@@ -51,7 +51,7 @@ if (command === 'check') {
 	console.log(`✅ changelog: ${list.length} fragment${list.length === 1 ? '' : 's'} valid.`);
 } else if (command === 'preview') {
 	const pending = pendingEntries(readFileSync(CHANGELOG, 'utf8'), fragments());
-	for (const p of pending.problems) console.error(`⚠️  ${p.file}${p.line ? `:${p.line}` : ''} — ${p.message}`);
+	for (const p of pending.problems) console.error(`⚠️  ${p.file}${p.line ? `:${p.line}` : ''} - ${p.message}`);
 	const body = (pending.intro ? `${pending.intro}\n\n` : '') + renderSections(pending.sections);
 	process.stdout.write(body || '(nothing pending)\n');
 } else if (command === 'release') {
@@ -76,7 +76,7 @@ if (command === 'check') {
 	if (bumped === pkg && !pkg.includes(`"version": "${version}"`)) fail('could not find "version" in frontend/package.json.');
 	writeFileSync(pkgPath, bumped);
 	for (const f of list) rmSync(join(FRAGMENT_DIR, f.name));
-	console.log(`✅ changelog: released ${version} (${date}) — ${list.length} fragment${list.length === 1 ? '' : 's'} folded in.`);
+	console.log(`✅ changelog: released ${version} (${date}) - ${list.length} fragment${list.length === 1 ? '' : 's'} folded in.`);
 	console.log('   CHANGELOG.md, VERSION and frontend/package.json updated; fragments removed.');
 	console.log('   Review the new section (add a short intro if the release deserves one), then run scripts/version-guard.sh.');
 } else {

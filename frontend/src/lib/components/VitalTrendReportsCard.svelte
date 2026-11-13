@@ -1,5 +1,5 @@
 <!--
-	pi24 reports — VitalTrendReportsCard.
+	pi24 reports - VitalTrendReportsCard.
 
 	The /reports counterpart to VitalTrendCard (dashboard). Mounted by
 	/reports/+page.svelte when resolveReportsPrimaryCard returns
@@ -7,7 +7,7 @@
 
 	Differences from the dashboard version:
 	- Bigger chart canvas (reports is the deep-view surface)
-	- Chip selector for 4+ vitals (chips, not tabs — Codex round 2
+	- Chip selector for 4+ vitals (chips, not tabs - Codex round 2
 	  consensus). 2-3 vitals → inline secondary sparklines.
 	- Diverging-bar variant when the ACTIVE vital crosses zero
 	  (mood_polarity). Diverging-ness is per-vital, not per-card: if a
@@ -18,7 +18,7 @@
 	  glance.
 	- Honors bp.dateFormat in tooltip titles (matching the /reports
 	  trend chart pi24-5e+ work).
-	- No "Verlauf ansehen →" link — we ARE the deep view.
+	- No "Verlauf ansehen →" link - we ARE the deep view.
 
 	Same monthly-mean aggregation algorithm as the dashboard card
 	(spanGaps:true keeps sparse lab cohorts legible). Diverging path
@@ -65,7 +65,7 @@
 	$: if (primaryVitalId) activeVitalId = primaryVitalId;
 
 	$: activeVital = (bp?.vitals || []).find((v) => v.id === activeVitalId) as VitalField | undefined;
-	/** All vitals to consider — primary plus secondaries with data. */
+	/** All vitals to consider - primary plus secondaries with data. */
 	$: allVitals = (() => {
 		const ids = [primaryVitalId, ...secondariesWithData];
 		const seen = new Set<string>();
@@ -199,7 +199,7 @@
 	})();
 
 	// Dose bands (2026-09-17): the same before/after structure as the episode
-	// trend — the most recently changed medication's dose periods behind the
+	// trend - the most recently changed medication's dose periods behind the
 	// vital's monthly line. Structure only; nothing derived per period.
 	$: bandBins = activeTrend
 		? monthBins(activeTrend.months[0].y, activeTrend.months[0].m, activeTrend.months.length)
@@ -264,7 +264,7 @@
 				},
 			},
 			// dateFormatChoice + reference line are intentionally not wired
-			// into Chart.js annotations here — kept for a future pass when
+			// into Chart.js annotations here - kept for a future pass when
 			// the chartjs-plugin-annotation budget is justified.
 			_dateFmt: fmt,
 			_ref: ref,
@@ -303,7 +303,7 @@
 		{#if chipsMode}
 			<!-- Chip selector for 4+ vitals. Pinned default = primary; user
 			     can swap which vital fills the chart. NOT tabs (would imply
-			     page navigation) — chips filter within this section. -->
+			     page navigation) - chips filter within this section. -->
 			<div class="flex flex-wrap gap-2 mb-4">
 				{#each allVitals as v}
 					<button

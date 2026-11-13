@@ -1,15 +1,15 @@
 <!--
-	CIPH-896 — Wordmark primitive.
+	CIPH-896 - Wordmark primitive.
 
-	"ciphra*" — the canonical brand mark. Text + asterisk sized
+	"ciphra*" - the canonical brand mark. Text + asterisk sized
 	relatively to a single `size` prop. Replaces 5+ hand-rolled SVG
 	implementations (landing nav, landing hero, landing footer, layout
 	header, /migrate header) so the mark stays consistent + cohort
 	identity stays intact (text always uses --text-primary, asterisk
-	always --brand — the wordmark is invariant by design, NOT
+	always --brand - the wordmark is invariant by design, NOT
 	cohort-tinted).
 
-	The asterisk paths mirror `Asterisk.svelte` exactly — same 8°
+	The asterisk paths mirror `Asterisk.svelte` exactly - same 8°
 	rotation, same arm geometry, same stroke-width ratio. The two
 	primitives stay in sync via the audit test in
 	`lib/wordmark-consolidation.test.ts`.
@@ -18,7 +18,7 @@
 	/** Height of the wordmark in CSS pixels. Text + asterisk scale together. */
 	export let size: number = 28;
 	/** Color of the asterisk strokes. `brand` is the default and almost
-	 *  always correct — wordmark identity is invariant. `muted` for
+	 *  always correct - wordmark identity is invariant. `muted` for
 	 *  faded watermark contexts. */
 	export let mark: 'brand' | 'muted' = 'brand';
 	/** Optional `aria-label` override. Defaults to "ciphra". */
@@ -26,11 +26,11 @@
 	/** When true, the asterisk arms draw themselves in via stroke-
 	 *  dashoffset on first paint (~600ms total). Opt-in so chrome
 	 *  wordmarks (top nav, footer) don't replay the entrance on every
-	 *  page navigation — only the landing hero asks for it. Honours
+	 *  page navigation - only the landing hero asks for it. Honours
 	 *  prefers-reduced-motion via the CSS @media block below. */
 	export let drawIn: boolean = false;
 
-	// Geometry — asterisk hugs the wordmark as a trailing glyph. Inter's
+	// Geometry - asterisk hugs the wordmark as a trailing glyph. Inter's
 	// rendered "ciphra" at font-size 26 with letter-spacing 0.5 ends near
 	// x≈80 in the viewBox, so the asterisk centre sits at x=82 with arms
 	// reaching across the gap. Earlier x=84 left a perceptible 1.5-glyph
@@ -93,13 +93,13 @@
 		vertical-align: middle;
 	}
 
-	/* Draw-in entrance — the three asterisk arms strokes themselves
+	/* Draw-in entrance - the three asterisk arms strokes themselves
 	   in sequence as a craft-level brand identity moment. The
 	   stroke-dasharray equals the path length (rounded up); animating
 	   stroke-dashoffset full → 0 makes the line draw along its own
 	   path. Only fires when the parent passes `drawIn` (landing hero)
 	   so chrome wordmarks stay still. Cascade: longest arm starts
-	   first, finishes at ~560ms — fast enough that the wobble at
+	   first, finishes at ~560ms - fast enough that the wobble at
 	   t=700ms picks up cleanly without overlap. */
 	.wordmark-asterisk--draw-in .wordmark-arm-1 {
 		stroke-dasharray: 11;

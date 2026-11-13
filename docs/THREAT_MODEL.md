@@ -1,9 +1,9 @@
-# ciphra — operational threat model
+# ciphra - operational threat model
 
 This is the engineering / audit companion to `SECURITY_MODEL.md`. `SECURITY_MODEL.md`
 describes the **protocol-layer** zero-knowledge model (what the server,
 the network, and the browser can each see). This file covers the
-**operational-layer** model — the adversaries introduced by the
+**operational-layer** model - the adversaries introduced by the
 production deploy stack (`golive/`) and how each is bounded.
 
 If you only have time for one, read `SECURITY_MODEL.md` first. This document
@@ -28,7 +28,7 @@ Two layers protect the patient's plaintext data:
 
 **The promise:** even if the entire operational layer is breached
 (sysadmin malice + Cloudflare account takeover + R2 compromise +
-Postgres dump leak — all at once), patient health data is still
+Postgres dump leak - all at once), patient health data is still
 encrypted at rest with keys the attacker doesn't have. They get
 ciphertext, username, timestamps, and IP within retention.
 
@@ -38,7 +38,7 @@ attacker controls what code runs in the browser, they can exfiltrate
 keys on the next login. This is a structural limitation of every
 web-based zero-knowledge product (Bitwarden, Proton, Tutanota, Standard
 Notes, etc.) and is mitigated only by reproducible builds (we do not
-have these yet) and source-availability (we do — public repo).
+have these yet) and source-availability (we do - public repo).
 
 ---
 
@@ -83,12 +83,12 @@ Equivalent to (A) plus the ability to bypass any host-level controls.
   shared with any other service) and 2FA via TOTP (not SMS).
 - VPS root key is SSH-key only, not password. Even with VM console
   access, an attacker would need to inject a new authorized_keys
-  entry via single-user-mode reboot — visible in console history and
+  entry via single-user-mode reboot - visible in console history and
   triggers a host_metrics.sh alert (unexpected reboot).
 - Account loss-of-control playbook: see
   [`/docs/INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md) → Playbook C.
 
-**Residual risk: MEDIUM** — protected by TOTP + SSH-key, but no
+**Residual risk: MEDIUM** - protected by TOTP + SSH-key, but no
 hardware key on the provider account.
 
 ### C. Stolen Cloudflare account credentials
@@ -104,15 +104,15 @@ sees a valid certificate.
 - Cloudflare account uses unique password + TOTP 2FA.
 - TLS mode locked at "Full (strict)" in the pre-cutover checklist
   (`golive/archive/CHECKLIST_prelaunch_2026-06-07.md`), and `security-monitor.yml` re-checks it daily
-  against the Cloudflare API — a drift alerts rather than waiting to
+  against the Cloudflare API - a drift alerts rather than waiting to
   be noticed. That leg needs `CF_API_TOKEN` + `CF_ZONE_ID` as repo
   secrets; without them it skips with a notice. See §7.
 - The HSTS header carries `preload`, which is what protects a
   returning visitor from a downgrade. Submitting the domain to the
-  preload *list* — which would also cover a first-ever visit — is
+  preload *list* - which would also cover a first-ever visit - is
   declined: it locks the domain to HTTPS for ~2 years. See §7.
 
-**Residual risk: MEDIUM-HIGH** — Cloudflare is a single point of
+**Residual risk: MEDIUM-HIGH** - Cloudflare is a single point of
 trust that sits between the user and our origin. This is the cost
 of using their TLS / WAF / DDoS protection.
 
@@ -127,9 +127,9 @@ of using their TLS / WAF / DDoS protection.
   cloud).
 - Patient health data inside the Postgres dump is itself ciphertext
   (per protocol-layer). So a backup leak gives the attacker
-  age-encrypted ciphertext — two encryption layers to break.
+  age-encrypted ciphertext - two encryption layers to break.
 
-**Residual risk: LOW** — the only real-world impact is
+**Residual risk: LOW** - the only real-world impact is
 metadata leak (usernames, registration dates, IP within retention)
 if both backup destinations AND the age private key are compromised.
 
@@ -143,7 +143,7 @@ hotspot, etc.
   strict + origin cert pinned 15-year validity).
 - HSTS header set by nginx, `preload` included; the preload-list
   submission is declined (see C).
-- The protocol model assumes a passive network attacker by default —
+- The protocol model assumes a passive network attacker by default -
   see `SECURITY_MODEL.md` §Threat model.
 
 **Residual risk: LOW** for passive attackers; **MEDIUM** for active
@@ -168,7 +168,7 @@ defend against this; we rely on browser-vendor extension review.
 ### H. Targeted attacker who can swap JavaScript
 
 The JS-swap attack. See §5 for full discussion. **Mitigated only
-partially** — this is the unsolved problem of all browser-E2E
+partially** - this is the unsolved problem of all browser-E2E
 products.
 
 ---
@@ -214,7 +214,7 @@ products.
 
 **Reading guide:** the patient's password is the only artifact
 that crosses the BROWSER → CLOUDFLARE boundary in non-hashed form,
-and only as Argon2-derived auth bytes — never as the password
+and only as Argon2-derived auth bytes - never as the password
 itself. The master key never leaves the BROWSER layer.
 
 ---
@@ -226,12 +226,12 @@ itself. The master key never leaves the BROWSER layer.
 | Login bruteforce | API /login | E (network) | ✅ Per-account lockout (5 fails → 15 min) + per-IP limits (nginx `api_login` zone, flask-limiter) + Cloudflare rate-limit |
 | Recovery bruteforce | API /recover | E | ✅ Per-account lockout (3 fails → 15 min) |
 | Account enumeration | API /login, /recover, /register, /family/claim | E | ⚠️ Fake params / decoy grants on `/login/init`, `/recover/init`, `/family/grants/claim/init`. Residual, accepted: `/register` 409 on a taken name (inherent; 3/min), a 429 lockout only a real account can reach, and a claim-init list longer than the decoy's one entry. SECURITY_MODEL.md → Hardening |
-| XSS → key theft | Frontend | E + B+C compromise paths | ✅ CSP strict (SvelteKit hash mode, configured in `frontend/vite.config.ts`) — no unhashed inline script; the two `app.html` inline scripts are hash-pinned (`src/app-html-csp.test.ts`); only `'wasm-unsafe-eval'` for Argon2 WASM, no `unsafe-eval`. `style-src` keeps `'unsafe-inline'` (dynamic inline styles) |
+| XSS → key theft | Frontend | E + B+C compromise paths | ✅ CSP strict (SvelteKit hash mode, configured in `frontend/vite.config.ts`) - no unhashed inline script; the two `app.html` inline scripts are hash-pinned (`src/app-html-csp.test.ts`); only `'wasm-unsafe-eval'` for Argon2 WASM, no `unsafe-eval`. `style-src` keeps `'unsafe-inline'` (dynamic inline styles) |
 | CSRF | API mutating endpoints | E | ✅ JWT-bearer auth (not cookie) → no automatic credential attachment |
 | SQL injection | API/Postgres | E | ✅ Parameterized queries (psycopg) |
-| TLS downgrade | Edge | C (CF takeover) | ⚠️ Locked at Full (strict); `security-monitor.yml` re-checks it daily via the CF API — needs `CF_API_TOKEN` + `CF_ZONE_ID` to be set, else that leg skips |
+| TLS downgrade | Edge | C (CF takeover) | ⚠️ Locked at Full (strict); `security-monitor.yml` re-checks it daily via the CF API - needs `CF_API_TOKEN` + `CF_ZONE_ID` to be set, else that leg skips |
 | BGP hijack / cert fraud | Network | E (sophisticated) | ⚠️ HSTS sent with `preload`; preload-*list* submission declined 2026-08-23 |
-| JS swap | Server-served bundle | A, B, C | ❌ Structural — see §5 |
+| JS swap | Server-served bundle | A, B, C | ❌ Structural - see §5 |
 | Backup leak | R2 / Swiss Backup | D | ✅ age-encrypted + protocol-layer ciphertext underneath |
 | Postgres dump leak | VPS compromise | A, B | ✅ Patient health data is ciphertext at rest |
 | Container CVE | Docker base images | E (sophisticated) | ✅ Daily Trivy scan of repo + published ghcr images (`security-scan.yml`), fresh DB, fails on HIGH/CRITICAL |
@@ -257,7 +257,7 @@ to detect this; the page looks identical.
 **Current mitigations:**
 
 1. **Source-availability.** ciphra's code is in a public repo. A
-   suspicious user can diff what they're served against the repo —
+   suspicious user can diff what they're served against the repo -
    but this is not a defense, it's a verification ritual most users
    will not perform.
 2. **Argon2-WASM SRI pinning.** The Argon2 library is loaded with a
@@ -265,8 +265,8 @@ to detect this; the page looks identical.
    is refused by the browser. But the *main app bundle* is loaded
    via SvelteKit's normal mechanism without SRI on every chunk.
 3. **No third-party CDNs for app code.** Everything is same-origin.
-   This shrinks the attack to "our server" (or anyone in front of it
-   — i.e. Cloudflare). The one third-party script is Cloudflare's Web
+   This shrinks the attack to "our server" (or anyone in front of it -
+   i.e. Cloudflare). The one third-party script is Cloudflare's Web
    Analytics beacon (`static.cloudflareinsights.com`), which is not app
    code and is served by the party already in the path.
 4. **CSP restricts script sources.** `default-src 'self'`; `script-src`
@@ -279,7 +279,7 @@ to detect this; the page looks identical.
   for SvelteKit; deferred.
 - SRI on every JS chunk (would require build tooling not yet wired).
 - Native desktop / mobile app with signed binaries (would defeat the
-  purpose for many users — web is the access model).
+  purpose for many users - web is the access model).
 
 **Posture:** disclosed clearly in `SECURITY_MODEL.md` (§What is NOT done
 yet → "No reproducible-build pipeline"). Users with a threat model
@@ -296,7 +296,7 @@ tool.
 encrypt with `BACKUP_PUBKEY` → rclone:
 1. **Primary (active):** Infomaniak Swiss Backup (Swiss jurisdiction)
 2. **Secondary (active, 2026-08):** cross-vendor offsite via
-   `RCLONE_SECONDARY` in `.env` — the nightly dump lands on both legs, so
+   `RCLONE_SECONDARY` in `.env` - the nightly dump lands on both legs, so
    an Infomaniak outage or account loss no longer takes the only copy.
    Offsite redundancy now exists.
 
@@ -337,13 +337,13 @@ upload time) for tamper-evidence.
 
 | Severity | Item | Owner |
 |---|---|---|
-| ✅ done | `docs/INCIDENT_RESPONSE.md` written (severity model, detect→learn loop, 5 playbooks, incident-record format) (2026-08-22) | — |
-| ⚙️ mechanism shipped | Cloudflare TLS-mode drift alerting — `security-monitor.yml` checks it daily via the CF API; **activate by setting `CF_API_TOKEN` + `CF_ZONE_ID` as GH secrets** (until then that one leg skips-with-notice; the edge-header checks already run) | operator: add secrets |
+| ✅ done | `docs/INCIDENT_RESPONSE.md` written (severity model, detect→learn loop, 5 playbooks, incident-record format) (2026-08-22) | - |
+| ⚙️ mechanism shipped | Cloudflare TLS-mode drift alerting - `security-monitor.yml` checks it daily via the CF API; **activate by setting `CF_API_TOKEN` + `CF_ZONE_ID` as GH secrets** (until then that one leg skips-with-notice; the edge-header checks already run) | operator: add secrets |
 | P2 | Backup tamper-evidence (third hash store) | post-launch ops sprint |
-| ⛔ declined | HSTS preload **submission to hstspreload.org** — the `preload` header stays (it protects returning visitors); the list submission is not wanted, as it locks the domain to HTTPS for ~2 years. Decided 2026-08-23 | — |
-| ✅ done | Continuous container CVE scan — `.github/workflows/security-scan.yml` runs Trivy daily against the repo + the published ghcr images (fresh DB), fails on HIGH/CRITICAL, emails on red (2026-06-12) | — |
-| ✅ done | Cross-vendor offsite backup secondary — `RCLONE_SECONDARY` active (2026-08) | — |
-| ⛔ declined | SBOM generation in CI — Trivy already covers CVE detection against the repo and the published images; an SBOM adds provenance we have no consumer for. Decided 2026-08-23 | — |
+| ⛔ declined | HSTS preload **submission to hstspreload.org** - the `preload` header stays (it protects returning visitors); the list submission is not wanted, as it locks the domain to HTTPS for ~2 years. Decided 2026-08-23 | - |
+| ✅ done | Continuous container CVE scan - `.github/workflows/security-scan.yml` runs Trivy daily against the repo + the published ghcr images (fresh DB), fails on HIGH/CRITICAL, emails on red (2026-06-12) | - |
+| ✅ done | Cross-vendor offsite backup secondary - `RCLONE_SECONDARY` active (2026-08) | - |
+| ⛔ declined | SBOM generation in CI - Trivy already covers CVE detection against the repo and the published images; an SBOM adds provenance we have no consumer for. Decided 2026-08-23 | - |
 | P3 | Hardware-key 2FA for provider accounts (CF + Infomaniak) | when YubiKey arrives |
 | P3 | Reproducible-build pipeline for frontend bundle | structural, no timeline |
 
@@ -358,7 +358,7 @@ upload time) for tamper-evidence.
   Acceptable at current scale (single developer, single-digit
   early users); revisit when team grows or user count crosses 100.
 - **No *continuous* DAST.** A first black-box pass ran against the
-  running stack on 2026-08-21 — 5 confirmed findings, all since
+  running stack on 2026-08-21 - 5 confirmed findings, all since
   fixed: username enumeration via a JSON-spacing oracle (#152),
   a non-object JSON body reaching a 500 pre-auth (#153), an
   account-lockout DoS and a rate-limiter coupled to the dev-mocks
@@ -371,7 +371,7 @@ upload time) for tamper-evidence.
 
 ## 8. Incident-response posture
 
-The full playbook is [`docs/INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md) —
+The full playbook is [`docs/INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md) -
 severity model (SEV1–4), the detect → triage → contain → assess → recover →
 communicate → learn loop, five playbooks (server compromise, tampered image,
 account loss-of-control, data-exposure, key/secret rotation), and the
@@ -379,13 +379,13 @@ incident-record format. In brief:
 
 1. **Detection.** ntfy push from `metrics/security_threshold.sh`,
    `metrics/host_metrics.sh`, `metrics/error_digest.sh`, plus HC.io
-   missed-ping alerts — and a credible user report.
+   missed-ping alerts - and a credible user report.
 2. **Containment.** First action on confirmed compromise:
-   `systemctl stop ciphra-app.service` — keeps the data plane intact
+   `systemctl stop ciphra-app.service` - keeps the data plane intact
    while serving 503 to all traffic.
 3. **Assessment.** journalctl + audit_log table + nginx access logs.
 4. **User communication.** If patient-data exposure is possible: in-app
-   notice + transparency entry. **No silent compromise** — a published
+   notice + transparency entry. **No silent compromise** - a published
    commitment (`SECURITY_MODEL.md`), not an aspiration.
 5. **Recovery.** Restore-from-backup to a new VPS, or in-place patch +
    restart. Rotate exposed secrets. Document the timeline.

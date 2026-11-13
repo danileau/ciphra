@@ -3,7 +3,7 @@
 	 * Link-based family-grant claim landing page.
 	 *
 	 * URL shape: /join/<grant_id>#<family_code>
-	 * The family code lives in the URL fragment — browsers never send
+	 * The family code lives in the URL fragment - browsers never send
 	 * fragments in HTTP requests, so the server never sees it.
 	 *
 	 * Flow:
@@ -35,14 +35,14 @@
 	let status: 'loading' | 'needs_login' | 'confirming' | 'claiming' | 'success' | 'error' = 'loading';
 	// The KEY, not the translated sentence (2026-09-19). An invite link is
 	// always opened cold, and the dictionary for anything but German arrives a
-	// moment after the page does — a sentence resolved here would stay German
+	// moment after the page does - a sentence resolved here would stay German
 	// on the one screen a new caregiver ever sees.
 	let errorKey = '';
 	/** A technical message with no key of its own (an exception's text). */
 	let errorText = '';
 
 	/** Translated at render. `t` is a parameter, so the reactive statement
-	 *  below re-runs when the dictionary arrives — and the keys stay literal,
+	 *  below re-runs when the dictionary arrives - and the keys stay literal,
 	 *  which is what the orphan detector reads. */
 	function translateError(
 		t: (key: string) => string,
@@ -92,7 +92,7 @@
 			// fetch our grant_id's details through claim/init variants.
 			// Approach: caregiver tries the code against every candidate returned
 			// for the *known* source_username after a server lookup-by-id. But
-			// the claim endpoint can verify directly — we just need to try
+			// the claim endpoint can verify directly - we just need to try
 			// deriving the key against any grant_params we can find.
 			//
 			// Since claim/init needs a username, we ask the server to return
@@ -164,7 +164,7 @@
 		grantId = params.grantId;
 		familyCode = params.code;
 
-		// Clear the fragment immediately — no point leaving the code in the
+		// Clear the fragment immediately - no point leaving the code in the
 		// address bar after we've consumed it.
 		if (browser) history.replaceState(null, '', window.location.pathname);
 
@@ -185,7 +185,7 @@
 </script>
 
 <svelte:head>
-	<title>{$t('family.join_title')} — ciphra</title>
+	<title>{$t('family.join_title')} - ciphra</title>
 </svelte:head>
 
 <main class="min-h-screen flex items-center justify-center p-4" style="background: var(--surface)">

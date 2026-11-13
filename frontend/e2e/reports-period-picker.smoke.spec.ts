@@ -36,7 +36,7 @@ async function seed(page: Page) {
 	await logEntryOn(page, '2025-07-03', 'smoke 2025-07');
 }
 
-test('period picker — light, desktop', async ({ page }) => {
+test('period picker - light, desktop', async ({ page }) => {
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await seed(page);
 	await page.goto('/reports');
@@ -56,7 +56,7 @@ test('period picker — light, desktop', async ({ page }) => {
 	await page.getByTestId('period-picker').waitFor();
 	await page.screenshot({ path: `${OUT}/desktop-light-2years-open.png`, fullPage: false });
 
-	// The month picker has the most rows — check it scrolls rather than
+	// The month picker has the most rows - check it scrolls rather than
 	// running off the card.
 	await page.keyboard.press('Escape');
 	await page.getByTestId('export-card-month').click();
@@ -64,7 +64,7 @@ test('period picker — light, desktop', async ({ page }) => {
 	await page.screenshot({ path: `${OUT}/desktop-light-month-open.png`, fullPage: false });
 });
 
-test('period picker — dark, desktop', async ({ page }) => {
+test('period picker - dark, desktop', async ({ page }) => {
 	await page.addInitScript(() => localStorage.setItem('ciphra_theme', 'dark'));
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await seed(page);
@@ -75,7 +75,7 @@ test('period picker — dark, desktop', async ({ page }) => {
 	await page.screenshot({ path: `${OUT}/desktop-dark-year-open.png`, fullPage: false });
 });
 
-test('period picker — mobile bottom sheet', async ({ page }) => {
+test('period picker - mobile bottom sheet', async ({ page }) => {
 	await page.setViewportSize({ width: 390, height: 844 });
 	await seed(page);
 	await page.goto('/reports');

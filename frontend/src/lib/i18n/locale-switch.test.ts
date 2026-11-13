@@ -1,5 +1,5 @@
 /**
- * CIPH-pi24-3 — language-switch dict-load notification regression suite.
+ * CIPH-pi24-3 - language-switch dict-load notification regression suite.
  *
  * The pre-fix bug at i18n/index.ts:27 used `_locale.update((l) => l)` to
  * "force re-publish" after a dynamic dict import resolved. That trick
@@ -58,7 +58,7 @@ describe('CIPH-pi24-3 first-switch dict load', () => {
 		await ensureLocale('en');
 		await settle();
 		locale.set('de');
-		// DE was eagerly bundled — no settle needed
+		// DE was eagerly bundled - no settle needed
 		expect(get(t)('auth.login')).toBe('Anmelden');
 	});
 
@@ -76,13 +76,13 @@ describe('CIPH-pi24-3 first-switch dict load', () => {
 		await settle();
 		locale.set('de');
 		await settle();
-		locale.set('en');  // dict already cached — no async needed
+		locale.set('en');  // dict already cached - no async needed
 		expect(get(t)('auth.login')).toBe('Log in');
 	});
 });
 
 // Note: a "before-load returns DE fallback, after-load returns EN" test
-// would be ideal but is fundamentally cache-dependent in this test module —
+// would be ideal but is fundamentally cache-dependent in this test module -
 // once one test in the file resolves the EN dict, the writable holds it for
 // every subsequent test. The "first switch to *" suite above already covers
 // the load-bearing behavior (post-fix: derived re-runs when translations

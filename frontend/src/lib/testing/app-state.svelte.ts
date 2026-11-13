@@ -9,7 +9,7 @@
  *     vi.mock('$app/state', () => import('#lib/testing/app-state.svelte.ts'));
  *
  * That is exactly the case a legacy `$:` statement reading `page` directly
- * misses — see lib/pageStore.ts.
+ * misses - see lib/pageStore.ts.
  */
 import type { Page } from '$app/state';
 

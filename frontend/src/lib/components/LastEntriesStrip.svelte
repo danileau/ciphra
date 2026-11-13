@@ -1,5 +1,5 @@
 <!--
-	pi24 dashboard — Last-entries strip.
+	pi24 dashboard - Last-entries strip.
 
 	Universal fallback card for the dashboard primary slot. Used when no
 	cohort-specific card has signal (Helena pre-labs, day-1-ish users
@@ -7,7 +7,7 @@
 	primitive can't fire yet). Codex + Claude campfire consensus 2026-05-12.
 
 	Anti-patterns this avoids:
-	- No "Nothing recorded yet" copy (the no-gaslight rule — see
+	- No "Nothing recorded yet" copy (the no-gaslight rule - see
 	  feedback_no_gaslight_good_days.md). The parent already checks
 	  `entries.length > 0` before mounting this component, so if there's
 	  nothing to show, this component never renders.
@@ -79,7 +79,7 @@
 	 * Compact summary line for one entry. Picks the first 1-2 signals
 	 * present: positive symptoms (named), episode counts (cohort-aware
 	 * noun), a vital reading, or notes preview. Never enumerates "0 of
-	 * X" — silence > nag.
+	 * X" - silence > nag.
 	 */
 	function summarize(doc: CiphraDocument): string {
 		const d = doc.data || {};

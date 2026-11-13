@@ -4,7 +4,7 @@
  * Lives apart from `docs.ts` on purpose: `docs.ts` imports
  * `virtual:ciphra-docs`, a module only the Vite plugin can provide, so
  * anything importing it is untestable under plain vitest. This half is
- * pure string work and gets real tests — see `docs-links.test.ts`.
+ * pure string work and gets real tests - see `docs-links.test.ts`.
  */
 
 /**
@@ -21,7 +21,7 @@
  * reader still learns the document exists and can find it in the source.
  *
  * Links to deeper repo paths (source files, docs/archive) are left
- * untouched — they were always repo references, never app routes.
+ * untouched - they were always repo references, never app routes.
  */
 export function rewriteDocLinks(html: string, known: Set<string>): string {
 	const withRoutes = html.replace(/href="([^"]*)"/g, (full, href: string) => {

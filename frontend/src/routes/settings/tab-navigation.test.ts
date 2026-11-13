@@ -1,12 +1,12 @@
 /**
- * SvelteKit 3 — the settings tab follows the URL on client-side navigation.
+ * SvelteKit 3 - the settings tab follows the URL on client-side navigation.
  *
  * The tab is `?tab=…`, and switching tabs is a same-route `goto` that reuses
  * the mounted page. With `$app/state` that only works because the legacy
  * `$: tab = …` reads the param through `pageStore()`; reading `page` inside
  * the `$:` directly leaves the first tab on screen forever (see
  * lib/pageStore.ts). This mounts the page, clicks a tab and follows the
- * `goto` the way SvelteKit does — by updating `page` — then checks the panel.
+ * `goto` the way SvelteKit does - by updating `page` - then checks the panel.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/svelte';

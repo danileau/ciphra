@@ -1,5 +1,5 @@
 /**
- * CIPH-884 — FAB remembers the last-selected episode type and floats it
+ * CIPH-884 - FAB remembers the last-selected episode type and floats it
  * to the front of the picker. Non-destructive: the full list remains
  * available, only the order shifts.
  */

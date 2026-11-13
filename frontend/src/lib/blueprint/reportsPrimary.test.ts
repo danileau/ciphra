@@ -40,7 +40,7 @@ function summary(overrides: Partial<ReportsSummary> = {}): ReportsSummary {
 	};
 }
 
-describe('resolveReportsPrimaryCard — vital-pinned cohorts (the dogfood fix)', () => {
+describe('resolveReportsPrimaryCard - vital-pinned cohorts (the dogfood fix)', () => {
 	it('hashimoto with TSH data → vital-trend(tsh), diverging=false', () => {
 		const spec = resolveReportsPrimaryCard(
 			bp('hashimoto', { vitals: [{ id: 'tsh', label: 'vital.tsh', unit: 'mU/L', placeholder: '' }] }),
@@ -65,7 +65,7 @@ describe('resolveReportsPrimaryCard — vital-pinned cohorts (the dogfood fix)',
 
 	it('hypertension with bp_systolic → vital-trend pinned to bp_systolic', () => {
 		// Even when hypertension has hypertensive_crisis episodes logged,
-		// vital-trend wins on /reports — the BP reading IS the metric.
+		// vital-trend wins on /reports - the BP reading IS the metric.
 		const spec = resolveReportsPrimaryCard(
 			bp('hypertension', {
 				episodeTypes: [{ id: 'hypertensive_crisis', label: '', color: '' }],
@@ -120,7 +120,7 @@ describe('resolveReportsPrimaryCard — vital-pinned cohorts (the dogfood fix)',
 	});
 });
 
-describe('resolveReportsPrimaryCard — episode cohorts', () => {
+describe('resolveReportsPrimaryCard - episode cohorts', () => {
 	it('epilepsy with episode data → episode-trend (dual-axis default)', () => {
 		const spec = resolveReportsPrimaryCard(
 			bp('epilepsy', { episodeTypes: [{ id: 'focal', label: '', color: '' }] }),
@@ -160,7 +160,7 @@ describe('resolveReportsPrimaryCard — episode cohorts', () => {
 	});
 });
 
-describe('resolveReportsPrimaryCard — fallback states', () => {
+describe('resolveReportsPrimaryCard - fallback states', () => {
 	it('cancer_treatment falls through to last-entries (journal-primary, scope cut on dashboard too)', () => {
 		expect(
 			resolveReportsPrimaryCard(
@@ -195,7 +195,7 @@ describe('resolveReportsPrimaryCard — fallback states', () => {
 	});
 });
 
-describe('resolveReportsPrimaryCard — Helena specifically (the dogfood case)', () => {
+describe('resolveReportsPrimaryCard - Helena specifically (the dogfood case)', () => {
 	it('Hashimoto + entries + TSH lab logged → vital-trend (Helena void fixed on /reports)', () => {
 		const spec = resolveReportsPrimaryCard(
 			bp('hashimoto'),

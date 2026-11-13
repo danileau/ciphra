@@ -1,5 +1,5 @@
 /**
- * ciphra — Client-side E2E encryption via WebCrypto API + Argon2-WASM
+ * ciphra - Client-side E2E encryption via WebCrypto API + Argon2-WASM
  *
  * Zero-knowledge architecture (all crypto runs in the browser):
  *
@@ -120,7 +120,7 @@ let argon2Promise: Promise<any> | null = null;
 //   openssl dgst -sha384 -binary frontend/static/argon2-bundled.min.js | base64 -w0
 // Without this pin, a compromised frontend host (or an MITM on a non-HTTPS
 // dev setup) could serve a tampered Argon2 that exfiltrates passwords before
-// they're ever hashed — defeating zero-knowledge at its weakest point.
+// they're ever hashed - defeating zero-knowledge at its weakest point.
 const ARGON2_SRI = 'sha384-XOR3aNvHciLPIf6r+2glkrmbBbLmIJ1EChMXjw8eBKBf8gE0rDq1TyUNuRdorOqi';
 
 function loadArgon2(): Promise<any> {
@@ -221,19 +221,19 @@ export async function verifierOf(key: Uint8Array): Promise<string> {
 
 export interface RegistrationBundle {
 	username: string;
-	auth_hash: string;            // b64 SHA-256(auth_key) — what server stores
+	auth_hash: string;            // b64 SHA-256(auth_key) - what server stores
 	auth_params: string;
 	vault_params: string;
 	encrypted_master: string;
 	recovery_vault: string | null;
 	recovery_params: string | null;
-	recovery_verifier: string | null; // b64 SHA-256(SHA-256(recovery_key)) — checks the recovery proof
+	recovery_verifier: string | null; // b64 SHA-256(SHA-256(recovery_key)) - checks the recovery proof
 	recovery_code: string | null; // plaintext, shown to user once, never sent
 }
 
 /**
  * Build a full registration bundle from a password. Runs three Argon2id rounds
- * (auth, vault, recovery) — expect ~3–6 seconds on mobile.
+ * (auth, vault, recovery) - expect ~3–6 seconds on mobile.
  * The returned `recovery_code` is shown to the user once and NEVER sent to server.
  */
 export async function createVault(
@@ -334,7 +334,7 @@ export async function decryptMasterKeyWithRecovery(
 /**
  * Re-encrypt an existing master_key under a new password. Used by
  * change-password and account recovery. Returns a new bundle (no new recovery
- * material — recovery_code / recovery_vault stay unchanged, set by caller).
+ * material - recovery_code / recovery_vault stay unchanged, set by caller).
  */
 export async function rewrapMasterKey(
 	masterKey: Uint8Array,
@@ -423,7 +423,7 @@ export async function matchFamilyGrant(
 				return { grantId: c.id, masterKey, grantProofB64 };
 			}
 		} catch {
-			// wrong salt pair or tampered wrapped_master — try next
+			// wrong salt pair or tampered wrapped_master - try next
 		}
 	}
 	return null;

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * Session-expiry interceptor — `api.request()` must fire `ciphra:unauthorized`
+ * Session-expiry interceptor - `api.request()` must fire `ciphra:unauthorized`
  * when an AUTHENTICATED call (token attached) gets a 401 from a non-auth
  * endpoint, so the shell can clear auth + redirect instead of rendering a
  * stale-looking logged-in view. It must NOT fire for credential 401s on the

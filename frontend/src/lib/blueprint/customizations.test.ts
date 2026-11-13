@@ -1,5 +1,5 @@
 /**
- * CIPH-882 — Contract for the additive-customization helpers.
+ * CIPH-882 - Contract for the additive-customization helpers.
  *
  * Locks the four invariants the rest of the feature depends on:
  *   - `isCustomItem` is a simple `custom_*` prefix check.
@@ -70,7 +70,7 @@ describe('isCustomItem', () => {
 		expect(isCustomItem('')).toBe(false);
 		expect(isCustomItem('custom')).toBe(false); // no underscore
 		expect(isCustomItem('custom_')).toBe(true);
-		// type guard for runtime safety — preset ids are never null in
+		// type guard for runtime safety - preset ids are never null in
 		// practice but the helper is called from rendering code.
 		expect(isCustomItem(undefined as unknown as string)).toBe(false);
 	});
@@ -100,7 +100,7 @@ describe('generateCustomId', () => {
 	it('produces distinct ids across rapid calls (collision-resistant)', () => {
 		const seen = new Set<string>();
 		for (let i = 0; i < 200; i++) seen.add(generateCustomId('same label'));
-		// 200 calls with a 5-char base36 suffix (~60M space) — collisions
+		// 200 calls with a 5-char base36 suffix (~60M space) - collisions
 		// should be vanishingly rare. >190 distinct is plenty proof.
 		expect(seen.size).toBeGreaterThan(190);
 	});
@@ -111,7 +111,7 @@ describe('generateCustomId', () => {
 	});
 });
 
-describe('resolveBlueprint — purity', () => {
+describe('resolveBlueprint - purity', () => {
 	it('returns the same reference when no customizations field is present', () => {
 		const bp = makeBp();
 		expect(resolveBlueprint(bp)).toBe(bp);
@@ -139,7 +139,7 @@ describe('resolveBlueprint — purity', () => {
 	});
 });
 
-describe('resolveBlueprint — symptom merging', () => {
+describe('resolveBlueprint - symptom merging', () => {
 	it('merges customSymptoms with matching groupId into that group', () => {
 		const bp = makeBp({
 			customizations: {
@@ -191,7 +191,7 @@ describe('resolveBlueprint — symptom merging', () => {
 	});
 });
 
-describe('resolveBlueprint — other arrays', () => {
+describe('resolveBlueprint - other arrays', () => {
 	it('appends customTriggers to triggers', () => {
 		const bp = makeBp({
 			customizations: {
@@ -229,7 +229,7 @@ describe('resolveBlueprint — other arrays', () => {
 	});
 });
 
-describe('resolveBlueprint — idempotence', () => {
+describe('resolveBlueprint - idempotence', () => {
 	it('resolve(resolve(bp)) is structurally equal to resolve(bp)', () => {
 		const bp = makeBp({
 			customizations: {
@@ -249,7 +249,7 @@ describe('resolveBlueprint — idempotence', () => {
 		// `customizations` field still contains custom_b. So r2 will have
 		// duplicates UNLESS resolveBlueprint detects the merge.
 		// Either: idempotence by structural equality, OR documented as
-		// non-idempotent. Plan declared idempotent — assert structural.
+		// non-idempotent. Plan declared idempotent - assert structural.
 		expect(JSON.stringify(r1)).toBe(JSON.stringify(r2));
 	});
 });

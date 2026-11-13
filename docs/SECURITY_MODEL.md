@@ -1,8 +1,8 @@
-# ciphra — security model
+# ciphra - security model
 
 This document is the honest description of what ciphra protects, what it doesn't, and how. It is the substitute for a third-party audit (which has not been done at the time of writing). Read it skeptically, read the code, and decide for yourself.
 
-> **Found a vulnerability?** Don't read on — report it. The policy is
+> **Found a vulnerability?** Don't read on - report it. The policy is
 > [`SECURITY.md`](../SECURITY.md) at the repository root: where to send it,
 > what's in scope, and what response you can realistically expect.
 
@@ -22,10 +22,10 @@ It is **not** designed to defend against:
 
 - An attacker with **physical access to your unlocked device**.
 - A **malicious browser** or compromised browser extension.
-- A **targeted attacker** who can serve you tampered JavaScript via a compromised CDN, hosting provider, or DNS chain — though we mitigate the easy version of this with Subresource Integrity.
+- A **targeted attacker** who can serve you tampered JavaScript via a compromised CDN, hosting provider, or DNS chain - though we mitigate the easy version of this with Subresource Integrity.
 - A **rubber-hose** attacker who can compel you to reveal your password.
 
-If your threat model includes any of those, ciphra is the wrong tool — use something air-gapped, paper, or a dedicated hardware-key-protected vault.
+If your threat model includes any of those, ciphra is the wrong tool - use something air-gapped, paper, or a dedicated hardware-key-protected vault.
 
 ---
 
@@ -34,12 +34,12 @@ If your threat model includes any of those, ciphra is the wrong tool — use som
 ### Primitives
 
 - **Argon2id** for key derivation (memory-hard password hashing, OWASP recommended). Parameters: `time_cost=3`, `memory_cost=64 MiB`, `parallelism=4`, `hash_len=32 bytes`.
-- **AES-256-GCM** for content encryption (NIST standard, authenticated encryption — detects tampering).
+- **AES-256-GCM** for content encryption (NIST standard, authenticated encryption - detects tampering).
 - **SHA-256** for credential verification (server stores a hash of an Argon2 output, never the password or the Argon2 output itself).
 
 ### Key hierarchy on registration (browser-side, client-only)
 
-1. Browser generates a fresh `master_key` — 32 random bytes from `crypto.getRandomValues()`.
+1. Browser generates a fresh `master_key` - 32 random bytes from `crypto.getRandomValues()`.
 2. Browser derives `auth_key = Argon2id(password + ":AUTH", auth_salt)`.
 3. Browser derives `vault_key = Argon2id(password + ":VAULT", vault_salt)`.
 4. Browser computes `auth_hash_for_server = SHA-256(auth_key)`.
@@ -66,20 +66,20 @@ A 12-word code from a 300-word list, shown once at registration: eleven random w
 
 ### Family sharing
 
-Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from a separate "family code" — six random words plus a checksum word (about 49 bits; the key derivation is Argon2id, and claim attempts are rate-limited). The wrapped blob is stored server-side (`family_grants.wrapped_master`). To use it, the caregiver must know the family code; their browser derives `family_key`, unwraps the blob locally, and claims the grant by sending `SHA-256(family_key)`. The server stores only `SHA-256` of that proof and never receives `family_key` itself. (Until November 2026 the browser sent `family_key` itself.) **Important:** revoking a grant stops new server-side access but does not retract data the caregiver already downloaded — we cannot reach into their device.
+Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from a separate "family code" - six random words plus a checksum word (about 49 bits; the key derivation is Argon2id, and claim attempts are rate-limited). The wrapped blob is stored server-side (`family_grants.wrapped_master`). To use it, the caregiver must know the family code; their browser derives `family_key`, unwraps the blob locally, and claims the grant by sending `SHA-256(family_key)`. The server stores only `SHA-256` of that proof and never receives `family_key` itself. (Until November 2026 the browser sent `family_key` itself.) **Important:** revoking a grant stops new server-side access but does not retract data the caregiver already downloaded - we cannot reach into their device.
 
 ---
 
 ## What the server can see
 
 - Username (chosen by user; can be a pseudonym).
-- `SHA-256(auth_key)` — not the password, not the auth_key itself.
+- `SHA-256(auth_key)` - not the password, not the auth_key itself.
 - Argon2 salts and parameters.
-- `encrypted_master`, `recovery_vault`, `wrapped_master` — opaque ciphertexts.
-- Encrypted document blobs — opaque ciphertexts. We can see size and timestamp, and for a document imported from epilepc, an opaque key derived from the original record so a repeated import does not duplicate it.
+- `encrypted_master`, `recovery_vault`, `wrapped_master` - opaque ciphertexts.
+- Encrypted document blobs - opaque ciphertexts. We can see size and timestamp, and for a document imported from epilepc, an opaque key derived from the original record so a repeated import does not duplicate it.
 - **One bit per document saying whether you consider it shareable.** Added so a
   family invitation can be limited to "everything except my diary" and have the
-  *server* enforce it rather than the app merely honouring it — the document's
+  *server* enforce it rather than the app merely honouring it - the document's
   type lives inside the ciphertext, so without this bit the server cannot tell
   what it is being asked to withhold. It says shareable or personal, and nothing
   else: not the type, not the content, not the date. A document written before
@@ -96,15 +96,15 @@ Each grant is a separate AES-GCM-wrap of the patient's master_key, derived from 
   It records sign-in activity (registration, logins that succeed or fail,
   lockouts, password changes, recovery), family sharing (invitations created,
   rescoped, revoked, and claim attempts), admin actions on your account, and
-  account deletion — **and every time a document is created, updated or
+  account deletion - **and every time a document is created, updated or
   deleted** (`DOC_CREATED`, `DOC_UPDATED`, `DOC_DELETED`, `DOC_BATCH_CREATED`).
   When someone you share with writes to your record, their row
   (`FAMILY_DOC_CREATED` / `_UPDATED` / `_DELETED`) names your account, and for a
   change or deletion also the document's id. So the log is a record of *when* you wrote to ciphra and *from
-  which address* — never of what you wrote.
+  which address* - never of what you wrote.
 - **IP addresses in that log** are kept raw for 30 days. After that they are
-  truncated — an IPv4 address to its /24 (the last octet zeroed), an IPv6
-  address to its /48 — and the whole row is deleted at 90 days. The clean-up
+  truncated - an IPv4 address to its /24 (the last octet zeroed), an IPv6
+  address to its /48 - and the whole row is deleted at 90 days. The clean-up
   runs when the API starts and then about once a day while it is running, so
   each step can land up to a day late. Deleting your account removes your
   account id and the IP from the rows of your own actions at once; rows others
@@ -131,72 +131,72 @@ The server-side promise above is the strong leg of the threat model. The local-d
 
 While you are logged in, several browser storage locations hold material relevant to your data:
 
-### 1. `sessionStorage` — `ciphra_master_key`
+### 1. `sessionStorage` - `ciphra_master_key`
 
-The 32-byte master key, base64-encoded. **Cleared automatically when the browser tab closes** — that's the whole reason it's in `sessionStorage` and not `localStorage`. If a tab reloads mid-session the key survives; if you close the browser, you'll be asked to log in again on the next visit. This shrinks the XSS-stolen-key blast radius from "forever" to "this tab session."
+The 32-byte master key, base64-encoded. **Cleared automatically when the browser tab closes** - that's the whole reason it's in `sessionStorage` and not `localStorage`. If a tab reloads mid-session the key survives; if you close the browser, you'll be asked to log in again on the next visit. This shrinks the XSS-stolen-key blast radius from "forever" to "this tab session."
 
 Code: `frontend/src/lib/stores/auth.ts` (`SS_MASTER_KEY`, `loadFromStorage`, `saveToStorage`).
 
-### 2. `localStorage` — `ciphra_auth`
+### 2. `localStorage` - `ciphra_auth`
 
 A JSON blob with: JWT bearer token, username, encrypted vault metadata (auth params, vault params, encrypted master), and an admin flag.
 
-This **persists across browser restarts** by design — without it, every visit would require a fresh login. It is, however, the broadest local-attack surface:
+This **persists across browser restarts** by design - without it, every visit would require a fresh login. It is, however, the broadest local-attack surface:
 
-- An XSS hole anywhere in the app could read the JWT and call our APIs as you. Our CSP (`default-src 'self'`, no un-hashed inline scripts, no JavaScript `eval` — details under Hardening) is the structural mitigation; we eliminate injection sinks rather than rely on token-storage tricks.
+- An XSS hole anywhere in the app could read the JWT and call our APIs as you. Our CSP (`default-src 'self'`, no un-hashed inline scripts, no JavaScript `eval` - details under Hardening) is the structural mitigation; we eliminate injection sinks rather than rely on token-storage tricks.
 - Browser-profile theft (someone with disk access to your unlocked machine) gets the token and the encrypted-vault metadata. They still need your password to unlock the master key, but they have a head start.
 
-We chose this tradeoff explicitly. An "always re-login" alternative would be more secure but materially worse UX for a daily journal. If the calculus matters for your threat model, log out manually after each session — that wipes both stores.
+We chose this tradeoff explicitly. An "always re-login" alternative would be more secure but materially worse UX for a daily journal. If the calculus matters for your threat model, log out manually after each session - that wipes both stores.
 
 Code: `frontend/src/lib/stores/auth.ts` (`LS_KEY`, `SS_MASTER_KEY`, `loadFromStorage`).
 
-### 3. `IndexedDB` — `ciphra_cache` / `decrypted_documents`
+### 3. `IndexedDB` - `ciphra_cache` / `decrypted_documents`
 
 This is the part most users do not realise is there.
 
-**ciphra caches decrypted document plaintext on the device** for warm-load performance. After your first decrypt of a document, the plaintext is written to IndexedDB alongside an etag (the original ciphertext). On the next page load we can read straight from cache and skip the Argon2 + AES-GCM step — that's how the calendar / journal feel instant on revisit. The tradeoff is that **plaintext exists at rest on your device between login and logout**, in addition to the ciphertext your browser already had to download.
+**ciphra caches decrypted document plaintext on the device** for warm-load performance. After your first decrypt of a document, the plaintext is written to IndexedDB alongside an etag (the original ciphertext). On the next page load we can read straight from cache and skip the Argon2 + AES-GCM step - that's how the calendar / journal feel instant on revisit. The tradeoff is that **plaintext exists at rest on your device between login and logout**, in addition to the ciphertext your browser already had to download.
 
 Code: `frontend/src/lib/idb.ts:1-90`.
 
-**Wipe semantics** — what removes this plaintext, and when:
+**Wipe semantics** - what removes this plaintext, and when:
 
 - **Logout** (the "Abmelden" button): wipes IndexedDB completely via `indexedDB.deleteDatabase`, and as a fallback also clears the live store contents if a tab still has the database open. Logout is `async` and the wipe is awaited before the UI confirms. Code: `frontend/src/lib/stores/auth.ts` (`logout()`), `frontend/src/lib/idb.ts` (`clearAllPartitions`).
 - **Browser tab close**: does **not** wipe IndexedDB. The plaintext stays. Re-opening the tab requires re-login (because the master key in `sessionStorage` is gone), but a forensic examination of the browser profile in that interval would surface the cached plaintext.
 - **Browser-profile compromise on an unlocked device**: out of scope. An attacker with disk access to your unlocked browser profile can read IndexedDB. This is the same threat model as any browser-served E2E app and is one of the listed exclusions at the top of this document.
 - **Caregiver / family-sharing context**: PI v13 security review caught a related bug where switching between linked vaults left the prior vault's plaintext on disk. Fixed in PI v16 (`clearAllPartitions` deletes the entire database, not just the active partition).
 
-If you want plaintext gone right now without losing your session, log out — the wipe is awaited before the UI confirms. Or use the **"Cache jetzt leeren" button in Settings → Konto → "Daten auf diesem Gerät"** which triggers the same wipe path (IndexedDB + service-worker cache) while keeping you logged in. Code: `frontend/src/lib/stores/auth.ts` (`clearLocalCache`). The button is always available — it is your action to invoke regardless of the displayed cache count.
+If you want plaintext gone right now without losing your session, log out - the wipe is awaited before the UI confirms. Or use the **"Cache jetzt leeren" button in Settings → Konto → "Daten auf diesem Gerät"** which triggers the same wipe path (IndexedDB + service-worker cache) while keeping you logged in. Code: `frontend/src/lib/stores/auth.ts` (`clearLocalCache`). The button is always available - it is your action to invoke regardless of the displayed cache count.
 
 ### 4. Service worker cache
 
-Same wipe contract as IndexedDB on logout — every cache whose key starts with `ciphra-` is deleted. SvelteKit currently ships render-only HTML shells via the SW, so today there is no patient data sitting in this cache; the wipe is defensive against future loader-injected content. Code: `frontend/src/lib/stores/auth.ts` (the `ciphra-` cache purge in `logout()`).
+Same wipe contract as IndexedDB on logout - every cache whose key starts with `ciphra-` is deleted. SvelteKit currently ships render-only HTML shells via the SW, so today there is no patient data sitting in this cache; the wipe is defensive against future loader-injected content. Code: `frontend/src/lib/stores/auth.ts` (the `ciphra-` cache purge in `logout()`).
 
 ### 5. Small preference + bookkeeping keys
 
 A handful of plain-string keys that hold UI state. None of them holds entry content. One is **derived from your health data** and is removed on logout; the rest carry nothing about your health and are not part of the wipe contract above.
 
-Removed on logout (`clearHealthPreferences` in `frontend/src/lib/stores/auth.ts`, called from `logout()` — which also runs when a session expires, when the browser was closed and the vault has to be unlocked again, and after account deletion). It is *not* touched by the "Cache jetzt leeren" button, which by contract keeps everything in `localStorage`:
+Removed on logout (`clearHealthPreferences` in `frontend/src/lib/stores/auth.ts`, called from `logout()` - which also runs when a session expires, when the browser was closed and the vault has to be unlocked again, and after account deletion). It is *not* touched by the "Cache jetzt leeren" button, which by contract keeps everything in `localStorage`:
 
-- `localStorage.ciphra_quickadd_last_episode` — the id of the episode type you last picked in quick-add, so it is offered first. Episode type ids name the condition (e.g. a seizure type).
+- `localStorage.ciphra_quickadd_last_episode` - the id of the episode type you last picked in quick-add, so it is offered first. Episode type ids name the condition (e.g. a seizure type).
 
 Migrated away:
 
-- `localStorage.ciphra_vital_targets:<username>` — where the personal vital targets from the setup wizard (e.g. a blood-pressure goal) used to be kept, in plaintext. A target says something about what is being treated, so targets now live inside your encrypted blueprint instead. On the first sign-in after the change, an existing key is copied into the blueprint and **removed once that encrypted copy is saved**. It is deliberately not removed on logout: logout also runs when a closed browser is reopened, before you can sign in again, and removing it then would lose targets that were never copied. A caregiver's device-local targets are never applied to a linked patient.
+- `localStorage.ciphra_vital_targets:<username>` - where the personal vital targets from the setup wizard (e.g. a blood-pressure goal) used to be kept, in plaintext. A target says something about what is being treated, so targets now live inside your encrypted blueprint instead. On the first sign-in after the change, an existing key is copied into the blueprint and **removed once that encrypted copy is saved**. It is deliberately not removed on logout: logout also runs when a closed browser is reopened, before you can sign in again, and removing it then would lose targets that were never copied. A caregiver's device-local targets are never applied to a linked patient.
 
 Kept (no health data):
 
-- `localStorage.ciphra_theme` — `light` / `dark` / `system` display preference. `localStorage.ciphra_locale` — interface language.
-- `localStorage.ciphra_welcome_web_seen`, `ciphra_welcome_migrate_seen`, `ciphra_migrate_tour_seen`, `ciphra_fab_seen_count`, `ciphra_fab_tooltip_dismissed`, `ciphra_event_line_tooltip_seen`, `ciphra_tagebuch_views`, `ciphra_pwa_install_dismissed_at`, `ciphra_legacy_swept_v1` — one-shot "already saw this" flags and counters.
-- `localStorage.ciphra_quickadd_last_mode` — which quick-add tab (`log` / `diary` / `med`) a long-press opens.
-- `localStorage.ciphra_setup_skipped` — "set up my own tracking later"; also cleared on every login and logout.
-- `localStorage.ciphra_migrate_done:<source>:<token>` — migration resume checkpoint: the list of already-imported document ids for a given import run, so an interrupted migration can continue without duplicates. Contains document *ids* and the one-time export token, no entry content; removed when the import completes.
-- `sessionStorage.ciphra_focus_month` — the `YYYY-MM` month you were last browsing, so calendar and reports stay on the same month within a tab.
-- `sessionStorage.ciphra_active_vault` — the numeric id of the linked account you are viewing, so a reload stays in it. Tab-scoped; reset to your own account on logout.
-- `sessionStorage.ciphra_pending_family_claim` — an invitation link opened before logging in: the grant id and family code, held until you have logged in and are sent on to the claim (then removed), or until the tab closes.
+- `localStorage.ciphra_theme` - `light` / `dark` / `system` display preference. `localStorage.ciphra_locale` - interface language.
+- `localStorage.ciphra_welcome_web_seen`, `ciphra_welcome_migrate_seen`, `ciphra_migrate_tour_seen`, `ciphra_fab_seen_count`, `ciphra_fab_tooltip_dismissed`, `ciphra_event_line_tooltip_seen`, `ciphra_tagebuch_views`, `ciphra_pwa_install_dismissed_at`, `ciphra_legacy_swept_v1` - one-shot "already saw this" flags and counters.
+- `localStorage.ciphra_quickadd_last_mode` - which quick-add tab (`log` / `diary` / `med`) a long-press opens.
+- `localStorage.ciphra_setup_skipped` - "set up my own tracking later"; also cleared on every login and logout.
+- `localStorage.ciphra_migrate_done:<source>:<token>` - migration resume checkpoint: the list of already-imported document ids for a given import run, so an interrupted migration can continue without duplicates. Contains document *ids* and the one-time export token, no entry content; removed when the import completes.
+- `sessionStorage.ciphra_focus_month` - the `YYYY-MM` month you were last browsing, so calendar and reports stay on the same month within a tab.
+- `sessionStorage.ciphra_active_vault` - the numeric id of the linked account you are viewing, so a reload stays in it. Tab-scoped; reset to your own account on logout.
+- `sessionStorage.ciphra_pending_family_claim` - an invitation link opened before logging in: the grant id and family code, held until you have logged in and are sent on to the claim (then removed), or until the tab closes.
 
-### 6. `IndexedDB` — `ciphra_outbox` (writes waiting for the network)
+### 6. `IndexedDB` - `ciphra_outbox` (writes waiting for the network)
 
-When a save cannot reach the server — you are offline — the entry is encrypted at the moment you save it and the **ciphertext** waits here until the connection returns. No plaintext is written to this store. Each queued write is tagged with your username (and, when you write into an account shared with you, that account's id), the kind of change, the sharing bit described above, and when it was queued, so that a different account signing in on the same device never sends your writes.
+When a save cannot reach the server - you are offline - the entry is encrypted at the moment you save it and the **ciphertext** waits here until the connection returns. No plaintext is written to this store. Each queued write is tagged with your username (and, when you write into an account shared with you, that account's id), the kind of change, the sharing bit described above, and when it was queued, so that a different account signing in on the same device never sends your writes.
 
 This database is deliberately **not** wiped on logout or by "Cache jetzt leeren": a write you made offline and have not yet sent would otherwise be lost. It empties itself as the queued writes reach the server.
 
@@ -215,26 +215,26 @@ We will not pretend otherwise.
 - **JWT secret:** required env var, ≥ 32 chars, no fallback. Server fails to start without it.
 - **Argon2 WASM library:** loaded with [Subresource Integrity](https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity) (SHA-384 hash pinned in `crypto.ts`). A tampered library is refused by the browser.
 - **CORS:** restricted to configured origins; no wildcard.
-- **CSP:** `default-src 'self'`; scripts only from our own origin, Cloudflare's Web Analytics beacon, and inline scripts whose hash is pinned in the policy (no `'unsafe-inline'` for scripts); no JavaScript `eval` — only `'wasm-unsafe-eval'`, which the Argon2 WebAssembly needs; `frame-ancestors 'none'`. Emitted per response by SvelteKit (`frontend/vite.config.ts`).
-- **Master key in browser:** lives in `sessionStorage` only — cleared when the browser closes. Limits the XSS window to "this tab session."
-- **Per-account lockout:** 5 failed login attempts → 15-minute lock; 3 failed recovery attempts → 15-minute lock. Once a lock has run out, the count starts again from zero. The right password or recovery code still gets through this automatic lock — otherwise anyone who knows your username could keep you locked out. A lock set by an administrator is different: it holds even against the right password or recovery code, and it ends every session already open.
+- **CSP:** `default-src 'self'`; scripts only from our own origin, Cloudflare's Web Analytics beacon, and inline scripts whose hash is pinned in the policy (no `'unsafe-inline'` for scripts); no JavaScript `eval` - only `'wasm-unsafe-eval'`, which the Argon2 WebAssembly needs; `frame-ancestors 'none'`. Emitted per response by SvelteKit (`frontend/vite.config.ts`).
+- **Master key in browser:** lives in `sessionStorage` only - cleared when the browser closes. Limits the XSS window to "this tab session."
+- **Per-account lockout:** 5 failed login attempts → 15-minute lock; 3 failed recovery attempts → 15-minute lock. Once a lock has run out, the count starts again from zero. The right password or recovery code still gets through this automatic lock - otherwise anyone who knows your username could keep you locked out. A lock set by an administrator is different: it holds even against the right password or recovery code, and it ends every session already open.
 - **JWT invalidation:** `password_version` column incremented on password change, recovery, or an admin lock; old tokens are rejected. Every authenticated request checks its token against the database: a deleted account's token stops working at once, admin rights are read from the database rather than from the token, and if the database cannot be reached the request is refused (503), not let through.
 - **Audit log retention:** 90 days max, IPs truncated after 30 days, both checked about daily; account id and IP cleared from your own audit rows on account deletion. Details under "What the server can see".
-- **User enumeration — what is hidden and what is not.** `/login/init` and `/recover/init` answer for every username with deterministic fake parameters (derived from a server-side HMAC) shaped exactly like real ones, and the family-claim lookup (`/family/grants/claim/init`, which needs a login) returns a decoy invitation for any username with nothing to claim. That is no user enumeration *through those lookups*. It does **not** make the existence of an account secret:
+- **User enumeration - what is hidden and what is not.** `/login/init` and `/recover/init` answer for every username with deterministic fake parameters (derived from a server-side HMAC) shaped exactly like real ones, and the family-claim lookup (`/family/grants/claim/init`, which needs a login) returns a decoy invitation for any username with nothing to claim. That is no user enumeration *through those lookups*. It does **not** make the existence of an account secret:
   - **Registration says a name is taken.** `/api/register` answers 409 for a username that exists. Registration cannot work without telling you that; the endpoint is rate-limited to 3 attempts a minute per address and the error text is generic, but the status code is the answer.
   - **A lockout says an account exists.** After 5 wrong passwords (or 3 wrong recovery codes, if recovery is set up) a real account answers "locked"; a username nobody registered never locks.
   - **The family-claim lookup shows a patient with several invitations.** The decoy list always has exactly one entry, so a list of two or more is real.
 
-  Assume someone can confirm that your username exists — one reason it can be a pseudonym. What they cannot get from the server is anything inside your account.
+  Assume someone can confirm that your username exists - one reason it can be a pseudonym. What they cannot get from the server is anything inside your account.
 
 ---
 
 ## What is NOT done (yet)
 
-- **No formal third-party cryptographic audit** has been commissioned. The code is open source — read it yourself, or have someone you trust read it. We plan to commission one when budget allows; in the meantime, this document is our promise that what is described here matches what is implemented.
-- **No bug bounty** is currently offered. Reports are still welcome — see [`SECURITY.md`](../SECURITY.md).
+- **No formal third-party cryptographic audit** has been commissioned. The code is open source - read it yourself, or have someone you trust read it. We plan to commission one when budget allows; in the meantime, this document is our promise that what is described here matches what is implemented.
+- **No bug bounty** is currently offered. Reports are still welcome - see [`SECURITY.md`](../SECURITY.md).
 - **No reproducible-build pipeline** for the frontend bundle. A hostile server operator could ship malicious JavaScript that bypasses zero-knowledge for one session. This is a structural limitation of any browser-served E2E application; mitigations include serving the app from a domain you control, or using the source from this repo on infrastructure you trust.
-- **No image upload.** Intentionally — would create a CSAM-detection problem we cannot honestly handle. May be reconsidered with mandatory client-side hash matching.
+- **No image upload.** Intentionally - would create a CSAM-detection problem we cannot honestly handle. May be reconsidered with mandatory client-side hash matching.
 - **No mobile app.** Web only at present. Mobile would unlock biometric unlock, panic-wipe with home-screen icon hiding, OS-level secure storage for the master key.
 - **No multi-device sync of in-memory state.** Each device decrypts independently using your password.
 
@@ -244,13 +244,13 @@ We will not pretend otherwise.
 
 See `/terms` on the live site (or `frontend/src/lib/i18n/en.ts` → `terms.cooperation_*` keys) for the exhaustive "what we can / cannot provide" breakdown.
 
-Short version: we can provide what the server holds — username, account dates, IP within retention window, opaque ciphertexts. We cannot provide the plaintext of any health entry, your password, or your master key, because we do not have them.
+Short version: we can provide what the server holds - username, account dates, IP within retention window, opaque ciphertexts. We cannot provide the plaintext of any health entry, your password, or your master key, because we do not have them.
 
 ---
 
 ## Reporting a vulnerability
 
-The reporting policy lives at [`SECURITY.md`](../SECURITY.md) — GitHub renders
+The reporting policy lives at [`SECURITY.md`](../SECURITY.md) - GitHub renders
 that file as the repository's vulnerability policy, which is where a reporter
 looks first. It covers the reporting channel, scope, and the response you can
 expect.
@@ -261,10 +261,10 @@ Short version: **[open a private security advisory](https://github.com/danileau/
 
 ## How to verify our claims yourself
 
-1. Read `frontend/src/lib/crypto.ts` — all browser-side crypto.
-2. Read `api/server.py` — search for `verify_auth`, `hash_auth_key`, the `register`, `login`, `recover`, `family_grant_*` endpoints.
+1. Read `frontend/src/lib/crypto.ts` - all browser-side crypto.
+2. Read `api/server.py` - search for `verify_auth`, `hash_auth_key`, the `register`, `login`, `recover`, `family_grant_*` endpoints.
 3. Open browser DevTools → Network tab on a real registration. Inspect the POST body to `/api/register`. Confirm: no plaintext password, no plaintext recovery code, just hashes and ciphertexts.
-4. Repeat for `/api/login` and `/api/family/grants` — same check.
+4. Repeat for `/api/login` and `/api/family/grants` - same check.
 5. Open browser DevTools → Application → Storage. Confirm:
    - `localStorage` → key `ciphra_auth` contains JWT + encrypted-vault metadata, no plaintext.
    - `sessionStorage` → key `ciphra_master_key` contains a base64 32-byte string while logged in; gone after browser close.
@@ -278,8 +278,8 @@ Short version: **[open a private security advisory](https://github.com/danileau/
      --certificate-oidc-issuer https://token.actions.githubusercontent.com
    ```
    This proves the image came from our `release-images.yml` workflow on
-   `main` — not a tampered or foreign build. (It does **not** defend
-   against the JS-swap problem at the browser layer — see the operational
-   threat model — but it does verify the registry-to-server supply chain.)
+   `main` - not a tampered or foreign build. (It does **not** defend
+   against the JS-swap problem at the browser layer - see the operational
+   threat model - but it does verify the registry-to-server supply chain.)
 
-If anything in this document is contradicted by the code, please report it — [`SECURITY.md`](../SECURITY.md) says how. The code is the truth; this document tries to describe it accurately.
+If anything in this document is contradicted by the code, please report it - [`SECURITY.md`](../SECURITY.md) says how. The code is the truth; this document tries to describe it accurately.

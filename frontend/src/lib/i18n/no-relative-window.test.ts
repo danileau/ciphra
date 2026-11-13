@@ -1,9 +1,9 @@
 /**
- * PDF copy guard — a document may not describe its own period relatively.
+ * PDF copy guard - a document may not describe its own period relatively.
  *
  * The doctor PDF titled itself "Letzte 12 Monate" / "Last 24 months" on
  * every multi-month export. That phrase needs a "now" to resolve against,
- * and the only "now" on the page is `Exportiert: <date>` — the moment the
+ * and the only "now" on the page is `Exportiert: <date>` - the moment the
  * patient pressed the button, which is not the window's end.
  *
  * Since the /reports picker anchors every year and every pair at December,
@@ -13,7 +13,7 @@
  *
  * This is not a style rule. A stated-period-vs-actual-content mismatch is
  * the documented reason the previous renderer was deleted:
- * docs/archive/CLINICAL_HANDOFF.md:6-8 — the export showed "last 90 days
+ * docs/archive/CLINICAL_HANDOFF.md:6-8 - the export showed "last 90 days
  * (count: 1)" when the user had selected 2 years. And the correct rule was
  * already written: PDF_DESIGN_SPEC §15, "The date range must appear on
  * page 1."
@@ -53,7 +53,7 @@ const RELATIVE_WINDOW: Record<string, RegExp> = {
 const pdfKeys = (dict: Record<string, string>) =>
 	Object.keys(dict).filter((k) => k.startsWith('pdf.'));
 
-describe('PDF copy — the document states its period absolutely', () => {
+describe('PDF copy - the document states its period absolutely', () => {
 	for (const [name, dict] of DICTS) {
 		it(`${name}: no pdf.* value claims a relative window`, () => {
 			const pattern = RELATIVE_WINDOW[name];
@@ -62,7 +62,7 @@ describe('PDF copy — the document states its period absolutely', () => {
 				offenders,
 				`${name}: these PDF strings describe the period relative to "now": ` +
 					`${offenders.map((k) => `${k} = "${dict[k]}"`).join(', ')}. ` +
-					`The PDF outlives the moment it was generated — state the range ` +
+					`The PDF outlives the moment it was generated - state the range ` +
 					`(PDF_DESIGN_SPEC §15) and let reportWindow.ts format it.`,
 			).toEqual([]);
 		});
@@ -91,7 +91,7 @@ describe('PDF copy — the document states its period absolutely', () => {
 				expect(value, `${name}: ${key} is missing`).toBeDefined();
 				expect(value, `${name}: ${key} must carry the {range}`).toContain('{range}');
 				// Substitution is single-pass, first-occurrence-only
-				// (i18n/index.ts) — a repeated placeholder silently survives
+				// (i18n/index.ts) - a repeated placeholder silently survives
 				// into the rendered PDF as literal "{range}".
 				expect(value.match(/\{range\}/g), `${name}: ${key} repeats {range}`).toHaveLength(1);
 			}

@@ -1,5 +1,5 @@
 /**
- * SvelteKit 3 — no legacy `$:` statement may read `page` from `$app/state`.
+ * SvelteKit 3 - no legacy `$:` statement may read `page` from `$app/state`.
  *
  * `page` is runes state. A `$:` statement only re-runs when an identifier it
  * names at compile time changes, and `page` is not one of those, so

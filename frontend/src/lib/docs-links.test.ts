@@ -5,7 +5,7 @@
  * The case that motivated the test: narrowing the shipped doc set
  * (docs-manifest.ts) meant the README's documentation table suddenly
  * referenced documents the app no longer carries. Nothing would have
- * broken loudly — the links would simply have resolved to nothing, in a
+ * broken loudly - the links would simply have resolved to nothing, in a
  * page whose whole subject is that ciphra's claims are checkable.
  */
 import { describe, it, expect } from 'vitest';
@@ -14,7 +14,7 @@ import { rewriteDocLinks } from '#lib/docs-links.ts';
 const KNOWN = new Set(['readme', 'architecture', 'security_model']);
 const rw = (html: string) => rewriteDocLinks(html, KNOWN);
 
-describe('rewriteDocLinks — documents the app ships', () => {
+describe('rewriteDocLinks - documents the app ships', () => {
 	it('rewrites a sibling .md link to its /docs route', () => {
 		expect(rw('<a href="ARCHITECTURE.md">Arch</a>')).toBe('<a href="/docs/architecture">Arch</a>');
 	});
@@ -38,7 +38,7 @@ describe('rewriteDocLinks — documents the app ships', () => {
 	});
 });
 
-describe('rewriteDocLinks — documents the app does not ship', () => {
+describe('rewriteDocLinks - documents the app does not ship', () => {
 	it('un-links them instead of leaving a link that goes nowhere', () => {
 		const out = rw('<a href="docs/OPERATIONS.md">Operations</a>');
 		expect(out).not.toMatch(/<a /);
@@ -63,7 +63,7 @@ describe('rewriteDocLinks — documents the app does not ship', () => {
 	});
 });
 
-describe('rewriteDocLinks — everything else is left alone', () => {
+describe('rewriteDocLinks - everything else is left alone', () => {
 	it('does not touch external links', () => {
 		const ext = '<a href="https://example.org/x.md">ext</a>';
 		expect(rw(ext)).toBe(ext);

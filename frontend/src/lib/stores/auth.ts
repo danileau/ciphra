@@ -37,7 +37,7 @@ const emptyState = (ready: boolean): AuthState => ({
 });
 
 // Master key lives in sessionStorage (cleared on browser/tab close), not
-// localStorage. Everything else — JWT, params, encrypted blobs — is safe to
+// localStorage. Everything else - JWT, params, encrypted blobs - is safe to
 // persist. If the tab reloads mid-session the key survives; if the user
 // closes the browser they're asked to log in again. This shrinks the XSS
 // blast radius from "forever" to "this browser session".
@@ -47,13 +47,13 @@ const SS_MASTER_KEY = 'ciphra_master_key';
 // Plaintext localStorage values derived from the user's health data: the
 // episode type quick-add last used (its id names the condition). Not session
 // state, but it outlived logout and was readable by the next person on the
-// device. Removed on logout — see docs/SECURITY_MODEL.md "Small preference +
+// device. Removed on logout - see docs/SECURITY_MODEL.md "Small preference +
 // bookkeeping keys".
 //
 // NOT here: the legacy `ciphra_vital_targets:<username>` key. Vital targets
 // moved into the encrypted blueprint; the layout folds the old key in and
 // removes it after that save succeeds (lib/blueprint/vitalTargets.ts). Wiping
-// it on logout would destroy targets that were never migrated — logout also
+// it on logout would destroy targets that were never migrated - logout also
 // runs when a closed browser is reopened, BEFORE the user can log in again.
 export const HEALTH_PREF_KEYS = ['ciphra_quickadd_last_episode'] as const;
 
@@ -61,7 +61,7 @@ function clearHealthPreferences() {
 	try {
 		for (const k of HEALTH_PREF_KEYS) localStorage.removeItem(k);
 	} catch {
-		// Storage blocked (private mode) — nothing was persisted either.
+		// Storage blocked (private mode) - nothing was persisted either.
 	}
 }
 
@@ -137,11 +137,11 @@ function createAuthStore() {
 				ready: true,
 			};
 			saveToStorage(state);
-			// 2026-06-07 — clear ciphra_setup_skipped on every fresh login.
+			// 2026-06-07 - clear ciphra_setup_skipped on every fresh login.
 			// The flag is intended to bridge the in-session gap between the
 			// user clicking "I'm here for someone else" on the wizard and
 			// the family-links store catching up. Across sessions / across
-			// users on the same browser it should NOT persist — a stale flag
+			// users on the same browser it should NOT persist - a stale flag
 			// from a previous test or a previous account silently breaks
 			// the auto-redirect-to-/setup that fresh registrants need to
 			// reach the wizard at all.
@@ -157,7 +157,7 @@ function createAuthStore() {
 				return next;
 			});
 		},
-		// PI v16 LB-26+27 — logout is now async. The IndexedDB wipe and the
+		// PI v16 LB-26+27 - logout is now async. The IndexedDB wipe and the
 		// service-worker navigation cache delete BOTH have to complete before
 		// we can claim the user is logged out. Previously fire-and-forget
 		// with a swallowed catch, which left plaintext at rest if the wipe
@@ -200,13 +200,13 @@ function createAuthStore() {
 				return next;
 			});
 		},
-		// CIPH-pi20-LB-2 — wipe locally-cached plaintext without ending
+		// CIPH-pi20-LB-2 - wipe locally-cached plaintext without ending
 		// the session. Mirrors logout()'s on-disk wipe (IndexedDB +
 		// SW navigation cache) but leaves localStorage/sessionStorage and
 		// the in-memory state intact so the user stays logged in. Returns
 		// when both wipes complete (or fail loudly via console.error).
 		// docs/SECURITY_MODEL.md "What the browser stores" points users at
-		// this — keep that doc in sync with the wipe contract here.
+		// this - keep that doc in sync with the wipe contract here.
 		async clearLocalCache() {
 			if (!browser) return;
 			try {

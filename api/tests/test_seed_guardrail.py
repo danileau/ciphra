@@ -1,11 +1,11 @@
 """
-CIPH-pi20-LB-5 — demo-seed production guardrail.
+CIPH-pi20-LB-5 - demo-seed production guardrail.
 
 Pinning the two-check contract on assert_demo_seed_allowed():
   1. CIPHRA_ALLOW_DEMO_SEED=1 must be set.
   2. The DSN must not contain production-looking patterns.
 
-Both layers are required even if one would alone be sufficient — the
+Both layers are required even if one would alone be sufficient - the
 env var is the explicit operator opt-in, the DSN sniff is the
 defense-in-depth against a dev who exports the env var and forgets to
 re-point DATABASE_URL.
@@ -39,7 +39,7 @@ def test_refuses_when_env_var_is_zero(monkeypatch):
 
 
 def test_refuses_when_env_var_is_other_truthy(monkeypatch):
-    """Only literal '1' opts in. 'true' / 'yes' / 'on' do NOT — keeps the
+    """Only literal '1' opts in. 'true' / 'yes' / 'on' do NOT - keeps the
     gate unambiguous and prevents accidental opt-in via shell variable."""
     for val in ("true", "yes", "on", "TRUE", "True"):
         monkeypatch.setenv("CIPHRA_ALLOW_DEMO_SEED", val)
@@ -75,7 +75,7 @@ def test_refuses_dsn_with_production_substring(monkeypatch):
 
 def test_refuses_dsn_pointing_at_ciphra_ch(monkeypatch):
     """ciphra.ch is the live deployment host. Refuse even if env var
-    is set — this is the case where someone's env var is left over from
+    is set - this is the case where someone's env var is left over from
     earlier work and they switch DSN without thinking."""
     monkeypatch.setenv("CIPHRA_ALLOW_DEMO_SEED", "1")
     with pytest.raises(DemoSeedRefused, match="ciphra\\.ch"):
@@ -83,7 +83,7 @@ def test_refuses_dsn_pointing_at_ciphra_ch(monkeypatch):
 
 
 def test_pattern_check_is_case_insensitive(monkeypatch):
-    """Capitalisation variants must still trip the gate — operators
+    """Capitalisation variants must still trip the gate - operators
     sometimes write env files in mixed case."""
     monkeypatch.setenv("CIPHRA_ALLOW_DEMO_SEED", "1")
     for dsn in (

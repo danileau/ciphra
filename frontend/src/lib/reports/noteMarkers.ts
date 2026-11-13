@@ -1,5 +1,5 @@
 /**
- * ciphra — note markers, the freeform annotations a user writes.
+ * ciphra - note markers, the freeform annotations a user writes.
  *
  * Shared deliberately. The doctor PDF prints these and the pre-export review
  * asks which of them may be printed; if the two disagreed about what counts
@@ -19,7 +19,7 @@ import type { CiphraDocument } from '#lib/stores/documents.ts';
 import { isExportable } from '#lib/utils/exportable.ts';
 
 export interface NoteMarker {
-	/** Document id — the identity the review dialog selects on. */
+	/** Document id - the identity the review dialog selects on. */
 	id: number;
 	/** `YYYY-MM-DD`. */
 	dateISO: string;
@@ -51,7 +51,7 @@ export function noteMarkerText(doc: CiphraDocument | { data?: any }): string {
  * Note markers inside `[startISO, endISO]`, oldest first.
  *
  * Applies `isExportable` so a per-entry private marker never reaches either
- * caller — the review dialog must not offer to include something the export
+ * caller - the review dialog must not offer to include something the export
  * would drop anyway, and must not imply the user has a choice they don't.
  */
 export function noteMarkersInWindow(
@@ -74,7 +74,7 @@ export function noteMarkersInWindow(
 /**
  * Drop the note markers the user did not tick.
  *
- * Everything else passes through untouched — entries, med administrations,
+ * Everything else passes through untouched - entries, med administrations,
  * and any note marker whose id is selected. Filtering the document set is
  * what keeps `generateDoctorPdf` free of a selection concept: the export
  * simply never sees a note the user withheld.

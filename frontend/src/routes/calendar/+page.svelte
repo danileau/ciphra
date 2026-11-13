@@ -9,10 +9,10 @@
 	import { goto } from '$app/navigation';
 	import { fade, fly } from 'svelte/transition';
 	import Asterisk from '#lib/components/Asterisk.svelte';
-	// CIPH-910 — EntryPreview + ConfirmDelete dropped from calendar after
+	// CIPH-910 - EntryPreview + ConfirmDelete dropped from calendar after
 	// the day-detail panel switched to the new <DayDetail> sectioned view.
 	import DayDetail from '#lib/components/DayDetail.svelte';
-	// CIPH-pi19-B — month-summary tail of the lg+ persistent rail.
+	// CIPH-pi19-B - month-summary tail of the lg+ persistent rail.
 	import MonthMiniSummary from '#lib/components/MonthMiniSummary.svelte';
 	import { cohortOf } from '#lib/blueprint/cohort.ts';
 	import { monthSummaryInsightFor } from '#lib/monthSummaryInsight.ts';
@@ -25,7 +25,7 @@
 	import { weekdayLabels } from '#lib/i18n/dates.ts';
 
 	let selectedDate: string | null = null;
-	// Design review 2026-06-11 — recall the month the user was browsing
+	// Design review 2026-06-11 - recall the month the user was browsing
 	// on /reports (or here, earlier this tab) so the comparison path
 	// calendar↔reports keeps its month context. Falls back to today.
 	const recalledMonth = recallFocusMonth();
@@ -34,16 +34,16 @@
 
 	$: bp = $resolvedBlueprint;
 
-	// CIPH-855a — Cycle-overlay mode. For cycle-cohort blueprints
+	// CIPH-855a - Cycle-overlay mode. For cycle-cohort blueprints
 	// (endometriosis / menopause / PMOS) the calendar renders a soft
 	// phase-colored background on each day cell so the monthly phase
-	// pattern is readable at a glance. Starts at 15% opacity — can be
+	// pattern is readable at a glance. Starts at 15% opacity - can be
 	// tuned up to 20% or down to 10% post-persona dry-run.
 	$: cohort = cohortOf(bp);
 	$: cycleOverlayActive = cohort === 'cycle';
 	$: cycleAnchor = cycleOverlayActive ? computeCycleAnchor(bp, $documents) : null;
 
-	// CIPH-855b — Phase-bands polish. For phase-cohort blueprints
+	// CIPH-855b - Phase-bands polish. For phase-cohort blueprints
 	// (bipolar/MS/long-covid/IBD/IBS/chronic_pain/anx_dep/burnout) the
 	// multiDay bands are the clinical unit. Render them at 6px (vs 3px
 	// default) and dim the counter-dots on days that also have a phase
@@ -56,7 +56,7 @@
 	function dayPhase(day: number): Phase | null {
 		if (!cycleOverlayActive) return null;
 		const dateStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
-		// CIPH-886 — manual override on the entry doc takes precedence over the
+		// CIPH-886 - manual override on the entry doc takes precedence over the
 		// derived phase. Used when the user knows their actual phase on a given
 		// day differs from the cycle-length-based derivation.
 		const override = dayPhaseOverride(day);
@@ -66,7 +66,7 @@
 		return state?.phase ?? null;
 	}
 
-	// CIPH-886 — return the explicit phase override on the entry for `day`, if
+	// CIPH-886 - return the explicit phase override on the entry for `day`, if
 	// one was set in /log/[date]'s phase-override section. Used by both
 	// dayPhase() (precedence) and the day-cell template (triangle indicator).
 	function dayPhaseOverride(day: number): Phase | null {
@@ -77,7 +77,7 @@
 		return null;
 	}
 
-	// CIPH-886 — number of overridden days in the visible month, used to
+	// CIPH-886 - number of overridden days in the visible month, used to
 	// extend the anchor hint with "N days manually overridden".
 	$: overrideCountThisMonth = (() => {
 		if (!cycleOverlayActive) return 0;
@@ -93,7 +93,7 @@
 	onMount(() => {
 		if (!$isAuthenticated) { goto('/login'); return; }
 		documents.load();
-		// CIPH-pi19-B — keep isLg in sync as the user resizes/drag-handles
+		// CIPH-pi19-B - keep isLg in sync as the user resizes/drag-handles
 		// across the breakpoint. Modal must dissolve into the rail (and
 		// vice versa) without a remount.
 		if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
@@ -121,8 +121,8 @@
 		else currentMonth++;
 		selectedDate = null;
 	}
-	// CIPH-878 — "go back to now" shortcut. Jumps to today's month and puts
-	// keyboard focus on today's cell, but does NOT set `selectedDate` —
+	// CIPH-878 - "go back to now" shortcut. Jumps to today's month and puts
+	// keyboard focus on today's cell, but does NOT set `selectedDate` -
 	// otherwise the day-detail sheet would pop open and feel like a dialog
 	// the user didn't ask for. The user can still tap today to open details.
 	function jumpToToday() {
@@ -136,7 +136,7 @@
 	$: todayMonth = new Date().getMonth();
 	$: isOnCurrentMonth = currentYear === todayYear && currentMonth === todayMonth;
 
-	// PI v16 LB-22 — was `$documents.filter(...)` per-cell. With ~540 docs
+	// PI v16 LB-22 - was `$documents.filter(...)` per-cell. With ~540 docs
 	// across 35 cells × ~6 callers per render that hit ~113K iterations on
 	// every month-paint. Now bucketed once when `monthDocs` changes; each
 	// cell is an O(1) Map lookup.
@@ -152,7 +152,7 @@
 		return m;
 	})();
 
-	// CIPH-pi19-A — per-day trigger + rescue-med tally for the cell encoding.
+	// CIPH-pi19-A - per-day trigger + rescue-med tally for the cell encoding.
 	// Same memoization shape as docsByDay: bucket once per monthDocs change so
 	// each cell is O(1). Maps date-string → count (zero-implies-absent).
 	$: triggerCountByDay = (() => {
@@ -184,13 +184,13 @@
 		}
 		return m;
 	})();
-	// CIPH-pi19-A — gates: only render the marks if the blueprint declares
+	// CIPH-pi19-A - gates: only render the marks if the blueprint declares
 	// the corresponding feature. ADHD blueprints (no rescueMedications) skip
 	// the edge bar entirely; data-driven, not cohort-switched.
 	$: showTriggerMark = (bp?.triggers?.length ?? 0) > 0;
 	$: showRescueMedMark = hasBedarfMeds(bp);
 
-	// Dose history — days on which a medication started, changed dose or
+	// Dose history - days on which a medication started, changed dose or
 	// stopped. Lives on the blueprint, not in documents, so a change day needs
 	// no logged entry to show. A daily-axis surface: one mark per day is fine
 	// here (unlike the aggregate trend charts).
@@ -203,7 +203,7 @@
 		return medicationChanges(bp.medications ?? [], { from: dateStr, to: dateStr }).length > 0;
 	}
 
-	// CIPH-pi19-B — month-level tallies powering the rail's mini-summary.
+	// CIPH-pi19-B - month-level tallies powering the rail's mini-summary.
 	$: triggerDayCount = triggerCountByDay.size;
 	$: rescueMedDayCount = rescueMedCountByDay.size;
 
@@ -213,7 +213,7 @@
 	}
 
 	function dayHasEpisode(day: number): boolean {
-		// Counter-style episodes only — multiDay episodes are shown as bars below
+		// Counter-style episodes only - multiDay episodes are shown as bars below
 		const docs = getDocsForDay(day);
 		const multiDayIds = new Set((bp?.episodeTypes || []).filter(e => e.multiDay).map(e => e.id));
 		return docs.some(d =>
@@ -242,7 +242,7 @@
 		return getDocsForDay(day).some(d => d.data.type === 'entry');
 	}
 
-	// CIPH-pi19-A — counter-row triangle (slot 3) + right-edge bar.
+	// CIPH-pi19-A - counter-row triangle (slot 3) + right-edge bar.
 	function dayHasTrigger(day: number): boolean {
 		return (triggerCountByDay.get(`${monthPrefix}-${String(day).padStart(2, '0')}`) || 0) > 0;
 	}
@@ -283,13 +283,13 @@
 
 	// A label per day, recomputed whenever anything it reads changes
 	// (2026-09-19). It used to be a function called straight from the
-	// template, and the template named neither `$t` nor `$documents` — so on
+	// template, and the template named neither `$t` nor `$documents` - so on
 	// a hard load every cell kept the label built in the first frame: German
 	// for anyone on another language, and "no entry" for days whose entries
 	// arrived a moment later. Screen-reader users got both wrong at once.
 	$: dayAriaLabels = (() => {
 		// Everything the label reads, named here so a change to any of it
-		// rebuilds the labels — a month with the same number of days as the
+		// rebuilds the labels - a month with the same number of days as the
 		// last one would otherwise not invalidate this block.
 		void $t; void $locale; void monthPrefix; void docsByDay; void medChangeDays;
 		void showTriggerMark; void showRescueMedMark; void triggerCountByDay; void rescueMedCountByDay;
@@ -305,7 +305,7 @@
 		});
 		const epCount = countEpisodesForDay(day);
 		const symCount = countSymptomsForDay(day);
-		// CIPH-pi19-A — append cardinality suffixes when the blueprint declares
+		// CIPH-pi19-A - append cardinality suffixes when the blueprint declares
 		// the feature AND the day carries the signal. plural() picks _one/_other.
 		const trigCount = showTriggerMark ? countTriggersForDay(day) : 0;
 		const rescueCount = showRescueMedMark ? countRescueMedsForDay(day) : 0;
@@ -326,7 +326,7 @@
 	$: selectedDayDocs = selectedDate ? $documents.filter(d => String(d.data.date || '') === selectedDate) : [];
 	$: monthName = new Date(currentYear, currentMonth).toLocaleDateString($locale, { month: 'long', year: 'numeric' });
 
-	// CIPH-pi19-B — viewport breakpoint for the persistent rail. lg+ (≥1024px)
+	// CIPH-pi19-B - viewport breakpoint for the persistent rail. lg+ (≥1024px)
 	// switches the calendar to a 2-col layout and suppresses the bespoke
 	// modal in favour of the rail. matchMedia keeps the flag in sync on
 	// resize so a window drag across the breakpoint doesn't strand a modal.
@@ -335,7 +335,7 @@
 		isLg = window.matchMedia('(min-width: 1024px)').matches;
 	}
 
-	// CIPH-pi19-B — derived "rail anchor": the date the rail's DayDetail
+	// CIPH-pi19-B - derived "rail anchor": the date the rail's DayDetail
 	// reads from. Tracks selectedDate when set; otherwise falls back to
 	// today (current month) or the most recent logged day in view (other
 	// months). Returns null only when the visible month has zero data and
@@ -369,7 +369,7 @@
 		return out;
 	})();
 
-	// CIPH-880 — Cohort-aware sheet header. Cycle cohort gets a phase chip
+	// CIPH-880 - Cohort-aware sheet header. Cycle cohort gets a phase chip
 	// (matches the day-cell ring colour from CIPH-879). Phase cohort gets
 	// pills for any multiDay band active on the selected day.
 	$: selectedDayPhase = (cycleOverlayActive && selectedDate && cycleAnchor)
@@ -389,7 +389,7 @@
 		}
 		return out;
 	})();
-	// CIPH-880 — Surface the "Copy previous day" affordance in the empty-state.
+	// CIPH-880 - Surface the "Copy previous day" affordance in the empty-state.
 	// Routes the user to /log/{date} where the existing copy-previous button
 	// from EntryComposer (CIPH-850) handles the actual merge.
 	$: previousDayHasEntry = (() => {
@@ -401,7 +401,7 @@
 	})();
 
 	function adjustSelectedDate(delta: number) {
-		// CIPH-pi19-B — anchor on railSelectedDate when no day is explicitly
+		// CIPH-pi19-B - anchor on railSelectedDate when no day is explicitly
 		// selected so the rail's prev/next arrows can browse from "today" or
 		// the most-recent-logged fallback. Modal path (selectedDate set)
 		// behaves exactly as before.
@@ -420,7 +420,7 @@
 		}
 	}
 
-	// CIPH-PI-v15 LB-1+2 — A11y wiring for the day-detail panel. The bespoke
+	// CIPH-PI-v15 LB-1+2 - A11y wiring for the day-detail panel. The bespoke
 	// modal previously bypassed Modal.svelte/BottomSheet.svelte's hard-won
 	// PI v13 focus-trap pattern. Inline the same contract here because the
 	// desktop right-panel layout doesn't fit either primitive.
@@ -448,7 +448,7 @@
 			selectedDate = null;
 			return;
 		}
-		// CIPH-pi19-B — Tab focus-trap is modal-only. The lg+ rail is a
+		// CIPH-pi19-B - Tab focus-trap is modal-only. The lg+ rail is a
 		// non-modal layout element; trapping focus there would steal Tab
 		// from the surrounding page (header / nav / grid).
 		if (isLg) return;
@@ -472,7 +472,7 @@
 	}
 
 	$: if (typeof document !== 'undefined' && selectedDate && !isLg) {
-		// Modal path only — at lg+ the rail is non-modal so we don't
+		// Modal path only - at lg+ the rail is non-modal so we don't
 		// auto-focus or trap. Capture the trigger so we can restore focus
 		// when the modal closes.
 		if (!lastFocused) {
@@ -488,14 +488,14 @@
 		try { lastFocused.focus(); } catch { /* day cell may have re-rendered */ }
 		lastFocused = null;
 	}
-	// CIPH-910 — handleEditEntry / handleDeleteEntry / confirmDeleteId
+	// CIPH-910 - handleEditEntry / handleDeleteEntry / confirmDeleteId
 	// removed: the day-detail panel is render-only now. Entry editing
 	// goes through the panel-header "Bearbeiten →" link to /log/{date};
 	// events and diaries are edited via the journal moment-modal.
 
 	$: weekdays = weekdayLabels($locale, 'short');
 
-	// CIPH-763c — roving-tabindex focus model for the day grid. Only one
+	// CIPH-763c - roving-tabindex focus model for the day grid. Only one
 	// cell is in the tab sequence at a time; arrow keys move focus within
 	// the grid (WAI-ARIA Grid pattern). Default focus = today when visible,
 	// otherwise day 1.
@@ -556,14 +556,14 @@
 </script>
 
 <svelte:head>
-	<title>{$t('nav.calendar')} — ciphra</title>
+	<title>{$t('nav.calendar')} - ciphra</title>
 </svelte:head>
 
 <!-- CIPH-746: widened to layout-data and dropped the nested max-w-2xl
 	 that used to pinch the month grid + event timeline on desktop.
 	 CIPH-782: tighter desktop spacing so month + event strip + day list
 	 fit in a 900px-tall viewport without scroll. Mobile sizing preserved
-	 by gating shrinkage on `md:` — tap targets stay ≥44px on phones.
+	 by gating shrinkage on `md:` - tap targets stay ≥44px on phones.
 	 CIPH-pi19-B: 2-col lg+ grid (1fr / 360px). Calendar grid stays in the
 	 left column; the right column is a sticky non-modal rail hosting
 	 DayDetail + MonthMiniSummary. Below lg the rail is hidden and the
@@ -602,10 +602,10 @@
 				</button>
 			</div>
 
-			<!-- CIPH-855a — Cycle-phase legend. Shown only for the cycle
+			<!-- CIPH-855a - Cycle-phase legend. Shown only for the cycle
 				 cohort so non-cycle users don't see unused chrome. Day-cell
 				 background color at 15% opacity maps 1:1 to these swatches.
-				 CIPH-pi19-A2 — last item explains the corner-triangle
+				 CIPH-pi19-A2 - last item explains the corner-triangle
 				 indicator for manually-overridden days (CIPH-886). -->
 			{#if cycleOverlayActive}
 				<div class="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]" aria-label={$t('cycle.phase_legend_aria')}>
@@ -632,7 +632,7 @@
 						<span style="color: var(--text-secondary)">{$t('cycle.phase_override_legend')}</span>
 					</span>
 				</div>
-				<!-- CIPH-879 — anchor correction hint. Shows which logged day the
+				<!-- CIPH-879 - anchor correction hint. Shows which logged day the
 					 calculated phases are pivoting on, and one-tap links the user
 					 to that date's log so she can correct the period start if the
 					 calculation doesn't match reality. -->
@@ -643,7 +643,7 @@
 					{:else}
 						<span>{$t('cycle.anchor_none')}</span>
 					{/if}
-					<!-- CIPH-886 — show how many days in this month have manual phase
+					<!-- CIPH-886 - show how many days in this month have manual phase
 						 overrides, so the user understands the calendar isn't fully
 						 derived. Hidden when zero (no clutter). -->
 					{#if overrideCountThisMonth > 0}
@@ -652,7 +652,7 @@
 				</div>
 			{/if}
 
-			<!-- CIPH-855b — MultiDay-band legend. Shown only for phase cohort
+			<!-- CIPH-855b - MultiDay-band legend. Shown only for phase cohort
 				 with declared multiDay episode types. Each swatch mirrors the
 				 6px band color at the bottom of the day cells. -->
 			{#if bandLegendVisible}
@@ -667,7 +667,7 @@
 				</div>
 			{/if}
 
-			<!-- CIPH-pi19-A2 — cell-mark legend. Explains the 4 in-cell encodings
+			<!-- CIPH-pi19-A2 - cell-mark legend. Explains the 4 in-cell encodings
 				 (episode dot, log dot, trigger triangle, rescue-med edge bar) so
 				 the new shapes from CIPH-pi19-A aren't a guessing game. Same data-
 				 driven gating as the marks themselves: triangle/bar only appear
@@ -709,7 +709,7 @@
 				{/each}
 			</div>
 
-			<!-- Days grid — CIPH-763c: ARIA grid pattern + roving tabindex
+			<!-- Days grid - CIPH-763c: ARIA grid pattern + roving tabindex
 				 CIPH-782: md: breakpoint shrinks the grid rhythm on desktop. -->
 			<div class="grid grid-cols-7 gap-1 md:gap-0.5" role="grid" aria-label={monthName}>
 				{#each Array(firstDayOfWeek) as _}
@@ -753,14 +753,14 @@
 							class="text-sm font-medium"
 							style="color: var(--text-primary)"
 						>{day}</span>
-						<!-- CIPH-855b — counter-dots dim to 40% when a phase band is
+						<!-- CIPH-855b - counter-dots dim to 40% when a phase band is
 							 active on this cell AND the blueprint is a phase cohort,
 							 so the band reads as the primary signal.
-							 CIPH-pi19-A — counter row extended to 3-slot grammar:
+							 CIPH-pi19-A - counter row extended to 3-slot grammar:
 							 slot 1 = episode (red dot), slot 2 = log (olive dot),
-							 slot 3 = trigger (ochre triangle — shape variant for
+							 slot 3 = trigger (ochre triangle - shape variant for
 							 color-blind safety).
-							 CIPH-pi19-A3 — sizes bumped (6px → 8px dots, 6×6 → 8×8
+							 CIPH-pi19-A3 - sizes bumped (6px → 8px dots, 6×6 → 8×8
 							 triangle, 3px → 4px edge bar) after persona feedback that
 							 the marks were "very small and the triangles hard to
 							 identify." Cell capacity (≥44px tall, day text 14px +
@@ -777,10 +777,10 @@
 								<span aria-hidden="true" style="width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 8px solid var(--ochre);"></span>
 							{/if}
 						</div>
-						<!-- CIPH-pi19-A — rescue-med edge bar. The clinically strongest
+						<!-- CIPH-pi19-A - rescue-med edge bar. The clinically strongest
 							 signal gets a position the dot row can't drown: a 4px brand
 							 stripe down the right edge. Outside the dot-row dim rule by
-							 design — rescue meds always read first. pointer-events:none
+							 design - rescue meds always read first. pointer-events:none
 							 keeps the whole cell as the 44×44 hit zone. -->
 						{#if hasRescueMed}
 							<span
@@ -790,7 +790,7 @@
 							></span>
 						{/if}
 						{#if hasMedChange}
-							<!-- Dose history — a medication started, changed or stopped on
+							<!-- Dose history - a medication started, changed or stopped on
 								 this day. A horizontal capsule in the top-left corner: a
 								 shape no other mark uses (dots, triangle, edge bar), so it
 								 stays distinguishable without colour. -->
@@ -802,7 +802,7 @@
 							></span>
 						{/if}
 						{#if bands.length > 0}
-							<!-- CIPH-855b — 6px bands for phase cohort (foreground),
+							<!-- CIPH-855b - 6px bands for phase cohort (foreground),
 								 3px default for everyone else (backward-compat). -->
 							<div class="absolute bottom-0 left-0 right-0 flex flex-col">
 								{#each bands as band}
@@ -815,7 +815,7 @@
 							</div>
 						{/if}
 						{#if phaseIsOverridden && phase}
-							<!-- CIPH-886 — triangle indicator on days where the user
+							<!-- CIPH-886 - triangle indicator on days where the user
 								 set an explicit phaseOverride. Distinguishes manually-
 								 set days from derived days. -->
 							<svg
@@ -832,7 +832,7 @@
 				{/each}
 			</div>
 
-			<!-- Monthly summary — CIPH-782 tighter on desktop -->
+			<!-- Monthly summary - CIPH-782 tighter on desktop -->
 			<div class="mt-4 md:mt-3 grid grid-cols-2 gap-3 md:gap-2">
 				<div class="card p-4 md:p-3">
 					<p class="text-2xl md:text-xl font-bold num-data" style="color: var(--ochre)">{totalEpisodes}</p>
@@ -844,11 +844,11 @@
 				</div>
 			</div>
 
-			<!-- Trend chart removed (PI v8 close — team consensus: calendars are
+			<!-- Trend chart removed (PI v8 close - team consensus: calendars are
 			     spatial, not temporal-trend; trend belongs on /reports). Event
 			     strip preserved as standalone card since it's spatial info
 			     (which days had events) not trend info.
-			     Calendar v2 (PI v9 — CIPH-820..825) replaces this section
+			     Calendar v2 (PI v9 - CIPH-820..825) replaces this section
 			     entirely with multi-type overlay + ongoing-phase bands. -->
 			{#if monthEvents.length > 0}
 				<div class="card mt-4 md:mt-3 p-4 md:p-3">
@@ -870,7 +870,7 @@
 			{/if}
 		</div>
 
-		<!-- CIPH-pi19-B — persistent right-rail (lg+ only). Non-modal layout
+		<!-- CIPH-pi19-B - persistent right-rail (lg+ only). Non-modal layout
 			 element: no role=dialog, no aria-modal, no scrim, no focus trap.
 			 Mirrors the modal's prev/next + date title + edit link, but the
 			 grid stays visible alongside it. Default content is today (current
@@ -965,15 +965,15 @@
 	</div>
 </div>
 
-<!-- primitive-exempt: Modal — the day-detail dialog is a right-side
+<!-- primitive-exempt: Modal - the day-detail dialog is a right-side
 	 panel on desktop and a bottom sheet on mobile, neither of which fits
 	 the centred Modal primitive. The same a11y contract (focus trap,
 	 Esc, focus return, role=dialog, aria-modal, prefers-reduced-motion)
 	 is implemented inline above (handlePanelKey + reactive focus
 	 management). PI v15 LB-1+2.
-	 CIPH-pi19-B — modal is suppressed at lg+ (≥1024px). The persistent
+	 CIPH-pi19-B - modal is suppressed at lg+ (≥1024px). The persistent
 	 rail handles day-detail as a layout element instead of an overlay. -->
-<!-- Day detail panel — bottom sheet on mobile, right-side panel on md+
+<!-- Day detail panel - bottom sheet on mobile, right-side panel on md+
 	 (CIPH-901b). The fly direction picks itself based on viewport at
 	 mount: mobile slides up, desktop slides in from the right. -->
 <svelte:window on:keydown={handlePanelKey} />
@@ -1006,7 +1006,7 @@
 				<div class="w-10 h-1 rounded-full" style="background: var(--border)"></div>
 			</div>
 
-			<!-- CIPH-880 — Header: prev arrow, date, next arrow, edit-link.
+			<!-- CIPH-880 - Header: prev arrow, date, next arrow, edit-link.
 				 The edit-link is a stable affordance to the form for this day,
 				 distinct from the per-doc edit buttons rendered below. -->
 			<div class="flex items-center justify-between gap-2 mb-2">
@@ -1037,7 +1037,7 @@
 				</a>
 			</div>
 
-			<!-- CIPH-880 — Cohort-aware framing. Cycle cohort: phase chip
+			<!-- CIPH-880 - Cohort-aware framing. Cycle cohort: phase chip
 				 matching the day-cell ring colour. Phase cohort: active band
 				 pills. Discrete / narrative cohorts get nothing here. -->
 			{#if selectedDayPhase}
@@ -1065,11 +1065,11 @@
 			{/if}
 
 			{#if selectedDayDocs.length > 0 || hasMedChangeOn(selectedDate)}
-				<!-- CIPH-910 — DayDetail replaces the per-doc EntryPreview
+				<!-- CIPH-910 - DayDetail replaces the per-doc EntryPreview
 					 stack. Sectioned, labeled view of the day's full data:
 					 PHASE / EPISODEN / SYMPTOME / AUSLÖSER / VITALS / NOTIZEN
 					 / EREIGNISSE / TAGEBUCH. Per-doc edit/delete icons are
-					 gone — the panel-header "Bearbeiten" link routes to
+					 gone - the panel-header "Bearbeiten" link routes to
 					 /log/{date} for entry editing; events and diaries are
 					 edited via the journal moment-modal. Matches the
 					 "delete should be hidden" preference (CIPH-902). -->
@@ -1089,7 +1089,7 @@
 							{$t('companion.fill_today')}
 						</a>
 						{#if previousDayHasEntry}
-							<!-- CIPH-880 — Routes to the form; EntryComposer's existing
+							<!-- CIPH-880 - Routes to the form; EntryComposer's existing
 								 copy-previous-day button (CIPH-850) finishes the merge. -->
 							<a
 								href="/log/{selectedDate}"
@@ -1111,12 +1111,12 @@
 	button.p-2:hover {
 		background: var(--surface-muted);
 	}
-	/* CIPH-910 — per-doc delete-on-hover selector dropped: the day-detail
+	/* CIPH-910 - per-doc delete-on-hover selector dropped: the day-detail
 	   panel no longer renders per-doc icon buttons. */
 	a[style*="--brand"]:hover {
 		text-decoration: underline;
 	}
-	/* CIPH-880 — sheet-header arrow nav (prev/next day). Mirrors the
+	/* CIPH-880 - sheet-header arrow nav (prev/next day). Mirrors the
 	   `.log-nav-btn` rhythm from /log/[date] so the two surfaces feel like
 	   the same surface. */
 	.cal-sheet-nav {
@@ -1140,10 +1140,10 @@
 		outline-offset: 2px;
 	}
 
-	/* CIPH-878 — jump-to-today pill next to month name. Subtle by default,
+	/* CIPH-878 - jump-to-today pill next to month name. Subtle by default,
 	   brand-tinted on hover. Only rendered when off the current month. */
 	.cal-today-btn {
-		/* CIPH-pi23-A1 — 44pt min-height per WCAG 2.5.5. Padding pushed
+		/* CIPH-pi23-A1 - 44pt min-height per WCAG 2.5.5. Padding pushed
 		   from 2/8 to 11/14 so the 11px font + line-height lands at 44. */
 		font-size: 11px;
 		font-weight: 500;
@@ -1167,7 +1167,7 @@
 		background: rgba(var(--brand-rgb, 99,102,241), 0.08);
 	}
 
-	/* CIPH-901b — Day detail panel.
+	/* CIPH-901b - Day detail panel.
 	   Mobile (<768px): bottom sheet, full width, max 70vh.
 	   Desktop (>=768px): right-side panel, full height, fixed 420px width.
 	   The fly transition picks the right axis at mount; CSS positions
@@ -1211,11 +1211,11 @@
 		}
 	}
 
-	/* CIPH-pi19-B — persistent right-rail at lg+. Sticky under the authed
+	/* CIPH-pi19-B - persistent right-rail at lg+. Sticky under the authed
 	   header, max-height pinned so the rail can scroll independently when
 	   DayDetail + MonthMiniSummary together overflow the viewport. The
 	   left border + padding is the visual seam separating browse (grid)
-	   from detail (rail) — no scrim, this is layout not modal. */
+	   from detail (rail) - no scrim, this is layout not modal. */
 	.cal-rail {
 		position: sticky;
 		top: 80px;

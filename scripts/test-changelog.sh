@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-changelog — prove scripts/changelog-guard.sh and
+# test-changelog - prove scripts/changelog-guard.sh and
 # `scripts/changelog.mjs release` do what changelog.d/README.md says.
 #
 # Builds a throwaway git repo per case, like test-version-next.sh, so nothing
@@ -40,9 +40,9 @@ fixture() {
 
 ## [Unreleased]
 
-<!-- Nothing yet. Pending entries live in changelog.d/ — see changelog.d/README.md. -->
+<!-- Nothing yet. Pending entries live in changelog.d/ - see changelog.d/README.md. -->
 
-## [1.3.0] — 2026-08-30
+## [1.3.0] - 2026-08-30
 
 ### Added
 - Old.
@@ -70,7 +70,7 @@ guard() { # guard <dir> → exit status of the guard
 expect_guard() { # expect_guard <name> <want: pass|fail> <dir>
 	local name="$1" want="$2" dir="$3" got=pass
 	guard "$dir" || got=fail
-	[ "$got" = "$want" ] && ok "guard: $name ($got)" || bad "guard: $name — expected $want, got $got"
+	[ "$got" = "$want" ] && ok "guard: $name ($got)" || bad "guard: $name - expected $want, got $got"
 	rm -rf "$dir"
 }
 
@@ -86,7 +86,7 @@ d="$(fixture)"; commit "$d" "feat!: rotate keys"
 expect_guard "breaking feat without a fragment" fail "$d"
 
 d="$(fixture)"; commit "$d" "chore(deps): bump vite"; commit "$d" "docs: typo"
-expect_guard "no feat/fix — nothing needed" pass "$d"
+expect_guard "no feat/fix - nothing needed" pass "$d"
 
 d="$(fixture)"; commit "$d" "fix(ci): flaky test [skip changelog]"
 expect_guard "[skip changelog] in the commit" pass "$d"
@@ -128,7 +128,7 @@ printf '### Fixed\n- A failed save said "Saved".\n\n### Security\n- Locked offli
 if ( cd "$d" && node scripts/changelog.mjs release 1.4.0 --date 2026-09-20 >/dev/null ); then
 	c="$d/CHANGELOG.md"
 	checks=(
-		"grep -q '^## \[1.4.0\] — 2026-09-20$' '$c'"
+		"grep -q '^## \[1.4.0\] - 2026-09-20$' '$c'"
 		"grep -q 'Dose history' '$c'"
 		"grep -q 'Locked offline entries' '$c'"
 		"grep -q '^\[1.4.0\]: https://github.com/danileau/ciphra/releases/tag/v1.4.0$' '$c'"

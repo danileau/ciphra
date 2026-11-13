@@ -1,9 +1,9 @@
 /**
- * CIPH-887 — PasswordField primitive contract + audit guard.
+ * CIPH-887 - PasswordField primitive contract + audit guard.
  *
  * The primitive wraps a native input + an eye-icon toggle. Tap flips the
  * input's `type` between `password` and `text` for the current session
- * only — visibility never persists to localStorage (security: a user
+ * only - visibility never persists to localStorage (security: a user
  * who hands the device to someone shouldn't have a previously toggled
  * state leak across logins).
  */
@@ -134,7 +134,7 @@ describe('CIPH-887 PasswordField audit guard', () => {
 describe('the password is never altered by the keyboard (2026-09-16)', () => {
 	// A real login failed on iOS: revealing the password switches the input to
 	// type="text", where the keyboard capitalizes, autocorrects and swaps in
-	// smart quotes — the string that reaches Argon2 is no longer the password.
+	// smart quotes - the string that reaches Argon2 is no longer the password.
 	it('opts out of capitalization, autocorrect and spellcheck, hidden and revealed', async () => {
 		const { container } = render(PasswordField, { props: { id: 'p1', value: 'secret' } });
 		const input = () => container.querySelector('input') as HTMLInputElement;

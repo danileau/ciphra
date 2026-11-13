@@ -1,5 +1,5 @@
 /**
- * ciphra — LoginForm vs. autofill (2026-11-03).
+ * ciphra - LoginForm vs. autofill (2026-11-03).
  *
  * On iOS Brave a returning user got "wrong username or password" with
  * "Invalid username" in the technical details, while the same credentials
@@ -52,7 +52,7 @@ beforeEach(() => {
 	vi.mocked(crypto.deriveAuthKey).mockReset();
 });
 
-describe('LoginForm — what is sent is what the fields show', () => {
+describe('LoginForm - what is sent is what the fields show', () => {
 	it('sends a username autofilled without an input event', async () => {
 		const { container } = render(LoginForm);
 		const { user, form } = fields(container);
@@ -91,7 +91,7 @@ describe('LoginForm — what is sent is what the fields show', () => {
 	});
 });
 
-describe('LoginForm — a username no account can have never reaches the server', () => {
+describe('LoginForm - a username no account can have never reaches the server', () => {
 	it('stops a saved recovery code, explains it, and does not print it', async () => {
 		const code = 'able acid aged also area army away baby back ball born boss';
 		const { container } = render(LoginForm);

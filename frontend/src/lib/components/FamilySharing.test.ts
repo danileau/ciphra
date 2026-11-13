@@ -1,5 +1,5 @@
 /**
- * FamilySharing — failures are said out loud, in the user's language.
+ * FamilySharing - failures are said out loud, in the user's language.
  *
  * `revoke` and `revokeAll` ignored `!res.ok`: the panic button could fail and
  * look like it worked. `createInvite` had no catch, so an offline attempt just

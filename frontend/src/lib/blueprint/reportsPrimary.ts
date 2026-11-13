@@ -1,5 +1,5 @@
 /**
- * pi24 reports rework — primary trend resolver for /reports.
+ * pi24 reports rework - primary trend resolver for /reports.
  *
  * Sibling to `dashboardPrimary.ts` but with a different contract.
  * Dashboard answers "what matters today" (glance, condensed); reports
@@ -22,18 +22,18 @@
  * 2. Episode cohort + episode-or-symptom data → 'episode-trend'.
  *    The dual-axis episodes + symptom-days chart. Default for
  *    epilepsy / adhd / asthma / glaucoma. Codex's campfire round 2
- *    conceded that this IS the right primary for episode cohorts —
+ *    conceded that this IS the right primary for episode cohorts -
  *    just not the universal centerpiece.
  *
  * 3. Any entry exists → 'last-entries'. Universal fallback. Same
- *    pattern as dashboard — silence > nag when nothing fits.
+ *    pattern as dashboard - silence > nag when nothing fits.
  *
  * 4. Else null. Day-1 user, no data.
  *
  * Cycle / phase / narrative cohorts intentionally fall through to
  * episode-trend (step 2) or last-entries (step 3) in this initial
  * version. Their dedicated primaries (cycle-phase summary, flare list,
- * top-triggers + journal feed) are deferred to P-later — the dual-axis
+ * top-triggers + journal feed) are deferred to P-later - the dual-axis
  * chart still works for those cohorts (not ideal, but not broken). The
  * dogfood-fixing scope of P1 is the vital-trend dimension.
  */
@@ -71,14 +71,14 @@ export interface ReportsSummary {
 
 /**
  * Per-condition vital pins for /reports. Same primary as the dashboard
- * map in `dashboardPrimary.ts` — the cohort's clinical anchor doesn't
+ * map in `dashboardPrimary.ts` - the cohort's clinical anchor doesn't
  * change between surfaces. Secondaries are broader on /reports because
  * the surface has room: small multiples / chip selector handle them.
  */
 const VITAL_PRIMARY_MAP: Record<string, { primary: string; secondaries: string[] }> = {
 	hashimoto: {
 		primary: 'tsh',
-		// Reports surface shows the full lab panel — 4-up chip row when
+		// Reports surface shows the full lab panel - 4-up chip row when
 		// all four have data, otherwise filtered to those with data.
 		secondaries: ['free_t4', 'free_t3', 'tpo_antibodies'],
 	},

@@ -1,5 +1,5 @@
 /**
- * CIPH-741 — signup happy path with mandatory recovery-code gate.
+ * CIPH-741 - signup happy path with mandatory recovery-code gate.
  *
  * Visits /login, switches to the register tab, signs up a random user,
  * verifies the recovery code screen, that the Continue button is disabled
@@ -14,8 +14,8 @@ import { TEST_PASSWORD, randUser } from './_helpers/testUser';
 // argon2 vault creation in the browser can take 10–20s per sign-up in dev.
 test.setTimeout(90_000);
 
-// CIPH-751 — testid-driven selectors so this test is locale-independent.
-// CIPH-pi20-LB-3 — does NOT use registerNewUser() because the test asserts
+// CIPH-751 - testid-driven selectors so this test is locale-independent.
+// CIPH-pi20-LB-3 - does NOT use registerNewUser() because the test asserts
 // the gate's intermediate state (button disabled before checkbox); inlining
 // the registration flow lets us add those assertions between steps.
 test('signup → recovery gate → /', async ({ page }) => {

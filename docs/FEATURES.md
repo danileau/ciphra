@@ -3,13 +3,13 @@
 What ciphra does today. For how it's built see
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Onboarding — blueprints
+## Onboarding - blueprints
 
 A new account picks a **blueprint** in the setup wizard: one of 25 condition
 presets (epilepsy, migraine, diabetes, bipolar, hypertension, PMOS (formerly PCOS), Hashimoto,
 MS, IBD, asthma, endometriosis, long-COVID, and more) or a `custom`
-build-your-own. The blueprint defines what that user tracks — symptom groups,
-episode types, triggers, vitals, medications — and can be customized after
+build-your-own. The blueprint defines what that user tracks - symptom groups,
+episode types, triggers, vitals, medications - and can be customized after
 setup. It is stored encrypted; the server never sees which condition a user
 tracks.
 
@@ -17,24 +17,24 @@ tracks.
 
 The core daily interaction is the entry form at `/log/[date]`:
 
-- **Symptoms** — tap-to-toggle chips, grouped by category.
-- **Episodes** — `+`/`−` counters per episode type; each episode can carry
+- **Symptoms** - tap-to-toggle chips, grouped by category.
+- **Episodes** - `+`/`−` counters per episode type; each episode can carry
   its own time, duration and note.
-- **Triggers** — toggle chips (sleep, stress, weather, …).
-- **Vitals** — typed values (blood pressure, sleep hours, weight, mood, …).
-- **Medications** — a scheduled medication counts as taken on a logged day,
+- **Triggers** - toggle chips (sleep, stress, weather, …).
+- **Vitals** - typed values (blood pressure, sleep hours, weight, mood, …).
+- **Medications** - a scheduled medication counts as taken on a logged day,
   so the form asks only what was *missed*; an as-needed one is ticked when
   taken.
-- **Notes** — free text.
+- **Notes** - free text.
 
 An entry can be **locked as private**: it stays in the journal but never
 reaches an export or a person you share with (unless that invitation includes
-private entries — see Family sharing).
+private entries - see Family sharing).
 
 For capture-as-it-happens rather than an evening review, **quick-add** records
 an entry (an episode, a symptom, a medication or a note), a rescue dose, a
-**note marker** — a dated event that appears in the trend and the doctor export,
-or stays in the journal if locked — or a **diary** entry. The diary is private
+**note marker** - a dated event that appears in the trend and the doctor export,
+or stays in the journal if locked - or a **diary** entry. The diary is private
 text: it is never exported.
 
 ## Medications and dose history
@@ -48,8 +48,8 @@ so it never counts towards adherence and never produces a missed dose.
 
 A medication's **dose changes over time without rewriting the past.** Each
 medication keeps one identity and a dated history of dose periods, stored
-inside the encrypted blueprint. *Change* asks what is changing — the dose or
-schedule, stopping it, or switching to a different medication — and from which
+inside the encrypted blueprint. *Change* asks what is changing - the dose or
+schedule, stopping it, or switching to a different medication - and from which
 date (tomorrow by default), and shows how it will be recorded before saving:
 days before the change keep the dose that applied then. A typo fix is a
 separate, explicitly retroactive correction. A stopped medication moves to its
@@ -64,7 +64,7 @@ changes in the export window). The history is descriptive only: ciphra marks
 when a dose changed and never compares symptoms before and after it.
 
 History also runs **backwards**. *Add an earlier dose* records what applied
-before ciphra knew the medication — days already recorded are untouched — and
+before ciphra knew the medication - days already recorded are untouched - and
 *Add a medication from the past* records one that was tried and stopped, with
 its period and, from a fixed translated list, why it ended. Those dates are
 entered as months, and "I don't remember" leaves the start open rather than
@@ -74,20 +74,20 @@ printed; only the fixed-list reason reaches the treatment-history export.
 ## Cohort-aware surfaces
 
 ciphra adapts to how a condition actually behaves. Each condition belongs to a
-cohort — discrete, cycle, phase, narrative, or custom — and that drives:
+cohort - discrete, cycle, phase, narrative, or custom - and that drives:
 
-- **Dashboard** — a cohort-pinned primary card (vital trend, gap-trend, phase
+- **Dashboard** - a cohort-pinned primary card (vital trend, gap-trend, phase
   rollup, …) plus a today-status recap.
-- **Calendar** — a month grid, with cycle and phase overlay modes for the
+- **Calendar** - a month grid, with cycle and phase overlay modes for the
   cohorts that need them, and a day-detail panel.
-- **Journal** — a reverse-chronological timeline of entries, note markers and
+- **Journal** - a reverse-chronological timeline of entries, note markers and
   episode notes, with search and filters, and the private diary alongside.
-- **Reports** — the layout and primary chart match the cohort.
+- **Reports** - the layout and primary chart match the cohort.
 
 ## Reports and the doctor PDF
 
 `/reports` is the "show your doctor" surface. An export picker offers three
-period scopes — a month, a calendar year, or two calendar years — each shown as
+period scopes - a month, a calendar year, or two calendar years - each shown as
 a card explaining when to use it, and each listing only the periods that hold
 exportable data, so a past year can be exported without paging back to it.
 The dashboard's "Export for doctor" shortcut appears only when there is
@@ -106,16 +106,16 @@ is no count, rate or comparison per period anywhere in the document.
 A fourth card exports the **treatment history**: every medication ever
 recorded, oldest first, with its dose periods and how each one ended, across
 the whole span rather than one window. It is built from the medication list
-alone — no symptom or episode data reaches it — and answers the question a
+alone - no symptom or episode data reaches it - and answers the question a
 first consultation opens with.
 
 Saving any of these writes plaintext to disk, and the export UI says so
 plainly. A CSV export is also available, and Settings can download all of
-your data, decrypted, as a JSON file — also plaintext, and the button says so.
+your data, decrypted, as a JSON file - also plaintext, and the button says so.
 
 ## Family sharing
 
-A patient can grant a caregiver access with a **family code** — a short phrase
+A patient can grant a caregiver access with a **family code** - a short phrase
 that re-wraps the patient's key. The caregiver claims the grant from their own
 account and can then read and add entries on the patient's behalf. Grants are
 revocable (though revocation cannot retract data already downloaded). See
@@ -124,26 +124,26 @@ revocable (though revocation cannot retract data already downloaded). See
 **Each invitation has a scope, chosen when it is created:** everything except
 the diary and locked entries (the default), or everything including them. Some
 people want a relative to see the whole picture; others keep the diary to
-themselves. The scope is enforced on the server — an out-of-scope document is
-never sent to the caregiver at all, rather than being filtered in their browser
-— and it can be changed afterwards. Narrowing a scope stops further access; it
+themselves. The scope is enforced on the server - an out-of-scope document is
+never sent to the caregiver at all, rather than being filtered in their browser -
+and it can be changed afterwards. Narrowing a scope stops further access; it
 cannot retract what was already downloaded. While a caregiver is reading
 someone's record, a line under the banner says how many entries are being held
 back from them, counted by the server.
 
 What a caregiver sees is the whole medication list, not just its doses: the
 dated history, the reason typed for a change, and the reason a medication was
-stopped. That is deliberate — somebody managing another person's medication
-needs to know why a drug was dropped — but it is worth knowing before writing
+stopped. That is deliberate - somebody managing another person's medication
+needs to know why a drug was dropped - but it is worth knowing before writing
 something in that field for a shared account.
 
 ## Account and recovery
 
-- **Recovery code** — a 12-word code shown once at signup. It is the only way
+- **Recovery code** - a 12-word code shown once at signup. It is the only way
   back into an account if the password is lost; ciphra cannot reset it.
-- **Change password** — re-wraps the vault without re-encrypting documents.
-- **Delete account** — GDPR self-service erasure, password-confirmed.
-- **Settings** — tracking profile and medications, language, date format,
+- **Change password** - re-wraps the vault without re-encrypting documents.
+- **Delete account** - GDPR self-service erasure, password-confirmed.
+- **Settings** - tracking profile and medications, language, date format,
   appearance, family sharing, data export, local-cache controls.
 
 ## Languages
@@ -154,12 +154,12 @@ orthography (`ss`, never `ß`).
 ## Privacy by construction
 
 - Zero-knowledge: every entry is an opaque blob the server cannot read. It
-  does hold what it needs to run an account — a username, an auth hash,
+  does hold what it needs to run an account - a username, an auth hash,
   timestamps, one bit per entry saying whether you share it, invitation
   bookkeeping, and a log of *when* you wrote (never what).
   [SECURITY_MODEL.md](SECURITY_MODEL.md) lists all of it; that list is the
   honest one, and this page defers to it.
-- No email address is collected — accounts are a username and password only.
+- No email address is collected - accounts are a username and password only.
 - A decrypted-document cache in IndexedDB makes revisits fast; logout wipes it.
 - Public condition pages (`/conditions/[id]`) explain what each condition
   tracks, for people deciding whether ciphra fits.
@@ -179,12 +179,12 @@ download their data as a JSON bundle (byte-identical to the migration bundle)
 or as a PDF.
 
 Once a user has completed migration, ciphra signals epilepc and that one account
-is read+export-only from that point on, regardless of the global phase — to
+is read+export-only from that point on, regardless of the global phase - to
 prevent the two systems from diverging.
 
 ## Operator tooling
 
-`/admin` is a metadata-only operator dashboard — user counts and their trend
+`/admin` is a metadata-only operator dashboard - user counts and their trend
 over time, per-account lock/unlock, admin promotion and account deletion, and
 the audit log: sign-ins, family sharing, admin actions, and
 the fact that a document was written, changed or deleted. It cannot show

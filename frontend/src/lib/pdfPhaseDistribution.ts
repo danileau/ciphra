@@ -1,15 +1,15 @@
 /**
- * CIPH-pi21-Track-B-4 — Phase distribution aggregation for the doctor PDF.
+ * CIPH-pi21-Track-B-4 - Phase distribution aggregation for the doctor PDF.
  *
  * Phase cohort (bipolar / MS / IBD / chronic_pain / anxiety_depression /
  * burnout / IBS / long_covid) renders a horizontal stacked bar showing the
  * relative mix of episode types across the focus month.
  *
  * Lives in its own file so the aggregation can be unit-tested independent
- * of jsPDF — the rendering side stays inside pdf.ts (consistent with
+ * of jsPDF - the rendering side stays inside pdf.ts (consistent with
  * `drawDayCoverageStrip` etc).
  *
- * Gated by `sectionsForCohort(cohort).includes('phase-distribution')` —
+ * Gated by `sectionsForCohort(cohort).includes('phase-distribution')` -
  * cycle/discrete/narrative/custom cohorts never call this.
  */
 import type { Blueprint, EpisodeType } from '#lib/blueprint/index.ts';
@@ -20,7 +20,7 @@ export type RGB = [number, number, number];
 
 export interface PhaseSegment {
 	id: string;
-	/** Episode-type label as authored — i18n key for preset items, literal
+	/** Episode-type label as authored - i18n key for preset items, literal
 	 *  string for custom items. Caller resolves with `labelOf(t, item)`. */
 	label: string;
 	count: number;
@@ -40,7 +40,7 @@ function parseHex(hex: string): RGB {
 /**
  * Sum episode counts per `episodeType.id` across the focus-month entry docs.
  * Returns segments sorted by count desc. Empty input → empty array (primitive
- * renders nothing in that case — silent month is honest, not "0% manic").
+ * renders nothing in that case - silent month is honest, not "0% manic").
  */
 export function aggregatePhaseDistribution(
 	blueprint: Blueprint,
@@ -49,7 +49,7 @@ export function aggregatePhaseDistribution(
 	const types: EpisodeType[] = blueprint.episodeTypes ?? [];
 	if (types.length === 0) return [];
 
-	// Shared math (design review 2026-06-11) — same totals the calendar
+	// Shared math (design review 2026-06-11) - same totals the calendar
 	// rail uses, including the legacy `seizures`-shape fallback this
 	// site previously missed.
 	const counts = episodeCountTotals(blueprint, focusMonthDocs, 'all');

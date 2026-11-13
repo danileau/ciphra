@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# security-digest — one consolidated weekly security posture summary.
+# security-digest - one consolidated weekly security posture summary.
 #
 # Spur A's anti-alert-fatigue layer. The daily jobs (Trivy security-scan,
 # security-monitor edge drift) alert on RED per-run; this AGGREGATES their
-# latest status into a single weekly message and — crucially — sends a green
+# latest status into a single weekly message and - crucially - sends a green
 # HEARTBEAT when all is well. Silence otherwise means "all clear" AND "the
 # monitor is broken" indistinguishably; a weekly digest tells them apart.
 #
@@ -13,7 +13,7 @@
 #
 # Needs `gh` authenticated (GITHUB_TOKEN in Actions, gh login locally).
 # Posts to ntfy when NTFY_TOPIC_URL is set. Writes the GH job summary when run
-# in Actions. Exit 0 always — it is a report + heartbeat, not a gate; the daily
+# in Actions. Exit 0 always - it is a report + heartbeat, not a gate; the daily
 # jobs remain the blocking alerts.
 set -uo pipefail
 
@@ -54,7 +54,7 @@ if [ "$overall" != "🔴" ]; then
 fi
 
 read -r -d '' BODY <<EOF || true
-${overall} ciphra security digest — v${ver}
+${overall} ciphra security digest - v${ver}
 
 $(emoji "$scan") CVE scan (Trivy)      ${scan:-not-run} $( [ -n "$scan" ] && echo "($(last_when security-scan.yml))" )
 $(emoji "$mon") Edge drift monitor    ${mon:-not-run} $( [ -n "$mon" ] && echo "($(last_when security-monitor.yml))" )
@@ -72,7 +72,7 @@ if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
   { echo '```'; echo "$BODY"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 fi
 
-# ntfy — one push a week. Priority default (this is a heartbeat, not an alarm);
+# ntfy - one push a week. Priority default (this is a heartbeat, not an alarm);
 # the daily jobs carry the high-priority red alerts.
 if [ -n "${NTFY_TOPIC_URL:-}" ]; then
   prio="default"; [ "$overall" = "🔴" ] && prio="high"

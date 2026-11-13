@@ -1,5 +1,5 @@
 /**
- * Canonical-origin helpers — contract tests.
+ * Canonical-origin helpers - contract tests.
  *
  * Pins the /migrate trust-gate semantics: ciphra.ch family over https
  * is canonical, loopback is dev (e2e + local), everything else is a
@@ -37,7 +37,7 @@ describe('originStatus', () => {
 	});
 });
 
-describe('hostOf — source normalization (P2 debt)', () => {
+describe('hostOf - source normalization (P2 debt)', () => {
 	it('hostname-only and full-URL inputs resolve identically', () => {
 		expect(hostOf('epilepc.ch')).toBe('epilepc.ch');
 		expect(hostOf('https://epilepc.ch')).toBe('epilepc.ch');

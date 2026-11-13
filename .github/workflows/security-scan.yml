@@ -1,4 +1,4 @@
-# Scheduled vulnerability scan (2026-06-12) — closes the gap the
+# Scheduled vulnerability scan (2026-06-12) - closes the gap the
 # PR-triggered gate cannot: a CVE published AFTER the last commit hits
 # existing lockfiles and the base layers (alpine/debian) of images
 # already running in prod. Runs daily against a fresh vuln DB (no cache
@@ -10,14 +10,14 @@
 #
 # Trivy itself is pinned (`version:`) to the SAME release as ci.yml's PR gate:
 # with `latest`, the daily scan and the gate could disagree only because they
-# ran different scanners. Dependabot can't bump this input — move all four
+# ran different scanners. Dependabot can't bump this input - move all four
 # `version:` lines together, by hand, with the trivy-action bump. The vuln DB
 # is not pinned and stays fresh; only the scanner binary is.
 name: Security scan
 
 on:
   schedule:
-    - cron: '20 4 * * *'   # daily 04:20 UTC — before the operator's day
+    - cron: '20 4 * * *'   # daily 04:20 UTC - before the operator's day
   workflow_dispatch:
 
 permissions:
@@ -43,20 +43,20 @@ jobs:
         with:
           scan-type: fs
           scan-ref: .
-          # SAST/DAST F7 — add misconfig + secret to the default vuln scan so
+          # SAST/DAST F7 - add misconfig + secret to the default vuln scan so
           # Dockerfile/IaC issues (e.g. images running as root, DS002) and any
           # committed secret gate CI, not just dependency CVEs.
           scanners: vuln,secret,misconfig
-          # F2 — documented risk acceptances (e.g. nginx must bind :443 as
+          # F2 - documented risk acceptances (e.g. nginx must bind :443 as
           # root) live in .trivyignore.yaml. NB: golive/ is gitignored and
           # untracked, so it isn't in the CI checkout and is never scanned
-          # here — no skip needed. (A local `trivy fs .` WILL see it, which is
+          # here - no skip needed. (A local `trivy fs .` WILL see it, which is
           # fine: it's the operator's deploy dir, not a CI-built image.)
           trivyignores: .trivyignore.yaml
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
-          version: v0.76.1   # pinned — see the note at the top of this file
+          version: v0.76.1   # pinned - see the note at the top of this file
           # JSON so the alert job can name packages and CVEs; the Findings
           # step below prints the same list to this job's log.
           format: json
@@ -72,7 +72,7 @@ jobs:
           if-no-files-found: ignore
 
   # Which images is prod running? `:latest` is the newest BUILD, and a build
-  # can sit undeployed for days (it did for 1.5.1) — scanning it reports the
+  # can sit undeployed for days (it did for 1.5.1) - scanning it reports the
   # next release, not the exposure. The VPS deploys the newest `deploy-<sha>`
   # tag by `--sort=-creatordate` (OPERATIONS.md); resolve it the same way.
   live:
@@ -86,7 +86,7 @@ jobs:
       - id: tag
         run: |
           tag="$(git for-each-ref --sort=-creatordate --count=1 --format='%(refname:strip=2)' 'refs/tags/deploy-*')"
-          [ -n "$tag" ] || { echo "::error::no deploy-* tag found — cannot tell what prod runs"; exit 1; }
+          [ -n "$tag" ] || { echo "::error::no deploy-* tag found - cannot tell what prod runs"; exit 1; }
           echo "Live per deploy tags: $tag"
           echo "sha=${tag#deploy-}" >> "$GITHUB_OUTPUT"
 
@@ -112,7 +112,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true
-          version: v0.76.1   # pinned — see the note at the top of this file
+          version: v0.76.1   # pinned - see the note at the top of this file
           format: json
           output: trivy-${{ matrix.image }}.json
       - name: Findings

@@ -2,14 +2,14 @@
  * The treatment history as its own document (2026-09-19).
  *
  * The first question at a new consultation is what has been tried, at what
- * dose, for how long and why it ended — a history that reaches back before
+ * dose, for how long and why it ended - a history that reaches back before
  * ciphra recorded anything. This suite pins:
  *   1. every dose period of every medication appears, oldest first, including
  *      the ones the person filled in from memory;
  *   2. a date given as a month prints as a month, never as an invented day;
  *   3. the reason a medication ended prints from the fixed list, while the
  *      free text a person typed still never leaves the app;
- *   4. the document carries no symptom, episode or day data at all — it is
+ *   4. the document carries no symptom, episode or day data at all - it is
  *      handed none, so nothing in it can read as a verdict on a medication.
  *
  * Read back from the real `generateTherapyPdf`, like its neighbours.
@@ -172,7 +172,7 @@ describe('the treatment-history PDF', () => {
 		expect(therapyPdf().join(' ')).not.toContain('Müdigkeit');
 	});
 
-	it('holds no symptom, episode or day data — it is handed none', () => {
+	it('holds no symptom, episode or day data - it is handed none', () => {
 		const body = PDF_SRC.slice(PDF_SRC.indexOf('export function generateTherapyPdf'));
 		const fn = body.slice(0, body.indexOf('\nexport function '));
 		expect(fn).not.toMatch(/documents|episode|symptom|daysLogged|adherence|reduce\(/i);

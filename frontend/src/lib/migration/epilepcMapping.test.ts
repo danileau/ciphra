@@ -1,5 +1,5 @@
 /**
- * ciphra — Epilepc mapping tests (CIPH-741).
+ * ciphra - Epilepc mapping tests (CIPH-741).
  *
  * Covers the security-critical migration surface:
  *  - strict schema validation (accept v1.1, reject v1.0 / v9.9 / malformed /
@@ -130,7 +130,7 @@ describe('mapSeizureType', () => {
         expect(mapSeizureType('ABSENZ')).toBe('absence');
     });
 
-    it('maps myoclonic (reorder fix — myoclonic tested before clonic/klonisch)', () => {
+    it('maps myoclonic (reorder fix - myoclonic tested before clonic/klonisch)', () => {
         // Fix: the myoclonic branch now runs BEFORE the generalized branch,
         // so 'Myoclonic' / 'myoklonisch' correctly map to 'myoclonic' rather
         // than being swallowed by the 'clonic' / 'klonisch' substring check.
@@ -195,7 +195,7 @@ describe('mapBundle', () => {
         expect(e1.notes).toBe('aura');
     });
 
-    // CIPH-760 — preserve raw epilepc type_name (granularity like
+    // CIPH-760 - preserve raw epilepc type_name (granularity like
     // "Fokal rechts", "Absence mit Sturz") alongside the coarse ciphra key.
     it('preserves epilepc_original_type on mapped entries when type_name present', () => {
         expect(mapped.entries[0].epilepc_original_type).toBe('Focal');
@@ -239,7 +239,7 @@ describe('mapBundle', () => {
     });
 
     it('events carry title + notes (notes default to empty string)', () => {
-        // Freeform (non-medication) events only — medication intake events are
+        // Freeform (non-medication) events only - medication intake events are
         // appended to the same array (asserted separately below).
         const real = mapped.events.filter((e) => e.kind !== 'medication');
         expect(real).toHaveLength(1);
@@ -249,7 +249,7 @@ describe('mapBundle', () => {
         expect(real[0].source_id).toBe('e-e1');
     });
 
-    // CIPH-760 — title (epilepc `name`) and notes (epilepc `description`)
+    // CIPH-760 - title (epilepc `name`) and notes (epilepc `description`)
     // must stay separate fields; prior code risked concatenating them.
     it('keeps event title and notes as separate fields (no concatenation)', () => {
         const b2: EpilepcBundle = {
@@ -317,7 +317,7 @@ describe('mapBundle', () => {
 });
 
 // ---------------------------------------------------------------------------
-// parseEpilepcMedName — dose-aware name normalization
+// parseEpilepcMedName - dose-aware name normalization
 // ---------------------------------------------------------------------------
 
 describe('parseEpilepcMedName', () => {
@@ -338,7 +338,7 @@ describe('parseEpilepcMedName', () => {
     });
 
     it('keeps a number that is part of the name (no unit → not a dose)', () => {
-        // "B12" / "5-HTP" must survive — only number+unit is treated as a dose.
+        // "B12" / "5-HTP" must survive - only number+unit is treated as a dose.
         expect(parseEpilepcMedName('Vitamin B12').base).toBe('Vitamin B12');
         expect(parseEpilepcMedName('5-HTP').base).toBe('5-HTP');
         expect(key('Vitamin D3')).not.toBe(key('Vitamin D'));
@@ -386,7 +386,7 @@ describe('mapBundle medication dedup + intake events', () => {
         expect(intakes[0].time).toBe('09:00');
     });
 
-    it('merges by name only — same drug at different doses → one definition, dose kept per intake', () => {
+    it('merges by name only - same drug at different doses → one definition, dose kept per intake', () => {
         const m = mapBundle(bundleWith([
             { epilepc_id: 'a', name: 'Urbanyl', dose: '10mg', started_at: '2026-01-01' },
             { epilepc_id: 'b', name: 'Urbanyl', dose: '20mg', started_at: '2026-01-02' },
@@ -450,7 +450,7 @@ describe('mergeMedications', () => {
         expect(merged.map((m) => m.id)).toEqual(['a', 'b']);
     });
 
-    it('dedupes by id — keeps existing', () => {
+    it('dedupes by id - keeps existing', () => {
         const existing = [med('a', 'keep')];
         const incoming = [med('a', 'overwrite'), med('b')];
         const merged = mergeMedications(existing, incoming);

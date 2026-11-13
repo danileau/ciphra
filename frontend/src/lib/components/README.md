@@ -3,7 +3,7 @@
 Single source of truth for the Ciphra webui. Read this before
 adding a component, a route, a token, or an i18n string. Every
 section is either enforced by a vitest test in `frontend/src/lib/`
-or documented as the canonical pattern — drift is caught at CI,
+or documented as the canonical pattern - drift is caught at CI,
 not at review.
 
 ---
@@ -19,9 +19,9 @@ not at review.
    new `.svelte` file requires an inventory entry in the same
    commit (`components-inventory.test.ts` will fail otherwise).
 3. **Use the route-shell registry to add routes** (`routeShells.ts`).
-   Do not add a new if/else branch to `+layout.svelte` — add a
+   Do not add a new if/else branch to `+layout.svelte` - add a
    registry entry. `routeShells.test.ts` enforces structure.
-4. **Use interaction primitives** — `Modal`, `BottomSheet`,
+4. **Use interaction primitives** - `Modal`, `BottomSheet`,
    `Toast`. Inline re-inventions are caught by
    `primitives.test.ts`. Opt out with a `<!-- primitive-exempt: … -->`
    comment + a reason.
@@ -29,9 +29,9 @@ not at review.
    Orphan keys are caught by `keys-used.test.ts`. Keys accessed
    at runtime (`$t(`prefix_${var}`)`) go in
    `lib/i18n/dynamic-keys.ts`.
-6. **Run `npm test` before declaring done** — failing
+6. **Run `npm test` before declaring done** - failing
    tests block. Also run `npm run check` (`svelte-kit sync` +
-   `svelte-check`) — no new warnings.
+   `svelte-check`) - no new warnings.
 
 Recommended local workflow before pushing (from `frontend/`):
 
@@ -51,7 +51,7 @@ Enforced by: [`src/routes/page-width.test.ts`](../../routes/page-width.test.ts).
 
 **The app layout imposes no width.** `<main>` is `flex-1` with no container, so
 a page that declares nothing renders edge-to-edge. "Forgot to choose" and
-"deliberately full-bleed" therefore look identical on screen — which is how the
+"deliberately full-bleed" therefore look identical on screen - which is how the
 tokens sat at 4-of-18 adoption from CIPH-746 until 2026-08-21 while the other
 fourteen routes each grew their own `max-w-*`.
 
@@ -59,7 +59,7 @@ Six tiers. Apply one on the outermost page wrapper; never nest them.
 
 | Token | Width | Pages |
 |---|---|---|
-| `layout-narrow` | 576 | *(currently unused — see auth cards below)* |
+| `layout-narrow` | 576 | *(currently unused - see auth cards below)* |
 | `layout-reading` | 768 | `/docs`, `/docs/[slug]`, `/privacy`, `/terms`, `/setup` |
 | `layout-default` | 896 | `/settings`, `/conditions/[id]` |
 | `layout-landing` | 1024 | the landing page's section bands |
@@ -77,7 +77,7 @@ every breakpoint: its bands sit on alternating full-bleed backgrounds where
   would widen each by 128px for tidiness alone.
 - **Measure.** `max-w-xl` on a paragraph caps line length (~65ch) and is
   typographically correct. The landing uses eight. Never replace these with a
-  layout token — and note the enforcement test is element-aware precisely
+  layout token - and note the enforcement test is element-aware precisely
   because a centred paragraph shares the `max-w-* mx-auto` idiom with a
   container.
 - **Responsive two-stage** (`/log/[date]`, via `EntryComposer`'s `.log-page`):
@@ -87,7 +87,7 @@ every breakpoint: its bands sit on alternating full-bleed backgrounds where
 ### Adding a page
 
 Put it in `TIERS` with its token, or in `EXCEPTIONS` with the reason it cannot
-use one. A `+page.svelte` in neither map fails the suite — that is the point.
+use one. A `+page.svelte` in neither map fails the suite - that is the point.
 The test also fails on a stale entry for a deleted route, on a page listed in
 both maps, and if the scale ever grows past six tiers, because a tier per page
 is not a system.
@@ -120,12 +120,12 @@ arbitrary bracket values except the list in
 `spacingTokens.ts` with a comment explaining why.
 
 Grandfathered bracket spacing:
-- `calc(2rem+env(safe-area-inset-bottom,0px))` — iOS safe-area
+- `calc(2rem+env(safe-area-inset-bottom,0px))` - iOS safe-area
   padding on scrollable modals.
 
 Note: `min-h-[44px]`, `min-w-[40px]`, `min-h-[calc(100vh-3.5rem)]`,
 `max-h-[70vh]`, etc. are outside the spacing-utility regex
-scope — they use `min-h`/`max-h`/`h`/`w` prefixes and are allowed
+scope - they use `min-h`/`max-h`/`h`/`w` prefixes and are allowed
 as-is. iOS tap targets (`44px`/`48px`/`40px`) and full-height
 main patterns remain unrestricted.
 
@@ -141,28 +141,28 @@ Allowed `text-{size}` utilities:
 `text-xs, text-sm, text-base, text-lg, text-xl, text-2xl,
 text-3xl, text-4xl, text-5xl, text-6xl`
 
-Semantic guidance — pick by role, not by px:
-- `text-xs` — captions, helpers, dense metadata chips.
-- `text-sm` — default body on information-dense pages (journal
+Semantic guidance - pick by role, not by px:
+- `text-xs` - captions, helpers, dense metadata chips.
+- `text-sm` - default body on information-dense pages (journal
   rows, admin tables, settings).
-- `text-base` — default body on landing / marketing sections.
-- `text-lg` — large body, card lead-in.
-- `text-xl` — section h2.
-- `text-2xl` — page h1.
-- `text-3xl` — landing display (mobile).
-- `text-4xl` — landing display (`sm:` breakpoint).
-- `text-5xl` — landing display (`md:` breakpoint), hero only.
-- `text-6xl` — landing display (`lg:` breakpoint), hero only.
+- `text-base` - default body on landing / marketing sections.
+- `text-lg` - large body, card lead-in.
+- `text-xl` - section h2.
+- `text-2xl` - page h1.
+- `text-3xl` - landing display (mobile).
+- `text-4xl` - landing display (`sm:` breakpoint).
+- `text-5xl` - landing display (`md:` breakpoint), hero only.
+- `text-6xl` - landing display (`lg:` breakpoint), hero only.
 
 Grandfathered micro sizes: `text-[11px]`, `text-[10px]` only.
 Used for tiny badges and dense meta labels where `text-xs`
-(12px) is still too large. Never invent new bracket sizes —
+(12px) is still too large. Never invent new bracket sizes -
 amend `typographyTokens.ts` if you genuinely need one.
 
 Color tokens (`text-slate-500`, `text-brand`, `text-white`,
 etc.) and alignment/decoration keywords (`text-center`,
 `text-balance`, `text-transparent`) are outside this rule's
-scope — see the Color palette section.
+scope - see the Color palette section.
 
 ## Color palette
 
@@ -171,7 +171,7 @@ Enforced by: [`blueprint/presets-palette.test.ts`](../blueprint/presets-palette.
 
 Every preset `accentColor` and every `episodeTypes[].color`
 must come from `DATA_PALETTE`. The palette was designed so
-adjacent episode types never share a hue — the test enforces
+adjacent episode types never share a hue - the test enforces
 adjacency uniqueness as well as palette membership.
 
 Semantic CSS variables (`--brand`, `--ochre`, `--olive`,
@@ -182,7 +182,7 @@ success/completed, ochre = warning/empty). Tailwind color
 utilities (`text-slate-500`, `bg-white`) are fine for generic
 chrome.
 
-## Accent architecture (CIPH-921c) — read this before touching any accent color
+## Accent architecture (CIPH-921c) - read this before touching any accent color
 
 Color in the authed app comes from **four distinct layers**. Most "why is
 this the wrong color?" bugs are using the wrong layer. Decide which one a
@@ -197,8 +197,8 @@ surface belongs to *before* picking a token.
 
 ### Where `--accent` comes from
 
-The accent is the **condition** color — the same hue `/conditions` and the
-dashboard badge use — *not* the cohort accent. Resolution order
+The accent is the **condition** color - the same hue `/conditions` and the
+dashboard badge use - *not* the cohort accent. Resolution order
 (`lib/conditionAccent.ts` → `conditionColorOf`): `conditionInfoMap[id].color`
 → blueprint `accentColor` → cohort slot-1 fallback.
 
@@ -213,10 +213,10 @@ dashboard badge use — *not* the cohort accent. Resolution order
   inherited value for page content). Public routes (no resolved blueprint)
   get no override and keep the `:root` brand-rust default.
 - `chromeSafeAccent()` darkens only the tones that dip below AA as a
-  white-text button (olive `#7f821b`, clay `#a87559`) — applied at the
+  white-text button (olive `#7f821b`, clay `#a87559`) - applied at the
   accent layer **only**, because olive doubles as `--olive`/`--success`, so
   retuning the raw DATA token would silently shift success states app-wide.
-- JS that feeds Chart.js can't read the CSS var — pass `conditionColorOf(bp)`
+- JS that feeds Chart.js can't read the CSS var - pass `conditionColorOf(bp)`
   (or the `accentHex` the dashboard threads down) into the dataset.
 
 ### Picking a color for a new surface
@@ -235,33 +235,33 @@ dashboard badge use — *not* the cohort accent. Resolution order
 Demo seeds (`api/seed_*.py`, gitignored) must use **DATA_PALETTE hexes** for
 `episodeTypes[].color`, same as the real presets. They previously hardcoded
 Tailwind hexes (`#DC2626`, `#1E40AF`, `#7C3AED`…) which clash hard with the
-warm brand — invisible to tests, very visible on multi-phase cohorts
+warm brand - invisible to tests, very visible on multi-phase cohorts
 (bipolar showed blue + purple bands). `api/seed_reseed_all.py` re-applies.
 
 ### Open threads (future sessions)
 
 - **Per-condition unique colors.** Today the 6 DATA tones are shared across
   ~23 conditions (epilepsy / chronic_pain / hypertension / RA all = rust).
-  Goal is a *unique* hue per condition, possibly **auto-generated** — not the
+  Goal is a *unique* hue per condition, possibly **auto-generated** - not the
   shared 6-tone set. When doing this, keep `chromeSafeAccent` + dark-mode
   legibility (accent-as-*text* on dark is the weak spot) in the loop.
 - **Calendar data-glyphs → condition color.** `MonthMiniSummary`'s heat-cell
   bar (and the main calendar day-marks it mirrors) still use `--brand` rust;
-  a test pins it. Not biting today, but should follow the condition color —
+  a test pins it. Not biting today, but should follow the condition color -
   needs main calendar + mini + the `rail.test.ts` contract changed together.
 
 ## Dark mode (design review 2026-06-11)
 
 Source of truth: the `[data-theme='dark']` token block in `app.css` +
 [`lib/stores/theme.ts`](../stores/theme.ts) (preference: light / dark /
-system, default **system** — the app follows the OS unless overridden). `+layout.svelte` mirrors the resolved theme
+system, default **system** - the app follows the OS unless overridden). `+layout.svelte` mirrors the resolved theme
 onto `<html data-theme>`; `app.html` carries a pre-hydration inline
 script so OS-dark users get no white flash (keep it in sync with the
 store; CSP note inside).
 
 Rules when adding UI:
 
-1. **Never hardcode an opaque surface or text color** — use the
+1. **Never hardcode an opaque surface or text color** - use the
    semantic vars and both themes come free. Translucent `rgba(...)`
    tints over themed surfaces adapt automatically and are fine.
    - **Inline-style trap:** `style="background: white"` / `'#fff'` bypasses
@@ -270,7 +270,7 @@ Rules when adding UI:
      toggle, and the landing EncryptionDemo badges. Inline → use
      `var(--surface-card)` (or the right semantic var), never a literal.
 2. **Text on a `--brand` or `--danger` fill** uses `--on-brand` /
-   `--on-danger` (white in light, warm-black in dark — the dark theme
+   `--on-danger` (white in light, warm-black in dark - the dark theme
    lifts those fills past white-text contrast).
 3. Raw Tailwind palette utilities (`bg-white`, `bg-surface`,
    `text-brand`, `text-slate-*`) are remapped to vars in `app.css`'s
@@ -285,7 +285,7 @@ Rules when adding UI:
 
 `<Asterisk mode="loading">` is for data actively being fetched or
 decrypted; `<Asterisk muted>` (or `mode="empty"`) is for static
-nothing-here states. Don't show a spinner for an empty state — it
+nothing-here states. Don't show a spinner for an empty state - it
 promises progress that isn't coming.
 
 ## i18n
@@ -297,7 +297,7 @@ objects).
 Source of truth: [`lib/i18n/de.ts`](../i18n/de.ts).
 
 Enforced by:
-- [`lib/i18n/keys-used.test.ts`](../i18n/keys-used.test.ts) —
+- [`lib/i18n/keys-used.test.ts`](../i18n/keys-used.test.ts) -
   orphan detector. Every `de.ts` key must be referenced via
   `$t('foo.bar')` or covered by an entry in
   [`lib/i18n/dynamic-keys.ts`](../i18n/dynamic-keys.ts)
@@ -316,7 +316,7 @@ Every `.svelte` file in this directory must appear below. The
 test fails if a component is added without a README entry, or an
 entry points at a file that no longer exists. **When adding a
 component, add it here. When removing, remove it here.** Before
-creating a new component, scan this list — there is probably
+creating a new component, scan this list - there is probably
 already a primitive that covers what you need.
 
 ### Layout shells
@@ -325,22 +325,22 @@ Shells own the reactive cascade (stores, derived `$:` state) and
 hand pre-computed data to render-only children. One shell per
 route kind.
 
-- **Companion.svelte** [`Companion.svelte`] — ~725 LOC, the
+- **Companion.svelte** [`Companion.svelte`] - ~725 LOC, the
   dashboard shell rendered at `/`. Owns blueprint + docs +
   cycle + compliance + chart reactive state. Renders the
   full-width header, then delegates the 2/3 + 1/3 grid to
   `CompanionMain` + `CompanionRail`. Caregiver-empty and
   loading states live here.
-- **CompanionMain.svelte** [`CompanionMain.svelte`] — ~250 LOC,
+- **CompanionMain.svelte** [`CompanionMain.svelte`] - ~250 LOC,
   render-only main column of the dashboard. Takes a flat list of
   props (pre-computed chart data, cycle state, callbacks). No store
   subscriptions, only a few trivial `$:` helpers. Justified split
   (see "Companion split decision" below).
-- **CompanionRail.svelte** [`CompanionRail.svelte`] — ~215 LOC,
+- **CompanionRail.svelte** [`CompanionRail.svelte`] - ~215 LOC,
   render-only right rail of the dashboard (`lg:` and up).
   Shows compliance, doctor-export CTA, today's entries. Zero
-  reactive declarations — pure render.
-- **BottomNav.svelte** — mobile bottom tab bar (`md:hidden`):
+  reactive declarations - pure render.
+- **BottomNav.svelte** - mobile bottom tab bar (`md:hidden`):
   Today / Calendar / centre quick-add FAB / Journal / Reports.
   Hides itself on auth, wizard and family-claim paths (`/login`,
   `/setup`, `/migrate`, `/join/*`); reads the path through the
@@ -348,11 +348,11 @@ route kind.
   Active-state pattern (CIPH-870): each tab uses a reactive
   declaration (`$: isXActive = …`) rather than a function called
   from the template. Svelte's template dependency tracking can't
-  see through function bodies — inline a call like
+  see through function bodies - inline a call like
   `class:active={isActive('/x')}` stops re-evaluating on
   navigation, so the first-rendered tab stays lit forever.
   12 regression tests in `BottomNav.test.ts` enforce this.
-- **AuthedFooter.svelte** (CIPH-903) — minimal authed-shell
+- **AuthedFooter.svelte** (CIPH-903) - minimal authed-shell
   footer rendered in `+layout.svelte` between `<main>` and
   `<BottomNav>`. Watermark Wordmark + Privacy / Terms /
   Security links + asterisk + `encryption.badge` trust line.
@@ -361,7 +361,7 @@ route kind.
   own the bottom of the screen. The encryption.badge used to
   live as a dashboard-only block in `Companion.svelte`; it now
   renders on every authed surface that shows the footer.
-- **PublicFooter.svelte** (CIPH-916) — full marketing footer
+- **PublicFooter.svelte** (CIPH-916) - full marketing footer
   for the public site. Mounted in `+layout.svelte` for the
   `landing` and `public-doc` shells (so /, /conditions,
   /privacy, /terms, /protocol, /docs all share it). Lifted from the
@@ -370,66 +370,66 @@ route kind.
 
 ### Cards
 
-- **EntryPreview.svelte** — ~540 LOC, the canonical entry/event
+- **EntryPreview.svelte** - ~540 LOC, the canonical entry/event
   card. Used on the journal and the dashboard rail
   (`CompanionRail`); the calendar switched to `DayDetail`. Owns
   its own edit/delete affordances, symptom-chip rendering,
   condition-icon mapping, date chrome. This is the one card
   primitive for diary content.
-- **DayDetail.svelte** (CIPH-910) — calendar-side-panel sectioned
+- **DayDetail.svelte** (CIPH-910) - calendar-side-panel sectioned
   day view. Aggregates everything logged on a single date into
   labeled clinical sections (PHASE / EPISODEN / SYMPTOME /
-  AUSLÖSER / VITALS / NOTIZEN / EREIGNISSE / TAGEBUCH) — text
+  AUSLÖSER / VITALS / NOTIZEN / EREIGNISSE / TAGEBUCH) - text
   list per section, no chip-jumble. Render-only: edit/delete
   is the calendar's concern (panel-header link → `/log/{date}`
   for entries; events/diaries use the journal moment-modal).
   Used only by `routes/calendar/+page.svelte`.
-- **LocaleSelect.svelte** (CIPH-pi24-5e) — the locale switcher on
+- **LocaleSelect.svelte** (CIPH-pi24-5e) - the locale switcher on
   `/login` and `PublicFooter`. Built as a hand-rolled combobox
   because a native `<select>`'s option panel is browser chrome the
   CSS cascade cannot reach; since 2026-09-20 it is a thin binding
-  over `Listbox.svelte` (`variant="chip"`) — which options, and what
+  over `Listbox.svelte` (`variant="chip"`) - which options, and what
   picking one does.
-- **VaultSwitcher.svelte** — the "Ansicht: <account>" control in the app
+- **VaultSwitcher.svelte** - the "Ansicht: <account>" control in the app
   header, letting a caregiver switch between their own vault and the
   accounts shared with them. Same reasoning as `LocaleSelect.svelte`, and
   the same shape: it replaced a native `<select>` whose `bg-transparent`
   left the open options panel with no background of its own, so it fell
-  back to UA chrome and read as broken — worst in dark mode, light panel
+  back to UA chrome and read as broken - worst in dark mode, light panel
   under near-white text. Reported from production. The active-vault tint
   uses `rgba(var(--ochre-rgb), …)`; the literal `rgba(159, 99, 11, …)` it
   replaced is the light-theme ochre and was wrong on a dark surface.
   Still hand-rolled: `Listbox.svelte` has since become the shared
-  dropdown, but the switcher has not been moved onto it — that is
+  dropdown, but the switcher has not been moved onto it - that is
   the open follow-up.
-- **ScopeChoice.svelte** — the two things a family invitation may be
+- **ScopeChoice.svelte** - the two things a family invitation may be
   allowed to read (everything except the diary and locked entries, or
   everything), as a radio pair with a hint under each. Shared by the
   create form and the per-grant modify panel in `FamilySharing.svelte`
   so the two cannot drift: "modify" must not offer a different promise
   from the one the person agreed to when they sent the invitation.
-  Radios rather than a checkbox because both answers are legitimate —
+  Radios rather than a checkbox because both answers are legitimate -
   a checkbox frames one as the deviation, and keeping your diary to
   yourself is not a deviation. `name` distinguishes the groups when a
   create form and an editing row are open at once.
-- **MedicationCombineDialog.svelte** — combines two entries of the same
+- **MedicationCombineDialog.svelte** - combines two entries of the same
   medication (the pre-dose-history workaround: one entry per dose) into one
   history via `combineMedications`. Asks nothing when the histories line up;
   otherwise which dose came first and from which day the other applied.
   Preview rendered from the computed result. The removed entry's id stays as
   an alias (`mergedIds`), so no logged document is rewritten.
-- **MedicationManager.svelte** — Settings → medications with dose
+- **MedicationManager.svelte** - Settings → medications with dose
   history (2026-09-16). Lists what applies *today* (dose, since when, a
   planned change or stop), stopped medications in their own list rather
   than gone, and each medication's recorded steps behind a disclosure.
   Applies `MedicationChangeDialog` results to the RAW blueprint and saves
-  it — never `$resolvedBlueprint`. The add form takes an optional start
+  it - never `$resolvedBlueprint`. The add form takes an optional start
   date; left empty, the medication reads as "since before the record".
   Two entry points open `MedicationHistoryDialog`: "add an earlier dose"
   inside a medication's history, and "add a medication from the past"
   beside the add button. Remembered periods are listed with a way to
   take them back.
-- **MedicationChangeDialog.svelte** — the one place a medication changes.
+- **MedicationChangeDialog.svelte** - the one place a medication changes.
   Wraps `Modal.svelte`. Asks *what* changes (dose/schedule, stopping, or
   switching to another drug) and *from when*, and renders a preview from
   the computed result, so what the person reads is what gets saved. Typo
@@ -437,41 +437,41 @@ route kind.
   "stop instead" first when days are logged against the medication and
   takes a second step to delete anyway. Pure writers live in
   `blueprint/medicationHistory.ts`; the dialog never saves.
-- **Listbox.svelte** — the app's one dropdown (2026-09-20). A trigger
+- **Listbox.svelte** - the app's one dropdown (2026-09-20). A trigger
   button plus a `role="listbox"` panel: opens on click and stays open,
   closes on an outside click or Escape, arrow/Home/End move the
   selection, and the panel opens below unless it genuinely does not fit
-  there — measured after it renders, not estimated. Replaced every
+  there - measured after it renders, not estimated. Replaced every
   native `<select>` in the app: a `<select>`'s options panel is browser
   chrome, so it could not be styled, placed, or kept open on mouse-up,
   which is how half the dropdowns came to open over the field they
-  belonged to. Below 640px it renders a native `<select>` on purpose —
+  belonged to. Below 640px it renders a native `<select>` on purpose -
   a phone's own picker is the better control. `variant="field"` matches
   `.input` for forms; `variant="chip"` hugs its label for page chrome.
-- **MedicationHistoryDialog.svelte** — records what happened BEFORE ciphra
+- **MedicationHistoryDialog.svelte** - records what happened BEFORE ciphra
   (2026-09-19): an earlier dose of a medication still taken, or a
   medication tried and stopped long ago, with a reason from a fixed list.
-  Wraps `Modal.svelte`. Dates are months, and the start may stay unknown —
+  Wraps `Modal.svelte`. Dates are months, and the start may stay unknown -
   nobody remembers the day a dose changed years ago. Writes through
   `prependPeriod` / `createPastMedication`, which never touch a recorded
   day; the periods are marked remembered, so they show the dose but never
   count as logged days. Like the other dialogs, it never saves.
-- **MedicationTimeline.svelte** — `/reports` dose-history card. One lane
+- **MedicationTimeline.svelte** - `/reports` dose-history card. One lane
   per medication inside the window, a segment per dose period with a
   visible step at each change, a faded square left edge when the dose was
   already running before the window, and a gap while stopped, plus the same
   changes as a dated list (the accessible form, and the one that still
   reads on a narrow phone). A strip of its own rather than marks on the
-  trend chart — per-event marks on aggregate-axis charts were rejected as
+  trend chart - per-event marks on aggregate-axis charts were rejected as
   glitch-looking; the chart's tooltip names the change instead. Rendered
   only when something started, changed or stopped in the window.
   Descriptive only: never a before/after comparison.
-- **ExportNoteReview.svelte** — pre-export opt-in for note markers.
+- **ExportNoteReview.svelte** - pre-export opt-in for note markers.
   Freeform note markers are the only export content authored as prose,
   and people write prose: a real export carried a third party's name,
   a night-time detail and a second physician's opinion. Inclusion is
   therefore **opt-in, decided at report generation** rather than at the
-  moment of writing — nothing is preselected, and the selection resets on
+  moment of writing - nothing is preselected, and the selection resets on
   every open (a decision about which sentences a doctor may read is not a
   preference to carry over). Skipped entirely when the window holds no
   note markers, so the ordinary export keeps its click count. Recorded
@@ -479,23 +479,23 @@ route kind.
   medication are the report. Options come from
   `lib/reports/noteMarkers.ts`, shared with `pdf.ts` so the set the user
   ticks is exactly the set printed.
-- **ExportPeriodPopover.svelte** — period picker for the `/reports`
+- **ExportPeriodPopover.svelte** - period picker for the `/reports`
   doctor export. Renders the panel only; the trigger is the export
   card in `routes/reports/+page.svelte`, which owns `aria-haspopup` /
   `aria-expanded` and takes focus back on close (pass the card in as
   `anchor` so outside-click can tell "clicked the trigger again" from
   "clicked away"). Two presentations, one behaviour: an anchored
   `role="listbox"` with Up/Down/Home/End/Esc at ≥640px (same reasoning
-  as `LocaleSelect.svelte`), a `BottomSheet` below that — touch has no
+  as `LocaleSelect.svelte`), a `BottomSheet` below that - touch has no
   hover and a panel under the third card in a 3-up grid clips at the
   viewport edge. Options come from `lib/reports/exportPeriods.ts`;
   every row states how much data the window holds, as a plain fact about
   the export. Low-coverage windows are offered like any other and are
-  never labelled sparse/incomplete — a coverage figure describes the PDF,
+  never labelled sparse/incomplete - a coverage figure describes the PDF,
   a judgment word describes the user and implies a logging target
   (`feedback_no_gaslight_good_days.md`; pinned by
   `lib/reports/no-coverage-judgment.test.ts`).
-- **WelcomeCard.svelte** (post-pi24, go-live) — first-moment
+- **WelcomeCard.svelte** (post-pi24, go-live) - first-moment
   explainer that mounts at the top of the dashboard. Two variants
   branched on `auth.registrationSource`: `'web'` shows the new-user
   3-bullet intro (log daily / doctor PDF / save recovery code);
@@ -506,31 +506,31 @@ route kind.
   the encrypted blueprint (`dismissedWelcome`, helper
   `applyWelcomeDismissed`), with localStorage
   (`ciphra_welcome_web_seen` / `ciphra_welcome_migrate_seen`) as the
-  instant-flip + caregiver fallback lane — localStorage-only dismissal
+  instant-flip + caregiver fallback lane - localStorage-only dismissal
   kept resurfacing the card on fresh browser profiles. Renders nothing
   once dismissed.
   Used by `Companion.svelte` (mounted above the greeting hero).
-- **GapTrendSpark.svelte** (CIPH-pi24-5c) — dashboard rail card
+- **GapTrendSpark.svelte** (CIPH-pi24-5c) - dashboard rail card
   showing the gap (days) between successive marker events as an
   inline-SVG sparkline. Last 5 historical gaps render as filled
   dots; the trailing in-progress current gap renders as a hollow
   dot. "Längster Abstand bisher" sits below as a reference line
   (no leaderboard reset). Only mounts when the active preset
-  declares `markerEvent` AND ≥3 marker events exist — wraps the
+  declares `markerEvent` AND ≥3 marker events exist - wraps the
   Klara objection at Companion.svelte:124 by showing trend, not a
   resetting counter. Used by `CompanionRail.svelte`.
-- **LastEntriesStrip.svelte** (pi24 dashboard) — universal
+- **LastEntriesStrip.svelte** (pi24 dashboard) - universal
   fallback for the dashboard primary slot (also used on
   `routes/reports/+page.svelte`). Renders up to 3 most-
   recent entry/event/diary docs as compact rows: date · type ·
-  1-line summary. Mounts only when `docs.length > 0` — silent
+  1-line summary. Mounts only when `docs.length > 0` - silent
   empty state per `feedback_no_gaslight_good_days.md`. Picked by
   `resolvePrimaryDashboardCard` when no cohort-specific card has
   signal (Helena pre-labs, day-1ish users, custom cohort, any
   blueprint where the pinned primitive can't fire yet). No
   coverage %, no streak counters, no "nothing recorded yet"
-  copy — mirrors what's there, not gaps.
-- **WithinPhaseRollupCard.svelte** (pi24 dashboard) — sits in
+  copy - mirrors what's there, not gaps.
+- **WithinPhaseRollupCard.svelte** (pi24 dashboard) - sits in
   the primary slot when `resolvePrimaryDashboardCard` returns
   `kind: 'active-phase'`. Co-renders with PhaseContextCard
   (anchor block above): anchor carries the phase identity
@@ -540,27 +540,27 @@ route kind.
   startedOn` to today. No pressure language; if everything is
   zero (a healthy day inside an ongoing flare), the card mounts
   with a single "{N} days logged" line via plural().
-- **TopTriggersCard.svelte** (pi24 dashboard) — observational
+- **TopTriggersCard.svelte** (pi24 dashboard) - observational
   top-5 trigger list with horizontal bar weights + total-days
   footer. Used by migraine + dermatology when triggers have been
   recorded in the last 12 months. Title is "Top recorded
-  triggers" / "Häufigste erfasste Auslöser" — observational
+  triggers" / "Häufigste erfasste Auslöser" - observational
   ONLY, never "Your triggers" / "Causes" (Codex's caveat on
   the campfire). Counts blueprint-declared trigger ids across
   both data shapes (array + object-map), skipping the
   EntryComposer merge-shape false positives. Mounted by
   `CompanionMain` when `resolvePrimaryDashboardCard` returns
   `kind: 'top-triggers'`.
-- **VitalTrendReportsCard.svelte** (pi24 reports) — the /reports
+- **VitalTrendReportsCard.svelte** (pi24 reports) - the /reports
   counterpart to VitalTrendCard. Same monthly-mean aggregation but
-  larger chart canvas, chip selector for 4+ vitals (chips not tabs —
+  larger chart canvas, chip selector for 4+ vitals (chips not tabs -
   filter affordance within section), and a diverging-bar variant
   when the primary vital's range crosses zero (`min < 0`, e.g.
   bipolar mood_polarity). Per-bar color by sign in diverging mode
   so positive and negative halves read distinctly without a legend.
   Mounted by `routes/reports/+page.svelte` when
   `resolveReportsPrimaryCard` returns `kind: 'vital-trend'`.
-- **VitalTrendCard.svelte** (pi24 dashboard) — 12-month monthly-
+- **VitalTrendCard.svelte** (pi24 dashboard) - 12-month monthly-
   mean line chart for a pinned primary vital (`primaryVitalId`).
   Used by hashimoto (TSH), hypertension (bp_systolic),
   cardiovascular (bp_systolic), diabetes (blood_sugar),
@@ -568,16 +568,16 @@ route kind.
   (mood_polarity). Headline shows last value + delta from
   previous month. Sparse months render as gaps (`spanGaps: true`
   on the dataset) so a quarterly lab-cohort like Hashimoto stays
-  readable. Pinned default vital — no chip selector on dashboard
+  readable. Pinned default vital - no chip selector on dashboard
   per campfire consensus. Multi-vital cohorts get a footer
   "{N} more values on /reports" link via plural() if
   secondaries have data. Mounted by `CompanionMain` when
   `resolvePrimaryDashboardCard` returns `kind: 'vital-trend'`.
-- **InsightsSection.svelte** (CIPH-920) — dashboard "Muster"
+- **InsightsSection.svelte** (CIPH-920) - dashboard "Muster"
   (patterns) section rendered below the primary card in
   `CompanionMain`. Capability-driven: computes cross-signal
   insight cards via `lib/blueprint/insights.ts`
-  (`computeInsights`) — sleep↔episodes, trigger lift, circadian
+  (`computeInsights`) - sleep↔episodes, trigger lift, circadian
   daypart, episode-type mix, duration, and episode-free streak.
   Each card self-gates on blueprint capability + a minimum-data
   threshold, so the section enriches epilepsy/migraine/parkinson/
@@ -585,12 +585,12 @@ route kind.
   gaslighting empty state). Lightweight CSS/SVG viz, NOT Chart.js
   (CIPH-900 "insight over raw charts" lesson). Per-blueprint
   coverage is pinned by `insights.test.ts`.
-- **MonthMiniSummary.svelte** (CIPH-pi19-B) — calendar right-rail
+- **MonthMiniSummary.svelte** (CIPH-pi19-B) - calendar right-rail
   tail. Shows trigger-day + rescue-med-day counts for the visible
   month, gated on `showTrigger` / `showRescue` props (which the
   parent derives from `bp.triggers.length` / `bp.rescueMedications
   .length`). Glyphs mirror the in-cell encoding (ochre triangle,
-  brand vertical bar). Render-only — counts are pre-computed in
+  brand vertical bar). Render-only - counts are pre-computed in
   the parent so we don't re-traverse `monthDocs`. Used only by
   `routes/calendar/+page.svelte`. PI v19 Story C will extend it
   with a 28-cell trigger-heatmap row above the count rows.
@@ -602,17 +602,17 @@ Per-surface empty primitives that read as the surface they replace
 uniform Asterisk hero. Composes with the cohort×route palette so
 each surface is also visibly cohort-aware when empty.
 
-- **JournalEmpty.svelte** — stream-card silhouette + hint copy.
+- **JournalEmpty.svelte** - stream-card silhouette + hint copy.
   Variants: `'all'` / `'diary'`. `hideCta` suppresses the
   "log today" button when empty results come from a search filter.
   Used in `routes/journal/+page.svelte`.
-- **ReportsEmpty.svelte** — clinical tabular silhouette with
+- **ReportsEmpty.svelte** - clinical tabular silhouette with
   greyed-out cells + threshold-aware caption ("you logged X days,
   N more to unlock the report"). Used in `routes/reports/+page.svelte`.
 
 ### Forms
 
-- **EntryComposer.svelte** (CIPH-850) — full-form entry surface
+- **EntryComposer.svelte** (CIPH-850) - full-form entry surface
   for `/log/[date]`. Prop contract: `date`, `bp`, `existingDoc`,
   `previousDoc`, `isToday`, `recentDocs`, `onSave`, `onDelete`,
   `onDateChange`, `onJumpToToday`. Owns auto-save (3s debounce),
@@ -625,7 +625,7 @@ each surface is also visibly cohort-aware when empty.
   `density='quick'` is reserved for PI v13 FAB consolidation.
   Contract enforced by `EntryComposer.test.ts`; route line-count
   guarded by `routes/log/[date]/line-count.test.ts`.
-- **DatePicker.svelte** (PI v17) — brand-consistent wrapper around
+- **DatePicker.svelte** (PI v17) - brand-consistent wrapper around
   `<input type="date">`. Native chrome (sharp corners, browser-default
   layout) hidden via `opacity:0`; visible face shows dd.mm.yyyy via
   `formatDisplay`. Click triggers `inputEl.showPicker()` (Safari fallback:
@@ -635,35 +635,35 @@ each surface is also visibly cohort-aware when empty.
   dialogs (`MedicationManager`, `MedicationChangeDialog`,
   `MedicationCombineDialog`, `MedicationHistoryDialog`). Settings toggle for
   display format queued for PI v18.
-- **TimePicker.svelte** (PI v17) — same wrapper pattern as DatePicker
+- **TimePicker.svelte** (PI v17) - same wrapper pattern as DatePicker
   for `<input type="time">`. Visible HH:MM, native picker on click.
   `compact` prop drops to 32px min-height for inline use beside +/-
   counters in EntryComposer episode rows. Used in diary quick-add and
   EntryComposer episode-time + multi-entry vitals time fields.
-- **PasswordField.svelte** (CIPH-887) — wraps a native password
+- **PasswordField.svelte** (CIPH-887) - wraps a native password
   input with an eye-icon toggle. Tap flips `type` between
-  `password` and `text` for the current session only — visibility
+  `password` and `text` for the current session only - visibility
   is never persisted to localStorage (security). Used wherever a
   passphrase is entered: `LoginForm`, `SignupFlow` (×2), the
   recovery flow on `/login`, and the password change in
   Settings. Audit guard in
   `PasswordField.test.ts` asserts no other `.svelte` renders a
   bare `<input type="password">`.
-- **SignupFlow.svelte** — multi-step signup (username →
+- **SignupFlow.svelte** - multi-step signup (username →
   passphrase → recovery code → condition presets). Used on
   `/login` and `/migrate`. Covered by `SignupFlow.test.ts`.
-- **LoginForm.svelte** — passphrase login. Used on `/login` and
+- **LoginForm.svelte** - passphrase login. Used on `/login` and
   `/migrate`.
-- **FamilySharing.svelte** — settings panel: generate family
+- **FamilySharing.svelte** - settings panel: generate family
   code, list linked accounts, revoke.
-- **LinkedAccounts.svelte** — settings panel: accounts this
+- **LinkedAccounts.svelte** - settings panel: accounts this
   user is linked to (caregiver side).
 
 ### Primitives (in use)
 
-- **Asterisk.svelte** — the brand mark. Loading / saved / empty
+- **Asterisk.svelte** - the brand mark. Loading / saved / empty
   / static modes. Every route uses this.
-- **Wordmark.svelte** (CIPH-896) — the canonical "ciphra*" brand
+- **Wordmark.svelte** (CIPH-896) - the canonical "ciphra*" brand
   mark with text + rotated asterisk in one SVG. Replaces 5+
   hand-rolled SVG wordmarks (landing nav/hero/footer, layout
   header, login + migrate auth headers). Single `size` prop scales
@@ -671,21 +671,21 @@ each surface is also visibly cohort-aware when empty.
   contexts. Asterisk geometry mirrors `Asterisk.svelte` exactly.
   Audit guard: `lib/wordmark-consolidation.test.ts` forbids any
   other `rotate(8)` SVG outside this primitive + Asterisk.
-- **Toast.svelte** — top-of-viewport transient message. Mounted
+- **Toast.svelte** - top-of-viewport transient message. Mounted
   once in `+layout.svelte`: the sync indicator, plus any page
   that dispatches a `ciphra:toast` window event (Settings does).
   Keyed re-render pattern documented at the use site.
-- **ChartWrapper.svelte** — thin Chart.js wrapper with
+- **ChartWrapper.svelte** - thin Chart.js wrapper with
   responsive sizing + reduced-motion handling. Used on the
   dashboard (`CompanionMain` how-are-you chart, `VitalTrendCard`)
   and `/reports` (trend charts, `VitalTrendReportsCard`).
-- **Sparkline.svelte** (pi24 admin) — stateless inline SVG
+- **Sparkline.svelte** (pi24 admin) - stateless inline SVG
   sparkline: takes an array of numbers, renders a single
   polyline plus a trailing dot for the most recent value. No
-  axes, no legend, no library — by design. Used by the admin
+  axes, no legend, no library - by design. Used by the admin
   dashboard's sparkline-first metric layout (migration counter,
   active users, document totals).
-- **Modal.svelte** (CIPH-834) — centred dialog over a
+- **Modal.svelte** (CIPH-834) - centred dialog over a
   translucent backdrop. Esc + backdrop click close when
   `dismissable`. Used for the `/migrate` post-import tour, the
   journal moment view, `EntryComposer`, `CustomItemModal`,
@@ -693,7 +693,7 @@ each surface is also visibly cohort-aware when empty.
   Settings, admin, the calendar day-detail and the layout's
   quick-add sheet keep bespoke dialogs inline with
   `<!-- primitive-exempt: Modal … -->` comments.
-- **CustomItemModal.svelte** (CIPH-882) — kind-driven add/edit
+- **CustomItemModal.svelte** (CIPH-882) - kind-driven add/edit
   form for user-added blueprint items: symptom, trigger, vital,
   episode. Wraps `Modal.svelte`. Form fields branch on `kind`:
   symptom (label + optional group select), trigger (label),
@@ -710,12 +710,12 @@ each surface is also visibly cohort-aware when empty.
   Contract test: `CustomItemModal.test.ts`. Used in
   `routes/settings/+page.svelte` (tracking tab), the
   `/setup` wizard and `EntryComposer`.
-- **Tabs.svelte** (CIPH-857) — ARIA tab pattern with roving
+- **Tabs.svelte** (CIPH-857) - ARIA tab pattern with roving
   tabindex + Left/Right/Home/End keyboard nav. Parent owns the
   URL (passes `current` + `onSelect`). Used on
   `routes/settings/+page.svelte` for the Account / Tracking /
   Sharing split.
-- **PhaseContextCard.svelte** (CIPH-854; extended CIPH-855b) —
+- **PhaseContextCard.svelte** (CIPH-854; extended CIPH-855b) -
   home-dashboard card shown only for the phase-band cohort
   (bipolar / MS / long-covid / IBD / IBS / chronic_pain /
   anxiety_depression / burnout) when a multiDay episode is
@@ -727,13 +727,13 @@ each surface is also visibly cohort-aware when empty.
 
 ### Feature-specific
 
-- **EncryptionDemo.svelte** — landing-page animated demo of
+- **EncryptionDemo.svelte** - landing-page animated demo of
   client-side encryption. Used on `/` (public landing) only.
-- **BottomSheet.svelte** — mobile modal sheet. Its one call
+- **BottomSheet.svelte** - mobile modal sheet. Its one call
   site is `ExportPeriodPopover` (below 640px); otherwise a
   Modal-primitive candidate for CIPH-834.
 
-### Interaction primitives — CIPH-834 status
+### Interaction primitives - CIPH-834 status
 
 CIPH-834 extracted three primitives; `ConfirmDelete` and
 `HelpHint` were never adopted and were removed on 2026-11-12,
@@ -746,9 +746,9 @@ or declaring an exemption comment.
 
 | Primitive | Canonical sites | Exempt sites (with reason) |
 | --- | --- | --- |
-| `Modal` | `routes/migrate/+page.svelte` (post-import tour), `routes/journal/+page.svelte`, `EntryComposer`, `CustomItemModal`, `ExportNoteReview`, the medication dialogs | `routes/settings/+page.svelte` + `routes/admin/+page.svelte` (bespoke danger-chrome dialogs), `routes/calendar/+page.svelte` (right-side day-detail), `routes/+layout.svelte` (quick-add sheet), `BottomSheet.svelte` (it **is** the other modal primitive — mobile bottom sheet) |
+| `Modal` | `routes/migrate/+page.svelte` (post-import tour), `routes/journal/+page.svelte`, `EntryComposer`, `CustomItemModal`, `ExportNoteReview`, the medication dialogs | `routes/settings/+page.svelte` + `routes/admin/+page.svelte` (bespoke danger-chrome dialogs), `routes/calendar/+page.svelte` (right-side day-detail), `routes/+layout.svelte` (quick-add sheet), `BottomSheet.svelte` (it **is** the other modal primitive - mobile bottom sheet) |
 
-Opt-out: add `<!-- primitive-exempt: <Primitive> — <reason> -->`
+Opt-out: add `<!-- primitive-exempt: <Primitive> - <reason> -->`
 to the top of the file. The heuristic is a soft fence: it
 catches drift, it does not enforce style.
 
@@ -757,26 +757,26 @@ catches drift, it does not enforce style.
 Modules that are not components but have the same "single source of
 truth" status. When a consumer needs cycle math, effective column
 derivation, or condition-cohort resolution, it imports from here
-rather than re-implementing. Drift is structural — catch it at PR
+rather than re-implementing. Drift is structural - catch it at PR
 review, not at runtime.
 
-- **`lib/cycleState.ts`** (CIPH-855a) — Cycle-phase math. Exports
+- **`lib/cycleState.ts`** (CIPH-855a) - Cycle-phase math. Exports
   `Phase` type, `computeCycleAnchor(bp, docs)`,
   `cycleStateForDate(anchor, date)`, `phaseBoundaries(cycleLength)`,
   `phaseForDay(day, cycleLength)`, `computeCycleStateToday(…)`,
   `hasCycleTracking(bp)`, `PHASE_COLORS`. Consumed by
   `Companion.svelte`, `CompanionMain.svelte` and
   `routes/calendar/+page.svelte`. **Do not re-implement cycle-day
-  math at a call site** — extend this module. 17 unit tests pin
+  math at a call site** - extend this module. 17 unit tests pin
   the extraction parity.
-- **`lib/pdf.ts` effective-column helpers** (CIPH-877) —
+- **`lib/pdf.ts` effective-column helpers** (CIPH-877) -
   `effectiveSymptomColumns(bp, docs, datePrefix, excludeIds?)` and
   `effectiveEpisodeColumns(bp, docs, datePrefix)`. Both return
   `curated ∪ items-with-data-in-range`. Used by the doctor PDF
   (`drawGridSection`) and by `routes/reports/+page.svelte`. Keeps
   the on-screen grid and the exported PDF/CSV aligned so users
   never see a logged symptom missing from the export.
-- **`lib/blueprint/cohort.ts`** (CIPH-854 / PI v10) — Resolves a
+- **`lib/blueprint/cohort.ts`** (CIPH-854 / PI v10) - Resolves a
   blueprint to one of `discrete` / `cycle` / `phase` / `narrative`
   / `custom` via `cohortOf(blueprint)`. Used by Companion + route
   shells + Calendar to decide which cohort-specific surfaces to
@@ -789,17 +789,17 @@ CSS classes. All 7 variants are in use;
 none pruned. (`.card-rhythmic` / `.card-rhythmic-stack` beside
 them are opt-in padding/gap helpers, not variants.)
 
-- `.card` — default white-on-warm card. 1px border, 12px radius.
-- `.card-anchor` — page's primary action card. 2px brand border,
+- `.card` - default white-on-warm card. 1px border, 12px radius.
+- `.card-anchor` - page's primary action card. 2px brand border,
   24px padding. One per page max. (CompanionMain, CompanionRail.)
-- `.card-inline` — secondary info, muted surface, no border,
+- `.card-inline` - secondary info, muted surface, no border,
   12px padding. (reports/+page.svelte.)
-- `.card-interactive` — hover-lift variant of `.card`.
+- `.card-interactive` - hover-lift variant of `.card`.
   (conditions/+page, landing preset grid.)
-- `.card-ochre` — ochre-tinted emphasis. (conditions/[id].)
-- `.card-olive` — olive-tinted emphasis, used for success /
+- `.card-ochre` - ochre-tinted emphasis. (conditions/[id].)
+- `.card-olive` - olive-tinted emphasis, used for success /
   completed states. (Companion today-filled, conditions/[id].)
-- `.card-brand` — brand-tinted emphasis. (Companion today-
+- `.card-brand` - brand-tinted emphasis. (Companion today-
   not-filled CTA.)
 
 ## Companion split decision (CIPH-832)
@@ -814,7 +814,7 @@ them are opt-in padding/gap helpers, not variants.)
   Main + Rail are render-only (Main has a few trivial derived
   helpers, Rail has 0). The props flowing to Main + Rail
   document the boundary explicitly.
-- The PI v8 retro flagged the split as "hasty" — post-PI v8 the
+- The PI v8 retro flagged the split as "hasty" - post-PI v8 the
   layout is stable (full-width header + 2/3+1/3 grid + full-
   width footer) and the split survives the stability test. No
   reactive state has leaked into Main or Rail.
@@ -829,26 +829,26 @@ Enforced by: [`lib/routeShells.test.ts`](../routeShells.test.ts).
 
 `ROUTE_SHELLS` maps each pathname pattern to a `ShellType` plus
 `requiresAuth` and `requiresBlueprint` flags. `+layout.svelte`'s
-redirect guards consume the flags directly — there is no longer a
+redirect guards consume the flags directly - there is no longer a
 per-route allowlist chained into each `$:` reactive block.
 
 Shell types:
 
-- `landing` — public marketing chrome. Routes: `/`.
-- `auth-flow` — centred-card flow with public nav. Routes:
+- `landing` - public marketing chrome. Routes: `/`.
+- `auth-flow` - centred-card flow with public nav. Routes:
   `/login`, `/migrate`, `/stream/*` (a legacy redirect to
   `/journal`).
-- `authed-app` — signed-in app: top header + main + bottom nav.
+- `authed-app` - signed-in app: top header + main + bottom nav.
   Routes: `/log/*`, `/journal`, `/calendar`, `/reports`,
   `/settings`, `/setup`. The catch-all for unknown paths also
   resolves here (with both guards on) so an unregistered new
   route fails closed.
-- `public-doc` — public reading surface. Routes: `/privacy`,
+- `public-doc` - public reading surface. Routes: `/privacy`,
   `/terms`, `/protocol`, `/conditions/*`, `/docs/*`.
-- `admin` — authed-app variant for admin pages. Routes:
+- `admin` - authed-app variant for admin pages. Routes:
   `/admin/*`. Does not require a blueprint (admin caregivers
   may not track their own condition).
-- `family-claim` — public family-code claim landing. Routes:
+- `family-claim` - public family-code claim landing. Routes:
   `/join/*`.
 
 When adding a new route:
@@ -856,7 +856,7 @@ When adding a new route:
 1. Add a pattern to `ROUTE_SHELLS` with the right `shell` +
    `requiresAuth` + `requiresBlueprint`.
 2. Add a test case to `routeShells.test.ts`.
-3. The layout's redirect guards will pick it up automatically —
+3. The layout's redirect guards will pick it up automatically -
    you should not need to touch `+layout.svelte` just to add a
    route.
 
@@ -864,12 +864,12 @@ When adding a new route:
 
 1. Read the "Read this before adding any code" section at the top.
 2. Use only tokens from Spacing / Typography / Color sections.
-3. Need a new component? Check the Component inventory first —
+3. Need a new component? Check the Component inventory first -
    there is probably already a primitive that covers it.
 4. Adding a centred dialog? Use `<Modal>` (or `<BottomSheet>`
    on mobile). If your variant
    genuinely does not fit, declare `<!-- primitive-exempt:
-   <Primitive> — <reason> -->` so the heuristic test stays green
+   <Primitive> - <reason> -->` so the heuristic test stays green
    and the next visual pass knows why you opted out.
 5. Adding a new route? Register it in `routeShells.ts` and add
    a test case. Do not copy-paste pathname checks into
@@ -878,10 +878,10 @@ When adding a new route:
    `*Tokens.ts` file and document the reason in the same commit.
 7. If you add or remove a `.svelte` file under
    `lib/components/`, update the Component inventory section
-   above in the same commit — `components-inventory.test.ts`
+   above in the same commit - `components-inventory.test.ts`
    will fail otherwise.
 8. Add i18n keys to all four locales (`de`, `en`, `fr`, `it`).
-9. Run `npm test && npm run check` before you push —
+9. Run `npm test && npm run check` before you push -
    the enforcement tests fail fast on drift.
 
 ## How to add a new component
@@ -893,7 +893,7 @@ When adding a new route:
    it does **not** do (negative space matters), and a minimal
    `Usage:` example.
 4. Add an entry to the Component inventory section in the same
-   commit — otherwise `components-inventory.test.ts` fails.
+   commit - otherwise `components-inventory.test.ts` fails.
 5. If the component replaces an inline pattern, sweep existing
    call sites. If the sweep is out of scope, add the inline-
    pattern regex to `primitives.test.ts` so future PRs are
@@ -906,7 +906,7 @@ When adding a new route:
 2. Add a test case to `routeShells.test.ts`.
 3. Create `src/routes/<path>/+page.svelte`.
 4. Do not modify `+layout.svelte` auth-redirect logic to add a
-   one-off exception — fix the shell definition instead.
+   one-off exception - fix the shell definition instead.
 
 ## How to add an i18n string
 
@@ -917,7 +917,7 @@ When adding a new route:
 3. If you access the key via a template string or variable
    lookup (e.g. `$t(`prefix_${variable}`)`), add the prefix to
    `DYNAMIC_KEY_PREFIXES` in `lib/i18n/dynamic-keys.ts` with a
-   comment pointing to the call site — otherwise
+   comment pointing to the call site - otherwise
    `keys-used.test.ts` flags the new keys as orphaned.
 4. When removing a key, delete from all four locales AND remove
    any `dynamic-keys.ts` allowlist entry in the same commit.

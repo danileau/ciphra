@@ -1,23 +1,23 @@
 /**
- * ciphra — Data visualization palette (CIPH-801).
+ * ciphra - Data visualization palette (CIPH-801).
  *
  * Used for chart series, condition accents, episode-type markers.
  * Keep small (≤6) so charts stay scannable and stay inside the warm
  * brand family. Pull from DATA_PALETTE (or the matching CSS --data-N
  * token) rather than raw hex literals.
  *
- * This array is the single source of truth — `app.css` defines the
+ * This array is the single source of truth - `app.css` defines the
  * same hues as `--data-1` … `--data-6` and must stay in sync.
  *
- *   1 brand rust      — primary (mirrors --brand)
- *   2 deep brick      — darker brand-adjacent
- *   3 ochre           — information / warmth (mirrors --ochre)
- *   4 olive           — calm / logged (mirrors --olive)
- *   5 anchor slate    — cool neutral for chart separation
- *   6 clay terracotta — warm tertiary, brand-adjacent
+ *   1 brand rust      - primary (mirrors --brand)
+ *   2 deep brick      - darker brand-adjacent
+ *   3 ochre           - information / warmth (mirrors --ochre)
+ *   4 olive           - calm / logged (mirrors --olive)
+ *   5 anchor slate    - cool neutral for chart separation
+ *   6 clay terracotta - warm tertiary, brand-adjacent
  *
  * Color-blind guidance (CIPH-801 persona dry-run, Linus):
- *   Avoid placing data-1 and data-2 adjacent in the same chart — the
+ *   Avoid placing data-1 and data-2 adjacent in the same chart - the
  *   brand-rust / deep-brick pair collides under protanopia. Insert an
  *   ochre, olive, or slate between them. The presets-palette vitest
  *   enforces no two adjacent episodeTypes share exactly the same
@@ -42,7 +42,7 @@ export const DATA_4 = DATA_PALETTE[3];
 export const DATA_5 = DATA_PALETTE[4];
 export const DATA_6 = DATA_PALETTE[5];
 
-/** RGB triples — mirrors `--data-N-rgb` CSS vars for `rgba()` tinting. */
+/** RGB triples - mirrors `--data-N-rgb` CSS vars for `rgba()` tinting. */
 export const DATA_PALETTE_RGB: Record<number, [number, number, number]> = {
 	1: [178, 60, 44],
 	2: [138, 42, 31],

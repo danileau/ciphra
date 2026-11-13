@@ -1,5 +1,5 @@
 /**
- * CIPH-pi23-A3a / A3b — cohort-conditional insight for the calendar lg+ rail
+ * CIPH-pi23-A3a / A3b - cohort-conditional insight for the calendar lg+ rail
  * MonthMiniSummary chip.
  *
  * Phase cohort (Anna primary): top multiDay episode types by day-coverage in
@@ -9,7 +9,7 @@
  *
  * Discrete cohort (Hans primary): top episode type by count in the focus
  * month. Bipolar's manic/depressive day-coverage doesn't apply to epilepsy's
- * point-event seizures — a discrete cohort wants to see "12 focal seizures"
+ * point-event seizures - a discrete cohort wants to see "12 focal seizures"
  * not "X% manic days."
  *
  * Cycle / narrative / custom: null. Future PIs add their own branches with
@@ -52,7 +52,7 @@ export type MonthSummaryInsight = PhaseDayCoverageInsight | TopEpisodeInsight | 
 /**
  * Compute the cohort-appropriate insight for the focus month. Returns null
  * for cohorts without a defined insight surface (cycle, narrative, custom)
- * — caller should hide the chip section in that case rather than render
+ * - caller should hide the chip section in that case rather than render
  * empty chrome.
  */
 export function monthSummaryInsightFor(
@@ -81,7 +81,7 @@ function phaseDayCoverage(
 	const multiDayEps: EpisodeType[] = (blueprint.episodeTypes ?? []).filter((ep) => ep.multiDay);
 	if (multiDayEps.length === 0 || daysInMonth <= 0) return null;
 
-	// Shared math (design review 2026-06-11) — same day-sets the doctor
+	// Shared math (design review 2026-06-11) - same day-sets the doctor
 	// PDF and /reports use, including the legacy `seizures`-shape
 	// fallback this site previously missed.
 	const dayCounts = multiDayEpisodeDays(blueprint, focusMonthDocs);

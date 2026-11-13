@@ -1,5 +1,5 @@
 /**
- * CIPH-896 — Wordmark consolidation guard.
+ * CIPH-896 - Wordmark consolidation guard.
  *
  * The frontend-designer critique flagged 5 hand-rolled SVG wordmarks
  * (`+page.svelte` ×3, `+layout.svelte` ×2, `migrate/+page.svelte`,
@@ -34,7 +34,7 @@ function walk(dir: string, acc: string[] = []): string[] {
 	return acc;
 }
 
-describe('CIPH-896 — wordmark consolidation', () => {
+describe('CIPH-896 - wordmark consolidation', () => {
 	const files = walk(SRC_ROOT);
 
 	it('Wordmark primitive exists at lib/components/Wordmark.svelte', () => {

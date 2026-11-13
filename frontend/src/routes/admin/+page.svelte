@@ -27,7 +27,7 @@
 		new_users_today: number;
 		deletions_30d: number;
 		deletions_today: number;
-		// Slice 2 — migration + dormancy metrics
+		// Slice 2 - migration + dormancy metrics
 		migrations_total: number;
 		migrations_7d: number;
 		migrations_30d: number;
@@ -182,12 +182,12 @@
 		return sortAsc ? ' \u2191' : ' \u2193';
 	}
 
-	// CIPH-pi24-5b+ \u2014 Failed-login burst grouping. A brute-force attempt
+	// CIPH-pi24-5b+ - Failed-login burst grouping. A brute-force attempt
 	// against one username can fill the audit log with 30+ near-identical
 	// LOGIN_FAILED rows in the same hour, drowning every other signal.
 	// Collapse runs of consecutive LOGIN_FAILED rows that share the same
 	// (username, hour) into a single rendered row with a "\u00d7N" count. The
-	// API stays a raw event stream \u2014 grouping is presentation only, so
+	// API stays a raw event stream - grouping is presentation only, so
 	// raw rows remain available for forensic queries.
 	type GroupedRow =
 		| { kind: 'single'; entry: AuditEntry; key: string }
@@ -252,7 +252,7 @@
 </script>
 
 <svelte:head>
-	<title>{$t('admin.title')} — ciphra</title>
+	<title>{$t('admin.title')} - ciphra</title>
 </svelte:head>
 
 <div class="layout-data py-6 space-y-6">
@@ -330,7 +330,7 @@
 		{#if stats && timeseries}
 			{@const active_pct = stats.total_users > 0 ? Math.round((stats.active_users_30d / stats.total_users) * 100) : 0}
 			<section>
-				<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted); letter-spacing: 0.04em;">{$t('admin.trend_26w') || 'Trend — 26 Wochen'}</h2>
+				<h2 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted); letter-spacing: 0.04em;">{$t('admin.trend_26w') || 'Trend - 26 Wochen'}</h2>
 				<div class="rounded-xl trend-block">
 					<div class="metric-row">
 						<div class="metric-label">
@@ -357,7 +357,7 @@
 							{:else if stats.last_migration_at}
 								{$t('admin.last_migration') || 'Last'}: {formatDate(stats.last_migration_at)}
 							{:else}
-								—
+								-
 							{/if}
 						</div>
 					</div>
@@ -519,7 +519,7 @@
 										<td class="px-4 py-2 font-mono text-xs hidden sm:table-cell" style="color: var(--text-muted);">{row.entry.ip_address || '-'}</td>
 									</tr>
 								{:else}
-									<!-- CIPH-pi24-5b+ — Grouped failed-login burst. The "×N" count
+									<!-- CIPH-pi24-5b+ - Grouped failed-login burst. The "×N" count
 										 reads as a quantity glyph (locale-neutral); the time cell
 										 carries a range; the IP cell shows the single IP if all
 										 attempts shared one, otherwise "(N)". -->
@@ -553,7 +553,7 @@
 	{/if}
 </div>
 
-<!-- primitive-exempt: Modal — admin user-delete dialog has bespoke danger
+<!-- primitive-exempt: Modal - admin user-delete dialog has bespoke danger
 	 chrome (blur backdrop + multi-button footer with loading state) the Modal
 	 primitive does not expose today. Sweep target for a future admin pass. -->
 <!-- Delete confirmation modal -->
@@ -616,7 +616,7 @@
 	}
 	/* Force the Sparkline SVG (which sets its own width attribute) to
 	   shrink to the column. preserveAspectRatio="none" already lets it
-	   stretch — we override the attribute width via CSS. */
+	   stretch - we override the attribute width via CSS. */
 	.metric-spark :global(svg) {
 		max-width: 100%;
 		height: auto;

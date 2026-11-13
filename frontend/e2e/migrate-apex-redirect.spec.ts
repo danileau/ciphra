@@ -1,5 +1,5 @@
 /**
- * INC-001 — epilepc → ciphra migration dies at the apex redirect.
+ * INC-001 - epilepc → ciphra migration dies at the apex redirect.
  *
  * Reported 2026-08-07 by a real migrant: registered on ciphra through the
  * migration link, saw an error he couldn't recall, no data arrived, and the
@@ -14,7 +14,7 @@
  *   - `startApexEmulator` supplies the only missing piece: the 301 that
  *     production's apex returns without CORS headers
  *
- * The decisive assertion is not the error message — it is that
+ * The decisive assertion is not the error message - it is that
  * `migration_token.used_at` and `ip_first_seen` are STILL NULL afterwards.
  * Those columns are written inside `export()` immediately after the single-use
  * stamp, so NULL proves the controller never executed: the browser refused to
@@ -25,7 +25,7 @@
  * Requires:
  *   cd ../epilepc && docker compose up -d --build
  *   docker compose exec app bin/console app:seed-demo --users=1
- *   (ciphra dev server on :5173 — Playwright starts it)
+ *   (ciphra dev server on :5173 - Playwright starts it)
  *
  * Run:  PLAYWRIGHT_RUN_MIGRATE=1 npx playwright test migrate-apex-redirect
  */
@@ -55,12 +55,12 @@ test.setTimeout(240_000);
 /**
  * Chromium 149 enforces Local Network Access: a fetch aimed at the loopback
  * address space is refused unless permission is granted, and it reports that
- * refusal as a *CORS* error —
+ * refusal as a *CORS* error -
  *
  *   "blocked by CORS policy: Permission was denied for this request to
  *    access the `loopback` address space"
  *
- * — which is indistinguishable, from the app's point of view, from the missing
+ * - which is indistinguishable, from the app's point of view, from the missing
  * CORS header this test exists to prove. It blocked Vite's own HMR socket in
  * the same run, so it is an environment policy, not a property of the code.
  *
@@ -78,7 +78,7 @@ test.use({
 
 /**
  * Register a fresh ciphra account from inside /migrate and clear the recovery
- * gate. This is the reporter's path — not /login?mode=register — and it
+ * gate. This is the reporter's path - not /login?mode=register - and it
  * matters: the account it produces has no blueprint, which is why `/` later
  * bounces the user into /setup.
  */
@@ -97,13 +97,13 @@ async function registerInMigrateFlow(page: Page): Promise<string> {
 /**
  * Collect the browser's own account of what happened to each request.
  * `TypeError: Failed to fetch` is the same string whether the cause was CSP,
- * DNS, TLS or CORS — these events are what tell them apart, so a failing run
+ * DNS, TLS or CORS - these events are what tell them apart, so a failing run
  * says why instead of just that.
  */
 function collectNetworkDiagnostics(page: Page): { lines: string[] } {
 	const lines: string[] = [];
 	page.on('requestfailed', (r) => {
-		lines.push(`requestfailed ${r.method()} ${r.url()} — ${r.failure()?.errorText}`);
+		lines.push(`requestfailed ${r.method()} ${r.url()} - ${r.failure()?.errorText}`);
 	});
 	page.on('console', (m) => {
 		if (m.type() === 'error') lines.push(`console.error ${m.text()}`);
@@ -122,7 +122,7 @@ async function confirmOriginAndFetch(page: Page): Promise<void> {
 	await confirm.click();
 }
 
-test.describe('INC-001 — apex redirect strips CORS and kills the migration', () => {
+test.describe('INC-001 - apex redirect strips CORS and kills the migration', () => {
 	let apex: ApexEmulator;
 
 	// A completed migration stamps `user.migrated_at`, which hides the
@@ -149,7 +149,7 @@ test.describe('INC-001 — apex redirect strips CORS and kills the migration', (
 		expect(before!.ipFirstSeen).toBeNull();
 
 		// The minted link points at whatever EPILEPC_ORIGIN says. In production
-		// that is the apex, which only ever redirects — the bug in one line.
+		// that is the apex, which only ever redirects - the bug in one line.
 		test.info().annotations.push({
 			type: 'minted-source',
 			description: `EPILEPC_ORIGIN produced source=${mintedSource}`,
@@ -187,7 +187,7 @@ test.describe('INC-001 — apex redirect strips CORS and kills the migration', (
 		await expect(page.getByTestId('migrate-confirm-import')).toHaveCount(0);
 
 		// ── 5. The decisive evidence ────────────────────────────────────────
-		// The browser DID attempt the request — it reached the edge...
+		// The browser DID attempt the request - it reached the edge...
 		expect(
 			apex.hits.some((p) => p.includes(`/api/ciphra-export/${token}`)),
 			`the export request must reach the apex.\n` +
@@ -226,7 +226,7 @@ test.describe('INC-001 — apex redirect strips CORS and kills the migration', (
 		await importBtn.waitFor({ timeout: 120_000 });
 		const exportSeconds = (Date.now() - fetchStartedAt) / 1000;
 
-		// INC-001 finding 2 — the export must fit inside the CDN's origin
+		// INC-001 finding 2 - the export must fit inside the CDN's origin
 		// timeout, not just PHP's set_time_limit(300).
 		//
 		// EpilepcBundleSerializer touches two @Encrypted fields per record and
@@ -236,12 +236,12 @@ test.describe('INC-001 — apex redirect strips CORS and kills the migration', (
 		//
 		// This matters far more than it looks, because export() stamps used_at
 		// BEFORE serialising: a 524 burns the token and the user cannot retry.
-		// So the moment the redirect is fixed, heavy accounts — the long-tenured
-		// users most likely to migrate — hit a worse, unrecoverable failure.
+		// So the moment the redirect is fixed, heavy accounts - the long-tenured
+		// users most likely to migrate - hit a worse, unrecoverable failure.
 		// Keep this assertion; it is the guard on that.
 		expect(
 			exportSeconds,
-			`export took ${exportSeconds.toFixed(1)}s — must stay under the ` +
+			`export took ${exportSeconds.toFixed(1)}s - must stay under the ` +
 				`${CDN_ORIGIN_TIMEOUT_S}s CDN origin timeout or the token burns on a 524`,
 		).toBeLessThan(CDN_ORIGIN_TIMEOUT_S);
 
@@ -249,7 +249,7 @@ test.describe('INC-001 — apex redirect strips CORS and kills the migration', (
 
 		// A first-time browser gets the one-shot "your diary stays private"
 		// tour (CIPH-761), which deliberately holds the user on /migrate until
-		// they acknowledge it — so don't assert on the URL here.
+		// they acknowledge it - so don't assert on the URL here.
 		const tourContinue = page.getByRole('button', {
 			name: /Got it, go to home|Verstanden, zur Startseite/i,
 		});
@@ -258,7 +258,7 @@ test.describe('INC-001 — apex redirect strips CORS and kills the migration', (
 		await expect(page).toHaveURL(/localhost:5173\/$/, { timeout: 60_000 });
 
 		// The real signal, independent of UI copy: export() ran, so the token
-		// is consumed and the caller's IP was recorded — the mirror image of
+		// is consumed and the caller's IP was recorded - the mirror image of
 		// the RED case, with only the source host different.
 		const after = readTokenRow(token);
 		expect(after!.usedAt, 'export() ran → token consumed').not.toBeNull();
@@ -276,13 +276,13 @@ test.describe('INC-001 — apex redirect strips CORS and kills the migration', (
  *
  * `public/.htaccess` now exempts the machine endpoints from the host
  * canonicalisation redirect. The dev container runs `AllowOverride None`, so
- * it cannot exercise that file directly — dev and production diverge on
+ * it cannot exercise that file directly - dev and production diverge on
  * exactly the file that caused the incident, which is itself worth knowing.
  * These cases pin the BEHAVIOUR the fix has to produce, whichever way the edge
  * ends up delivering it, and `scripts/verify-migration-origin.sh` confirms the
  * real rule against production after deploy.
  */
-test.describe('INC-001 — fixed edge behaviours', () => {
+test.describe('INC-001 - fixed edge behaviours', () => {
 	let apex: ApexEmulator;
 
 	test.beforeEach(() => resetMigrationState());
@@ -306,7 +306,7 @@ test.describe('INC-001 — fixed edge behaviours', () => {
 		await registerInMigrateFlow(page);
 		await confirmOriginAndFetch(page);
 
-		// The preview only renders if the bundle actually arrived — which is
+		// The preview only renders if the bundle actually arrived - which is
 		// precisely what the redirect used to prevent.
 		await page.getByTestId('migrate-confirm-import').waitFor({ timeout: 120_000 });
 		expect(readTokenRow(token)!.usedAt, 'export() ran through the apex').not.toBeNull();
@@ -320,7 +320,7 @@ test.describe('INC-001 — fixed edge behaviours', () => {
 		// IS consumed. But when a cross-origin CORS request is redirected the
 		// browser taints the follow-up request's Origin to `null`; epilepc then
 		// fails its allow-list check and echoes its configured CIPHRA_ORIGIN,
-		// which no longer matches — so the browser discards the response.
+		// which no longer matches - so the browser discards the response.
 		// Verified directly:
 		//
 		//   $ curl -X OPTIONS -H 'Origin: null' .../api/ciphra-export/probe
@@ -345,7 +345,7 @@ test.describe('INC-001 — fixed edge behaviours', () => {
 		await registerInMigrateFlow(page);
 		await confirmOriginAndFetch(page);
 
-		// The user still gets nothing — but note WHEN. The redirect is followed,
+		// The user still gets nothing - but note WHEN. The redirect is followed,
 		// so the server performs the ENTIRE export first, and only then does the
 		// browser discard the response. The wait here must therefore cover a full
 		// export, not just a round-trip. That wasted work is a further argument
@@ -359,7 +359,7 @@ test.describe('INC-001 — fixed edge behaviours', () => {
 		// this option, and it must fail loudly if anyone reaches for it.
 		expect(
 			readTokenRow(token)!.usedAt,
-			'CORS-on-redirect burns the token while delivering nothing — do not ship this',
+			'CORS-on-redirect burns the token while delivering nothing - do not ship this',
 		).not.toBeNull();
 	});
 
@@ -368,7 +368,7 @@ test.describe('INC-001 — fixed edge behaviours', () => {
 		const { token } = parseMigrationLink(link);
 		expect(readTokenRow(token)!.usedAt).toBeNull();
 
-		// Node-side fetch: no browser, no CORS — we are testing the server's
+		// Node-side fetch: no browser, no CORS - we are testing the server's
 		// consume-on-success contract, not the transport.
 		const status = await withBrokenSourceTable(async () => {
 			const res = await fetch(

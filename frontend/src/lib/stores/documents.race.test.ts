@@ -1,12 +1,12 @@
 /**
- * Regression — documents.load() must dedupe concurrent callers by returning
+ * Regression - documents.load() must dedupe concurrent callers by returning
  * the SAME in-flight promise, not resolving the second caller instantly.
  *
  * The login-onboarding bug (2026-06-13): the layout and Companion both call
  * load(). The old `if (loading) return;` resolved the second caller's promise
  * immediately while $documents was still empty. Depending on mount order that
- * either flashed the dashboard's "no profile" onboarding state, or — when the
- * layout was the second caller — ran blueprint.loadFromDocuments() against
+ * either flashed the dashboard's "no profile" onboarding state, or - when the
+ * layout was the second caller - ran blueprint.loadFromDocuments() against
  * empty docs so the blueprint never resolved until a manual refresh.
  *
  * This test pins the contract deterministically (no mount-order flakiness):
@@ -69,7 +69,7 @@ describe('documents.load() concurrent dedup', () => {
 
 		// Wait until load() has reached the underlying fetch (the outbox overlay
 		// and cache read run a few microtasks first). With the fetch in-flight,
-		// a correct store has resolved NEITHER caller — the pre-fix store
+		// a correct store has resolved NEITHER caller - the pre-fix store
 		// resolved the second caller (r2) early via its `return;`.
 		await vi.waitFor(() => expect(typeof h.state.resolve).toBe('function'));
 		expect(r1).toBe(false);

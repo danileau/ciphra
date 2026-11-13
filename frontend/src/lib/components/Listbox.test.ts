@@ -4,7 +4,7 @@
  * Reported from the running app: "most of the dropdowns show the list on top
  * of the clicked field, and some show it only while the click is held". Every
  * one of those was a native `<select>`, whose options panel is browser chrome
- * — not in the DOM, not stylable, placed by the platform, and on Linux/GTK
+ * - not in the DOM, not stylable, placed by the platform, and on Linux/GTK
  * operated by press-drag-release. This component replaces them, so the two
  * symptoms are what it is pinned against:
  *
@@ -46,7 +46,7 @@ function placeTrigger(el: Element, top: number, height = 44) {
 }
 
 describe('opening and closing', () => {
-	it('stays open after a full click — press, release, still there', async () => {
+	it('stays open after a full click - press, release, still there', async () => {
 		const { getByTestId } = mount();
 		const trigger = getByTestId('lb');
 		await fireEvent.mouseDown(trigger);

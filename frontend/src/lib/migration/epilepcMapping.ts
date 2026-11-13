@@ -1,10 +1,10 @@
 /**
- * CIPH-712 — Epilepc → ciphra bundle parser + mapping.
+ * CIPH-712 - Epilepc → ciphra bundle parser + mapping.
  *
  * Translates schema v1.1 export bundles into ciphra's 2-type doc model
  * (entry / event) plus diary primitive and Blueprint.medications append.
  *
- * No external deps. Manual schema validator — strict, rejects unknown
+ * No external deps. Manual schema validator - strict, rejects unknown
  * top-level fields. Unknown seizure type_name maps to 'unknown'.
  */
 
@@ -97,16 +97,16 @@ export function mapSeizureType(typeName: string | null | undefined): string {
 }
 
 /** A dose token: a number (decimal/ratio) followed by a recognised unit. The
- *  unit is REQUIRED — we never strip a bare number, so a number that is part of
+ *  unit is REQUIRED - we never strip a bare number, so a number that is part of
  *  a drug's identity ("Vitamin B12", "5-HTP") is preserved. No leading `\b`, so
  *  the glued form ("urbanyl10mg") is caught too. */
 const DOSE_TOKEN = /\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?\s*(?:mcg|µg|ug|mg|kg|ml|iu|ie|hübe?|hub|puffs?|tropfen|gtt|tabletten?|tabs?|stk|g|l|%)\b\.?/gi;
 
 /** Parse an epilepc freetext medication name into a dedup key + clean base
  *  name + any embedded dose. Grouping is case- and whitespace-insensitive and
- *  ignores an embedded dose token — so "Urbanyl", "urbanyl", "urbanyl10mg" and
+ *  ignores an embedded dose token - so "Urbanyl", "urbanyl", "urbanyl10mg" and
  *  "URBANyL 15mg" all collapse to ONE definition (matching a `grep -i urbanyl`
- *  intuition), while a typo like "urbayl" stays separate (NO fuzzy matching —
+ *  intuition), while a typo like "urbayl" stays separate (NO fuzzy matching -
  *  fusing distinct drugs would be a medical-safety bug). */
 export function parseEpilepcMedName(raw: string): { base: string; key: string; embeddedDose: string } {
 	const doses: string[] = [];
@@ -135,14 +135,14 @@ export function mapBundle(b: EpilepcBundle): MappedDocs {
 		};
 		if (s.time) doc.time = s.time;
 		if (s.notes) doc.notes = s.notes;
-		// CIPH-760 — preserve raw epilepc type_name alongside the coarse
+		// CIPH-760 - preserve raw epilepc type_name alongside the coarse
 		// ciphra episode key so granularity ("Fokal rechts", "Absence mit
 		// Sturz") isn't lost. Surfaced by EntryPreview as a subtitle.
 		if (s.type_name) doc.epilepc_original_type = s.type_name;
 		return doc;
 	});
 
-	// CIPH-760 — keep epilepc `name` (title) and `description` (notes)
+	// CIPH-760 - keep epilepc `name` (title) and `description` (notes)
 	// separate. Previously callers had concatenated them, losing the
 	// distinction. Ciphra's event doc has both fields; we map 1:1.
 	const events = b.events.map((e) => ({
@@ -167,7 +167,7 @@ export function mapBundle(b: EpilepcBundle): MappedDocs {
 		return doc;
 	});
 
-	// CIPH-pi19 — epilepc modelled each medication INTAKE as its own medication
+	// CIPH-pi19 - epilepc modelled each medication INTAKE as its own medication
 	// row, so a single PRN drug (e.g. Urbanyl) arrived as dozens/hundreds of
 	// duplicate rows. ciphra's model is: one medication DEFINITION + one event
 	// per intake. So we (1) collapse records to a single MedicationSlot per
@@ -238,18 +238,18 @@ export function mergeMedications(existing: MedicationSlot[], incoming: Medicatio
 }
 
 /**
- * INC-001 — make sure the blueprint can actually render what we just imported.
+ * INC-001 - make sure the blueprint can actually render what we just imported.
  *
  * `mapSeizureType` files every migrated seizure under one of five episode keys
  * (focal / generalized / absence / myoclonic / unknown). If the account's
  * blueprint has no matching `episodeTypes` entry, those entries import fine and
- * then render as nothing — the user sees an empty app and concludes the
+ * then render as nothing - the user sees an empty app and concludes the
  * migration failed. That is reachable today: a migrant whose first attempt died
  * gets bounced into `/setup` (the dashboard requires a blueprint), picks some
  * condition, and on the retry their wizard blueprint wins.
  *
  * Additive by design. Existing types keep their id, label, colour and tracking
- * flags untouched — only genuinely missing ones are appended. Wholesale
+ * flags untouched - only genuinely missing ones are appended. Wholesale
  * blueprint replacement is what caused the 2026-06-20 medication data-loss
  * incident; never do that here.
  */
@@ -270,7 +270,7 @@ export function epilepcEpisodeTypes(): EpisodeType[] {
  *  one and append the medications. The existing setup wizard can be re-run
  *  later. */
 export function defaultEpilepsyBlueprint(): Blueprint {
-	// Use the real epilepsy preset — identical to what a user gets from the
+	// Use the real epilepsy preset - identical to what a user gets from the
 	// setup wizard. Deep-clone so callers can mutate (e.g. append medications)
 	// without poisoning the shared preset object.
 	return JSON.parse(JSON.stringify(epilepsyPreset)) as Blueprint;

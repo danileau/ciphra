@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# verify-migration-prod.sh — INC-001 deploy gate.
+# verify-migration-prod.sh - INC-001 deploy gate.
 #
 # Run it BEFORE the deploy and AFTER it, then diff the two reports. Passing
-# after having failed before is the proof that the fix landed — and the point
+# after having failed before is the proof that the fix landed - and the point
 # at which it is safe to tell an affected user to try again.
 #
 #   scripts/verify-migration-prod.sh before
@@ -13,7 +13,7 @@
 #
 # Two layers, because they answer different questions:
 #
-#   1. HTTP contract (curl, OPTIONS only — free, touches no token)
+#   1. HTTP contract (curl, OPTIONS only - free, touches no token)
 #      Does the host serve these paths directly, with the right CORS origin?
 #
 #   2. Browser reality (Playwright on ciphra.ch, bogus token)
@@ -37,13 +37,13 @@ CIPHRA_ORIGIN="${CIPHRA_ORIGIN:-https://ciphra.ch}"
 mkdir -p "$OUT_DIR"
 
 {
-	echo "INC-001 migration verification — label: $LABEL"
+	echo "INC-001 migration verification - label: $LABEL"
 	echo "date:   $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 	echo "ciphra: $CIPHRA_ORIGIN"
 	echo "hosts:  $HOSTS"
 	echo
 	echo "=============================================================="
-	echo "LAYER 1 — HTTP contract (OPTIONS, no token touched)"
+	echo "LAYER 1 - HTTP contract (OPTIONS, no token touched)"
 	echo "=============================================================="
 	IFS=',' read -ra HOST_LIST <<< "$HOSTS"
 	for h in "${HOST_LIST[@]}"; do
@@ -57,7 +57,7 @@ mkdir -p "$OUT_DIR"
 
 	echo
 	echo "=============================================================="
-	echo "LAYER 2 — real browser on $CIPHRA_ORIGIN (bogus token)"
+	echo "LAYER 2 - real browser on $CIPHRA_ORIGIN (bogus token)"
 	echo "=============================================================="
 	echo "A 404 is the HEALTHY answer: the request reached PHP, which"
 	echo "correctly rejected a token we made up. 'Failed to fetch' means"

@@ -1,5 +1,5 @@
 /**
- * CIPH-830 — spacing token discipline.
+ * CIPH-830 - spacing token discipline.
  *
  * This list defines the allowed Tailwind spacing values for any
  * `gap-*`, `p-*`, `m-*`, `space-x-*`, `space-y-*` utility in
@@ -9,10 +9,10 @@
  * jumps to 8/10/12/16/20/24 for layout gaps, and 28/32/40/48 for
  * hero sections, page padding, and bottom-nav clearance. Half-steps
  * (2.5, 3.5) and odd integers (7, 9, 11, 13, 14, 15, 17, 18, 19)
- * are intentionally disallowed — they were the patchwork PI v9 set
+ * are intentionally disallowed - they were the patchwork PI v9 set
  * out to remove. If you need one, pick the visually closer allowed
  * value. If you genuinely need a new value, amend this file and
- * document the reason in the README — don't add ad-hoc arbitrary
+ * document the reason in the README - don't add ad-hoc arbitrary
  * values.
  */
 export const ALLOWED_SPACING = [
@@ -37,7 +37,7 @@ export const ALLOWED_SPACING = [
 	'48',
 	'px', // Tailwind's `p-px` = 1px; allowed for hairline offsets.
 	'auto', // `m-auto`, `mx-auto`, etc.
-	'full', // `w-full`-style, not spacing — but `m-full` etc. wouldn't ever be used; kept for regex generality.
+	'full', // `w-full`-style, not spacing - but `m-full` etc. wouldn't ever be used; kept for regex generality.
 ] as const;
 
 /**
@@ -46,7 +46,7 @@ export const ALLOWED_SPACING = [
  * token does not work.
  *
  * Note: this list covers `gap-[…]`, `p*-[…]`, `m*-[…]`,
- * `space-{x,y}-[…]` only. It does NOT cover `min-h-[44px]` etc —
+ * `space-{x,y}-[…]` only. It does NOT cover `min-h-[44px]` etc -
  * those are outside the spacing-utility regex scope.
  */
 export const ALLOWED_BRACKET_SPACING = [

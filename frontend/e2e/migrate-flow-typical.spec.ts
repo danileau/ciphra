@@ -1,5 +1,5 @@
 /**
- * CIPH-741 / CIPH-751 — epilepc → ciphra migration happy path.
+ * CIPH-741 / CIPH-751 - epilepc → ciphra migration happy path.
  *
  * Requires the api running with `CIPHRA_DEV_MOCKS=1` so the mock bundle
  * route is available. Enable by running:
@@ -21,14 +21,14 @@ test.skip(!runMigrate, 'set PLAYWRIGHT_RUN_MIGRATE=1 + CIPHRA_DEV_MOCKS=1 to run
 test.setTimeout(120_000);
 
 /**
- * INC-001 — this spec could not pass as written, and had not been able to
+ * INC-001 - this spec could not pass as written, and had not been able to
  * since CSP hardening (Track 3 P0 3.1) shipped.
  *
  * ciphra's `connect-src` names only the production epilepc hosts, so the
  * bundle fetch to `localhost:5000` was refused inside the renderer. It never
  * reached the mock, and it failed with the same `TypeError: Failed to fetch`
  * that a genuine source outage produces. Being gated behind
- * PLAYWRIGHT_RUN_MIGRATE, nobody saw it go quiet — which is a large part of
+ * PLAYWRIGHT_RUN_MIGRATE, nobody saw it go quiet - which is a large part of
  * why the apex/www misconfiguration reached a real user unnoticed.
  *
  * Chromium 149 also refuses loopback fetches by default (Local Network
@@ -47,7 +47,7 @@ test('migrate: dev-typical bundle → epilepsy blueprint + /today', async ({ pag
     await allowConnectOrigins(page, bothSchemes(MOCK_SOURCE));
     await page.goto(`/migrate#migrate=dev-typical&source=${MOCK_SOURCE}`);
 
-    // Inline SignupFlow on the migrate page (not /login) — can't reuse
+    // Inline SignupFlow on the migrate page (not /login) - can't reuse
     // registerNewUser which navigates to /login?mode=register.
     const user = randUser('e2e_mig_');
     const pass = TEST_PASSWORD;

@@ -8,19 +8,19 @@ import { IN_APP_DOCS } from './src/lib/docs-manifest';
 import { withPendingFragments } from './src/lib/changelogFragments.js';
 import { readFragments } from './src/lib/changelogFragmentFiles.js';
 
-// CIPH-pi20-LB-6 — default 5000 → 5050: macOS AirPlay/AirTunes listens
+// CIPH-pi20-LB-6 - default 5000 → 5050: macOS AirPlay/AirTunes listens
 // on :5000 by default, which silently 403'd against our API in local
 // dev (FULL_REVIEW 2026-05-05 P1.3). 5050 is collision-free across
 // macOS/Linux/Windows. Override via VITE_API_URL when needed.
 const apiTarget = process.env.VITE_API_URL || 'http://localhost:5050';
 
 /**
- * ciphra-docs — exposes the repository's documentation to the app as the
+ * ciphra-docs - exposes the repository's documentation to the app as the
  * virtual module `virtual:ciphra-docs`, powering the `/docs` route.
  *
  * The docs live above the SvelteKit project root, so a browser-side
  * `import.meta.glob` cannot reach them. This plugin reads them with Node
- * `fs` at dev/build time and watches them for hot reload — editing a
+ * `fs` at dev/build time and watches them for hot reload - editing a
  * `.md` updates `/docs` directly.
  *
  * WHICH docs is an explicit allowlist: `src/lib/docs-manifest.ts`.
@@ -40,7 +40,7 @@ export function ciphraDocs(): Plugin {
 
 	// Explicit allowlist, not "everything in docs/". The old glob shipped
 	// the operator runbook and the product backlog to patients and grew
-	// the bundle on every new doc — see src/lib/docs-manifest.ts, which
+	// the bundle on every new doc - see src/lib/docs-manifest.ts, which
 	// also carries the test that keeps this set a decision.
 	const mdFiles = (): string[] =>
 		docRoot
@@ -64,7 +64,7 @@ export function ciphraDocs(): Plugin {
 				const text = readFileSync(abs, 'utf8');
 				out[key] = key === 'CHANGELOG.md' ? withPendingFragments(text, fragments()) : text;
 			} catch {
-				/* a file may be momentarily absent during an edit — skip it */
+				/* a file may be momentarily absent during an edit - skip it */
 			}
 		}
 		return out;
@@ -106,10 +106,10 @@ export function ciphraDocs(): Plugin {
  */
 export const kitConfig: KitConfig = {
 	preprocess: vitePreprocess(),
-	// 2026-06-07 — switched from adapter-auto to adapter-node so the
+	// 2026-06-07 - switched from adapter-auto to adapter-node so the
 	// Docker prod build (golive/frontend/Dockerfile.prod) produces a
 	// build/index.js the runtime stage can `node build/index.js`.
-	// adapter-auto only handles Vercel/Netlify/CF Pages/Azure SWA —
+	// adapter-auto only handles Vercel/Netlify/CF Pages/Azure SWA -
 	// for generic Linux Docker it produced no build/ output.
 	//
 	// `paths.origin` is deliberately left unset: adapter-node 6 then falls
@@ -117,11 +117,11 @@ export const kitConfig: KitConfig = {
 	// prod), and dev/e2e/local `node build` keep deriving the origin from the
 	// request. Setting it here would pin every build to one host.
 	adapter: adapter(),
-	// Track 3 P0 (3.1) — drop `'unsafe-inline'` from script-src. SvelteKit
+	// Track 3 P0 (3.1) - drop `'unsafe-inline'` from script-src. SvelteKit
 	// emits a per-response CSP header and hashes its own inline hydration
 	// scripts (mode: 'hash'), so the blanket script-src unsafe-inline (the
 	// launch-night tactical) is no longer needed. This REPLACES the nginx
-	// CSP header (removed in nginx/ciphra.conf) — the script hashes are
+	// CSP header (removed in nginx/ciphra.conf) - the script hashes are
 	// per-build, so only SvelteKit can keep them in sync.
 	//
 	// style-src KEEPS 'unsafe-inline': the app uses ~970 dynamic inline
@@ -134,7 +134,7 @@ export const kitConfig: KitConfig = {
 			'default-src': ['self'],
 			// SvelteKit auto-adds the hash of its own inline hydration
 			// bootstrap. The two hashes below are the static author scripts
-			// in src/app.html (dark-mode pre-paint init + SW registration) —
+			// in src/app.html (dark-mode pre-paint init + SW registration) -
 			// SvelteKit does NOT hash author scripts in app.html. If you edit
 			// either inline script, update these; the test
 			// src/app-html-csp.test.ts pins them so drift fails CI.

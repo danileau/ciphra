@@ -1,5 +1,5 @@
 /**
- * CIPH-890 — Cohort × Route palette contract.
+ * CIPH-890 - Cohort × Route palette contract.
  *
  * Locks the invariants the rest of PI v13 depends on:
  *   - 5 cohorts, 6 tones each, complete coverage.
@@ -11,7 +11,7 @@
  *     (`#faf8f6`) so chart bars / dots / band fills stay legible.
  *   - Named exports stay in sync with the matrix.
  *
- * (The route-shift assertions were removed with the route axis itself —
+ * (The route-shift assertions were removed with the route axis itself -
  * design review 2026-06-11, see `route-shift-removed.test.ts`.)
  *   - `pathToRoute` maps every primary surface correctly.
  *
@@ -61,7 +61,7 @@ const SURFACE = '#faf8f6';
 const CHART_FLOOR = 3.0;
 const TEXT_FLOOR = 4.5;
 
-describe('CIPH-890 — completeness', () => {
+describe('CIPH-890 - completeness', () => {
 	it('declares all 5 cohorts', () => {
 		expect(Object.keys(COHORT_PALETTES).sort()).toEqual(
 			[...ALL_COHORTS_PALETTE].sort(),
@@ -78,13 +78,13 @@ describe('CIPH-890 — completeness', () => {
 	});
 });
 
-describe('CIPH-890 — discrete cohort preserves DATA_PALETTE verbatim', () => {
+describe('CIPH-890 - discrete cohort preserves DATA_PALETTE verbatim', () => {
 	it('cohortPalette("discrete") deep-equals DATA_PALETTE', () => {
 		expect(cohortPalette('discrete')).toEqual(DATA_PALETTE);
 	});
 });
 
-describe('CIPH-890 — adjacency rule (mirrors presets-palette.test.ts CIPH-801)', () => {
+describe('CIPH-890 - adjacency rule (mirrors presets-palette.test.ts CIPH-801)', () => {
 	// CIPH-801's adjacency rule operates at the consumer level (preset
 	// `episodeTypes` arrays must not have two adjacent entries with the
 	// same color). The cohort palette itself is a source-of-truth list;
@@ -110,7 +110,7 @@ describe('CIPH-890 — adjacency rule (mirrors presets-palette.test.ts CIPH-801)
 	);
 });
 
-describe('CIPH-890 — WCAG contrast against the cream surface', () => {
+describe('CIPH-890 - WCAG contrast against the cream surface', () => {
 	it.each(ALL_COHORTS_PALETTE)(
 		'every tone in cohort %s meets the chart-use floor (≥3:1 against #faf8f6)',
 		(cohort) => {
@@ -120,7 +120,7 @@ describe('CIPH-890 — WCAG contrast against the cream surface', () => {
 				const ratio = contrastRatio(tone, SURFACE);
 				expect(
 					ratio,
-					`${cohort} slot ${i} (${tone}) is ${ratio.toFixed(2)}:1 — ` +
+					`${cohort} slot ${i} (${tone}) is ${ratio.toFixed(2)}:1 - ` +
 						`below the chart-use floor of ${CHART_FLOOR}:1.`,
 				).toBeGreaterThanOrEqual(CHART_FLOOR);
 			}
@@ -147,7 +147,7 @@ describe('CIPH-890 — WCAG contrast against the cream surface', () => {
 	});
 });
 
-describe('CIPH-890 — named exports match the matrix', () => {
+describe('CIPH-890 - named exports match the matrix', () => {
 	const expected: Record<Cohort, readonly string[]> = {
 		cycle: [CYCLE_1, CYCLE_2, CYCLE_3, CYCLE_4, CYCLE_5, CYCLE_6],
 		phase: [PHASE_1, PHASE_2, PHASE_3, PHASE_4, PHASE_5, PHASE_6],
@@ -167,7 +167,7 @@ describe('CIPH-890 — named exports match the matrix', () => {
 	});
 });
 
-describe('CIPH-890 — COHORT_PALETTE_RGB matches the hex matrix', () => {
+describe('CIPH-890 - COHORT_PALETTE_RGB matches the hex matrix', () => {
 	it.each(ALL_COHORTS_PALETTE)('cohort %s rgb triples decode to the hex tones', (cohort) => {
 		const hex = cohortPalette(cohort);
 		const rgb = COHORT_PALETTE_RGB[cohort];
@@ -181,7 +181,7 @@ describe('CIPH-890 — COHORT_PALETTE_RGB matches the hex matrix', () => {
 	});
 });
 
-describe('CIPH-890 — pathToRoute', () => {
+describe('CIPH-890 - pathToRoute', () => {
 	it('maps each primary surface to its route', () => {
 		expect(pathToRoute('/calendar')).toBe('calendar');
 		expect(pathToRoute('/calendar/2026-04-28')).toBe('calendar');

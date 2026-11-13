@@ -1,12 +1,12 @@
 /**
- * CIPH-pi20-LB-2 — `auth.clearLocalCache()` contract.
+ * CIPH-pi20-LB-2 - `auth.clearLocalCache()` contract.
  *
  * The wipe-without-logout invariant: same on-disk wipe path as
  * logout (IndexedDB plaintext cache + SW navigation cache) but
  * MUST leave session state intact (in-memory + localStorage +
  * sessionStorage all untouched).
  *
- * This is a doc-vs-code anchor — SECURITY_MODEL.md "What the browser
+ * This is a doc-vs-code anchor - SECURITY_MODEL.md "What the browser
  * stores" tells users the button exists and exactly what it does.
  * If this test breaks, the doc is lying.
  */
@@ -68,7 +68,7 @@ describe('CIPH-pi20-LB-2 settings UI wiring', () => {
 	});
 
 	it('disables the button only while wiping is in flight (always-available privacy action)', () => {
-		// 2026-06-07 — the earlier `cachedDocCount === 0` half of the
+		// 2026-06-07 - the earlier `cachedDocCount === 0` half of the
 		// disabled gate was dropped. Three reasons captured in the
 		// settings/+page.svelte block comment: it read as a broken
 		// trust signal, the count was non-reactive and stale, and the

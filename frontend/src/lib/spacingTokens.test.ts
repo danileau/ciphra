@@ -1,5 +1,5 @@
 /**
- * CIPH-830 — spacing discipline enforcement test.
+ * CIPH-830 - spacing discipline enforcement test.
  *
  * Scans every `.svelte` file under `frontend/src/` plus `app.css`,
  * pulls out class strings (`class="…"`, `class='…'`, `@apply …;`),
@@ -11,7 +11,7 @@
  * Prefix-matched with `\b` so `min-h-…`, `max-w-…`, `-mt-…`
  * (negative margins handled below) don't false-match.
  *
- * Ignores `class:foo={…}` reactive class directives (Svelte) —
+ * Ignores `class:foo={…}` reactive class directives (Svelte) -
  * those names are evaluated, not strings. Also ignores `:class`
  * inline JS. Coverage is best-effort-exhaustive, not total; the
  * goal is to catch accidental drift, not adversarial evasion.
@@ -90,11 +90,11 @@ function extractClassContexts(src: string): string[] {
 	for (const m of src.matchAll(/\bclass\s*=\s*"([^"]*)"/g)) out.push(m[1]);
 	// class='…'
 	for (const m of src.matchAll(/\bclass\s*=\s*'([^']*)'/g)) out.push(m[1]);
-	// class={`…`} tagged template — grab the whole literal
+	// class={`…`} tagged template - grab the whole literal
 	for (const m of src.matchAll(/\bclass\s*=\s*\{`([^`]*)`\}/g)) out.push(m[1]);
 	// @apply …;
 	for (const m of src.matchAll(/@apply\s+([^;}\n]+)/g)) out.push(m[1]);
-	// class:foo={…} directive — the name before `=` is a literal class
+	// class:foo={…} directive - the name before `=` is a literal class
 	for (const m of src.matchAll(/\bclass:([\w-]+)/g)) out.push(m[1]);
 	return out;
 }
@@ -111,7 +111,7 @@ function isAllowedValue(val: string): boolean {
 	return ALLOWED_SET.has(val);
 }
 
-describe('CIPH-830 — spacing token discipline', () => {
+describe('CIPH-830 - spacing token discipline', () => {
 	const files = walkSvelteAndCss(SRC_ROOT);
 
 	it('scans a non-trivial number of files', () => {

@@ -2,7 +2,7 @@ import type { Blueprint } from './types';
 import { DATA_1, DATA_2, DATA_3, DATA_4, DATA_5, DATA_6 } from '../dataPalette';
 
 /*
- * CIPH-801 — every `accentColor` and every `episodeTypes[].color` in
+ * CIPH-801 - every `accentColor` and every `episodeTypes[].color` in
  * this file MUST reference DATA_1..DATA_6 from `../dataPalette`. The
  * vitest `presets-palette.test.ts` enforces this, and also checks
  * that no two adjacent episodeTypes within a preset share the same
@@ -65,7 +65,7 @@ export const epilepsy: Blueprint = {
 	],
 	// Single source of truth: as-needed ("Bedarfsmedikation") starter meds live
 	// here, editable in Settings and surfaced in the FAB. (Folded from the old
-	// preset-only `rescueMedications` list — ids preserved so already-logged
+	// preset-only `rescueMedications` list - ids preserved so already-logged
 	// events still resolve.)
 	medications: [
 		{ id: 'midazolam_buccal', name: 'Midazolam', dose: '5 mg', schedule: '', asNeeded: true },
@@ -821,7 +821,7 @@ export const endometriosis: Blueprint = {
 	vitals: [
 		{ id: 'pain_level', label: 'vital.pain_level', unit: '1-10', placeholder: '5' },
 		{ id: 'bleeding_intensity', label: 'vital.bleeding_intensity', unit: '1-5', placeholder: '3' },
-		// Endo-specific cycle tracking — daily cycle_day alone isn't enough
+		// Endo-specific cycle tracking - daily cycle_day alone isn't enough
 		// to spot length-irregularity flares (per persona feedback).
 		{ id: 'cycle_day', label: 'vital.cycle_day', unit: 'day', placeholder: '14', excludeFromTrends: true },
 		{ id: 'cycle_length', label: 'vital.cycle_length', unit: 'days', placeholder: '28', excludeFromTrends: true },
@@ -1206,7 +1206,7 @@ export const long_covid: Blueprint = {
 		{
 			id: 'fatigue', label: 'symptom_group.fatigue', items: [
 				{ id: 'pem', label: 'symptom.pem' },
-				// PEM with delayed onset is the diagnostic hallmark — separate
+				// PEM with delayed onset is the diagnostic hallmark - separate
 				// from same-day exhaustion. Sofia (10-persona QA) called this
 				// out as missing. Boom-bust = the user sees the cycle.
 				{ id: 'pem_delayed', label: 'symptom.pem_delayed' },
@@ -1338,7 +1338,7 @@ export const menopause: Blueprint = {
 		{ id: 'temperature', label: 'vital.temperature', unit: '°C', placeholder: '36.8' },
 		{ id: 'sleep_hours', label: 'vital.sleep_hours', unit: 'h', placeholder: '7' },
 		{ id: 'mood', label: 'vital.mood', unit: '1-10', placeholder: '5' },
-		{ id: 'cycle_day', label: 'vital.cycle_day', unit: '', placeholder: '—', excludeFromTrends: true },
+		{ id: 'cycle_day', label: 'vital.cycle_day', unit: '', placeholder: '-', excludeFromTrends: true },
 	],
 	medications: [],
 	gridSymptomColumns: ['hot_flashes', 'night_sweats', 'brain_fog', 'slept_badly', 'irritable'],
@@ -1621,7 +1621,7 @@ export const ibd: Blueprint = {
 };
 
 // ─── PMOS (Polyendocrine Metabolic Ovarian Syndrome; renamed from PCOS,
-//     Lancet 2026-05-12). conditionId stays 'pcos' — it's the stable key
+//     Lancet 2026-05-12). conditionId stays 'pcos' - it's the stable key
 //     inside existing users' encrypted blueprints; only labels changed. ──────
 
 export const pcos: Blueprint = {
@@ -1695,10 +1695,10 @@ export const pcos: Blueprint = {
 };
 
 // ─── Hashimoto (Autoimmune Thyroiditis) ─────────────────────
-// CIPH-pi24-4b — Discrete cohort. Most patients on Levothyroxine are
+// CIPH-pi24-4b - Discrete cohort. Most patients on Levothyroxine are
 // stable; clinical journey is lab-result-driven over months (TSH/T3/T4/
 // TPO). Symptoms (cold-intolerance, weight, hair, fog, dry skin) flag
-// dose-adjust conversations. No multiDay episode pattern — symptom days
+// dose-adjust conversations. No multiDay episode pattern - symptom days
 // are independent. Doctor handover = lab trend + symptom correlation.
 
 export const hashimoto: Blueprint = {
@@ -1752,7 +1752,7 @@ export const hashimoto: Blueprint = {
 };
 
 // ─── Rheumatoid arthritis / Psoriatic arthritis ─────────────
-// CIPH-pi24-4c — Phase cohort. Autoimmune flare = multiDay episode
+// CIPH-pi24-4c - Phase cohort. Autoimmune flare = multiDay episode
 // pattern (calendar-first browse). Diagnostic-criteria-aligned tracking:
 // symmetric joint pain, morning stiffness >30 min, CRP. Doctor handover
 // at 3-6 month rheumatology visits = the load-bearing artifact.
@@ -1786,7 +1786,7 @@ export const rheumatoid_arthritis: Blueprint = {
 		},
 	],
 	episodeTypes: [
-		// CIPH-pi24-4c — `flare` is the load-bearing multiDay episode.
+		// CIPH-pi24-4c - `flare` is the load-bearing multiDay episode.
 		// `remission` marks stable windows for the doctor-PDF arc.
 		{ id: 'flare', label: 'episode.ra_flare', color: DATA_1, multiDay: true },
 		{ id: 'remission', label: 'episode.ra_remission', color: DATA_4, multiDay: true },
@@ -1835,7 +1835,7 @@ export const presets: PresetInfo[] = [
 	{ id: 'ms', labelKey: 'landing.template_ms', descriptionKey: 'landing.template_ms_desc', icon: 'brain', color: DATA_6, blueprint: ms },
 	// Neurodivergence
 	{ id: 'adhd', labelKey: 'landing.template_adhd', descriptionKey: 'landing.template_adhd_desc', icon: 'focus', color: DATA_3, blueprint: adhd },
-	// Removed per product review — kept blueprint def above for potential future re-enable
+	// Removed per product review - kept blueprint def above for potential future re-enable
 	// { id: 'autism', labelKey: 'landing.template_autism', descriptionKey: 'landing.template_autism_desc', icon: 'ear', color: DATA_5, blueprint: autism },
 	// Mental health
 	{ id: 'burnout', labelKey: 'landing.template_burnout', descriptionKey: 'landing.template_burnout_desc', icon: 'battery-low', color: DATA_5, blueprint: burnout },
@@ -1847,17 +1847,17 @@ export const presets: PresetInfo[] = [
 	// Respiratory & Cardio
 	{ id: 'asthma', labelKey: 'landing.template_asthma', descriptionKey: 'landing.template_asthma_desc', icon: 'wind', color: DATA_4, blueprint: asthma },
 	{ id: 'hypertension', labelKey: 'landing.template_hypertension', descriptionKey: 'landing.template_hypertension_desc', icon: 'heart-pulse', color: DATA_1, blueprint: hypertension },
-	// Removed per product review — kept blueprint def above for potential future re-enable
+	// Removed per product review - kept blueprint def above for potential future re-enable
 	// { id: 'cardiovascular', labelKey: 'landing.template_cardiovascular', descriptionKey: 'landing.template_cardiovascular_desc', icon: 'heart-pulse', color: DATA_1, blueprint: cardiovascular },
 	// GI & Oncology
 	{ id: 'ibs', labelKey: 'landing.template_ibs', descriptionKey: 'landing.template_ibs_desc', icon: 'shield', color: DATA_3, blueprint: ibs },
-	// CIPH-pi24-4a — cancer_treatment revived as a setup-wizard preset.
+	// CIPH-pi24-4a - cancer_treatment revived as a setup-wizard preset.
 	// Landing-discovery surface (conditionGroups + conditionInfoMap entry +
 	// /conditions/[id] deep-link page with ~80 i18n strings of rationale
 	// copy) deferred to a follow-up. Selection via /setup works fully.
 	{ id: 'cancer_treatment', labelKey: 'landing.template_cancer_treatment', descriptionKey: 'landing.template_cancer_treatment_desc', icon: 'shield-plus', color: DATA_4, blueprint: cancer_treatment },
 	// Dermatology & Gynecology
-	// Removed per product review — kept blueprint def above for potential future re-enable
+	// Removed per product review - kept blueprint def above for potential future re-enable
 	// { id: 'dermatology', labelKey: 'landing.template_dermatology', descriptionKey: 'landing.template_dermatology_desc', icon: 'scan', color: DATA_6, blueprint: dermatology },
 	{ id: 'endometriosis', labelKey: 'landing.template_endometriosis', descriptionKey: 'landing.template_endometriosis_desc', icon: 'flower', color: DATA_2, blueprint: endometriosis },
 	{ id: 'menopause', labelKey: 'landing.template_menopause', descriptionKey: 'landing.template_menopause_desc', icon: 'scan', color: DATA_6, blueprint: menopause },
@@ -1867,9 +1867,9 @@ export const presets: PresetInfo[] = [
 	{ id: 'glaucoma', labelKey: 'landing.template_glaucoma', descriptionKey: 'landing.template_glaucoma_desc', icon: 'eye', color: DATA_3, blueprint: glaucoma },
 	{ id: 'parkinson', labelKey: 'landing.template_parkinson', descriptionKey: 'landing.template_parkinson_desc', icon: 'waves', color: DATA_3, blueprint: parkinson },
 	{ id: 'ibd', labelKey: 'landing.template_ibd', descriptionKey: 'landing.template_ibd_desc', icon: 'donut', color: DATA_6, blueprint: ibd },
-	// CIPH-pi24-4b — Hashimoto added to the setup-wizard preset list.
+	// CIPH-pi24-4b - Hashimoto added to the setup-wizard preset list.
 	{ id: 'hashimoto', labelKey: 'landing.template_hashimoto', descriptionKey: 'landing.template_hashimoto_desc', icon: 'droplet', color: DATA_6, blueprint: hashimoto },
-	// CIPH-pi24-4c — Rheumatoid arthritis added to the setup-wizard preset list.
+	// CIPH-pi24-4c - Rheumatoid arthritis added to the setup-wizard preset list.
 	{ id: 'rheumatoid_arthritis', labelKey: 'landing.template_rheumatoid_arthritis', descriptionKey: 'landing.template_rheumatoid_arthritis_desc', icon: 'flame', color: DATA_1, blueprint: rheumatoid_arthritis },
 	// Custom
 	{ id: 'custom', labelKey: 'landing.template_custom', descriptionKey: 'landing.template_custom_desc', icon: 'settings', color: DATA_5, blueprint: custom },

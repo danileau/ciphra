@@ -1,5 +1,5 @@
 /**
- * CIPH-891 — Palette migration audit.
+ * CIPH-891 - Palette migration audit.
  *
  * Asserts the cohort-aware semantic tokens (`--accent`, `--accent-info`,
  * `--accent-calm`, `--accent-neutral` and their `-rgb` siblings) are
@@ -38,7 +38,7 @@ const ACCENT_TOKENS = [
 	'--accent-neutral-rgb',
 ] as const;
 
-describe('CIPH-891 — accent semantic tokens declared in :root', () => {
+describe('CIPH-891 - accent semantic tokens declared in :root', () => {
 	it.each(ACCENT_TOKENS)('%s is declared with a value', (token) => {
 		// Match `<token>:` followed by anything up to a `;` on the same
 		// or next line. Robust against indentation + multiline values.
@@ -50,7 +50,7 @@ describe('CIPH-891 — accent semantic tokens declared in :root', () => {
 	});
 });
 
-describe('CIPH-891 — every cohort has a [data-cohort] accent override block', () => {
+describe('CIPH-891 - every cohort has a [data-cohort] accent override block', () => {
 	it.each(ALL_COHORTS_PALETTE)(
 		'cohort %s declares all 8 accent tokens under [data-cohort="%s"]',
 		(cohort) => {
@@ -75,7 +75,7 @@ describe('CIPH-891 — every cohort has a [data-cohort] accent override block', 
 	);
 });
 
-describe('CIPH-891 — cohort RGB triples in app.css match COHORT_PALETTE_RGB', () => {
+describe('CIPH-891 - cohort RGB triples in app.css match COHORT_PALETTE_RGB', () => {
 	it.each(ALL_COHORTS_PALETTE)(
 		'cohort %s rgb declarations match the JS matrix',
 		(cohort) => {
@@ -95,7 +95,7 @@ describe('CIPH-891 — cohort RGB triples in app.css match COHORT_PALETTE_RGB', 
 	);
 });
 
-describe('CIPH-891 — high-leverage primitives migrated to --accent', () => {
+describe('CIPH-891 - high-leverage primitives migrated to --accent', () => {
 	// These are the chrome primitives migrated in CIPH-891. Each test
 	// asserts the source contains a `var(--accent)` reference, proving
 	// the migration landed and didn't get reverted.

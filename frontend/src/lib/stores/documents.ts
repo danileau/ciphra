@@ -16,7 +16,7 @@ import {
 } from '#lib/outbox.ts';
 
 /**
- * What the last load/save failed at, as a code — the shell translates it.
+ * What the last load/save failed at, as a code - the shell translates it.
  * These used to be English literals rendered raw in every locale.
  */
 export type DocumentsError = 'load' | 'save' | 'update';
@@ -27,7 +27,7 @@ export const documentsError = writable<DocumentsError | null>(null);
  * withholding (diary + entries the patient locked). Zero when looking at your
  * own vault.
  *
- * The caregiver banner tells them the number exists — CIPH-726's point is that
+ * The caregiver banner tells them the number exists - CIPH-726's point is that
  * a caregiver has to know they are seeing a partial record, or they will read
  * a quiet week as a quiet week. It used to count them out of `$documents`,
  * which only worked because the filter it was describing did not exist.
@@ -66,7 +66,7 @@ function resolveVault(): VaultCtx {
 		// `activeVault` from sessionStorage before the links arrive) or no
 		// longer exists. This used to fall back to the user's OWN vault: the
 		// caregiver's data rendered under the patient's banner, and the next
-		// write went to the wrong account. No key instead — reads and writes
+		// write went to the wrong account. No key instead - reads and writes
 		// refuse until the links load, and the shell snaps an unknown vault
 		// back to "own" once it knows.
 		return { masterKey: null, sourceUserId: active, cacheKey: `${uname}:linked:${active}`, username: uname };
@@ -84,7 +84,7 @@ function resolveVault(): VaultCtx {
 // A write should be queued (not failed) only when the server is genuinely
 // unreachable: a thrown fetch error, the device reporting offline, or the
 // service worker's 503 "offline" stub / a transient 5xx. Real client errors
-// (401 auth, 400 malformed) are NOT queued — they surface as failures.
+// (401 auth, 400 malformed) are NOT queued - they surface as failures.
 
 function isNetworkError(e: unknown): boolean {
 	if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
@@ -120,7 +120,7 @@ export const BATCH_MAX_BYTES = 1.5 * 1024 * 1024;
 /**
  * Split `items` into runs of at most `maxCount` whose serialised JSON array
  * stays within `maxBytes`. An item that is too big on its own still gets a
- * run of its own — the server is the one to refuse it, not this function.
+ * run of its own - the server is the one to refuse it, not this function.
  */
 export function chunkForBatch<T>(items: T[], maxCount = BATCH_MAX_DOCS, maxBytes = BATCH_MAX_BYTES): T[][] {
 	// `{"documents":[]}` around the array, and a comma between items.
@@ -148,7 +148,7 @@ export function chunkForBatch<T>(items: T[], maxCount = BATCH_MAX_DOCS, maxBytes
 // The share-class reconcile after a load (see reconcileShareClasses) decides
 // from a snapshot. If an owner write lands between the snapshot and the
 // reconcile, the reconcile would stamp the OLD plaintext's class over the
-// new one — the privacy-relevant case being "just marked private, then
+// new one - the privacy-relevant case being "just marked private, then
 // reclassified shareable". So: writes to the own vault are counted, a
 // reconcile only runs when none started since the snapshot was taken, and a
 // write that starts while a reconcile call is on the wire waits for it.
@@ -157,7 +157,7 @@ let ownWritesInFlight = 0;
 let classifying: Promise<unknown> | null = null;
 
 async function ownWrite<T>(sourceUserId: number | null | undefined, send: () => Promise<T>): Promise<T> {
-	// A caregiver's write never carries a class — the server forces it.
+	// A caregiver's write never carries a class - the server forces it.
 	if (sourceUserId != null) return send();
 	ownWriteSeq++;
 	ownWritesInFlight++;
@@ -187,10 +187,10 @@ function createDocStore() {
 	let loading = false;
 	// The promise of the currently-running load(), shared with concurrent
 	// callers so they await the SAME fetch instead of resolving instantly.
-	// Resolves to `true` only when the server fetch actually succeeded — a
+	// Resolves to `true` only when the server fetch actually succeeded - a
 	// failed/early-returned load resolves `false` so callers can distinguish
 	// "loaded, genuinely no documents" from "couldn't load" (the latter must
-	// NOT be treated as an authoritative empty vault — see the layout's
+	// NOT be treated as an authoritative empty vault - see the layout's
 	// setup-redirect guard).
 	let inFlight: Promise<boolean> | null = null;
 	// cacheKey (vault identity) of the in-flight load. A load for a DIFFERENT
@@ -240,13 +240,13 @@ function createDocStore() {
 			if (doc.data?.type === 'family_link') continue;
 			// The patient's diary and locked entries are not the caregiver's to
 			// read. Dropped before `freshCache` so they are not written to this
-			// device either — `putDocs` replaces the partition, so a cache from
+			// device either - `putDocs` replaces the partition, so a cache from
 			// before this filter is purged on the first successful load.
 			//
 			// This is a client-side control: the grant re-wraps the patient's
 			// master key, so the ciphertext still arrives and is still
 			// decryptable here. Making it a real boundary means not sending
-			// those rows at all — see the per-grant scope work.
+			// those rows at all - see the per-grant scope work.
 			if (linked && !isVisibleUnderMask(doc, shareMask)) {
 				hidden++;
 				continue;
@@ -268,7 +268,7 @@ function createDocStore() {
 	 * writes stay visible across reloads while still offline. Creates appear as
 	 * pending rows; updates replace the live doc's data; removes hide it. Only
 	 * the active vault's records (matching cacheKey) are applied. Ciphertext is
-	 * decrypted here with the in-memory master key — nothing plaintext is read
+	 * decrypted here with the in-memory master key - nothing plaintext is read
 	 * from the outbox at rest.
 	 */
 	async function applyOutbox(
@@ -327,7 +327,7 @@ function createDocStore() {
 					_tempId: r.tempId,
 				});
 			} catch {
-				// Undecryptable record (wrong vault) — leave it queued, skip render.
+				// Undecryptable record (wrong vault) - leave it queued, skip render.
 			}
 		}
 		// Newest queued create first; server docs keep their order after.
@@ -342,8 +342,8 @@ function createDocStore() {
 	 *
 	 * Two ways they drift. Everything written before the sharing scope
 	 * existed carries NULL, which the server reads as not-shareable. And a
-	 * write that did not carry the class — an offline edit queued by an
-	 * older build, or a caregiver editing an entry — leaves the old class in
+	 * write that did not carry the class - an offline edit queued by an
+	 * older build, or a caregiver editing an entry - leaves the old class in
 	 * place (the PUT keeps it via COALESCE): an entry locked while offline
 	 * synced still SHAREABLE and was served to a narrow-scope caregiver.
 	 * Only the owner can repair either: the class comes from the plaintext,
@@ -351,7 +351,7 @@ function createDocStore() {
 	 *
 	 * `seqAtFetch` is the own-write generation when the GET went out, or -1
 	 * if a write was already in flight then (the snapshot may be stale). The
-	 * pass stops the moment an owner write has started since — see
+	 * pass stops the moment an owner write has started since - see
 	 * `ownWrite`. Runs after the owner's own load, never on a linked vault.
 	 * Failures are swallowed: it is a repair pass, and the next load retries.
 	 */
@@ -360,7 +360,7 @@ function createDocStore() {
 		const pending: { id: number; share_class: number }[] = [];
 		for (const raw of rawDocs) {
 			const doc = byId.get(raw.id);
-			if (!doc?.data) continue; // undecryptable or family_link — leave it alone
+			if (!doc?.data) continue; // undecryptable or family_link - leave it alone
 			const wanted = shareClassOf(doc.data);
 			if (raw.share_class === wanted) continue;
 			pending.push({ id: raw.id, share_class: wanted });
@@ -378,7 +378,7 @@ function createDocStore() {
 				classifying = call;
 				await call;
 			} catch {
-				return; // offline or refused — the next load retries
+				return; // offline or refused - the next load retries
 			} finally {
 				if (classifying === call) classifying = null;
 			}
@@ -399,7 +399,7 @@ function createDocStore() {
 	/**
 	 * The class a queued write must replay with. Own vault only: the flush
 	 * has only ciphertext, and a PUT without a class keeps the server's old
-	 * one. A caregiver's write never carries a class — the server forces
+	 * one. A caregiver's write never carries a class - the server forces
 	 * those shareable and would ignore it anyway.
 	 */
 	function queuedShareClass(data: any, ctx: VaultCtx): number | undefined {
@@ -490,7 +490,7 @@ function createDocStore() {
 			for (const r of stale) await outboxDequeue(r.tempId);
 			await refreshPendingCount(ctx.username);
 		} catch {
-			// Best effort — the worst case is the old behaviour.
+			// Best effort - the worst case is the old behaviour.
 		}
 	}
 
@@ -531,7 +531,7 @@ function createDocStore() {
 	 *   written), and api.ts has already told the shell, which snaps the
 	 *   switcher back and says access was removed.
 	 * - 429 `quota_exceeded`: the vault owner is at the document cap. Kept
-	 *   queued — dropping someone's entries is not ours to decide — set
+	 *   queued - dropping someone's entries is not ours to decide - set
 	 *   aside, and announced once.
 	 * - Anything else retryable: that vault waits for the next trigger.
 	 * - No response at all, or a 401: the network or the session is gone for
@@ -560,7 +560,7 @@ function createDocStore() {
 			try {
 				res = await sendQueued(rec);
 			} catch {
-				break; // network dropped mid-drain, or unexpected — retry on the next trigger
+				break; // network dropped mid-drain, or unexpected - retry on the next trigger
 			}
 			try {
 				// A remove whose target is already gone is a success.
@@ -593,7 +593,7 @@ function createDocStore() {
 				await outboxDequeue(rec.tempId);
 				changed++;
 			} catch {
-				break; // the outbox itself failed — stop, retry on the next trigger
+				break; // the outbox itself failed - stop, retry on the next trigger
 			}
 		}
 
@@ -617,7 +617,7 @@ function createDocStore() {
 			// Concurrent callers (the layout's post-login load + a page
 			// component's own onMount load) must AWAIT the same in-flight fetch.
 			// The old `if (loading) return;` resolved the second caller's
-			// promise instantly while $documents was still empty — so the
+			// promise instantly while $documents was still empty - so the
 			// dashboard flipped `loaded=true` with no blueprint yet and rendered
 			// its "no profile yet" onboarding state until a manual refresh.
 			// Capture the vault context ONCE so a mid-load activeVault change
@@ -627,7 +627,7 @@ function createDocStore() {
 			// Concurrent SAME-vault callers (layout post-login load + a page's
 			// onMount load) AWAIT the same in-flight fetch. A DIFFERENT vault
 			// (caregiver switched mid-load) must NOT piggyback on the previous
-			// vault's load — wait for it to settle, then run a fresh one.
+			// vault's load - wait for it to settle, then run a fresh one.
 			if (loading) {
 				if (inFlightKey === ctx.cacheKey) return inFlight ?? Promise.resolve(false);
 				try { await inFlight; } catch { /* settle the prior vault's load */ }
@@ -639,7 +639,7 @@ function createDocStore() {
 			if (!masterKey) return false;
 			const linked = sourceUserId != null;
 			// Narrow until the server says otherwise. The client filter is
-			// defence in depth behind the server's own WHERE clause — if it
+			// defence in depth behind the server's own WHERE clause - if it
 			// defaulted wide, a stale response would show what a narrow grant
 			// must not.
 			let shareMask = SHARE_MASK_SHARED_ONLY;
@@ -690,7 +690,7 @@ function createDocStore() {
 				const tFetch = performance.now();
 				if (res.ok) {
 					// The grant's scope and the count it withholds are the
-					// server's to state — it is the only party that can see
+					// server's to state - it is the only party that can see
 					// both sides of the filter.
 					if (linked && typeof res.data.share_mask === 'number') {
 						shareMask = res.data.share_mask as number;
@@ -757,7 +757,7 @@ function createDocStore() {
 		 * that save many documents in a row and reload once at the end.
 		 *
 		 * INC-001 rehearsal: the migration's per-document fallback path saved
-		 * 37 documents and reloaded after every single one — 74 requests where
+		 * 37 documents and reloaded after every single one - 74 requests where
 		 * 37 would do, against an nginx `burst=20`. Half of them 503'd, the
 		 * import aborted, and the user had to click "import" four times to get
 		 * their data in.
@@ -778,7 +778,7 @@ function createDocStore() {
 					: api.storeDocument(encrypted, shareClassOf(data)));
 				if (res.ok) {
 					documentsError.set(null);
-					// CIPH-767e — sync indicator: notify the UI that a successful
+					// CIPH-767e - sync indicator: notify the UI that a successful
 					// save round-trip to the server completed so the layout can
 					// surface a brief "Synced" toast.
 					if (browser) {
@@ -796,11 +796,11 @@ function createDocStore() {
 				return false;
 			}
 		},
-		// Track-3 3.4 — bulk create for the migration import. SELF-VAULT ONLY
+		// Track-3 3.4 - bulk create for the migration import. SELF-VAULT ONLY
 		// (migration imports into your own new account; no family batch path).
 		// Encrypts each item with the master key, posts one batch, and returns
 		// the server's per-item results (status created|skipped|error) aligned to
-		// the input order. NOT offline-queued — migration is an online,
+		// the input order. NOT offline-queued - migration is an online,
 		// resumable-via-client_key flow, and queueing partial batches would
 		// muddy the idempotency story. Falls back to per-doc save() at the call
 		// site if this returns ok:false.
@@ -842,7 +842,7 @@ function createDocStore() {
 					status = res.status;
 					if (!res.ok) {
 						// Don't shout "failed to save" at the user for a retryable
-						// overload — the caller decides, and it will simply wait.
+						// overload - the caller decides, and it will simply wait.
 						if (!isRetryableStatus(res.status)) documentsError.set('save');
 						return { ok: false, status: res.status, results: [] };
 					}
@@ -869,7 +869,7 @@ function createDocStore() {
 			}
 			// Editing a not-yet-synced offline create: mutate its queued
 			// ciphertext in place rather than hitting the server with a temp id.
-			// The class travels with it — the create replays with whatever the
+			// The class travels with it - the create replays with whatever the
 			// record says, and "locked it before it synced" must stick.
 			if (id < 0) {
 				const tempId = tempIdOf(id);
@@ -938,7 +938,7 @@ function createDocStore() {
 		 *
 		 * Single-flight: `online` and `visibilitychange` fire together when a
 		 * phone wakes, and two overlapping drains each POSTed the same queued
-		 * create — a duplicate document per offline entry. A call that arrives
+		 * create - a duplicate document per offline entry. A call that arrives
 		 * mid-drain shares the running promise and earns one more pass after
 		 * it, so a write queued in the meantime is not left waiting for the
 		 * next trigger.

@@ -1,5 +1,5 @@
 /**
- * CIPH-pi22-C-1 — wordlist coverage closing the PI v21 carryover gap.
+ * CIPH-pi22-C-1 - wordlist coverage closing the PI v21 carryover gap.
  *
  * Recovery-code format validation moved client-side in the zero-knowledge
  * refactor (PI v21 LB-4b-2): server.py no longer validates code format,
@@ -11,14 +11,14 @@
  * Pinning the validate/generate round-trip + the 12-word + checksum
  * contract here means a future refactor of WORDLIST, the checksum math,
  * or the `.toLowerCase().trim().split` normalisation has to break a test
- * to ship — protects the recovery-code path that personas Anna (bipolar,
+ * to ship - protects the recovery-code path that personas Anna (bipolar,
  * dose-stable on lithium) and Hans (epilepsy, multi-AED) both rely on
  * for cross-device unlock.
  */
 import { describe, expect, it } from 'vitest';
 import { generateRecoveryCode, validateRecoveryCode, WORDLIST } from '#lib/wordlist.ts';
 
-describe('validateRecoveryCode — happy path', () => {
+describe('validateRecoveryCode - happy path', () => {
 	it('accepts a freshly generated code', () => {
 		// Round-trip: the generator and validator must agree on the
 		// checksum semantics, otherwise the user gets a code they can't
@@ -47,13 +47,13 @@ describe('validateRecoveryCode — happy path', () => {
 		const code = generateRecoveryCode();
 		expect(validateRecoveryCode('  ' + code + '  ')).toBe(true);
 		// Multiple whitespace chars between words split the same as single
-		// — the regex `\s+` collapses them.
+		// - the regex `\s+` collapses them.
 		const padded = code.split(' ').join('   \t  ');
 		expect(validateRecoveryCode(padded)).toBe(true);
 	});
 });
 
-describe('validateRecoveryCode — rejection paths', () => {
+describe('validateRecoveryCode - rejection paths', () => {
 	it('rejects the empty string', () => {
 		expect(validateRecoveryCode('')).toBe(false);
 	});
@@ -79,7 +79,7 @@ describe('validateRecoveryCode — rejection paths', () => {
 		const code = generateRecoveryCode();
 		const words = code.split(' ');
 		// Replace a middle word with an English word that is NOT in WORDLIST.
-		// Pick something visibly absent — "xerox" is not in the 300-word list.
+		// Pick something visibly absent - "xerox" is not in the 300-word list.
 		const broken = [...words];
 		broken[5] = 'xerox';
 		expect(validateRecoveryCode(broken.join(' '))).toBe(false);
@@ -89,7 +89,7 @@ describe('validateRecoveryCode — rejection paths', () => {
 		const code = generateRecoveryCode();
 		const words = code.split(' ');
 		const correctChecksum = words[11];
-		// Pick a different wordlist word for the checksum slot — has to
+		// Pick a different wordlist word for the checksum slot - has to
 		// be different from the real one, so swap to whatever isn't it.
 		const wrongChecksum = WORDLIST.find((w) => w !== correctChecksum)!;
 		words[11] = wrongChecksum;
@@ -97,7 +97,7 @@ describe('validateRecoveryCode — rejection paths', () => {
 	});
 
 	it('rejects punctuation injected between words', () => {
-		// Comma/period would NOT split via \s+ — they stay part of the word
+		// Comma/period would NOT split via \s+ - they stay part of the word
 		// and the wordlist membership check fails. Validates the regex
 		// behaviour explicitly so a future "be more lenient" refactor
 		// doesn't accidentally accept "able, acid, aged ..." as 12 words.
@@ -116,7 +116,7 @@ describe('validateRecoveryCode — rejection paths', () => {
 		// Result must reject because the checksum no longer matches.
 		const code = generateRecoveryCode();
 		const words = code.split(' ');
-		// Swap words[0] and words[1] — changes the prefix sum if those
+		// Swap words[0] and words[1] - changes the prefix sum if those
 		// words have different WORDLIST indices.
 		const a = WORDLIST.indexOf(words[0]);
 		const b = WORDLIST.indexOf(words[1]);
@@ -129,7 +129,7 @@ describe('validateRecoveryCode — rejection paths', () => {
 			const expectedChecksum = WORDLIST[newPrefixSum % WORDLIST.length];
 			// If swapping happened to produce the same checksum (rare, but
 			// possible when (b - a) is a multiple of WORDLIST.length), the
-			// test wouldn't be meaningful — assert the swap actually changed
+			// test wouldn't be meaningful - assert the swap actually changed
 			// the expected checksum first.
 			if (expectedChecksum !== words[11]) {
 				expect(validateRecoveryCode(words.join(' '))).toBe(false);

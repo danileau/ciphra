@@ -8,15 +8,15 @@
 
 ## Was ciphra ist
 
-Ein Privacy-First-Gesundheitsbegleiter mit Ende-zu-Ende-Verschlüsselung. Der Server kann die Nutzerdaten mathematisch nicht entschlüsseln. Ursprünglich entstanden aus [epilepc](https://epilepc.ch), einem 7 Jahre alten Symfony-Epilepsie-Tracker (Diplomarbeit), öffnet ciphra das Konzept für jede Gesundheitssituation — Epilepsie, Migräne, Diabetes, chronische Schmerzen oder alles, was ein Patient oder eine betreuende Person täglich dokumentieren muss.
+Ein Privacy-First-Gesundheitsbegleiter mit Ende-zu-Ende-Verschlüsselung. Der Server kann die Nutzerdaten mathematisch nicht entschlüsseln. Ursprünglich entstanden aus [epilepc](https://epilepc.ch), einem 7 Jahre alten Symfony-Epilepsie-Tracker (Diplomarbeit), öffnet ciphra das Konzept für jede Gesundheitssituation - Epilepsie, Migräne, Diabetes, chronische Schmerzen oder alles, was ein Patient oder eine betreuende Person täglich dokumentieren muss.
 
 ### Kernversprechen
 
 - **3 Minuten pro Abend** um den Tag zu dokumentieren (Symptome, Anfälle, Medikamente, Auslöser, Notizen)
-- **Deine Daten, dein Schlüssel** — E2E-verschlüsselt, Zero-Knowledge-Server
-- **Zeig deinem Arzt ein Raster** — Monatsbericht, den er in Sekunden erfassen kann
-- **Funktioniert offline** — PWA, verschlüsselter lokaler Cache, synchronisiert bei Verbindung
-- **Keine Wellness-App** — ein ernsthaftes, funktionales Werkzeug für Menschen, die reale Erkrankungen managen
+- **Deine Daten, dein Schlüssel** - E2E-verschlüsselt, Zero-Knowledge-Server
+- **Zeig deinem Arzt ein Raster** - Monatsbericht, den er in Sekunden erfassen kann
+- **Funktioniert offline** - PWA, verschlüsselter lokaler Cache, synchronisiert bei Verbindung
+- **Keine Wellness-App** - ein ernsthaftes, funktionales Werkzeug für Menschen, die reale Erkrankungen managen
 
 ---
 
@@ -24,7 +24,7 @@ Ein Privacy-First-Gesundheitsbegleiter mit Ende-zu-Ende-Verschlüsselung. Der Se
 
 ### Die App (Symfony 5.4, PHP)
 - 6 Entitäten: User, Seizure, Medication, Diaryentry, Event, Seizuretype
-- Serverseitige Verschlüsselung (Defuse via DoctrineEncryptBundle — Server hält den Schlüssel)
+- Serverseitige Verschlüsselung (Defuse via DoctrineEncryptBundle - Server hält den Schlüssel)
 - Bootstrap 4 / SB Admin 2 / jQuery / DataTables / Chart.js
 - Mehrsprachig: DE, EN, IT, FR
 - 11 Controller, 4 Security Voters, Doctrine ORM + MariaDB
@@ -150,7 +150,7 @@ Statische Testseiten unter `/home/danileau/work/epilepc/ui-test/` demonstrieren 
 
 Jedes bedient einen anderen Moment im Tag des Nutzers:
 
-#### A: Companion ("Heute") — Morgen-Check-in
+#### A: Companion ("Heute") - Morgen-Check-in
 `concept-companion.html`
 - Begrüssung + Datum
 - Anfallsfreier Streak-Zähler (Tage seit letztem, persönlicher Rekord)
@@ -161,7 +161,7 @@ Jedes bedient einen anderen Moment im Tag des Nutzers:
 - Wochen-Minivisualisierung (7-Tage farbige Blockansicht)
 - Kommende Termine
 
-#### B: Tagesprotokoll ("Protokoll") — Abendlicher 3-Min-Log
+#### B: Tagesprotokoll ("Protokoll") - Abendlicher 3-Min-Log
 `concept-tagesprotokoll.html`
 - Toggle-Chips für Symptome gruppiert nach Kategorie (Verhalten, Körperlich, Schlaf)
 - Anfallszähler mit +/- Steppern und Zeit-Chips
@@ -169,10 +169,10 @@ Jedes bedient einen anderen Moment im Tag des Nutzers:
 - Medikamenten-Checkliste (tägliche Standard- + Bedarfsmedikation)
 - Vitalzeichen-Bereich (BD, Puls, O2, Gewicht, Temperatur, Neurofeedback)
 - Notizen-Textfeld
-- **Monatsraster-Ansicht**: HTML-Tabelle nach Alexandras Excel-Vorbild — Zeilen=Tage, Spalten=Symptome/Medikamente/Auslöser, Summen + Prozente am Ende
+- **Monatsraster-Ansicht**: HTML-Tabelle nach Alexandras Excel-Vorbild - Zeilen=Tage, Spalten=Symptome/Medikamente/Auslöser, Summen + Prozente am Ende
 - PDF-Export-Button
 
-#### C: Kalender ("Kalender") — Mustererkennung
+#### C: Kalender ("Kalender") - Mustererkennung
 `concept-calendar.html`
 - Monatsraster mit farbcodierten Punkten pro Tag
 - Medikamenten-Bänder als Gantt-Balken unter dem Kalender
@@ -182,7 +182,7 @@ Jedes bedient einen anderen Moment im Tag des Nutzers:
 - Zwei-Panel-Layout (Kalender links, Detail rechts) auf Desktop
 - Bottom Sheet auf Mobile
 
-#### D: Stream ("Stream") — Verlauf durchblättern
+#### D: Stream ("Stream") - Verlauf durchblättern
 `concept-stream.html`
 - Einheitlicher chronologischer Feed aller Eintragstypen
 - Filter-Tabs (Alle / Anfälle / Medikation / Tagebuch / Ereignisse)
@@ -213,7 +213,7 @@ Nutzer wählen ihre Standard-Ansicht in den Einstellungen. Alle Ansichten jederz
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  FRONTEND (PWA — installierbar, funktioniert offline)   │
+│  FRONTEND (PWA - installierbar, funktioniert offline)   │
 │  SvelteKit + TypeScript + Tailwind CSS                  │
 │                                                          │
 │  ┌──────────┐  ┌──────────┐  ┌───────────────────────┐ │
@@ -314,7 +314,7 @@ Bestehende epilepc-Nutzer migrieren mit einem einmaligen Import:
 4. Nutzer meldet sich bei ciphra an (neue App)
 5. Client verschlüsselt jeden Datensatz mit dem NEUEN E2E-Master-Key
 6. Upload der verschlüsselten Blobs zum ciphra-Backend
-7. Fertig — alte Daten nun E2E-verschlüsselt im neuen System
+7. Fertig - alte Daten nun E2E-verschlüsselt im neuen System
 
 epilepc läuft weiter für Nutzer, die nicht migrieren. Kein erzwungener Umstieg.
 
@@ -322,7 +322,7 @@ epilepc läuft weiter für Nutzer, die nicht migrieren. Kein erzwungener Umstieg
 
 ## Implementierungsphasen
 
-### Phase 1 — Kern-App
+### Phase 1 - Kern-App
 - SvelteKit-Projekt aufsetzen + Tailwind + TypeScript
 - WebCrypto E2E-Verschlüsselung (epi-2-Krypto nach JS portieren)
 - Auth-Flow: Registrierung (mit Recovery Code), Login, Passwort-Wiederherstellung
@@ -331,21 +331,21 @@ epilepc läuft weiter für Nutzer, die nicht migrieren. Kein erzwungener Umstieg
 - Tagesprotokoll-Ansicht (Abend-Log + Monatsraster)
 - Verschlüsselter IndexedDB-lokaler Cache
 
-### Phase 2 — Vollständige Ansichten
+### Phase 2 - Vollständige Ansichten
 - Kalender-Ansicht
 - Stream-Ansicht
 - Klassische/Admin-Ansicht (Fallback)
 - PDF-Export (browserseitig)
 - Monatsraster-Bericht (Alexandras Anwendungsfall)
 
-### Phase 3 — Plattform
+### Phase 3 - Plattform
 - PWA-Installation (Startbildschirm, Offline-Sync)
 - Migrationstool (Import von epilepc v1)
 - Betreuungs-Konten (eine Person dokumentiert für eine andere)
-- Mehrsprachigkeit (DE/EN/IT/FR — bestehende Übersetzungen portieren)
+- Mehrsprachigkeit (DE/EN/IT/FR - bestehende Übersetzungen portieren)
 - 2FA
 
-### Phase 4 — Offene Gesundheitsplattform
+### Phase 4 - Offene Gesundheitsplattform
 - Konfigurierbare Zustandsvorlagen (Epilepsie, Migräne, Diabetes...)
 - Teilbare verschlüsselte Nur-Lese-Berichte (zeitbegrenzter Link für Ärzte)
 - Native Mobile Wrapper (Capacitor) falls PWA nicht reicht
@@ -374,9 +374,9 @@ epilepc läuft weiter für Nutzer, die nicht migrieren. Kein erzwungener Umstieg
 
 | Domain | Status |
 |---|---|
-| **ciphra.ch** | Verfügbar (RDAP-geprüft, wahrscheinlich — kein DNS, erfundenes Wort) |
+| **ciphra.ch** | Verfügbar (RDAP-geprüft, wahrscheinlich - kein DNS, erfundenes Wort) |
 | **ciphra.app** | Verfügbar (WHOIS-geprüft) |
 
 ---
 
-*ciphra — verschlüsselt by design.*
+*ciphra - verschlüsselt by design.*

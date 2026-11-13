@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ciphra deploy wizard — the single entry point for deploying ciphra.
+# ciphra deploy wizard - the single entry point for deploying ciphra.
 #
 # It answers the two questions the raw `git tag deploy-<sha>` flow doesn't,
 # then does the deploy itself (tag → push → health poll):
@@ -11,17 +11,17 @@
 #   2. IS THIS IN A RELEASE?  → warns when the commit carries changelog
 #      fragments no release has compiled yet, or when its VERSION was never
 #      tagged (v1.4.0 sat untagged for three days, with every compare link in
-#      the user-facing changelog dead, and nothing said so). Warnings only —
+#      the user-facing changelog dead, and nothing said so). Warnings only -
 #      shipping ahead of a release is a legitimate choice, an unnoticed one
 #      is not. See scripts/release-state.sh.
 #   3. AM I ALLOWED?  → reads your GitHub permission on the repo. The deploy
-#      gate is repo *write* access (the trigger is `git push` of a tag —
+#      gate is repo *write* access (the trigger is `git push` of a tag -
 #      "repo write = operator", per ciphra-autodeploy). Read-only collaborators
 #      get a view-only wizard with the deploy actions disabled and explained.
 #
 # Safety (mirrors the old scripts/deploy.sh, now folded in): only commits that
 # are on origin/main AND have a green+signed release-images build are offered;
-# the tag is ANNOTATED (so rollback to an older commit still sorts newest — the
+# the tag is ANNOTATED (so rollback to an older commit still sorts newest - the
 # VPS selects by `--sort=-creatordate`); every push needs an explicit y/N.
 #
 # The VPS side (ciphra-deploy.timer → golive/deploy/ciphra-autodeploy, ~3 min)
@@ -52,7 +52,7 @@ fi
 die() { echo "${RED}✗ $*${R}" >&2; exit 1; }
 hr()  { printf '%s\n' "${DIM}────────────────────────────────────────────────────────────${R}"; }
 
-# release_state <sha> — what is about to ship, and whether it is labelled.
+# release_state <sha> - what is about to ship, and whether it is labelled.
 # Never blocks: it prints, the y/N below decides. Kept in its own script so it
 # can be tested without driving the wizard (scripts/test-release-state.sh).
 release_state() {
@@ -64,14 +64,14 @@ release_state() {
   if [ -n "$out" ]; then printf '%s\n' "$out"; echo; fi
 }
 
-# do_deploy <sha> — the actual production trigger. Assumes the caller already
+# do_deploy <sha> - the actual production trigger. Assumes the caller already
 # established that <sha> is on origin/main, has signed images, and (for a fresh
 # deploy) isn't tagged yet / (for rollback) has had its old tag removed.
 #   - ANNOTATED tag: the VPS selects the live deploy via --sort=-creatordate.
 #     A lightweight tag's creatordate is the *commit's* date, so a rollback to
 #     an older commit would sort below the current one and never get picked.
 #     An annotated tag carries its own tagger date → newest-pushed always wins.
-#   - Then polls prod health (two clean 200s) — the deploy auto-rolls-back on a
+#   - Then polls prod health (two clean 200s) - the deploy auto-rolls-back on a
 #     failed health check, so a sustained 200 means the new SHA took.
 do_deploy() {
   local sha="$1" tag="deploy-$1"
@@ -91,10 +91,10 @@ do_deploy() {
     local cc
     cc="$(curl -s -D - -o /dev/null --max-time 5 "$SW_URL?x=$$" | tr -d '\r' | grep -i '^cache-control:' || true)"
     echo "  ${GRN}✓${R} ${HEALTH_URL} → 200 (stable)"
-    echo "  ${DIM}sw.js ${cc:-(no cache-control header — expected: no-cache)}${R}"
+    echo "  ${DIM}sw.js ${cc:-(no cache-control header - expected: no-cache)}${R}"
     echo "${GRN}✓ deploy ${sha} is live and healthy.${R}"
   else
-    echo "${YLW}⚠ health not stable within 7 min — check 'journalctl -u ciphra-deploy -f' on the VPS.${R}" >&2
+    echo "${YLW}⚠ health not stable within 7 min - check 'journalctl -u ciphra-deploy -f' on the VPS.${R}" >&2
     echo "  ${DIM}(the deploy auto-rolls-back on a failed health check; ntfy will say FAILED.)${R}" >&2
     exit 1
   fi
@@ -114,7 +114,7 @@ command -v gh   >/dev/null || die "gh CLI required (https://cli.github.com)"
 command -v git  >/dev/null || die "git required"
 command -v curl >/dev/null || die "curl required"
 git rev-parse --git-dir >/dev/null 2>&1 || die "not a git repo"
-gh auth status >/dev/null 2>&1 || die "not logged in to gh — run: gh auth login"
+gh auth status >/dev/null 2>&1 || die "not logged in to gh - run: gh auth login"
 
 REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)" \
   || die "could not resolve repo via gh (is a GitHub remote configured?)"
@@ -124,7 +124,7 @@ echo "${B}ciphra deploy wizard${R}  ${DIM}· repo ${REPO} · you: ${ACTOR}${R}"
 hr
 
 # ----- 1) permission gate ---------------------------------------------------
-# The one bit that matters is push access — the deploy trigger IS a tag push.
+# The one bit that matters is push access - the deploy trigger IS a tag push.
 PERMS="$(gh api "repos/$REPO" -q \
   '[.permissions.admin, .permissions.maintain, .permissions.push, .permissions.triage, .permissions.pull] | @tsv' \
   2>/dev/null || echo $'false\tfalse\tfalse\tfalse\tfalse')"
@@ -139,9 +139,9 @@ elif [ "$P_PULL"     = "true" ]; then ROLE="read"
 fi
 
 if [ "$CAN_DEPLOY" -eq 1 ]; then
-  echo "${GRN}● permission: ${ROLE}${R} — you can push deploy tags (operator)."
+  echo "${GRN}● permission: ${ROLE}${R} - you can push deploy tags (operator)."
 else
-  echo "${YLW}● permission: ${ROLE}${R} — ${B}view-only${R}: no repo write, so deploy actions are disabled."
+  echo "${YLW}● permission: ${ROLE}${R} - ${B}view-only${R}: no repo write, so deploy actions are disabled."
   echo "  ${DIM}To deploy, ask an operator with write access, or get push access to ${REPO}.${R}"
 fi
 hr
@@ -215,7 +215,7 @@ for full in "${COMMITS[@]}"; do
   IDX_SHA[$i]="$sha"; IDX_OK[$i]="$ok"
   # Recommend the newest signed + undeployed commit that is NEWER than what's
   # live (i.e. above the live row in this newest-first list). Never point the
-  # default backwards to an old commit that just happened to never ship — that
+  # default backwards to an old commit that just happened to never ship - that
   # would suggest a regression. Rolling back to older commits stays a manual
   # choice via `r`.
   if [ -z "$DEFAULT" ] && [ "$past_live" -eq 0 ] && [ "$ok" -eq 1 ] && [ -z "${DEPLOYED[$sha]:-}" ]; then
@@ -230,14 +230,14 @@ echo
 if [ -n "$DEFAULT" ]; then
   echo "${DIM}» = recommended (newest signed commit not yet deployed)${R}"
 else
-  echo "${GRN}✓ up to date — the live commit is the newest signed build. Nothing new to deploy.${R}"
+  echo "${GRN}✓ up to date - the live commit is the newest signed build. Nothing new to deploy.${R}"
   echo "${DIM}  (You can still redeploy or roll back with 'r'.)${R}"
 fi
 hr
 
 # View-only users stop here.
 if [ "$CAN_DEPLOY" -ne 1 ]; then
-  echo "${YLW}View-only — nothing to select.${R} Above is the current deploy state and what's deployable."
+  echo "${YLW}View-only - nothing to select.${R} Above is the current deploy state and what's deployable."
   exit 0
 fi
 
@@ -289,7 +289,7 @@ fi
 [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$i" ] || die "invalid selection: $choice"
 SEL_SHA="${IDX_SHA[$choice]}"
 if [ "${IDX_OK[$choice]}" -ne 1 ]; then
-  echo "${RED}✗ ${SEL_SHA} has no signed images — release-images isn't green for it.${R}"
+  echo "${RED}✗ ${SEL_SHA} has no signed images - release-images isn't green for it.${R}"
   echo "  ${DIM}The VPS would refuse it (cosign verify fails). Wait for CI or pick a signed commit.${R}"
   exit 1
 fi

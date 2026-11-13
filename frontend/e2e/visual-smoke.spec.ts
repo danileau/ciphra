@@ -1,5 +1,5 @@
 /**
- * Visual smoke harness — manual eyeball, not pixel-diff.
+ * Visual smoke harness - manual eyeball, not pixel-diff.
  *
  * Registers a fresh user, completes setup with one preset, then
  * navigates the 6 high-value surfaces in both mobile (375px) and
@@ -28,7 +28,7 @@ test.describe.configure({ mode: 'serial' });
 const VIEWPORTS = [
 	{ name: 'mobile', width: 375, height: 812 },
 	{ name: 'desktop', width: 1280, height: 900 },
-	// CIPH-pi19-D — wide viewport adds the lg+ persistent calendar rail
+	// CIPH-pi19-D - wide viewport adds the lg+ persistent calendar rail
 	// to the smoke pipeline. 1440px is the common laptop/desktop width
 	// where the rail lives (≥1024px breakpoint).
 	{ name: 'wide', width: 1440, height: 900 },
@@ -44,7 +44,7 @@ const ROUTES_AUTHED = [
 ] as const;
 
 const COHORT_PRESETS = [
-	// preset matches one of the regex below — locale-agnostic.
+	// preset matches one of the regex below - locale-agnostic.
 	{ id: 'discrete', match: /epilepsy|epilepsie|epilessia/i },
 	{ id: 'cycle', match: /endometr/i },
 	{ id: 'phase', match: /bipolar/i },
@@ -68,7 +68,7 @@ async function registerAndConfigure(
 	await page.getByTestId('recovery-continue').click();
 
 	await page.goto('/setup');
-	// Role step added in ad45859 ("Track my own health" vs caregiver) —
+	// Role step added in ad45859 ("Track my own health" vs caregiver) -
 	// click through it before the preset grid appears. Locale-tolerant.
 	// Retry loop: the step is SSR'd, so a too-early click lands before
 	// hydration attaches the listener and silently does nothing.
@@ -97,7 +97,7 @@ async function registerAndConfigure(
 
 for (const cohort of COHORT_PRESETS) {
 	for (const vp of VIEWPORTS) {
-		test(`visual smoke — cohort=${cohort.id} viewport=${vp.name}`, async ({
+		test(`visual smoke - cohort=${cohort.id} viewport=${vp.name}`, async ({
 			page,
 		}) => {
 			await page.setViewportSize({ width: vp.width, height: vp.height });
@@ -121,7 +121,7 @@ for (const cohort of COHORT_PRESETS) {
 
 test.describe('public chrome', () => {
 	for (const vp of VIEWPORTS) {
-		test(`visual smoke — public viewport=${vp.name}`, async ({ page }) => {
+		test(`visual smoke - public viewport=${vp.name}`, async ({ page }) => {
 			await page.setViewportSize({ width: vp.width, height: vp.height });
 			for (const route of [
 				{ path: '/', label: 'landing' },

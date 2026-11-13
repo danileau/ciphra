@@ -1,13 +1,13 @@
 /**
- * CIPH-pi22-L-2/L-3/L-4 — app.html structural contract.
+ * CIPH-pi22-L-2/L-3/L-4 - app.html structural contract.
  *
  * Pins the canonical link, JSON-LD structured data, and noscript fallback
- * against accidental removal. app.html isn't a Svelte component — no other
+ * against accidental removal. app.html isn't a Svelte component - no other
  * test surface naturally covers it. Regex-on-source matches the discipline
  * pattern used by `pdf.kpi-glance.test.ts` and `security-doc.test.ts`.
  *
  * Open-lens scoring per `feedback_open_persona_dryrun.md`: these stories
- * ship at honest 3.5-3.9 (Anna + Hans). They are SEO/edge wins — invisible
+ * ship at honest 3.5-3.9 (Anna + Hans). They are SEO/edge wins - invisible
  * to users in normal flow but real for growth ranking + privacy-paranoid
  * edge users. Pinning them means a future "clean up app.html" sweep can't
  * silently delete the audit's findings.
@@ -86,9 +86,9 @@ describe('CIPH-pi22-L-4 noscript fallback', () => {
 	});
 
 	it('noscript explains the JS requirement positively (no "we cant" framing)', () => {
-		// Per feedback_brand_voice.md — frame encryption as an act, not as
+		// Per feedback_brand_voice.md - frame encryption as an act, not as
 		// a denial. The copy says "your password derives the encryption key
-		// in this browser tab" — not "we can't read your data without JS."
+		// in this browser tab" - not "we can't read your data without JS."
 		const m = APP_HTML.match(/<noscript>([\s\S]+?)<\/noscript>/);
 		expect(m![1]).not.toMatch(/we (cannot|can't|never)|not even (admins?|we)/i);
 	});

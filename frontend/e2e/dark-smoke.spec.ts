@@ -18,7 +18,7 @@ test.describe.configure({ mode: 'serial' });
 
 const ROUTES = ['/', '/log/today', '/journal', '/calendar', '/reports', '/settings'] as const;
 
-test('dark smoke — discrete cohort, mobile + desktop', async ({ page }) => {
+test('dark smoke - discrete cohort, mobile + desktop', async ({ page }) => {
 	// Pre-seed the preference so app.html applies dark before first paint.
 	await page.addInitScript(() => localStorage.setItem('ciphra_theme', 'dark'));
 
@@ -28,7 +28,7 @@ test('dark smoke — discrete cohort, mobile + desktop', async ({ page }) => {
 	await page.goto('/login?mode=register');
 	// The signup form renders client-side; a screenshot straight after goto
 	// sometimes caught the page before it had painted (blank PNG). Wait for
-	// the form's first field — the landmark this shot exists to show.
+	// the form's first field - the landmark this shot exists to show.
 	await page.locator('#signup-user').waitFor({ state: 'visible', timeout: 30_000 });
 	await page.screenshot({ path: 'e2e/_screenshots/dark/desktop-login.png', fullPage: true });
 
@@ -40,7 +40,7 @@ test('dark smoke — discrete cohort, mobile + desktop', async ({ page }) => {
 	await page.getByTestId('recovery-ack-checkbox').check();
 	await page.getByTestId('recovery-continue').click();
 
-	// Setup wizard: role step (SSR'd — retry until hydration), preset, next×N.
+	// Setup wizard: role step (SSR'd - retry until hydration), preset, next×N.
 	await page.goto('/setup');
 	const roleSelf = page.getByText(
 		/track my own health|eigene gesundheit dokumentieren|documenter ma propre santé|documentare la mia salute/i,

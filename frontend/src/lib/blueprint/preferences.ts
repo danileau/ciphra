@@ -19,16 +19,16 @@ const DATE_FORMAT_DEFAULT: DateFormatChoice = 'dd.mm.yyyy';
 /**
  * Render a day-precision date in the user's chosen format.
  *
- * Canonical implementation. It existed three times — VitalTrendReportsCard,
+ * Canonical implementation. It existed three times - VitalTrendReportsCard,
  * routes/reports, and a `sampleDate` in settings that showed the user a
- * preview of a format the rest of the app then applied separately — and the
+ * preview of a format the rest of the app then applied separately - and the
  * doctor PDF implemented none of them, formatting every date through
  * `toLocaleDateString` and so silently overriding an explicit setting on the
  * one artefact that leaves the device.
  *
  * Day precision only. `dateFormat` has no month-precision variant, so
  * month-and-year labels (chart axes, the report window, monthly grid titles)
- * keep locale formatting — there is no user choice to honour there.
+ * keep locale formatting - there is no user choice to honour there.
  */
 export function formatDateChoice(d: Date, choice: DateFormatChoice | undefined): string {
 	const dd = String(d.getDate()).padStart(2, '0');

@@ -8,7 +8,7 @@
  * Vital targets (a blood-pressure goal says what is being treated) moved into
  * the encrypted blueprint. The legacy `ciphra_vital_targets:<username>` key is
  * deliberately NOT wiped on logout: logout also runs when a closed browser is
- * reopened, before the user can sign in and the key can be migrated — wiping
+ * reopened, before the user can sign in and the key can be migrated - wiping
  * it there would silently lose targets. The layout migrates it and removes it
  * after the save (see vitalTargets.test.ts).
  *
@@ -22,7 +22,7 @@ import { join } from 'node:path';
 vi.mock('$app/env', () => ({ browser: true }));
 vi.mock('#lib/idb.ts', () => ({ clearAllPartitions: vi.fn(async () => {}) }));
 
-describe('auth.logout — health-derived preferences', () => {
+describe('auth.logout - health-derived preferences', () => {
 	beforeEach(() => {
 		localStorage.clear();
 		sessionStorage.clear();

@@ -1,5 +1,5 @@
 /**
- * CIPH-857 — Settings tabs enforcement.
+ * CIPH-857 - Settings tabs enforcement.
  *
  * Ensures the three tabs (account/tracking/sharing) stay wired and
  * that i18n keys exist in every locale. Static parse rather than
@@ -61,7 +61,7 @@ describe('CIPH-857 settings tabs', () => {
 	it('placebo primary-surface UI stays hidden until a consumer exists', () => {
 		// Design review 2026-06-11: the select wrote
 		// blueprint.primaryBrowseSurface but getPrimaryBrowseSurface() has
-		// zero runtime consumers — the control changed nothing. It comes
+		// zero runtime consumers - the control changed nothing. It comes
 		// back in the same PR that ships a real consumer; until then its
 		// reappearance without one is a regression.
 		expect(source).not.toContain('primary-surface-select');

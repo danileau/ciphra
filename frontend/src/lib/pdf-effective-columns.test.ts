@@ -1,5 +1,5 @@
 /**
- * CIPH-877 — PDFs + CSVs auto-expand grid columns the same way the
+ * CIPH-877 - PDFs + CSVs auto-expand grid columns the same way the
  * on-screen report does, so we never export a narrower slice than what
  * the user actually logs.
  */
@@ -36,7 +36,7 @@ const docs = [
 	{ data: { type: 'entry', date: '2026-04-03', symptoms: { rare: true },
 		episodes: { myoclonic: 1 } } },
 	{ data: { type: 'entry', date: '2026-04-05', episodes: { focal: 2 } } },
-	// Out-of-month — should not surface new columns:
+	// Out-of-month - should not surface new columns:
 	{ data: { type: 'entry', date: '2026-03-15', symptoms: { never_shown: true },
 		episodes: { absence: 5 } } },
 ] as any[];

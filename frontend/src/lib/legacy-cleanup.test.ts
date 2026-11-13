@@ -54,7 +54,7 @@ describe('sweepLegacyLocalStorage', () => {
 		for (const k of LEGACY_KEYS) {
 			// Current keys are either prefixed `ciphra_` for active client state
 			// or the sentinel itself. The legacy set is the explicit allowlist of
-			// historical names we sweep — if anyone adds a `ciphra_*` key here it
+			// historical names we sweep - if anyone adds a `ciphra_*` key here it
 			// would risk deleting live data.
 			if (k.startsWith('ciphra_')) {
 				expect(k).toBe('ciphra_dark'); // the only legacy ciphra_-prefixed key

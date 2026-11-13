@@ -1,5 +1,5 @@
 /**
- * D4 (docs-reset sprint) — documentation anti-rot guard.
+ * D4 (docs-reset sprint) - documentation anti-rot guard.
  *
  * The repository's markdown docs rotted because nothing ever checked
  * them: stale specs, dead file references, PI-cycle scratch committed by
@@ -10,7 +10,7 @@
  *     that left CONTINUE_TOMORROW.md pointing at a deleted renderer),
  *   - PI-cycle scratch gets committed to the repo.
  *
- * Mirrors `blueprint/labels-audit-doc.test.ts` — a doc guarded by a test.
+ * Mirrors `blueprint/labels-audit-doc.test.ts` - a doc guarded by a test.
  * The written half of the rule lives in docs/DEVELOPING.md (Conventions).
  */
 import { describe, it, expect } from 'vitest';
@@ -35,7 +35,7 @@ function stripCode(md: string): string {
 	return md.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '');
 }
 
-/** Markdown link targets — the `target` of every `[text](target)`. */
+/** Markdown link targets - the `target` of every `[text](target)`. */
 function linkTargets(md: string): string[] {
 	const targets: string[] = [];
 	const re = /\[[^\]]*\]\(([^)\s]+)/g;
@@ -44,7 +44,7 @@ function linkTargets(md: string): string[] {
 	return targets;
 }
 
-describe('docs-reset D4 — documentation anti-rot guard', () => {
+describe('docs-reset D4 - documentation anti-rot guard', () => {
 	it('every canonical doc exists', () => {
 		const missing = CANONICAL.filter((d) => !existsSync(join(REPO, d)));
 		expect(missing, `Missing canonical docs: ${missing.join(', ')}`).toEqual([]);
@@ -67,7 +67,7 @@ describe('docs-reset D4 — documentation anti-rot guard', () => {
 
 	it('no PI-cycle scratch is committed to the repo root or docs/', () => {
 		// PI-cycle planning notes, review memos, and session hand-offs
-		// belong in memory/, never the repo — see docs/DEVELOPING.md.
+		// belong in memory/, never the repo - see docs/DEVELOPING.md.
 		const SCRATCH = /^(PI_V|CONTINUE_)|_DOGFOOD|_REVIEW_pi|_RETRIAGE|_REPLAN/i;
 		const offenders: string[] = [];
 		for (const dir of ['', 'docs']) {

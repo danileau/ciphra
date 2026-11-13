@@ -1,5 +1,5 @@
 /**
- * ciphra — Document store tests.
+ * ciphra - Document store tests.
  *
  * The store relies heavily on Svelte runtime ($app/environment, etc.)
  * and the crypto module, so we focus on interface shape and basic

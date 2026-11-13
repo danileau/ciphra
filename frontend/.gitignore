@@ -7,7 +7,7 @@ build
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# Playwright artefacts — visual-smoke screenshots are for local
+# Playwright artefacts - visual-smoke screenshots are for local
 # eyeballing only (Phase B of the deblock plan). Don't commit them.
 e2e/_screenshots/
 playwright-report/

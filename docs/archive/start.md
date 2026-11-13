@@ -8,15 +8,15 @@
 
 ## What ciphra Is
 
-A privacy-first personal health companion with end-to-end encryption. The server mathematically cannot read user data. Originally born from [epilepc](https://epilepc.ch), a 7-year-old Symfony epilepsy tracker (diploma thesis), ciphra opens the concept to any health condition — epilepsy, migraine, diabetes, chronic pain, or anything a patient or caregiver needs to document daily.
+A privacy-first personal health companion with end-to-end encryption. The server mathematically cannot read user data. Originally born from [epilepc](https://epilepc.ch), a 7-year-old Symfony epilepsy tracker (diploma thesis), ciphra opens the concept to any health condition - epilepsy, migraine, diabetes, chronic pain, or anything a patient or caregiver needs to document daily.
 
 ### Core Promise
 
 - **3 minutes per evening** to log your day (symptoms, seizures, meds, triggers, notes)
-- **Your data, your key** — E2E encrypted, zero-knowledge server
-- **Show your doctor a grid** — monthly report they can scan in seconds
-- **Works offline** — PWA, encrypted local cache, syncs when online
-- **Not a wellness app** — a serious, functional tool for people managing real conditions
+- **Your data, your key** - E2E encrypted, zero-knowledge server
+- **Show your doctor a grid** - monthly report they can scan in seconds
+- **Works offline** - PWA, encrypted local cache, syncs when online
+- **Not a wellness app** - a serious, functional tool for people managing real conditions
 
 ---
 
@@ -24,7 +24,7 @@ A privacy-first personal health companion with end-to-end encryption. The server
 
 ### The App (Symfony 5.4, PHP)
 - 6 entities: User, Seizure, Medication, Diaryentry, Event, Seizuretype
-- Server-side encryption (Defuse via DoctrineEncryptBundle — server holds the key)
+- Server-side encryption (Defuse via DoctrineEncryptBundle - server holds the key)
 - Bootstrap 4 / SB Admin 2 / jQuery / DataTables / Chart.js
 - Multi-language: DE, EN, IT, FR
 - 11 controllers, 4 security voters, Doctrine ORM + MariaDB
@@ -150,7 +150,7 @@ Static test pages in `/home/danileau/work/epilepc/ui-test/` demonstrate every co
 
 Each serves a different moment in the user's day:
 
-#### A: Companion ("Heute") — Morning check-in
+#### A: Companion ("Heute") - Morning check-in
 `concept-companion.html`
 - Greeting + date
 - Seizure-free streak counter (days since last, personal best)
@@ -161,7 +161,7 @@ Each serves a different moment in the user's day:
 - Weekly mini-visualization (7-day colored block grid)
 - Upcoming appointments
 
-#### B: Tagesprotokoll ("Protokoll") — Evening 3-min log
+#### B: Tagesprotokoll ("Protokoll") - Evening 3-min log
 `concept-tagesprotokoll.html`
 - Toggle chips for symptoms grouped by category (Behavior, Physical, Sleep)
 - Seizure counters with +/- steppers and time chips
@@ -169,10 +169,10 @@ Each serves a different moment in the user's day:
 - Medication checklist (standard daily + as-needed)
 - Vitals section (BP, pulse, O2, weight, temp, neurofeedback)
 - Notes textarea
-- **Monthly grid view**: HTML table mirroring Alexandra's Excel — rows=days, columns=symptoms/meds/triggers, sums + percentages at bottom
+- **Monthly grid view**: HTML table mirroring Alexandra's Excel - rows=days, columns=symptoms/meds/triggers, sums + percentages at bottom
 - PDF export button
 
-#### C: Calendar ("Kalender") — Pattern recognition
+#### C: Calendar ("Kalender") - Pattern recognition
 `concept-calendar.html`
 - Month grid with color-coded dots per day
 - Medication bands as Gantt bars below calendar
@@ -182,7 +182,7 @@ Each serves a different moment in the user's day:
 - Two-panel layout (calendar left, detail right) on desktop
 - Bottom sheet on mobile
 
-#### D: Stream ("Stream") — History browsing
+#### D: Stream ("Stream") - History browsing
 `concept-stream.html`
 - Unified chronological feed of all entry types
 - Filter tabs (All / Seizures / Medication / Diary / Events)
@@ -213,7 +213,7 @@ Users choose their default view in preferences. All views available, switchable 
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  FRONTEND (PWA — installable, works offline)            │
+│  FRONTEND (PWA - installable, works offline)            │
 │  SvelteKit + TypeScript + Tailwind CSS                  │
 │                                                          │
 │  ┌──────────┐  ┌──────────┐  ┌───────────────────────┐ │
@@ -314,7 +314,7 @@ Existing epilepc users migrate with a one-time import:
 4. User logs into ciphra (new app)
 5. Client encrypts each record with their NEW E2E master key
 6. Upload encrypted blobs to ciphra backend
-7. Done — old data now E2E encrypted in new system
+7. Done - old data now E2E encrypted in new system
 
 epilepc keeps running for users who don't migrate. No forced cutover.
 
@@ -322,7 +322,7 @@ epilepc keeps running for users who don't migrate. No forced cutover.
 
 ## Implementation Phases
 
-### Phase 1 — Core App
+### Phase 1 - Core App
 - SvelteKit project scaffold + Tailwind + TypeScript
 - WebCrypto E2E encryption (port epi-2's crypto to JS)
 - Auth flow: register (with recovery code), login, password recovery
@@ -331,21 +331,21 @@ epilepc keeps running for users who don't migrate. No forced cutover.
 - Tagesprotokoll view (evening log + monthly grid)
 - Encrypted IndexedDB local cache
 
-### Phase 2 — Complete Views
+### Phase 2 - Complete Views
 - Calendar view
 - Stream view
 - Classic/admin view (fallback)
 - PDF export (browser-side)
 - Monthly grid report (Alexandra's use case)
 
-### Phase 3 — Platform
+### Phase 3 - Platform
 - PWA install (home screen, offline sync)
 - Migration tool (import from epilepc v1)
 - Caregiver accounts (one user logging for another)
-- Multi-language (DE/EN/IT/FR — port existing translations)
+- Multi-language (DE/EN/IT/FR - port existing translations)
 - 2FA
 
-### Phase 4 — Open Health Platform
+### Phase 4 - Open Health Platform
 - Configurable condition templates (epilepsy, migraine, diabetes...)
 - Shareable read-only encrypted reports (time-limited link for doctors)
 - Native mobile wrappers (Capacitor) if PWA isn't enough
@@ -374,9 +374,9 @@ epilepc keeps running for users who don't migrate. No forced cutover.
 
 | Domain | Status |
 |---|---|
-| **ciphra.ch** | Available (verified RDAP, likely — no DNS, invented word) |
+| **ciphra.ch** | Available (verified RDAP, likely - no DNS, invented word) |
 | **ciphra.app** | Available (verified WHOIS) |
 
 ---
 
-*ciphra — encrypted by design.*
+*ciphra - encrypted by design.*

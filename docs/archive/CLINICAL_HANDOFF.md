@@ -1,9 +1,9 @@
-# CLINICAL_HANDOFF.md — ciphra clinical handoff artifact (RETIRED)
+# CLINICAL_HANDOFF.md - ciphra clinical handoff artifact (RETIRED)
 
 > **RETIRED 2026-05-22.** The single-A4 model this spec mandates was tested
 > against the legacy multi-page renderer and rejected by the user:
 > *"legacy is a lot better than v2."* Rendering Hans (epilepsy, 2-year scope,
-> 87 episodes) exposed the root error — the hard 1-page constraint (§1.1) plus
+> 87 episodes) exposed the root error - the hard 1-page constraint (§1.1) plus
 > the 90-day data window (§14.7) made the export show "last 90 days (count: 1)"
 > when the user had selected 2 years, discarding 21 months including the GTC
 > and the medication change. The `pdfHandoff.ts` renderer (v1 + v2) is deleted.
@@ -14,22 +14,22 @@
 >
 > **Kept for reference only:** §1.3–§1.6 and §11.5 (the MDR analysis), §14
 > (UX dimensions), and §15 (brand identity) remain useful. §1.1 (single page)
-> and §14.7 (90-day window) are the disproven constraints — do not reinstate.
+> and §14.7 (90-day window) are the disproven constraints - do not reinstate.
 
 **Status:** RETIRED. Superseded the now-also-retired `PDF_TEMPLATE.md` and `PDF_DESIGN_SPEC.md`.
 **Provenance:**
-- v1 (2026-05-21): R1–R5 campfire + 7-split tribunal. Optimized for MDR + print + clinical correctness. Resulting render was experience-crushing — page LED with "[no note provided]", 91-cell calendar grid made sparse data look empty, gibberish 2-letter codes, US date format. User: *"this is the result of this whole idea. without this part, this deliverable being perfect, the whole application has no sense."*
+- v1 (2026-05-21): R1–R5 campfire + 7-split tribunal. Optimized for MDR + print + clinical correctness. Resulting render was experience-crushing - page LED with "[no note provided]", 91-cell calendar grid made sparse data look empty, gibberish 2-letter codes, US date format. User: *"this is the result of this whole idea. without this part, this deliverable being perfect, the whole application has no sense."*
 - v2 (2026-05-22): R1–R4 campfire with UX seats + ciphra brand identity dimension + conviction loop. All three buddies voted SOLD on the literal same mockup at R4. Replaces §3.2 calendar grid with the density-strip pattern, adds §14 (UX dimensions) and §15 (ciphra brand identity).
 
 **Mode:** Single A4 PDF, rendered client-side in the patient's browser. Zero-knowledge: the patient's vault is decrypted in-memory; the artifact never leaves the device unless the patient shares it.
 
-**Why this artifact matters:** The PDF is THE deliverable that justifies ciphra's existence. The patient labors for weeks/months producing data that lives only in their browser. This artifact is the single moment it leaves the device. It has to feel worth that whole journey — something the patient is proud to hand over, and that the clinician respects receiving. Without this deliverable being right, the whole application has no purpose.
+**Why this artifact matters:** The PDF is THE deliverable that justifies ciphra's existence. The patient labors for weeks/months producing data that lives only in their browser. This artifact is the single moment it leaves the device. It has to feel worth that whole journey - something the patient is proud to hand over, and that the clinician respects receiving. Without this deliverable being right, the whole application has no purpose.
 
 The artifact's job is to be the **clinical handoff** at the doctor visit. It is read by four audiences, in this priority order:
-1. **Specialist clinician** — 5–15 min slot, forensic reader, wants patterns not stories
-2. **Triage nurse / new clinician** — orientation, briefs the on-call in 90 seconds
-3. **Patient themselves** — reads it before the visit, wants to grok what they're handing over
-4. **Partner / family member** — non-medical, sees it in the family folder, must not be harmed or confused
+1. **Specialist clinician** - 5–15 min slot, forensic reader, wants patterns not stories
+2. **Triage nurse / new clinician** - orientation, briefs the on-call in 90 seconds
+3. **Patient themselves** - reads it before the visit, wants to grok what they're handing over
+4. **Partner / family member** - non-medical, sees it in the family folder, must not be harmed or confused
 
 Every design decision below has been weighed against all four audiences.
 
@@ -41,19 +41,19 @@ Every design decision below has been weighed against all four audiences.
 
 1.2. **Zero-knowledge.** Rendered in the patient's browser via jsPDF. No server-side template, no live API. Argon2id WASM crypto must run on a Web Worker, completing before PDF generation begins, to prevent main-thread blocking on low-end Android.
 
-1.3. **MDR-safe.** The artifact displays only patient-authored entries and raw values. No algorithmic derivation, no clinical framing, no cross-cohort correlation that implies interpretation. The disclaimer at the bottom does **not** override functional intent — behavior determines classification, not the scope statement.
+1.3. **MDR-safe.** The artifact displays only patient-authored entries and raw values. No algorithmic derivation, no clinical framing, no cross-cohort correlation that implies interpretation. The disclaimer at the bottom does **not** override functional intent - behavior determines classification, not the scope statement.
 
 1.4. **Banned wording (hard list, all locales).** These words never appear in labels, headers, axis titles, or generated copy:
 
 > trend · improvement · improving · worsening · abnormal · elevated · response · recommendation · significant · stable · delta (as a labeled frame) · trajectory · control (as in "good control") · suboptimal · adherence (as judgment) · poor · optimal · concerning · notable · spike · cluster · pattern
 
-Patient-authored free text is exempt — if the patient writes "I feel worse," it prints verbatim.
+Patient-authored free text is exempt - if the patient writes "I feel worse," it prints verbatim.
 
-1.5. **No color encodes value.** Color may encode event category at most, never severity, intensity, or quality. The artifact must survive 1-bit dithered B&W photocopy at 150dpi without semantic loss — meaning categorical distinction must be carried by **shape + label + contrast**, with color as redundant decoration only. The current cohort palette retires from the artifact.
+1.5. **No color encodes value.** Color may encode event category at most, never severity, intensity, or quality. The artifact must survive 1-bit dithered B&W photocopy at 150dpi without semantic loss - meaning categorical distinction must be carried by **shape + label + contrast**, with color as redundant decoration only. The current cohort palette retires from the artifact.
 
 1.6. **"Patient-reported" as a label is banned.** No data-quality tiering on individual data sections. Provenance lives in one scope statement at the bottom, not as a recurring label decorating sections.
 
-1.7. **Embedded Noto Sans subset** for DE/EN/FR/IT correctness. Deterministic text measurement and wrapping owned by us — `splitTextToSize` is not enough; pre-wrap all strings, truncate visibly.
+1.7. **Embedded Noto Sans subset** for DE/EN/FR/IT correctness. Deterministic text measurement and wrapping owned by us - `splitTextToSize` is not enough; pre-wrap all strings, truncate visibly.
 
 1.8. **Locale: Swiss German uses `ss` not `ß`.** Pinned by existing `swiss-orthography.test.ts`. Applies to all generated copy.
 
@@ -73,14 +73,14 @@ The cohort shell is identical across all 5 cohort families. Only block 4 (primar
 │ Notebook: {cohort label} · Export period: {range}        │
 │ Locale: {de|en|fr|it} · Timezone: Europe/Zurich         │
 ├─ 4. PRIMARY BLOCK (110mm, cohort-swappable) ─────────────┤
-│ [varies by cohort — see §3]                              │
+│ [varies by cohort - see §3]                              │
 ├─ 5. Patient notes (≤25mm, max 3 items, most recent) ────┤
 │ {date} · "{patient-authored note, ≤120 chars}"          │
 │ {date} · "..."                                          │
 │ {date} · "..."                                          │
 │ [+N not printed on this page]                            │
 ├─ 6. Unlabeled white space ──────────────────────────────┤
-│ [naturally available room — no caption, no label]        │
+│ [naturally available room - no caption, no label]        │
 ├─ 7. Scope statement (≤15mm, bottom) ─────────────────────┤
 │ This page displays patient-authored entries and raw     │
 │ values for the selected period. It does not diagnose,   │
@@ -122,21 +122,21 @@ Free T4 (pmol/L)  [same structure, ≤2 metrics per page]
 ```
 
 **Rules for vital cohorts:**
-- **Side-by-side raw values** (`Last: X · This: Y`) — never compute a delta. The patient observes the difference; the software does not.
+- **Side-by-side raw values** (`Last: X · This: Y`) - never compute a delta. The patient observes the difference; the software does not.
 - **Dots-only sparkline.** No connecting line (a line implies trajectory, which is a banned interpretation). Each dot is a measured draw. No interpolation.
 - **X-axis = per-draw absolute dates.** Not relative weeks (implies "since-the-event"). Not calendar months (loses precision).
 - **No reference range bounds.** No dashed clinical-range lines. Visual position relative to "normal" IS clinical framing.
-- **Dose-change strip is BELOW the data, on a separate axis.** Vertically aligned by date for visual coincidence — never overlaid. Treats the relationship as temporal, not causal.
+- **Dose-change strip is BELOW the data, on a separate axis.** Vertically aligned by date for visual coincidence - never overlaid. Treats the relationship as temporal, not causal.
 - Maximum 2 vital metrics per page 1. Additional metrics overflow with a `+N more values not printed on this page` suffix.
 
-### 3.2 Episode cohorts (Epilepsy, Migraine, ADHD, RA, IBD, Asthma) — v2
+### 3.2 Episode cohorts (Epilepsy, Migraine, ADHD, RA, IBD, Asthma) - v2
 
 Primary signal: **dated events with full labels, rendered as a horizontal density strip + a separate Ereignisliste section.**
 
 > **v1 design retired.** The original spec used a 91-cell calendar grid. Rendering Hans (epilepsy, 2 events / 90 days) revealed this design read as EMPTY: 89 hairline cells dominated the visual weight, 2 real events became visual dust. All three v2 campfire buddies independently flagged this. The grid is gone. The replacement preserves all v1 hard constraints (B&W safe, no color encoding, no derivation) but produces a page that reads as having content.
 
 ```
-ANFÄLLE — Letzte 90 Tage (Anzahl: 2)
+ANFÄLLE - Letzte 90 Tage (Anzahl: 2)
 [11pt bold]
 
 22. Feb ───────●──────────────────●──────────────── 22. Mai
@@ -156,8 +156,8 @@ Vorher: 2  ·  Diese Periode: 2
 **Rules for episode cohorts:**
 - **Density strip is the primary chart.** Horizontal axis from window start to window end. Each event = one filled black circle (0.9mm radius) placed at its proportional date position. Endpoint date labels at 6pt muted, just above the axis line.
 - **No calendar grid.** The 91-cell grid is retired. A page with sparse data must read as sparse-but-real, not empty. The strip is the only spatial visual; the Ereignisliste carries the per-event detail.
-- **Ereignisliste section** renders **full localized event labels** ("Anfall mit Bewusstseinsverlust", "Myoklonischer Anfall"). No 2-letter codes anywhere — clinicians don't carry decoder rings.
-- **Section title carries the count inline:** `ANFÄLLE — Letzte 90 Tage (Anzahl: N)`. The count is a derived numeric, not patient-authored — it lives in the section header at body weight, not as a hero numeric (spec §8 "no oversized numerics" holds).
+- **Ereignisliste section** renders **full localized event labels** ("Anfall mit Bewusstseinsverlust", "Myoklonischer Anfall"). No 2-letter codes anywhere - clinicians don't carry decoder rings.
+- **Section title carries the count inline:** `ANFÄLLE - Letzte 90 Tage (Anzahl: N)`. The count is a derived numeric, not patient-authored - it lives in the section header at body weight, not as a hero numeric (spec §8 "no oversized numerics" holds).
 - **Comparison row is 7pt muted, plain text:** `Vorher: P · Diese Periode: T`. Side-by-side raw counts, no delta arrow, no derivation. The doctor reads the two numbers and draws their own conclusion.
 - **Page-1 Ereignisliste cap = 8 events.** Surplus events overflow with `+N event(s) not printed on this page` suffix per §1.1. The density strip displays ALL events regardless of cap (markers are cheap).
 
@@ -166,7 +166,7 @@ Vorher: 2  ·  Diese Periode: 2
 Primary signal: **cycle days plotted on a temporal strip.**
 
 ```
-CYCLE — last 90 days
+CYCLE - last 90 days
 
 Mar:  [  ]●●●●[             ]●     [             ]
 Apr:  [●●●●  ]●     [             ●][            ]
@@ -188,7 +188,7 @@ Bleeding-day count:  Previous: 11 ·  This: 14
 Primary signal: **phase bands across time + symptom marker density.**
 
 ```
-PHASE OVERLAY — last 90 days
+PHASE OVERLAY - last 90 days
 
 Mar:  ████████░░░░░░░░░░    ░░░░░░    ▓▓▓▓
 Apr:  ▓▓▓▓░░░░░░░░    ████████    ░░░░░░░░
@@ -197,7 +197,7 @@ May:  ░░░░░░░░    ████████░░░░
 ████ = patient-marked "active" / flare
 ▓▓▓▓ = patient-marked "transition"
 ░░░░ = patient-marked "baseline"
-(Bands use stripe patterns, not color shading — B&W safe.)
+(Bands use stripe patterns, not color shading - B&W safe.)
 
 Patient-marked phases this period:
   Active:      Previous: 12 days  ·  This: 18 days
@@ -213,14 +213,14 @@ Patient-marked phases this period:
 Primary signal: **dated patient-authored entries.**
 
 ```
-DIARY ENTRIES — last 90 days  (5 most recent shown)
+DIARY ENTRIES - last 90 days  (5 most recent shown)
 
 15 May 2026
   "Tired again this morning. Walked to the post office;
    half-way I had to sit down. Felt better by lunch."
 
 08 May 2026
-  "Forgot dose yesterday — woke up confused this morning.
+  "Forgot dose yesterday - woke up confused this morning.
    Now back on schedule."
 
 02 May 2026
@@ -297,7 +297,7 @@ Locale-translated. Plain text, no fill, no border. Black-on-white only.
 - Table text: 8pt
 - Body text: 9pt
 - Section heads: 11pt
-- Top-line patient quote: 11pt (parity with section heads — anchors the page)
+- Top-line patient quote: 11pt (parity with section heads - anchors the page)
 - Scope statement: 7pt
 - Chart axis labels: 6pt
 
@@ -307,7 +307,7 @@ Locale-translated. Plain text, no fill, no border. Black-on-white only.
 - Data marker (filled): 0.55mm radius circle
 - Calendar cell border: 0.2mm
 - Axis line: 0.5mm
-- Reading-space ruling (if drawn): NONE — keep as raw white space
+- Reading-space ruling (if drawn): NONE - keep as raw white space
 
 6.7. **No autoTable for the primary block.** Primary block uses manual `rect()` + `text()` for full control over white space and B&W fidelity. autoTable is allowed for the side-by-side raw-value rows (vital cohorts) and for the patient-notes block, but with `theme: 'plain'`, no fill colors, hairline borders only.
 
@@ -323,7 +323,7 @@ Before generating the PDF, the export wizard must:
 
 7.3. Show the **scope confirmation**: a one-line summary of what's about to be exported (e.g., *"Last 90 days, 18 episodes, 5 lab draws"*) so the patient knows what's leaving the browser.
 
-7.4. After generation, the PDF is offered for download. **It is not transmitted anywhere.** The patient is responsible for delivering it to the clinician (paper, AirDrop, email — their choice).
+7.4. After generation, the PDF is offered for download. **It is not transmitted anywhere.** The patient is responsible for delivering it to the clinician (paper, AirDrop, email - their choice).
 
 ---
 
@@ -335,7 +335,7 @@ The R1–R5 campfire surfaced many tempting additions. The binding spec rejects 
 - **No "top findings" section.** "Top" implies curation. Use sorted tables with the patient's own order, never software-ranked.
 - **No trend arrows / up-down indicators.** Even neutral arrows imply directionality.
 - **No completeness score.** "Entries on 41 of 81 dates" is fine in side-by-side raw form; "51% complete" or "good logging" is not.
-- **No reference range bounds on charts.** Dashed clinical-range lines position values relative to "normal" — a derived clinical frame.
+- **No reference range bounds on charts.** Dashed clinical-range lines position values relative to "normal" - a derived clinical frame.
 - **No connecting lines on sparklines.** A line between dots is interpolation. Dots are measured points.
 - **No hero numerics.** Large numbers imply significance. All numerics use the codified type scale at 9pt body or smaller.
 - **No streak counters.** "X days seizure-free" gamifies symptom-free days. Patient diary is not a fitness app. The calm-day calendar markers carry the same information without the resetting-counter shame.
@@ -343,7 +343,7 @@ The R1–R5 campfire surfaced many tempting additions. The binding spec rejects 
 - **No "for the clinician" framing** of the artifact. No "key facts for your visit" bullets. No curated "top symptoms." No "summary box."
 - **No defensive banner at top.** Scope statement lives at the bottom, plain.
 - **No AI-generated medical language.** No NLP transformation of patient logs.
-- **No reading-space label.** White space at bottom is available for clinician annotation but never invited or labeled — that would prescribe a workflow.
+- **No reading-space label.** White space at bottom is available for clinician annotation but never invited or labeled - that would prescribe a workflow.
 
 ---
 
@@ -351,29 +351,29 @@ The R1–R5 campfire surfaced many tempting additions. The binding spec rejects 
 
 | Cohort family | Primary block | Secondary | Page 1 example fits? |
 |---|---|---|---|
-| Vital — Hashimoto | TSH + free T4 rows + dots + dose strip | Patient notes (3) | Yes |
-| Vital — Hypertension | SBP/DBP rows + dots + medication strip | Patient notes (3) | Yes |
-| Vital — Diabetes T1 | Fingerstick rows + dots + insulin strip | Patient notes (3) | Tight (calendar omitted) |
-| Vital — Bipolar polarity | Polarity rows + dots + medication strip | Patient notes (3) | Yes |
-| Vital — Parkinson | UPDRS rows + dots + medication strip | Patient notes (3) | Yes |
-| Episode — Epilepsy | Calendar grid + count comparison | Patient notes (3) | Yes (truncation possible at >40 events) |
-| Episode — Migraine | Calendar grid + count comparison | Patient notes (3) | Yes |
-| Episode — ADHD | Calendar grid + count comparison | Patient notes (3) | Yes |
-| Episode — RA flares | Calendar grid + count comparison | Patient notes (3) | Yes |
-| Episode — IBD | Calendar grid + count comparison | Patient notes (3) | Yes |
-| Episode — Asthma | Calendar grid + count comparison | Patient notes (3) | Yes |
-| Cycle — Menstrual | Cycle strip + bleeding-day count | Patient notes (3) | Yes |
-| Cycle — Endometriosis | Cycle strip + pain count | Patient notes (3) | Yes |
-| Cycle — PCOS | Cycle strip + symptom count | Patient notes (3) | Yes |
-| Phase — Bipolar phase | Stripe-band timeline + day counts | Patient notes (3) | Yes |
-| Phase — MS | Stripe-band timeline + flare counts | Patient notes (3) | Yes |
-| Phase — Autism | Stripe-band timeline + day counts | Patient notes (3) | Yes |
-| Narrative — Long-COVID | Diary entries (5 recent) | — (entries dominate) | Yes |
-| Narrative — IBS | Diary entries (5 recent) | — | Yes |
-| Narrative — Burnout | Diary entries (5 recent) | — | Yes |
-| Narrative — Cancer treatment | Diary entries (5 recent) | — | Yes |
-| Narrative — Dermatology | Diary entries (5 recent) | — | Yes |
-| Custom | Inventory table + 5 recent entries | — | Yes |
+| Vital - Hashimoto | TSH + free T4 rows + dots + dose strip | Patient notes (3) | Yes |
+| Vital - Hypertension | SBP/DBP rows + dots + medication strip | Patient notes (3) | Yes |
+| Vital - Diabetes T1 | Fingerstick rows + dots + insulin strip | Patient notes (3) | Tight (calendar omitted) |
+| Vital - Bipolar polarity | Polarity rows + dots + medication strip | Patient notes (3) | Yes |
+| Vital - Parkinson | UPDRS rows + dots + medication strip | Patient notes (3) | Yes |
+| Episode - Epilepsy | Calendar grid + count comparison | Patient notes (3) | Yes (truncation possible at >40 events) |
+| Episode - Migraine | Calendar grid + count comparison | Patient notes (3) | Yes |
+| Episode - ADHD | Calendar grid + count comparison | Patient notes (3) | Yes |
+| Episode - RA flares | Calendar grid + count comparison | Patient notes (3) | Yes |
+| Episode - IBD | Calendar grid + count comparison | Patient notes (3) | Yes |
+| Episode - Asthma | Calendar grid + count comparison | Patient notes (3) | Yes |
+| Cycle - Menstrual | Cycle strip + bleeding-day count | Patient notes (3) | Yes |
+| Cycle - Endometriosis | Cycle strip + pain count | Patient notes (3) | Yes |
+| Cycle - PCOS | Cycle strip + symptom count | Patient notes (3) | Yes |
+| Phase - Bipolar phase | Stripe-band timeline + day counts | Patient notes (3) | Yes |
+| Phase - MS | Stripe-band timeline + flare counts | Patient notes (3) | Yes |
+| Phase - Autism | Stripe-band timeline + day counts | Patient notes (3) | Yes |
+| Narrative - Long-COVID | Diary entries (5 recent) | - (entries dominate) | Yes |
+| Narrative - IBS | Diary entries (5 recent) | - | Yes |
+| Narrative - Burnout | Diary entries (5 recent) | - | Yes |
+| Narrative - Cancer treatment | Diary entries (5 recent) | - | Yes |
+| Narrative - Dermatology | Diary entries (5 recent) | - | Yes |
+| Custom | Inventory table + 5 recent entries | - | Yes |
 
 23 cohorts × hard-1-page = all fit. Truncation triggered only on episode cohorts with >40 events in 90 days (rare).
 
@@ -388,17 +388,17 @@ The redesign requires substantial rewrite. The current `pdf.ts` (4110 lines) is 
 - The `cohortOf(blueprint)` resolver (already cohort-aware)
 - `paintPaper` (becomes a no-op or pure-white in new model)
 - The seed personas (Hans/Helena/Anna/Klaus/Rita/etc.) for testing
-- `pdfTrajectory.ts`, `pdfCycleStrip.ts`, `pdfPhaseDistribution.ts`, `pdfDailyMonthChart.ts` — the renderable primitives can be reused with rule changes
+- `pdfTrajectory.ts`, `pdfCycleStrip.ts`, `pdfPhaseDistribution.ts`, `pdfDailyMonthChart.ts` - the renderable primitives can be reused with rule changes
 
 **Goes:**
 - Multi-page page layout (vital-trends section, episode-duration table, symptom-frequency table, medication-adherence table as separate pages)
-- KPI tiles (`tileVitalLastValue`, `tilePhaseTopN`, etc.) — all 14 tile factories
+- KPI tiles (`tileVitalLastValue`, `tilePhaseTopN`, etc.) - all 14 tile factories
 - The 24-month trajectory chart
 - The trajectory pill (already neutralized in DSPEC-2, now removed)
 - The disclaimer banner (already neutralized in DSPEC-1, now moved to scope-statement footer style)
 - The "for-doctor" bullets page
 - Monthly grid table (for episode cohorts; replaced by calendar primary block)
-- Cohort accent color resolver (`resolveCohortAccents`) — colors retire from the artifact
+- Cohort accent color resolver (`resolveCohortAccents`) - colors retire from the artifact
 - All `setFontSize` calls except those mapped to the new TYPE scale
 
 **Adds:**
@@ -434,11 +434,11 @@ The redesign requires substantial rewrite. The current `pdf.ts` (4110 lines) is 
 
 ## 12. Open follow-ups (not blocking ship)
 
-12.1. **Companion HTML appendix** as optional second artifact for the patient's own browser-side drill-down. Codex's R1 idea, demoted to nice-to-have. Not a clinical handoff — a patient-side data browser.
+12.1. **Companion HTML appendix** as optional second artifact for the patient's own browser-side drill-down. Codex's R1 idea, demoted to nice-to-have. Not a clinical handoff - a patient-side data browser.
 
 12.2. **Multi-locale top-line examples.** Three localized concrete examples per cohort family, to seed the patient-prompt UI as placeholder text. Out of scope for the spec; in scope for the export-wizard implementation.
 
-12.3. **The Settings entry point.** Where in the ciphra app does the patient access this export? Today it's `/reports → Export PDF`. Spec is silent on this — UI affordance lives outside the artifact contract.
+12.3. **The Settings entry point.** Where in the ciphra app does the patient access this export? Today it's `/reports → Export PDF`. Spec is silent on this - UI affordance lives outside the artifact contract.
 
 12.4. **Treatment-change source-of-truth.** For vital cohorts, dose changes come from the patient's medication log. The current data model has medications as a daily log entry, not as discrete "dose change events." A future schema migration may introduce `treatment_change` documents with effective-date + old-value + new-value, eliminating today's "find the day the dose changed" reconstruction.
 
@@ -447,7 +447,7 @@ The redesign requires substantial rewrite. The current `pdf.ts` (4110 lines) is 
 ## 13. What this spec does NOT govern
 
 - The ciphra app's calendar / journal / reports / dashboard UI. Those have their own design.
-- Family-share PDFs (currently the family-grant invitation PDF — different artifact, different purpose).
+- Family-share PDFs (currently the family-grant invitation PDF - different artifact, different purpose).
 - The recovery-code printout (different artifact).
 - The companion HTML appendix (12.1).
 
@@ -457,7 +457,7 @@ This spec governs ONE artifact: the patient-generated clinical handoff PDF deliv
 
 ## 14. UX dimensions (v2 amendment, 2026-05-22)
 
-The v1 spec optimized for MDR safety + print survival + clinical correctness and produced a page that read as **empty**. The v2 workflow added UX as a load-bearing dimension. These rules are not aesthetic — they protect the artifact from being experientially dead while still satisfying the hard constraints.
+The v1 spec optimized for MDR safety + print survival + clinical correctness and produced a page that read as **empty**. The v2 workflow added UX as a load-bearing dimension. These rules are not aesthetic - they protect the artifact from being experientially dead while still satisfying the hard constraints.
 
 14.1. **No placeholder text leads the page.** The patient-quote block at the top is patient-authored or absent. Never `[no note provided]`, `[keine Notiz hinterlegt]`, or any equivalent placeholder. When the patient writes no top-line text, the block collapses entirely (returns y unchanged) and the identity block shifts up. White space accumulates at the bottom of the page. Software does not narrate absence.
 
@@ -465,17 +465,17 @@ The v1 spec optimized for MDR safety + print survival + clinical correctness and
 
 14.3. **Full localized labels, never abbreviation codes.** The page never asks the reader to decode 2-letter abbreviations for clinical concepts. Every event, every metric, every section label resolves to the locale's full word. The legacy `SZ` / `AU` / `FO` style codes are retired across all cohort renderers.
 
-14.4. **Typographic hierarchy is mandatory.** The page has three visual weights — human signal (patient quote, name, event labels at the body or section-head tier), clinical scan (counts, dates, strip axis at body or compact), audit/support (provenance, scope at compact). A page where every block sits at the same weight is a failure (the eye finds no path).
+14.4. **Typographic hierarchy is mandatory.** The page has three visual weights - human signal (patient quote, name, event labels at the body or section-head tier), clinical scan (counts, dates, strip axis at body or compact), audit/support (provenance, scope at compact). A page where every block sits at the same weight is a failure (the eye finds no path).
 
 14.5. **Username capitalization.** Display names render with proper casing regardless of how the user typed them at signup. `hans` becomes `Hans`. Multi-word names split on whitespace and capitalize each part. Lowercase usernames in user-facing blocks read as raw debug output.
 
 14.6. **Locale-faithful date format.** Dates use the locale's natural form with month name (short), not ISO digits or US slash format. `22. Mai 2026`, not `5/22/2026`. The legacy locale leak was an experience-crushing detail.
 
-14.7. **The 90-day window is the universal data window.** Every cohort's primary block renders the trailing 90 days ending at the period end. The identity block shows this same window — header and data align. The report-scope (month / year / 2years) governs how far back to look but the displayed window is always 90 days unless explicitly overridden by the cohort renderer.
+14.7. **The 90-day window is the universal data window.** Every cohort's primary block renders the trailing 90 days ending at the period end. The identity block shows this same window - header and data align. The report-scope (month / year / 2years) governs how far back to look but the displayed window is always 90 days unless explicitly overridden by the cohort renderer.
 
 14.8. **The patient's own words are the page's emotional anchor.** When present, the top-line quote sits in its own block with a 3pt olive left rule running the full block height. The rule is brand chrome (not value-encoded color); it visually elevates the patient voice without crowning it. The author + date prefix is bold; the quote body is italic. This block, when populated, is the page's first read.
 
-14.9. **Comparison data is plain, side-by-side, demoted.** Period-over-period counts render as `Vorher: P · Diese Periode: T` at 7pt muted — never as a hero numeric, never with a directional arrow, never with a banned-word label. The patient or clinician reads the two numbers and draws their own conclusion. Software does not interpret the difference.
+14.9. **Comparison data is plain, side-by-side, demoted.** Period-over-period counts render as `Vorher: P · Diese Periode: T` at 7pt muted - never as a hero numeric, never with a directional arrow, never with a banned-word label. The patient or clinician reads the two numbers and draws their own conclusion. Software does not interpret the difference.
 
 14.10. **White space is a positive primitive.** The lower half of the page may legitimately be unfilled when data is sparse. White space is not decorated, not labeled, not watermarked, not filled with prompts. It reads as "the patient logged what they logged; nothing else exists." A page that pads to look full lies about the data.
 
@@ -485,7 +485,7 @@ The v1 spec optimized for MDR safety + print survival + clinical correctness and
 
 This artifact is the deliverable that justifies ciphra's existence. It must read as **ciphra**, not as a generic clinical PDF. The R1–R5 (v1) workflow over-corrected on MDR safety and stripped brand identity along with value-encoded color. v2 restores brand presence within the MDR constraints.
 
-15.1. **The asterisk wordmark is mandatory.** The header band carries `ciphra*` — the wordmark in bold textPrimary, the asterisk in brick (RGB 178/60/44), positioned immediately after with no space. Future upgrade: replace the typographic `*` glyph with a drawn 6-arm star at 8° tilt (matching the web wordmark's geometry). Current implementation uses the glyph for fidelity-cost reasons; this is a documented Phase 2 follow-up.
+15.1. **The asterisk wordmark is mandatory.** The header band carries `ciphra*` - the wordmark in bold textPrimary, the asterisk in brick (RGB 178/60/44), positioned immediately after with no space. Future upgrade: replace the typographic `*` glyph with a drawn 6-arm star at 8° tilt (matching the web wordmark's geometry). Current implementation uses the glyph for fidelity-cost reasons; this is a documented Phase 2 follow-up.
 
 15.2. **Olive is brand chrome, never value-encoded.** The olive (RGB 127/130/27) appears in exactly two places: the 3pt left rule of the patient-quote block, and (optionally, in a future iteration) a left rule on the scope-statement block. It is never used on data, never on values, never on event markers. It signals "this is a quiet, durable artifact" without saying anything about the data inside.
 
@@ -499,7 +499,7 @@ This artifact is the deliverable that justifies ciphra's existence. It must read
 
 15.5. **Swiss German uses `ss`, never `ß`.** Pinned by existing vitest. Applies to all generated copy including new handoff strings.
 
-15.6. **No decorative reassurance.** The page does not whisper "you're doing fine" or "look how nice the design is." Trust apps don't sparkle. The brand presence is the wordmark, the olive rule, and the voice — that's the whole signature. No watermark asterisks in white space, no decorative dividers, no "tip of the day" affordances. Quiet is the brand.
+15.6. **No decorative reassurance.** The page does not whisper "you're doing fine" or "look how nice the design is." Trust apps don't sparkle. The brand presence is the wordmark, the olive rule, and the voice - that's the whole signature. No watermark asterisks in white space, no decorative dividers, no "tip of the day" affordances. Quiet is the brand.
 
 15.7. **Type matches the app's register.** The PDF uses Noto Sans (Regular + Bold embedded subset for DE/EN/FR/IT), matching the app's sans-serif. The legacy helvetica fallback is acceptable as a Phase 1 stand-in but the Noto Sans embed is mandatory before launch.
 

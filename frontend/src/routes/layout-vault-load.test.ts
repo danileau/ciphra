@@ -7,7 +7,7 @@
  *     sessionStorage, but the patient's key lives in the family links. The
  *     shell loaded documents and links in parallel; the documents load won,
  *     found no link, fell back to the caregiver's OWN vault and rendered it
- *     under the patient's banner — and the next write went there too.
+ *     under the patient's banner - and the next write went there too.
  *  2. The vault-switch reactive only reloaded when `docsLoaded` was true but
  *     always recorded `lastVault`, so a switch during a load was dropped:
  *     A→B→C showed B under C, and a revoke snap-back mid-load was lost. Retry

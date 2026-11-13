@@ -80,7 +80,7 @@
 		await typewriter(plaintextJson, v => (plaintextRevealed = v), 1100);
 		await wait(250);
 
-		// --- Step 2: key derivation — hex scrambles for ~1.4s ---
+		// --- Step 2: key derivation - hex scrambles for ~1.4s ---
 		step = 2;
 		const keyBytes = crypto.getRandomValues(new Uint8Array(32));
 		const finalKeyHex = bytesToHex(keyBytes);
@@ -235,7 +235,7 @@
 		</div>
 	</div>
 
-	<!-- Vault key strip — shows scrambling during derive, settled hex after -->
+	<!-- Vault key strip - shows scrambling during derive, settled hex after -->
 	{#if step >= 2}
 		<div
 			class="rounded-xl p-4 transition-all duration-500"

@@ -1,5 +1,5 @@
 /**
- * CIPH-835 — i18n key orphan detector.
+ * CIPH-835 - i18n key orphan detector.
  *
  * Walks every `.svelte` and `.ts` file under `frontend/src/` (minus
  * tests and node_modules), collects every key passed to `t(...)` or
@@ -12,7 +12,7 @@
  * either delete them (all four locales!) or add a prefix to the
  * allowlist.
  *
- * This is soft by design — the allowlist covers blueprint-driven
+ * This is soft by design - the allowlist covers blueprint-driven
  * labels (vital ids, preset titles, phase keys, etc.) that a static
  * grep cannot see. If you add a new family of dynamic keys, add the
  * prefix to `dynamic-keys.ts` with a comment explaining the caller.
@@ -47,7 +47,7 @@ function walk(dir: string, acc: string[] = []): string[] {
 const T_CALL_RE =
 	/(?<![\w])\$?t\(\s*(?:'([A-Za-z0-9_.]+)'|"([A-Za-z0-9_.]+)"|`([A-Za-z0-9_.]+)`)\s*[,)]/g;
 
-// PI v15 LB-7 — `plural($t, $locale, 'foo.bar', count)` resolves to
+// PI v15 LB-7 - `plural($t, $locale, 'foo.bar', count)` resolves to
 // `foo.bar_one` / `foo.bar_other` / `foo.bar` via Intl.PluralRules.
 // Capture the base key from each plural() call so the `_one` / `_other`
 // variants don't show up as orphans.
@@ -74,7 +74,7 @@ function collectUsedKeys(files: string[]): Set<string> {
 	return used;
 }
 
-describe('CIPH-835 — i18n key orphan detector', () => {
+describe('CIPH-835 - i18n key orphan detector', () => {
 	const files = walk(SRC_ROOT);
 
 	it('scans a non-trivial number of files', () => {

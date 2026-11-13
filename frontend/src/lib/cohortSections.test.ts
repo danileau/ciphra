@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_COHORTS } from '#lib/blueprint/cohort.ts';
 import { SPINE, sectionsForCohort, type PdfSectionKey } from '#lib/cohortSections.ts';
 
-describe('cohortSections — typed gate', () => {
+describe('cohortSections - typed gate', () => {
 	it('returns a non-empty ordered list for every cohort', () => {
 		for (const c of ALL_COHORTS) {
 			const list = sectionsForCohort(c);
@@ -68,14 +68,14 @@ describe('cohortSections — typed gate', () => {
 	});
 
 	it('discrete and custom share the same section list', () => {
-		// Both are "no extra cohort-conditional middle" — gate symmetry catches
+		// Both are "no extra cohort-conditional middle" - gate symmetry catches
 		// drift if someone adds a discrete-only or custom-only section without
 		// updating the other. Document as intent; if they ever diverge, this
 		// test must change deliberately.
 		expect(sectionsForCohort('discrete')).toEqual(sectionsForCohort('custom'));
 	});
 
-	it('snapshot — full table per cohort (any change here forces a memo update)', () => {
+	it('snapshot - full table per cohort (any change here forces a memo update)', () => {
 		const table = Object.fromEntries(
 			ALL_COHORTS.map((c) => [c, sectionsForCohort(c)]),
 		);

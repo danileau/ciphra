@@ -1,8 +1,8 @@
 <!--
-	DatePicker — fully custom, brand-consistent, locale-aware.
+	DatePicker - fully custom, brand-consistent, locale-aware.
 
 	Replaces the native browser date-picker popover entirely. The native
-	`<input type="date">` chrome is browser-OS controlled — it can't be
+	`<input type="date">` chrome is browser-OS controlled - it can't be
 	restyled, and its calendar UI ignores the page's `$locale` (often
 	rendering in English even when ciphra is set to DE/FR/IT). We render
 	our own popover instead.
@@ -13,15 +13,15 @@
 	Display format defaults to `dd.mm.yyyy` (Swiss/EU). Settings toggle
 	for alternative formats is queued for PI v18.
 
-	PI v17 — addressed user feedback "datepicker breaks the design with
+	PI v17 - addressed user feedback "datepicker breaks the design with
 	its sharp edges and 2000ish design" + "in english and doesnt respect
 	the selected language".
 
 	`mode="month"` (2026-09-19) picks a month instead of a day, for history
 	entered from memory: nobody knows the day a dose changed three years ago,
 	and a picker that demands one gets an invented answer. The value stays an
-	ISO date — the first day of the month, or its last when `monthEdge="end"`
-	— so every reader keeps comparing plain dates; the caller records the
+	ISO date - the first day of the month, or its last when `monthEdge="end"`
+	- so every reader keeps comparing plain dates; the caller records the
 	precision beside it. `max` bounds both modes: history cannot end in the
 	future.
 -->
@@ -165,7 +165,7 @@
 		triggerEl?.focus();
 	}
 
-	// Month/weekday names — locale-driven.
+	// Month/weekday names - locale-driven.
 	$: monthLabel = new Date(cursorYear, cursorMonth, 1)
 		.toLocaleDateString($locale, { month: 'long', year: 'numeric' });
 	// Monday-first week order, narrow weekday headers (M, D, M, D, F, S, S).

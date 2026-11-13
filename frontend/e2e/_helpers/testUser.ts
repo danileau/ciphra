@@ -1,5 +1,5 @@
 /**
- * CIPH-pi20-LB-3 — shared E2E test-user fixtures.
+ * CIPH-pi20-LB-3 - shared E2E test-user fixtures.
  *
  * Centralises password + registration flow so a future password-floor
  * change (today: 12 chars) only touches this file. The legacy 11-char
@@ -55,7 +55,7 @@ export async function selectCohort(page: Page, cohortMatch: RegExp): Promise<voi
 	});
 
 	// NEVER gate on count() straight after goto(): it resolves before Svelte
-	// has rendered, reports 0, and the step is silently skipped — which is
+	// has rendered, reports 0, and the step is silently skipped - which is
 	// exactly how this helper failed. Wait for whichever step is showing.
 	await Promise.race([
 		ownHealth.first().waitFor({ timeout: 30_000 }),
@@ -71,7 +71,7 @@ export async function selectCohort(page: Page, cohortMatch: RegExp): Promise<voi
 	// and the preset heading sits in a nested <h3>.
 	await page.locator('button').filter({ hasText: cohortMatch }).first().click();
 	// Walk to the end. The wizard grew steps over time, so loop until the
-	// finish button appears rather than assuming a fixed count — and then
+	// finish button appears rather than assuming a fixed count - and then
 	// wait for it to actually leave /setup, because a helper that returns
 	// while the blueprint has not been saved makes its caller assert against
 	// a state that never existed.

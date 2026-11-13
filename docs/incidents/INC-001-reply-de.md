@@ -1,4 +1,4 @@
-# INC-001 — Antwortvorlage (DE)
+# INC-001 - Antwortvorlage (DE)
 
 Für den von INC-001 betroffenen Migranten. Platzhalter in `{{ }}`; keine
 personenbezogenen Daten committen.
@@ -18,14 +18,14 @@ Vorher fehlt ihm die Anmelde-Option und der Text stimmt nicht.
 
 ---
 
-**Betreff:** Re: Migration von epilepc zu ciphra — behoben
+**Betreff:** Re: Migration von epilepc zu ciphra - behoben
 
 Guten Tag
 
 danke für die Meldung, und entschuldige den Ärger.
 
 Der Fehler lag bei uns. Dein Migrationslink zeigte auf einen Server, der die
-Anfrage nur weitergeleitet statt beantwortet hat — der Browser bricht das aus
+Anfrage nur weitergeleitet statt beantwortet hat - der Browser bricht das aus
 Sicherheitsgründen ab. Darum die Fehlermeldung, und darum ist bei epilepc gar
 keine Anfrage angekommen.
 
@@ -39,7 +39,7 @@ Hier ist der korrigierte Link:
 {{RECOVERY_LINK}}
 
 Du hast auf ciphra bereits ein Konto ({{CIPHRA_USERNAME}}). Wähle beim Öffnen
-des Links den Reiter **Anmelden** statt Registrieren — danach läuft die
+des Links den Reiter **Anmelden** statt Registrieren - danach läuft die
 Übertragung durch.
 
 Der Link ist bis {{EXPIRES_AT}} gültig. Falls etwas klemmt, melde dich
@@ -59,7 +59,7 @@ Freundliche Grüsse
 - **„Starte den Einrichtungs-Assistenten nicht zuerst."** War nötig, solange ein
   nicht-epilepsie-Blueprint dazu führte, dass importierte Anfälle unsichtbar
   blieben. `ensureEpisodeTypes` (#117, deployt) ergänzt die fehlenden
-  Anfallstypen jetzt automatisch — die Warnung wäre nur noch Ballast.
+  Anfallstypen jetzt automatisch - die Warnung wäre nur noch Ballast.
 - **Die Anleitung um die Schein-Registrierung herum.** Mit dem Login-Tab (#125)
   ist die Anmeldung sichtbar, statt sich hinter einem provozierten Fehler zu
   verstecken.
@@ -70,4 +70,4 @@ Freundliche Grüsse
 
 Sollte behoben sein (Session-Speicher, epilepc#70). Falls doch:
 
-> Für die Migration brauchst du kein epilepc-Login — der Link oben genügt.
+> Für die Migration brauchst du kein epilepc-Login - der Link oben genügt.

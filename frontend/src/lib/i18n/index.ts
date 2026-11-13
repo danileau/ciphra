@@ -6,10 +6,10 @@ export const locales: Locale[] = ['de', 'en', 'fr', 'it'];
 export const localeNames: Record<Locale, string> = { de: 'Deutsch', en: 'English', fr: 'Français', it: 'Italiano' };
 
 // `de` is the SSR/fallback dict and is bundled eagerly. The other three are
-// loaded on demand via dynamic import — splits ~130KB gzip off first paint
+// loaded on demand via dynamic import - splits ~130KB gzip off first paint
 // for users whose detected locale is also `de` (the dominant Swiss case).
 //
-// CIPH-pi24-3 — `translations` is a writable store, not a plain object.
+// CIPH-pi24-3 - `translations` is a writable store, not a plain object.
 // The previous design wrote `translations[target] = mod.default` inside a
 // dynamic-import .then() and tried to nudge the derived `t` store with
 // `_locale.update((l) => l)`. That trick fails for primitive locale strings
@@ -39,7 +39,7 @@ async function ensureLocale(target: Locale): Promise<void> {
 				return mod.default;
 			})
 			.catch((err) => {
-				// CIPH-pi24-3 — Without this catch a failed import gives a
+				// CIPH-pi24-3 - Without this catch a failed import gives a
 				// silent perpetual fallback to DE forever (or until reload).
 				// Clearing `inflight[target]` lets the user retry by switching
 				// away and back.
@@ -53,7 +53,7 @@ async function ensureLocale(target: Locale): Promise<void> {
 	} catch {
 		// Swallow the rejection at this layer; consumers get DE fallback via
 		// the derived `t` and can retry. Re-throwing here would force every
-		// caller to wrap in try/catch — overkill for an i18n best-effort load.
+		// caller to wrap in try/catch - overkill for an i18n best-effort load.
 	}
 }
 
@@ -66,7 +66,7 @@ function detectLocale(): Locale {
 		const lang = navigator.language.slice(0, 2) as Locale;
 		if (locales.includes(lang)) return lang;
 	}
-	// CIPH-pi24-1C — fall back to EN for unsupported browser locales.
+	// CIPH-pi24-1C - fall back to EN for unsupported browser locales.
 	// A Polish/Spanish/Portuguese visitor previously got a German page
 	// they couldn't read; English is the more honest international default.
 	// DE remains the explicit choice for German-speaking users via either
@@ -93,7 +93,7 @@ export const locale = {
 export const t = derived([locale, translations], ([$locale, $trans]) => {
 	// Prefer the requested locale; fall back to `de` while a pending dict
 	// resolves, then to the raw key. Re-derives whenever `translations`
-	// updates (i.e., a dynamic-import .then() resolved) — fixes the silent
+	// updates (i.e., a dynamic-import .then() resolved) - fixes the silent
 	// fallback bug at CIPH-pi24-3.
 	const dict = $trans[$locale];
 	const fallback = $trans.de;
@@ -120,7 +120,7 @@ export function translateUnit(
 	if (!unit) return '';
 	const key = `vital.unit_${unit}`;
 	const translated = translator(key);
-	// t() returns the key verbatim on miss — fall back to the raw unit.
+	// t() returns the key verbatim on miss - fall back to the raw unit.
 	return translated === key ? unit : translated;
 }
 

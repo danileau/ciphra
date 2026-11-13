@@ -1,5 +1,5 @@
 /**
- * `withEpisodeCountChanged` — the /reports grid's +/- on an episode cell.
+ * `withEpisodeCountChanged` - the /reports grid's +/- on an episode cell.
  *
  * The grid edited only `episodes[id]`. EntryComposer prefers
  * `episodeInstances[id]` whenever an entry has any, so opening that day in
@@ -14,7 +14,7 @@ import { withEpisodeCountChanged } from './episodeCounts';
 import EntryComposer from '#lib/components/EntryComposer.svelte';
 import type { Blueprint } from '#lib/blueprint/index.ts';
 
-describe('withEpisodeCountChanged — entries with per-occurrence rows', () => {
+describe('withEpisodeCountChanged - entries with per-occurrence rows', () => {
 	const base = {
 		type: 'entry',
 		date: '2026-09-01',
@@ -37,7 +37,7 @@ describe('withEpisodeCountChanged — entries with per-occurrence rows', () => {
 		expect(next.episodeNotes).toEqual(base.episodeNotes);
 	});
 
-	it('-1 removes the last UNTIMED row first — a grid "+" is undone by a grid "-"', () => {
+	it('-1 removes the last UNTIMED row first - a grid "+" is undone by a grid "-"', () => {
 		const plus = withEpisodeCountChanged(base, 'attack', 1);
 		const minus = withEpisodeCountChanged(plus, 'attack', -1);
 		expect(minus.episodeInstances.attack).toEqual(base.episodeInstances.attack);
@@ -68,7 +68,7 @@ describe('withEpisodeCountChanged — entries with per-occurrence rows', () => {
 	});
 });
 
-describe('withEpisodeCountChanged — count-only entries', () => {
+describe('withEpisodeCountChanged - count-only entries', () => {
 	it('changes the count and leaves the entry count-only', () => {
 		const legacy = { type: 'entry', date: '2026-09-01', episodes: { attack: 1 } };
 		const next = withEpisodeCountChanged(legacy, 'attack', 1);

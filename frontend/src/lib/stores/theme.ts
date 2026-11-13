@@ -1,5 +1,5 @@
 /**
- * Theme preference (design review 2026-06-11 — dark mode, Phase 7).
+ * Theme preference (design review 2026-06-11 - dark mode, Phase 7).
  *
  * Three-way choice: 'light' | 'dark' | 'system'. Resolved to a binary
  * theme and applied as `data-theme` on <html> by `+layout.svelte`;
@@ -13,7 +13,7 @@
  * Users who explicitly chose a theme keep their stored choice.
  *
  * localStorage (not sessionStorage): a durable preference like locale,
- * and not health data. The doctor PDF ignores the theme on purpose —
+ * and not health data. The doctor PDF ignores the theme on purpose -
  * print media stays light.
  */
 import { writable, readable, derived, type Readable } from 'svelte/store';
@@ -43,7 +43,7 @@ export function setThemeChoice(choice: ThemeChoice): void {
 	try {
 		localStorage.setItem(KEY, choice);
 	} catch {
-		/* storage blocked — preference lives for the session only */
+		/* storage blocked - preference lives for the session only */
 	}
 }
 

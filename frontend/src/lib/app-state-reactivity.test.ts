@@ -1,9 +1,9 @@
 /**
- * SvelteKit 3 — `$app/stores` → `$app/state` in legacy-mode components.
+ * SvelteKit 3 - `$app/stores` → `$app/state` in legacy-mode components.
  *
  * `page` from `$app/state` is runes state. A legacy `$:` statement that reads
  * it directly runs once and then goes stale on every client-side navigation
- * that reuses the mounted component (same route, new URL or params) — no
+ * that reuses the mounted component (same route, new URL or params) - no
  * error, the UI just stops following the URL. ciphra's legacy components read
  * `page` through `pageStore()` (lib/pageStore.ts) instead.
  *

@@ -1,14 +1,14 @@
 /**
- * In-app documentation source — D5 of the docs-reset sprint.
+ * In-app documentation source - D5 of the docs-reset sprint.
  *
  * The repository's `docs/*.md` reach the app through the
- * `virtual:ciphra-docs` module — the `ciphraDocs` Vite plugin reads them
+ * `virtual:ciphra-docs` module - the `ciphraDocs` Vite plugin reads them
  * with Node `fs` (see vite.config.ts), because they live above the
  * SvelteKit root where a browser-side glob can't reach.
  * Editing a `.md` file updates `/docs` directly: documentation as code.
  *
- * The markdown is first-party, in-repo, team-authored content — never user
- * input — so rendering it via `{@html}` in the route carries no XSS risk.
+ * The markdown is first-party, in-repo, team-authored content - never user
+ * input - so rendering it via `{@html}` in the route carries no XSS risk.
  */
 import { marked } from 'marked';
 import { docs as rawDocs } from 'virtual:ciphra-docs';
@@ -38,7 +38,7 @@ function titleOf(raw: string, fallback: string): string {
 	return m ? m[1].trim() : fallback;
 }
 
-/** First prose paragraph, flattened + truncated — the index card blurb. */
+/** First prose paragraph, flattened + truncated - the index card blurb. */
 function blurbOf(raw: string): string {
 	const body = raw.replace(/^#[^\n]*\n+/, '');
 	const para = body
@@ -84,7 +84,7 @@ export const docList: DocMeta[] = [...bySlug.values()]
 export function getDoc(slug: string): RenderedDoc | null {
 	const entry = bySlug.get(slug.toLowerCase());
 	if (!entry) return null;
-	// Drop the leading H1 — the route renders the title in its own header.
+	// Drop the leading H1 - the route renders the title in its own header.
 	const body = entry.raw.replace(/^#[^\n]*\n+/, '');
 	const html = rewriteDocLinks(marked.parse(body) as string, new Set(bySlug.keys()));
 	return { meta: entry.meta, html };

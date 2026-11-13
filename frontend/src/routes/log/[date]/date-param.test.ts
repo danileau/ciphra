@@ -1,5 +1,5 @@
 /**
- * SvelteKit 3 — /log/[date] follows the date param on client-side navigation.
+ * SvelteKit 3 - /log/[date] follows the date param on client-side navigation.
  *
  * SvelteKit reuses this route component across /log/<a> → /log/<b> (the day
  * arrows, "today", a day clicked in /reports), so `currentDate` must re-derive

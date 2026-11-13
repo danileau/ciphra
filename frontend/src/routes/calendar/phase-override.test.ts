@@ -1,5 +1,5 @@
 /**
- * CIPH-886 — Per-day phase override precedence + render-coverage guards.
+ * CIPH-886 - Per-day phase override precedence + render-coverage guards.
  *
  * The cycle cohort can set an explicit phase on any entry day to override
  * the derivation when the auto-computed phase doesn't match reality

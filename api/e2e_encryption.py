@@ -1,5 +1,5 @@
 """
-ciphra — E2E Encryption Module
+ciphra - E2E Encryption Module
 Argon2id key derivation + AES-256-GCM
 Ported from epi-2 PoC with production fixes.
 """

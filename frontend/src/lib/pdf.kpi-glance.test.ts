@@ -1,5 +1,5 @@
 /**
- * CIPH-pi19-3 — 4-tile KPI glance contract.
+ * CIPH-pi19-3 - 4-tile KPI glance contract.
  *
  * Replaces the legacy 2×2 stat-card grid + separate "Comparison
  * deltas" block with a single 1×4 row of cohort-driven tiles. Tiles
@@ -13,15 +13,15 @@ import { join } from 'node:path';
 const PDF = readFileSync(join(__dirname, 'pdf.ts'), 'utf8');
 
 describe('CIPH-pi19-3 drawStatCard delta sub-line', () => {
-	// RETIRED 2026-08-21 — the `semantic` field and its olive/brick colouring.
+	// RETIRED 2026-08-21 - the `semantic` field and its olive/brick colouring.
 	// 'good' painted "three fewer episodes" green and 'bad' painted "three
 	// more" brick: a verdict on the person's course, on the same page as the
 	// trajectory label removed for exactly that reason.
 	// "Ciphra ist nur eine Dokumentationsplattform."
 	//
-	// The vital tiles had already reached this conclusion independently —
+	// The vital tiles had already reached this conclusion independently -
 	// their delta was hard-coded 'neutral' because "TSH falling on a
-	// hypothyroid patient is good, on a hyperthyroid patient is bad" — which
+	// hypothyroid patient is good, on a hyperthyroid patient is bad" - which
 	// left episodes as the only judged figure on the page.
 	it('the delta carries the number and its sign, and nothing else', () => {
 		expect(PDF).toMatch(/interface StatCardDelta\s*\{[\s\S]{0,400}sign:\s*'\+'\s*\|\s*'-'\s*\|\s*'='/);
@@ -46,7 +46,7 @@ describe('CIPH-pi19-3 drawStatCard delta sub-line', () => {
 
 describe('CIPH-pi19-3 KPI glance layout (1 row × 4 tiles)', () => {
 	it('drops the legacy 2×2 cardW math (col % 2, row, 2× cardH)', () => {
-		// The old layout looped i % 2 + Math.floor(i/2) — that pattern
+		// The old layout looped i % 2 + Math.floor(i/2) - that pattern
 		// must no longer exist in the tile-rendering path.
 		expect(PDF).not.toMatch(/const col = i % 2;\s*\n\s*const row = Math\.floor\(i \/ 2\)/);
 	});
@@ -68,7 +68,7 @@ describe('CIPH-pi19-3 KPI glance layout (1 row × 4 tiles)', () => {
 
 describe('CIPH-pi19-3 / pi24 P-PDF-4 per-cohort tile selection', () => {
 	it('candidatesForCohort switch covers all 5 cohorts', () => {
-		// pi24 P-PDF-4 — refactored from a fixed 4-tile slate to a
+		// pi24 P-PDF-4 - refactored from a fixed 4-tile slate to a
 		// priority list. `candidatesForCohort` returns 5-7 candidates;
 		// caller picks first 4 non-null. Switch shape unchanged.
 		const sw = PDF.match(/switch \(cohort\) \{[\s\S]*?\n\t\t\}\n\t\};/);
@@ -81,7 +81,7 @@ describe('CIPH-pi19-3 / pi24 P-PDF-4 per-cohort tile selection', () => {
 	it('discrete contains episodes + duration-distribution in order (CIPH-pi23-B2-fix-2 preserved)', () => {
 		// PI v23 B2' clinical primary order preserved. pi24 P-PDF-4 spreads
 		// `vitalFirst` at the head for vital-pinned discrete conditions
-		// (hashimoto, hypertension etc.) — the regex below tolerates any
+		// (hashimoto, hypertension etc.) - the regex below tolerates any
 		// prefix as long as tileEpisodes comes before tileEpisodeDurationDist
 		// inside the discrete case.
 		expect(PDF).toMatch(
@@ -108,7 +108,7 @@ describe('CIPH-pi19-3 / pi24 P-PDF-4 per-cohort tile selection', () => {
 	});
 
 	it('vital-pinned conditions get vitalFirst spread before generic tiles', () => {
-		// pi24 P-PDF-4 — Hashimoto/hypertension/cardiovascular/diabetes/
+		// pi24 P-PDF-4 - Hashimoto/hypertension/cardiovascular/diabetes/
 		// parkinson/bipolar each pin a clinical-primary vital that takes
 		// the leading tile slot when the vital has data. Empty pin map
 		// would silently drop this discipline.
@@ -118,10 +118,10 @@ describe('CIPH-pi19-3 / pi24 P-PDF-4 per-cohort tile selection', () => {
 	});
 
 	it('tile factories return Tile | null so the selector can fall through', () => {
-		// pi24 P-PDF-4 — pre-pi24 each factory returned `Tile` with
-		// "—" placeholder values; now each returns `Tile | null` so the
+		// pi24 P-PDF-4 - pre-pi24 each factory returned `Tile` with
+		// "-" placeholder values; now each returns `Tile | null` so the
 		// priority-list selector can pick the next populated alternative.
-		// The 5-doctor agents campfire flagged "—" tiles as pure
+		// The 5-doctor agents campfire flagged "-" tiles as pure
 		// decoration with confidence (3 of 4 empty on real Hans PDF).
 		expect(PDF).toMatch(/tileEpisodes\s*=\s*\(\):\s*Tile\s*\|\s*null/);
 		expect(PDF).toMatch(/tileTopSymptom\s*=\s*\(\):\s*Tile\s*\|\s*null/);
@@ -130,7 +130,7 @@ describe('CIPH-pi19-3 / pi24 P-PDF-4 per-cohort tile selection', () => {
 	});
 
 	// RETIRED with the field above. This asserted "more episodes = condition
-	// is worsening = bad" — the clinical reading a documentation platform must
+	// is worsening = bad" - the clinical reading a documentation platform must
 	// not perform on the patient's behalf, and one that is wrong often enough
 	// to matter: more episodes during a deliberate taper is expected, not
 	// deterioration.
@@ -157,7 +157,7 @@ describe('CIPH-pi19-3 rescueMedDays aggregation', () => {
 	//   focusPrefixForKpi … ds.startsWith(focusPrefixForKpi)
 	// i.e. the tile counted the ANCHOR MONTH. That was written at pi v19,
 	// when the export was always the current month or a trailing window from
-	// now — "focus month" and "the report period" were the same thing, so the
+	// now - "focus month" and "the report period" were the same thing, so the
 	// assertion characterised the implementation rather than deciding
 	// anything clinically (it carried no rationale, unlike its sibling
 	// above).

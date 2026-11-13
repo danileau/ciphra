@@ -1,11 +1,11 @@
 /**
- * ciphra — API client
+ * ciphra - API client
  */
 
 const API_BASE = '/api';
 
 // Endpoints where a 401 means "bad credentials" (handled by the caller), NOT
-// "your session expired" — so the global session-expiry catch must skip them.
+// "your session expired" - so the global session-expiry catch must skip them.
 const AUTH_ENDPOINTS = ['/login', '/register', '/recover'];
 function isAuthEndpoint(path: string): boolean {
 	return AUTH_ENDPOINTS.some((p) => path === p || path.startsWith(p + '/'));
@@ -41,11 +41,11 @@ async function request(
 
 	// The API always answers in JSON; the things in front of it do not. An
 	// nginx or Cloudflare 502/503/504 is an HTML page, and `res.json()` threw
-	// a SyntaxError on it — which is not a network error, so an offline-
+	// a SyntaxError on it - which is not a network error, so an offline-
 	// capable write FAILED instead of queueing, and a batch reported status 0.
 	// Keep the status so the callers' retry/queue logic sees what happened.
 	// A 2xx that is not JSON did not come from the API either (captive
-	// portal, proxy page): report it as "no response", never as success —
+	// portal, proxy page): report it as "no response", never as success -
 	// an empty `documents` list read as authoritative would wipe the cache.
 	const body = await readJson(res);
 	if (body === NOT_JSON) {
@@ -53,7 +53,7 @@ async function request(
 	}
 
 	// A 403 on a linked patient's vault means the grant was revoked while the
-	// caregiver was viewing it. Distinct from 401 (own session is fine) — tell
+	// caregiver was viewing it. Distinct from 401 (own session is fine) - tell
 	// the shell to reconcile family links + snap back to the caregiver's own
 	// vault, instead of leaving a stuck switcher + generic "load failed" error.
 	// Only the API's own (JSON) 403 counts: an HTML block page from a WAF in
@@ -86,7 +86,7 @@ async function readJson(res: Response): Promise<Record<string, unknown> | typeof
 import type { RegistrationBundle } from './crypto';
 
 export async function register(bundle: RegistrationBundle, source?: 'web' | 'migrate') {
-	// Server receives only hashes + encrypted blobs — never the password or recovery_code.
+	// Server receives only hashes + encrypted blobs - never the password or recovery_code.
 	// `source` is a metadata-only bit ('web' default, 'migrate' for the epilepc
 	// off-ramp) so /admin can count migrations vs organic signups.
 	const { recovery_code: _drop, ...payload } = bundle;
@@ -118,7 +118,7 @@ export async function storeDocument(encryptedData: string, shareClass?: number) 
 	});
 }
 
-// Track-3 3.4 — bulk import (used by /migrate). Up to 100 encrypted docs per
+// Track-3 3.4 - bulk import (used by /migrate). Up to 100 encrypted docs per
 // round-trip. `client_key` (opaque, optional) makes each blob idempotent so a
 // resumed migration re-sends the same batch without duplicating. Response:
 // { results: [{client_key, status: 'created'|'skipped'|'error', id?, error?}],
@@ -145,7 +145,7 @@ export async function updateDocument(id: number, encryptedData: string, shareCla
 
 // Backfill the sharing class for documents written before it existed. The
 // server treats an unclassified document as NOT shareable, so until this runs
-// a caregiver sees less — never more. Owner-only server-side.
+// a caregiver sees less - never more. Owner-only server-side.
 export async function classifyDocuments(documents: { id: number; share_class: number }[]) {
 	return request('/documents/classify', {
 		method: 'POST',

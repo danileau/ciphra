@@ -1,5 +1,5 @@
 """
-API hardening pass, 2026-09 — one class per finding.
+API hardening pass, 2026-09 - one class per finding.
 
 Each of these was a verified bug on main, not a hypothetical:
 
@@ -22,7 +22,7 @@ Each of these was a verified bug on main, not a hypothetical:
 
 Most assertions run against MockCursor. The SQL whose semantics carry the fix
 (the atomic counters) also runs against a real PostgreSQL at the bottom,
-skipped when none is configured — same pattern as test_batch_on_conflict.py.
+skipped when none is configured - same pattern as test_batch_on_conflict.py.
 """
 import base64
 import json
@@ -77,7 +77,7 @@ RECOVER_BODY = {
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 1 — type confusion
+# 1 - type confusion
 # ═══════════════════════════════════════════════════════════════════
 
 class TestTypeConfusion:
@@ -198,7 +198,7 @@ class TestTypeConfusion:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 2 — share_mask booleans
+# 2 - share_mask booleans
 # ═══════════════════════════════════════════════════════════════════
 
 class TestShareMaskIsStrict:
@@ -226,7 +226,7 @@ class TestShareMaskIsStrict:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 3 — token authority comes from the database
+# 3 - token authority comes from the database
 # ═══════════════════════════════════════════════════════════════════
 
 class TestTokenAuthority:
@@ -270,7 +270,7 @@ class TestTokenAuthority:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 4 — the admin lock holds
+# 4 - the admin lock holds
 # ═══════════════════════════════════════════════════════════════════
 
 ADMIN_LOCKED = datetime.now(timezone.utc) + timedelta(days=36500)
@@ -373,7 +373,7 @@ class TestAdminLock:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 5 — failed attempts count atomically and restart after a lock
+# 5 - failed attempts count atomically and restart after a lock
 # ═══════════════════════════════════════════════════════════════════
 
 class TestAttemptCounters:
@@ -433,7 +433,7 @@ class TestAttemptCounters:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 6 — the claim-init decoy
+# 6 - the claim-init decoy
 # ═══════════════════════════════════════════════════════════════════
 
 class TestClaimDecoy:
@@ -486,7 +486,7 @@ class TestClaimDecoy:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 7 — claim race + deterministic scope
+# 7 - claim race + deterministic scope
 # ═══════════════════════════════════════════════════════════════════
 
 GRANT = {'id': 5, 'source_user_id': 2, 'claimed_by_user_id': None, 'grant_verifier': 'h'}
@@ -529,7 +529,7 @@ class TestClaimRaceAndScope:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 8 — deleting a caregiver revokes what they claimed
+# 8 - deleting a caregiver revokes what they claimed
 # ═══════════════════════════════════════════════════════════════════
 
 REVOKE_CLAIMED = ('UPDATE family_grants SET revoked_at = NOW() '
@@ -546,7 +546,7 @@ class TestCaregiverDeletion:
         sql = _sql(mock_db)
         assert REVOKE_CLAIMED in sql
         assert sql.index(REVOKE_CLAIMED) < sql.index('DELETE FROM users WHERE id = %s'), \
-            'revoke first — after the delete, ON DELETE SET NULL has already erased who claimed it'
+            'revoke first - after the delete, ON DELETE SET NULL has already erased who claimed it'
         params = mock_db.executed[sql.index(REVOKE_CLAIMED)][1]
         assert params == (1,)
 
@@ -559,7 +559,7 @@ class TestCaregiverDeletion:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 9 — audit hygiene
+# 9 - audit hygiene
 # ═══════════════════════════════════════════════════════════════════
 
 class TestAuditHygiene:
@@ -588,7 +588,7 @@ class TestAuditHygiene:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 10 — audit retention
+# 10 - audit retention
 # ═══════════════════════════════════════════════════════════════════
 
 class TestAnonymizeIp:
@@ -723,7 +723,7 @@ class TestDailyRetentionTrigger:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 11 — concurrent registration
+# 11 - concurrent registration
 # ═══════════════════════════════════════════════════════════════════
 
 class TestRegisterRace:
@@ -746,7 +746,7 @@ class TestRegisterRace:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Real PostgreSQL — the counter statements' semantics
+# Real PostgreSQL - the counter statements' semantics
 # ═══════════════════════════════════════════════════════════════════
 
 @pytest.mark.skipif(not os.environ.get('DATABASE_URL'), reason='needs a real PostgreSQL; CI has none')

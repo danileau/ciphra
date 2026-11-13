@@ -1,9 +1,9 @@
 /**
- * Export-period copy guard — a coverage figure may describe the export,
+ * Export-period copy guard - a coverage figure may describe the export,
  * never the user.
  *
  * The /reports period picker shipped (#128) with a `reports.period_sparse`
- * badge — "Lückenhaft" / "Patchy" / "Incomplet" / "Incompleto" — on any
+ * badge - "Lückenhaft" / "Patchy" / "Incomplet" / "Incompleto" - on any
  * window under half covered. That reads as a verdict on the person: it
  * implies a logging target and tells them they missed it.
  *
@@ -32,7 +32,7 @@ const DICTS: Array<[string, Record<string, string>]> = [
 
 /**
  * Words that grade the data rather than describe it. Deliberately wider
- * than the one label that was removed — the failure mode is re-adding the
+ * than the one label that was removed - the failure mode is re-adding the
  * same idea under a synonym.
  */
 const JUDGMENT: Record<string, RegExp> = {
@@ -47,7 +47,7 @@ function periodKeys(dict: Record<string, string>): string[] {
 	return Object.keys(dict).filter((k) => k.startsWith('reports.period_'));
 }
 
-describe('export period copy — describes the export, never grades the user', () => {
+describe('export period copy - describes the export, never grades the user', () => {
 	for (const [name, dict] of DICTS) {
 		it(`${name}: the removed reports.period_sparse badge stays gone`, () => {
 			expect(
@@ -70,7 +70,7 @@ describe('export period copy — describes the export, never grades the user', (
 		});
 	}
 
-	it('the picker still states coverage — this guard must not empty the row', () => {
+	it('the picker still states coverage - this guard must not empty the row', () => {
 		// Guards against "fix the lint by deleting the information": the
 		// coverage figure is the honest half and has to survive.
 		expect(de['reports.period_days_one']).toMatch(/\{count\}/);

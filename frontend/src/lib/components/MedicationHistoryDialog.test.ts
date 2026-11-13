@@ -112,7 +112,7 @@ describe('a medication from the past', () => {
 		]);
 	});
 
-	it('needs an end — a medication from the past has one by definition', async () => {
+	it('needs an end - a medication from the past has one by definition', async () => {
 		const { getByTestId } = mount({ mode: 'past', med: null });
 		await fireEvent.input(getByTestId('history-name'), { target: { value: 'Levetiracetam' } });
 		await fireEvent.input(getByTestId('history-dose'), { target: { value: '1000 mg' } });

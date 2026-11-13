@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# repro-inc-001.sh — one-command reconstruction of INC-001.
+# repro-inc-001.sh - one-command reconstruction of INC-001.
 #
 # INC-001: epilepc → ciphra migration failed for a real migrant on
 # 2026-08-07. He registered on ciphra through the migration link, hit an
@@ -9,7 +9,7 @@
 # This script stands up BOTH real stacks, seeds a complete migration's worth
 # of source data, and runs the reconstruction end to end:
 #
-#   RED   source = apex emulator (301, no CORS headers — production's edge)
+#   RED   source = apex emulator (301, no CORS headers - production's edge)
 #         → fetch dies in the browser, epilepc's export() never executes,
 #           migration_token.used_at and ip_first_seen stay NULL.
 #           That is the exact row shape found in production.
@@ -34,7 +34,7 @@ EPILEPC_COMPOSE="$EPILEPC_DIR/docker-compose.yml"
 # Deliberately light so the GREEN control stays fast. epilepc decrypts two
 # defuse-encrypted fields per record on export and each one runs its own key
 # derivation, so export cost is linear and steep: measured 2026-08-09 at
-# ~142 ms/record — 1365 records took 193 s. Raise SEED_SEIZURES to reproduce
+# ~142 ms/record - 1365 records took 193 s. Raise SEED_SEIZURES to reproduce
 # the heavy-account export budget problem (see INC-001 finding 2):
 #   SEED_SEIZURES=900 SEED_DIARY=360 scripts/repro-inc-001.sh
 SEED_SEIZURES="${SEED_SEIZURES:-40}"
@@ -110,7 +110,7 @@ sql() {
 
 show_source_counts() {
 	info "source records for demo1@epilepc.test:"
-	# `event` and `user` are reserved words in MariaDB — always backtick.
+	# `event` and `user` are reserved words in MariaDB - always backtick.
 	sql "SELECT CONCAT('    seizures=', (SELECT COUNT(*) FROM \`seizure\` s JOIN \`user\` u ON u.id=s.user_id WHERE u.email='demo1@epilepc.test'),
 	                  ' events=',   (SELECT COUNT(*) FROM \`event\` e JOIN \`user\` u ON u.id=e.user_id WHERE u.email='demo1@epilepc.test'),
 	                  ' meds=',     (SELECT COUNT(*) FROM \`medication\` m JOIN \`user\` u ON u.id=m.user_id WHERE u.email='demo1@epilepc.test'),
@@ -118,7 +118,7 @@ show_source_counts() {
 }
 
 show_token_table() {
-	bold "migration_token after the run — compare against production"
+	bold "migration_token after the run - compare against production"
 	printf '  %-22s %-22s %-16s\n' "used_at" "migration_completed_at" "ip_first_seen"
 	sql "SELECT IFNULL(used_at,'NULL'), IFNULL(migration_completed_at,'NULL'), IFNULL(ip_first_seen,'NULL')
 	     FROM migration_token ORDER BY created_at" |

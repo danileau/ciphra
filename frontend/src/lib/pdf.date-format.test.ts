@@ -1,20 +1,20 @@
 /**
  * The exported documents honour the user's chosen date format.
  *
- * `Blueprint.dateFormat` offers four choices — `dd.mm.yyyy`, `dd/mm/yyyy`,
- * `iso`, `us` — and the app applies them on `/reports` and in the vital-trend
+ * `Blueprint.dateFormat` offers four choices - `dd.mm.yyyy`, `dd/mm/yyyy`,
+ * `iso`, `us` - and the app applies them on `/reports` and in the vital-trend
  * tooltips. The PDF and the CSV applied none of them: every date went through
  * `toLocaleDateString`, so an explicit setting was silently overridden on the
  * one artefact that leaves the device and gets handed to someone else.
  *
- * The formatter existed three times before this — in VitalTrendReportsCard, in
+ * The formatter existed three times before this - in VitalTrendReportsCard, in
  * routes/reports, and as a `sampleDate` in settings that showed the user a
  * preview of a format the rest of the app then re-implemented. Now once, in
  * blueprint/preferences.ts, next to the setting it reads.
  *
  * SCOPE. Day-precision dates only. `dateFormat` has no month-precision
- * variant, so month-and-year labels — the report window, chart axes, monthly
- * grid titles — keep locale formatting. There is no user choice to honour
+ * variant, so month-and-year labels - the report window, chart axes, monthly
+ * grid titles - keep locale formatting. There is no user choice to honour
  * there, and forcing one would produce "08.2026" where "Aug 2026" belongs.
  */
 import { describe, it, expect } from 'vitest';
@@ -49,8 +49,8 @@ describe('day-precision dates follow the setting', () => {
 
 	it('no day-precision date is left on toLocaleDateString in the doctor PDF', () => {
 		// The two survivors are deliberate: generateRecoveryPdf and
-		// generateFamilyInvitePdf receive no blueprint — the recovery sheet is
-		// produced at signup, before one exists — so there is no setting to
+		// generateFamilyInvitePdf receive no blueprint - the recovery sheet is
+		// produced at signup, before one exists - so there is no setting to
 		// read. Everything before them must be converted.
 		const upTo = PDF.slice(0, PDF.indexOf('export function generateRecoveryPdf'));
 		const dayPrecision = upTo.match(/day:\s*'(2-digit|numeric)'/g) ?? [];

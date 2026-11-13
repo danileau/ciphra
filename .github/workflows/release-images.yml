@@ -1,25 +1,25 @@
-# Release images — every merge to main publishes deployable images to
+# Release images - every merge to main publishes deployable images to
 # ghcr.io (2026-06-12). This replaces the build-on-VPS ritual; the VPS
 # becomes a consumer: docker pull + tag bump + restart, operator-run
-# (deploys stay a human action by explicit decision — no SSH from CI).
+# (deploys stay a human action by explicit decision - no SSH from CI).
 #
 # Tags per image: the 7-char commit SHA (what CIPHRA_TAG points at) and
 # a moving `latest`. Rollback = previous SHA tag, exactly like before.
 #
 # Images are SIGNED (cosign keyless via GitHub OIDC, logged to Rekor):
 # the signature pins the identity of THIS workflow on THIS repo. The
-# deploy ritual verifies before restart — see OPERATIONS.md. Honest
+# deploy ritual verifies before restart - see OPERATIONS.md. Honest
 # scope: protects the registry→VPS link (tampered/foreign images);
 # does NOT protect against a compromised GitHub account (it signs
 # "legitimately") and is unrelated to the THREAT_MODEL JS-swap item.
 #
 # The frontend image needs the repo docs staged into its build context
-# (the ciphraDocs vite plugin resolves /docs-src inside the container —
+# (the ciphraDocs vite plugin resolves /docs-src inside the container -
 # launch v0.1.0 missed this and shipped an empty /docs section).
 #
 # nginx joined the pipeline 2026-06-12 (context moved in-repo to
 # nginx/): all three prod images are now CI-built and signed. TLS
-# material stays bind-mounted on the VPS — never in any image.
+# material stays bind-mounted on the VPS - never in any image.
 #
 # VPS one-time setup to consume these images (operator):
 #   docker login ghcr.io -u danileau -p <PAT with read:packages>
@@ -31,11 +31,11 @@ on:
     branches: [main]
   # Base-layer CVEs land with no commit to trigger on. On 2026-08-21 the
   # published api image was 10 days old and carried 36 HIGHs from
-  # util-linux 2.41-5, fixed upstream as 2.41.5-0+deb13u1 — the Dockerfile
+  # util-linux 2.41-5, fixed upstream as 2.41.5-0+deb13u1 - the Dockerfile
   # already ran `apt-get upgrade`, there had simply been no build since.
   # Push-only meant the sole way to republish was a dummy commit. This is
   # a rebuild button: same main, fresh apt/apk upgrade. It publishes; it
-  # does not deploy (the operator still pulls — see OPERATIONS.md).
+  # does not deploy (the operator still pulls - see OPERATIONS.md).
   workflow_dispatch:
 
 permissions:
@@ -95,7 +95,7 @@ jobs:
           # Run-scoped cache-bust: forces the OS-upgrade / npm-strip layer to
           # re-run each build so :latest can't drift behind fixed-upstream CVEs
           # while the gha cache replays a stale layer (see the Dockerfiles).
-          # NOT github.sha — a workflow_dispatch rebuild of an unchanged main
+          # NOT github.sha - a workflow_dispatch rebuild of an unchanged main
           # repeats the SHA and the stale layer comes straight back.
           build-args: |
             CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}
@@ -132,7 +132,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           provenance: true
-          # Run-scoped cache-bust — re-run apt upgrade each build. NOT github.sha:
+          # Run-scoped cache-bust - re-run apt upgrade each build. NOT github.sha:
           # a workflow_dispatch rebuild of an unchanged main repeats the SHA and
           # would replay the cached (stale) layer. See api/Dockerfile.
           build-args: |
@@ -171,7 +171,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           provenance: true
-          # Run-scoped cache-bust — re-run apk upgrade each build. NOT github.sha:
+          # Run-scoped cache-bust - re-run apk upgrade each build. NOT github.sha:
           # a workflow_dispatch rebuild of an unchanged main repeats the SHA and
           # would replay the cached (stale) layer. See nginx/Dockerfile.prod.
           build-args: |

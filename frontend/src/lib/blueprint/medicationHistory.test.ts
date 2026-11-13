@@ -2,8 +2,8 @@
  * Medication dose history (2026-09-16).
  *
  * The scenario that motivated it: 2× 10 mg daily, switching to 2× 12 mg from
- * tomorrow. Before, the only way to record that was to overwrite "10 mg" —
- * which rewrote every past day — or to delete the medication, which dropped
+ * tomorrow. Before, the only way to record that was to overwrite "10 mg" -
+ * which rewrote every past day - or to delete the medication, which dropped
  * it from every report. These tests pin that a change is a step in time, that
  * days before it keep what they had, and that every step can be read back.
  */
@@ -56,7 +56,7 @@ describe('addDaysISO', () => {
 	});
 });
 
-describe('medPeriods — a medication saved before dose history', () => {
+describe('medPeriods - a medication saved before dose history', () => {
 	it('reads as one open-ended period carrying its dose, active on any day', () => {
 		const med = legacy();
 		expect(medPeriods(med)).toEqual([{ dose: '10 mg', schedule: '2× täglich' }]);
@@ -66,7 +66,7 @@ describe('medPeriods — a medication saved before dose history', () => {
 	});
 });
 
-describe('applyDoseChange — the 10 mg → 12 mg scenario', () => {
+describe('applyDoseChange - the 10 mg → 12 mg scenario', () => {
 	const changed = applyDoseChange(legacy(), { from: '2026-09-17', dose: '12 mg', schedule: '2× täglich', note: 'Aufdosierung' });
 
 	it('keeps 10 mg on every day before the change and 12 mg from the change on', () => {
@@ -160,7 +160,7 @@ describe('applySwitch', () => {
 	});
 });
 
-describe('applyCorrection — fixing a typo is retroactive by design', () => {
+describe('applyCorrection - fixing a typo is retroactive by design', () => {
 	it('rewrites only the latest period, and renames', () => {
 		const changed = applyDoseChange(legacy(), { from: '2026-09-17', dose: '21 mg', schedule: '2× täglich' });
 		const fixed = applyCorrection(changed, { name: 'Lamotrigine', dose: '12 mg', schedule: '2× täglich', asNeeded: false });
@@ -191,7 +191,7 @@ describe('undoLastChange', () => {
 	});
 });
 
-describe('medHistoryDays — what deleting would strip', () => {
+describe('medHistoryDays - what deleting would strip', () => {
 	const entry = (date: string, data: Record<string, unknown> = {}) => ({ data: { type: 'entry', date, ...data } });
 
 	it('counts every logged day of a scheduled med (assumed taken), not just the missed ones', () => {
@@ -222,7 +222,7 @@ describe('medHistoryDays — what deleting would strip', () => {
 /* ─── Duplicates (the pre-dose-history workaround) ─────────────────────── */
 
 describe('coalescing a change to what already applied', () => {
-	it('reads back-to-back equal doses as one period — no "8 mg → 8 mg" step', () => {
+	it('reads back-to-back equal doses as one period - no "8 mg → 8 mg" step', () => {
 		const med = legacy({
 			periods: [
 				{ to: '2026-09-15', dose: '10mg', schedule: 'abends' },
@@ -260,7 +260,7 @@ describe('duplicateGroups', () => {
 	});
 });
 
-describe('combineMedications — the operator\'s Fycompa case (2026-09-16)', () => {
+describe('combineMedications - the operator\'s Fycompa case (2026-09-16)', () => {
 	// The workaround: the original entry at 10 mg, a second "Fycompa" added at
 	// 8 mg when the dose changed. After dose history shipped, the original was
 	// changed to 8 mg from 16.09. (plus a same-dose step on 17.09.) and the
@@ -282,7 +282,7 @@ describe('combineMedications — the operator\'s Fycompa case (2026-09-16)', () 
 		expect(medicationsOverlap(original, duplicate)).toBe(true);
 	});
 
-	it('10 mg until the duplicate took over, 8 mg since — and it continues past the duplicate\'s stop', () => {
+	it('10 mg until the duplicate took over, 8 mg since - and it continues past the duplicate\'s stop', () => {
 		const combined = combineMedications(original, duplicate, { earlierId: 'fyc-1', switchDate: '2026-08-01' })!;
 		expect(combined.id).toBe('fyc-1');
 		expect(combined.mergedIds).toEqual(['fyc-2']);
@@ -324,7 +324,7 @@ describe('combineMedications — the operator\'s Fycompa case (2026-09-16)', () 
 
 /* ─── History from before ciphra (2026-09-19) ──────────────────────────── */
 
-describe('prependPeriod — the development before the record', () => {
+describe('prependPeriod - the development before the record', () => {
 	it('gives a medication with no recorded start one, and keeps every later period', () => {
 		const med = applyDoseChange(legacy(), { from: '2026-09-16', dose: '8 mg', schedule: '2× täglich' });
 		const back = prependPeriod(med, { dose: '12 mg', schedule: '2× täglich', from: '2023-03-01', to: '2026-05-31' })!;
@@ -354,7 +354,7 @@ describe('prependPeriod — the development before the record', () => {
 		expect([first.to, first.toPrecision, first.reported]).toEqual(['2026-05-31', 'month', true]);
 	});
 
-	it('leaves a gap alone — a pause in the therapy is not a dose', () => {
+	it('leaves a gap alone - a pause in the therapy is not a dose', () => {
 		const med = createMedication('m', { name: 'Fycompa', dose: '8mg', schedule: '', asNeeded: false, from: '2026-06-01' });
 		const back = prependPeriod(med, { dose: '10mg', schedule: '', from: '2024-01-01', to: '2025-12-31' })!;
 		expect(isActiveOn(back, '2026-03-01')).toBe(false);
@@ -370,7 +370,7 @@ describe('prependPeriod — the development before the record', () => {
 		expect(prependPeriod(legacy(), { dose: '10mg', schedule: '' })).toBeNull();
 	});
 
-	it('is not applyDoseChange with an old date — that one drops the later history', () => {
+	it('is not applyDoseChange with an old date - that one drops the later history', () => {
 		const med = applyDoseChange(legacy(), { from: '2026-09-16', dose: '8 mg', schedule: '2× täglich' });
 		const wrong = applyDoseChange(med, { from: '2024-01-01', dose: '12 mg', schedule: '2× täglich' });
 		// The 8 mg the person actually takes today is gone.
@@ -410,7 +410,7 @@ describe('remembered days are not tracked days', () => {
 	});
 });
 
-describe('createPastMedication — tried, and stopped again', () => {
+describe('createPastMedication - tried, and stopped again', () => {
 	it('is one remembered period and reads as stopped', () => {
 		const med = createPastMedication('lev', {
 			name: 'Levetiracetam', dose: '1000 mg', schedule: '2× täglich', asNeeded: false,

@@ -2,7 +2,7 @@
  * Open the global quick-add sheet the way a desktop user does.
  *
  * The specs that use this run on Desktop Chrome (1280px). There the mobile
- * BottomNav — and its centre `fab-quickadd` button — is `md:hidden`, and the
+ * BottomNav - and its centre `fab-quickadd` button - is `md:hidden`, and the
  * separate desktop FAB was removed on purpose in pi v24-5d (8d87637). Its
  * replacement is the `+ Add` button in the /journal header (`journal-add`,
  * `hidden md:inline-flex`), which opens the very same sheet via the

@@ -1,5 +1,5 @@
 <!--
-	ciphra — period picker for the /reports doctor export.
+	ciphra - period picker for the /reports doctor export.
 
 	Renders the PANEL only; the trigger is the export card in
 	routes/reports/+page.svelte, which owns `aria-haspopup` / `aria-expanded`
@@ -8,14 +8,14 @@
 
 	Two presentations, one behaviour:
 	  ≥640px  anchored listbox under the card, keyboard-driven like
-	          LocaleSelect (the repo's custom-listbox precedent — a native
+	          LocaleSelect (the repo's custom-listbox precedent - a native
 	          <select> panel is browser chrome CSS cannot reach).
 	  <640px  BottomSheet. Touch has no hover, and a layer anchored under
 	          the third card in a 3-up grid gets clipped at the viewport
 	          edge. BottomSheet also brings its own focus trap.
 
 	Every row states how much data the window holds, as a plain fact about
-	the export. Windows with little data are offered like any other — a
+	the export. Windows with little data are offered like any other - a
 	2-year pair straddling an empty year is a legitimate thing to hand a
 	doctor.
 
@@ -33,7 +33,7 @@
 
 	export let open = false;
 	export let options: PeriodOption[] = [];
-	/** Row pre-selected on open — the period covering the month on screen. */
+	/** Row pre-selected on open - the period covering the month on screen. */
 	export let selectedIndex = 0;
 	export let heading = '';
 	/** The trigger card, so an outside-click check can exclude it. */
@@ -234,7 +234,7 @@
 		flex-direction: column;
 		gap: 2px;
 		width: 100%;
-		/* 44px floor — the /reports touch-target contract. */
+		/* 44px floor - the /reports touch-target contract. */
 		min-height: 44px;
 		padding: 8px 12px;
 		text-align: left;

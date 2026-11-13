@@ -5,7 +5,7 @@
  * is a runes object, and a legacy `$:` statement only re-runs when an
  * identifier it names at compile time changes. `page` is neither a store nor
  * component state, so `$: tab = page.url.searchParams.get('tab')` runs once
- * and then never again on client-side navigation — with no error.
+ * and then never again on client-side navigation - with no error.
  *
  * `pageStore(read)` wraps `read(page)` in a readable store (Svelte's
  * `toStore`, which re-evaluates the getter inside an effect, so it tracks the
@@ -17,7 +17,7 @@
  *
  * Call it during component initialisation (top level of `<script>`): on the
  * server `page` can only be read while rendering. Runes-mode components do not
- * need this — they read `page` directly in `$derived`.
+ * need this - they read `page` directly in `$derived`.
  */
 import { page, type Page } from '$app/state';
 import { toStore, type Readable } from 'svelte/store';

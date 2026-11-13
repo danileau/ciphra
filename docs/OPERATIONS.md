@@ -1,6 +1,6 @@
 # Operations
 
-This is the day-to-day operations runbook for ciphra in production —
+This is the day-to-day operations runbook for ciphra in production -
 the production deploy at `ciphra.ch`. For local development setup, see
 [DEVELOPING.md](DEVELOPING.md). For the security model and threat
 boundaries, see [SECURITY_MODEL.md](SECURITY_MODEL.md). For initial VPS
@@ -45,9 +45,9 @@ If you arrived here because something is broken, jump to
 
 Two systemd units own the stack:
 
-- **`ciphra-data.service`** wraps `golive/docker-compose.data.yml` —
+- **`ciphra-data.service`** wraps `golive/docker-compose.data.yml` -
   postgres + redis. Started first; data survives `ciphra-app` restarts.
-- **`ciphra-app.service`** wraps `golive/docker-compose.app.yml` —
+- **`ciphra-app.service`** wraps `golive/docker-compose.app.yml` -
   nginx + frontend + api. `Requires=ciphra-data.service` so app can
   never start before its data dependencies.
 
@@ -76,7 +76,7 @@ by CI and never rsynced.
 | Encrypted backups | `infomaniak-primary:ciphra-backup/` (S3) | Infomaniak account |
 | Cron log files | `/var/log/ciphra-*.log` | mostly ubuntu, `ciphra-fw.log` root |
 
-## Cron — what fires when
+## Cron - what fires when
 
 ### User crontab (run as `ubuntu`)
 
@@ -90,7 +90,7 @@ Verify with `crontab -l`.
 | Time (UTC) | Job | Log | What it does |
 |---|---|---|---|
 | `*/5 * * * *` | `backup/healthcheck.sh` | `ciphra-health.log` | Probes nginx `/health` with a CF-Connecting-IP header, pings HC.io `ciphra-liveness` on success. App-stack alive. |
-| `*/5 * * * *` | `metrics/vps_pulse.sh` | `ciphra-pulse.log` | Pings HC.io `ciphra-vps-pulse`. Proves the VPS itself reaches the internet — independent of docker/app. |
+| `*/5 * * * *` | `metrics/vps_pulse.sh` | `ciphra-pulse.log` | Pings HC.io `ciphra-vps-pulse`. Proves the VPS itself reaches the internet - independent of docker/app. |
 | `*/15 * * * *` | `metrics/host_metrics.sh` | `ciphra-host.log` | Checks host disk/RAM/load against thresholds. Breach → ntfy push. |
 | `0 * * * *` | `metrics/security_threshold.sh` | `ciphra-security.log` | Hourly: spike in LOGIN_FAILED events → ntfy push. |
 | `0 2 * * *` | `metrics/metrics.sh` | `ciphra-metrics.log` | Nightly: appends a CSV row of `count(users) | count(docs) | count(audit)`. Eyeballable trend data. |
@@ -124,25 +124,25 @@ Four checks at https://healthchecks.io/. Email on missed pings.
 | `ciphra-liveness` | `HEALTHCHECK_URL_LIVENESS` | 5 min | 2 min | App stack down. nginx, api, or postgres unreachable. |
 | `ciphra-vps-pulse` | `HEALTHCHECK_URL_VPS_PULSE` | 5 min | 5 min | VPS itself unreachable. Host crash, network outage, kernel panic. |
 | `ciphra-backup` | `HEALTHCHECK_URL` | 1 day | 6 hours | Nightly backup failed. Possibly: pg_dump error, age error, rclone upload failed. |
-| `ciphra-deploy` | `HEALTHCHECK_URL_DEPLOY` | 5 min | 15 min | **Pull-based CD is dead** — the watcher can't reach GitHub, so a `deploy-<sha>` tag would never ship. Prod keeps serving the old image and every other check stays green. |
+| `ciphra-deploy` | `HEALTHCHECK_URL_DEPLOY` | 5 min | 15 min | **Pull-based CD is dead** - the watcher can't reach GitHub, so a `deploy-<sha>` tag would never ship. Prod keeps serving the old image and every other check stays green. |
 
 Read combinations:
 
 | liveness | pulse | backup | Means |
 |---|---|---|---|
 | 🟢 | 🟢 | 🟢 | All healthy |
-| 🔴 | 🟢 | (any) | App stack broken — `docker ps`, `journalctl -u ciphra-app`, check logs |
-| 🔴 | 🔴 | (any) | VPS unreachable — check Infomaniak Manager / provider status |
-| 🟢 | 🟢 | 🔴 | Backup pipeline broken — `tail -30 /var/log/ciphra-backup.log` |
+| 🔴 | 🟢 | (any) | App stack broken - `docker ps`, `journalctl -u ciphra-app`, check logs |
+| 🔴 | 🔴 | (any) | VPS unreachable - check Infomaniak Manager / provider status |
+| 🟢 | 🟢 | 🔴 | Backup pipeline broken - `tail -30 /var/log/ciphra-backup.log` |
 
 `ciphra-deploy` is deliberately read separately from the three above: they
 answer "is prod serving?", it answers "can we still ship to prod?". Those are
 different questions, and on 2026-09-01 they had different answers for a full
-day. Red there is never urgent for users — it is urgent for the next deploy.
+day. Red there is never urgent for users - it is urgent for the next deploy.
 
 ### ntfy
 
-A long-random topic at `https://ntfy.sh/<topic>` — value in `NTFY_TOPIC_URL`. Subscribed
+A long-random topic at `https://ntfy.sh/<topic>` - value in `NTFY_TOPIC_URL`. Subscribed
 on the operator's phone via the ntfy app. Pushes from:
 
 - `metrics/host_metrics.sh` (disk/RAM/load threshold breach, every 15 min)
@@ -157,7 +157,7 @@ of the scripts manually to test.
 
 ### What's backed up
 
-The full ciphra postgres database — `users`, `encrypted_documents`,
+The full ciphra postgres database - `users`, `encrypted_documents`,
 `family_grants`, `audit_log`. NOT the docker images (they're
 rebuildable), NOT the nginx config (lives in `golive/` on laptop +
 VPS), NOT the redis state (ephemeral by design).
@@ -174,8 +174,8 @@ pg_dump → gzip → age (asymmetric encrypt → BACKUP_PUBKEY)
 No plaintext touches disk: `pg_dump` streams into a unix pipe.
 
 Retention (Sunday sweep): 90 days on primary, 30 days on secondary. The
-cross-vendor offsite secondary is **active** (2026-08) via `RCLONE_SECONDARY`
-— the nightly dump lands on both legs, so no single provider holds the only
+cross-vendor offsite secondary is **active** (2026-08) via `RCLONE_SECONDARY` -
+the nightly dump lands on both legs, so no single provider holds the only
 copy. (`backup.sh` skips the secondary leg silently if the variable is unset.)
 
 ### Manual backup (debug / pre-migration sanity)
@@ -200,7 +200,7 @@ A backup you've never restored from is not a backup. Run this every
 materially.
 
 This should run on a separate machine (operator's laptop preferred)
-so it tests the cold-recovery path — "VPS is gone, I have only the
+so it tests the cold-recovery path - "VPS is gone, I have only the
 paper key + the Infomaniak login".
 
 ```bash
@@ -214,7 +214,7 @@ sleep 3
 mkdir -p /tmp/ciphra-restore-drill && cd /tmp/ciphra-restore-drill
 rclone copy infomaniak-primary:ciphra-backup/ . --max-age 24h
 
-# 3. Restore. Use whichever age private key path applies — laptop file
+# 3. Restore. Use whichever age private key path applies - laptop file
 #    for routine drills, paper-into-temp-file for full cold drills (see
 #    project_age_key_rotation_runbook.md §"Restore from a pre-rotation backup").
 LATEST=$(ls -1t *.sql.gz.age | head -1)
@@ -238,8 +238,8 @@ cd /tmp && rm -rf ciphra-restore-drill
 
 **Acceptance:** 4 tables exist, counts are plausible for current
 state. If you want to fully validate Zero-Knowledge: pick a document
-ciphertext (`SELECT encrypted_data FROM encrypted_documents LIMIT 1`)
-— you should see opaque base64-looking blob, not JSON.
+ciphertext (`SELECT encrypted_data FROM encrypted_documents LIMIT 1`) -
+you should see opaque base64-looking blob, not JSON.
 
 If the drill fails at any step, escalate the failed step (don't
 just retry). Common failure modes:
@@ -257,7 +257,7 @@ just retry). Common failure modes:
 | age private key | Paper (2 cards, 2 locations) + laptop file 0600 | Semi-annual (Jan 1 + Jul 1) + trigger-based |
 | Infomaniak S3 access + secret | rclone config on VPS + restore-machine | When suspected leak |
 | Cloudflare origin cert + key | nginx container bind-mount | Cert auto-rotates per CF; 15-year expiry by default |
-| `SECRET_KEY` (JWT signing) | `.env` on VPS | Annual hygiene rotation (invalidates all sessions — schedule with notice) |
+| `SECRET_KEY` (JWT signing) | `.env` on VPS | Annual hygiene rotation (invalidates all sessions - schedule with notice) |
 | Postgres password | `.env` on VPS | Only on suspected leak (changing requires restart + DB user re-auth) |
 | ntfy topic URL | `.env` on VPS | When suspected leak (anyone with topic can send/spam) |
 
@@ -276,7 +276,7 @@ personal memory). Summary:
 
 NEVER `cat`/`head`/`Read` a keyfile that contains the private. Use
 `grep "public key"` or equivalent extractors. The private leak can
-never be undone — see `memory/feedback_never_print_secret_files.md`.
+never be undone - see `memory/feedback_never_print_secret_files.md`.
 
 ### S3 credentials rotation
 
@@ -315,7 +315,7 @@ The hard case: Infomaniak issues, ransomware, anything. Recovery time
    instead of throwaway docker.
 7. Start systemd units: `sudo systemctl start ciphra-data ciphra-app`.
 8. Verify `https://<vps-public-ip>:8443/health` works (with `--resolve`
-   + CF-Connecting-IP header — see healthcheck.sh).
+   + CF-Connecting-IP header - see healthcheck.sh).
 9. Update DNS A/AAAA records at Cloudflare to point at new VPS IP.
    Propagation: ~5 min with CF.
 10. Re-install crontabs (user + root).
@@ -323,7 +323,7 @@ The hard case: Infomaniak issues, ransomware, anything. Recovery time
 
 ### "The laptop is gone"
 
-Less hard but real — operator laptop is the single point for:
+Less hard but real - operator laptop is the single point for:
 - age private key on disk
 - rclone restore-machine config
 - `golive/` canonical tree
@@ -348,8 +348,8 @@ Recovery:
 
 There is no recovery. The Zero-Knowledge model means even the
 operator cannot decrypt backups without the key. Past backups are
-permanently opaque. The running stack still works — current state in
-postgres is unaffected — but past snapshots are gone forever.
+permanently opaque. The running stack still works - current state in
+postgres is unaffected - but past snapshots are gone forever.
 
 This is why we do paper-stash to 2 locations and quarterly drills.
 
@@ -376,7 +376,7 @@ tag. Users read what shipped at **`/docs → Changelog`** (pending fragments sho
 under *Unreleased*) and in `CHANGELOG.md`.
 
 The workflows:
-- `ci.yml` — PR + main gates, all four required by `main-protection`:
+- `ci.yml` - PR + main gates, all four required by `main-protection`:
   `version-guard` (SemVer + changelog + fragment guard), `frontend`
   (svelte-check → build → vitest, build-first so `built-css-guard` sees the
   artifact), `api` (pytest in the dev image against a throwaway Postgres, then
@@ -384,19 +384,19 @@ The workflows:
   `scripts/resolve-pydeps.sh` first writes the gitignored
   `ci-pydeps/requirements.txt`: `api/requirements*.txt` are `>=` floors that
   `trivy fs` cannot read, so without it the scan saw no Python packages.
-- `release-images.yml` — on merge to main: validate `VERSION` → buildx +
+- `release-images.yml` - on merge to main: validate `VERSION` → buildx +
   sign + push (tags `X.Y.Z` + `<sha>` + `latest`).
-- `release-tag.yml` — **manual only** (Actions → *Release tag* → *Run
+- `release-tag.yml` - **manual only** (Actions → *Release tag* → *Run
   workflow*, or `gh workflow run release-tag.yml --ref main` once the release
   PR has merged). Creates the annotated **`vX.Y.Z` git tag** and publishes the
   GitHub release, with that version's `CHANGELOG.md` section as the body.
   Takes an optional version + commit, so it also backfills a release that
   shipped before it existed. Idempotent, and never writes to a branch (a tag is
   not a branch push, so `main-protection` is untouched). It used to fire on any
-  merge that moved `VERSION`; that was removed 2026-08-30 — cutting a release
+  merge that moved `VERSION`; that was removed 2026-08-30 - cutting a release
   is a decision, not a side effect. See `docs/VERSIONING.md`.
-- `security-scan.yml` — daily Trivy of the repo + the images prod **runs**
-  (the newest `deploy-*` tag, resolved like the VPS does — not `:latest`,
+- `security-scan.yml` - daily Trivy of the repo + the images prod **runs**
+  (the newest `deploy-*` tag, resolved like the VPS does - not `:latest`,
   which can be an undeployed build); the repo leg runs
   `scripts/resolve-pydeps.sh` first, like `ci.yml`. Trivy is pinned to the same version as
   the PR gate in `ci.yml`; bump all four `version:` lines together. Red pushes
@@ -404,35 +404,35 @@ The workflows:
   high priority when it turns red, default while it stays red, one recovery
   ping, silence while green. Until 2026-10-26 red only meant a GitHub email,
   and the scan stayed red for ~24 days.
-- `security-monitor.yml` — daily deterministic drift check of the LIVE
+- `security-monitor.yml` - daily deterministic drift check of the LIVE
   prod edge (`scripts/security-monitor.sh`): CSP shape, HSTS+preload, the
-  security headers, no framework leak, and — with `CF_API_TOKEN` +
-  `CF_ZONE_ID` secrets — the Cloudflare TLS mode. Red = a control drifted
+  security headers, no framework leak, and - with `CF_API_TOKEN` +
+  `CF_ZONE_ID` secrets - the Cloudflare TLS mode. Red = a control drifted
   on prod; pushes ntfy when `NTFY_TOPIC_URL` is set. Complements Trivy
   (which sees deps/images, not the running edge).
   **Cloudflare challenges it:** the runner is a datacenter IP, so Bot Fight
-  challenges it and the edge-header leg reports INCONCLUSIVE (not a red — it
+  challenges it and the edge-header leg reports INCONCLUSIVE (not a red - it
   will not assess the challenge page's headers as ciphra's). That is an
   **accepted state** (decided 2026-08-23, [`backlog.md`](backlog.md) →
   Decided): Free-plan Bot Fight cannot be skipped reliably, the header config
   is CI-guarded, and the TLS-mode leg runs independently.
-- `security-digest.yml` — weekly (Mon 06:00 UTC) consolidated posture
+- `security-digest.yml` - weekly (Mon 06:00 UTC) consolidated posture
   summary (`scripts/security-digest.sh`): aggregates the latest
   `security-scan` + `security-monitor` conclusions and the open-Dependabot
-  count into one 🟢/🟡/🔴 ntfy message. A report + **heartbeat**, not a gate
-  — the green weekly push is how you tell "all clear" apart from "a monitor
+  count into one 🟢/🟡/🔴 ntfy message. A report + **heartbeat**, not a gate -
+  the green weekly push is how you tell "all clear" apart from "a monitor
   died". The daily jobs stay the blocking red alerts.
 
-Deploys remain an operator action — CI never touches the VPS, and the
+Deploys remain an operator action - CI never touches the VPS, and the
 VPS holds no GitHub credentials.
 
 ### Standard deploy (pull-based CD, since 2026-06-12)
 
 The VPS watches the repo for `deploy-<7sha>` tags
 (`ciphra-deploy.timer`, every 3 min → `golive/deploy/ciphra-autodeploy`,
-root: it must restart systemd units — the documented second root task).
+root: it must restart systemd units - the documented second root task).
 
-**Deploy with the wizard** (`scripts/deploy-wizard.sh`, since 2026-07-25) —
+**Deploy with the wizard** (`scripts/deploy-wizard.sh`, since 2026-07-25) -
 the single entry point from the laptop:
 
 ```bash
@@ -451,14 +451,14 @@ tag → push → health-poll itself. It only offers commits that are on
 Before the confirm it also says whether the commit is **in a release**
 (`scripts/release-state.sh`, 2026-09-20): it warns when the commit still
 carries `changelog.d/` fragments no release has compiled, and when its
-`VERSION` has no `vX.Y.Z` tag — which is how v1.4.0 stayed untagged for three
+`VERSION` has no `vX.Y.Z` tag - which is how v1.4.0 stayed untagged for three
 days with every `compare/v1.4.0…` link in the user-facing changelog dead.
 Neither blocks the deploy; shipping ahead of a release is a legitimate choice,
 doing it without noticing is not. On a clean release it prints nothing and goes
 straight to the y/N (before #252, 2026-11-12, it exited silently at exactly
 that point).
 
-Under the hood it's still just a tag push. The wizard is the supported path —
+Under the hood it's still just a tag push. The wizard is the supported path -
 do not hand over a raw `git tag` + `git push`; the lightweight-tag version of it
 is what made rollbacks silently no-op (see below). Only if the wizard itself
 cannot run, the break-glass equivalent is:
@@ -471,20 +471,20 @@ git push origin deploy-<sha>
 
 > **Deploy tags must be annotated.** The VPS selects the live deploy with
 > `git tag --sort=-creatordate`. For a *lightweight* tag, `creatordate` is
-> the tagged **commit's** date — so a rollback tag on an older commit sorts
+> the tagged **commit's** date - so a rollback tag on an older commit sorts
 > *below* the current one and the VPS never picks it (rollback silently
 > no-ops). An **annotated** tag (`git tag -m …`) carries its own tagger
 > date → newest-pushed always wins. The wizard does this for you.
 
 Within ~3 minutes the VPS: pulls all three images → **digest-pinned
-cosign verification** (unsigned/foreign images are refused — a tag
+cosign verification** (unsigned/foreign images are refused - a tag
 alone cannot deploy anything the pipeline didn't sign) → `.env` bump →
 restart → health check. ntfy reports start / OK / BLOCKED / FAILED.
 **On a failed health check it rolls back automatically** to the
 previous registry+tag and says so.
 
 During the container swap Cloudflare can briefly answer **523** (origin
-unreachable) — that is the restart, not a failure; judge the deploy by the
+unreachable) - that is the restart, not a failure; judge the deploy by the
 ntfy result and `/health` a minute later.
 
 Rollback by hand = `r` in the wizard, or push a fresh **annotated** deploy
@@ -497,14 +497,14 @@ database before it serves traffic, so a rollback puts the *previous* image on
 the *newer* schema. That is a supported state as long as the migration was
 additive: the old code never selects the column, and the API logs a warning
 saying the database is ahead. `curl -s https://ciphra.ch/health` shows both
-numbers — `schema` (what the database is at) and `app_schema` (what the running
+numbers - `schema` (what the database is at) and `app_schema` (what the running
 image knows); the mismatch is the confirmation. If the API instead **refuses to
 start** with a schema message, the failed release carried a migration marked
 incompatible: roll *forward* to a fixed build, or restore the database from the
 backup taken before that release. Do not try to hand-edit the schema back.
 `docs/VERSIONING.md` has the ledger and what `compatible` means.
 
-### CDN caching — `/sw.js` must not be edge-cached
+### CDN caching - `/sw.js` must not be edge-cached
 
 `/sw.js` is the service-worker update mechanism. On the first prod deploy
 (2026-06-13) a new worker was served STALE for hours: Cloudflare edge-cached
@@ -524,7 +524,7 @@ After any deploy, sanity-check: `curl -sI 'https://ciphra.ch/sw.js?x=1' | grep -
 cache-control` should be `no-cache`. Do **not** read deploy freshness off
 `/sw.js` any more: since SvelteKit 3 / adapter-node 6 (1.5.3) it carries no
 `last-modified`, and its `etag` is a content hash that only changes when
-`static/sw.js` does. `/_app/version.json` changes every build — see
+`static/sw.js` does. `/_app/version.json` changes every build - see
 [Post-deploy smoke](#post-deploy-smoke). A leftover stale edge entry shows as
 `cf-cache-status: HIT`; clear it with Caching → Purge Custom URL → `/sw.js`.
 
@@ -532,11 +532,11 @@ cache-control` should be `no-cache`. Do **not** read deploy freshness off
 
 One-time setup: in `/opt/ciphra/golive/.env` set
 `CIPHRA_REGISTRY=ghcr.io/danileau`. The ghcr packages are PUBLIC
-(repo is open source, images contain no secrets — .env stays on the
+(repo is open source, images contain no secrets - .env stays on the
 VPS), so pulls need no token; authenticity comes from the cosign
 verify step below, not from registry auth. If the packages are ever
 made private: fine-grained PAT, packages:read on this repo only,
-6-month expiry bundled into the semi-annual key-rotation ritual —
+6-month expiry bundled into the semi-annual key-rotation ritual -
 do NOT build token-refresh machinery for a read-only pull credential.
 
 ```bash
@@ -547,13 +547,13 @@ docker pull ghcr.io/danileau/ciphra-nginx:<sha>
 
 # 2. verify the signatures (cosign binary: one-time install; helper
 #    script from golive/deploy). Pins "built by the release workflow
-#    of danileau/ciphra on main" against the EXACT PULLED DIGEST —
+#    of danileau/ciphra on main" against the EXACT PULLED DIGEST -
 #    immune to tag re-pointing. Do NOT skip-on-red.
 ciphra-verify ghcr.io/danileau/ciphra-frontend:<sha>
 ciphra-verify ghcr.io/danileau/ciphra-api:<sha>
 ciphra-verify ghcr.io/danileau/ciphra-nginx:<sha>
 
-# 3. bump + restart (keep commands SHORT — long pastes split):
+# 3. bump + restart (keep commands SHORT - long pastes split):
 sed -i "s|^CIPHRA_TAG=.*|CIPHRA_TAG=<sha>|" /opt/ciphra/golive/.env
 sudo systemctl restart ciphra-app
 docker ps --format 'table {{.Names}}\t{{.Status}}'
@@ -569,7 +569,7 @@ in-repo at `frontend/Dockerfile.prod`:
 
 ```bash
 cd /opt/ciphra/src && git pull --ff-only
-# Stage the docs FIRST — the build context does not contain them (launch
+# Stage the docs FIRST - the build context does not contain them (launch
 # lesson: v0.1.0 shipped an empty /docs). Same list as release-images.yml.
 rm -rf frontend/_docs-src && mkdir frontend/_docs-src
 cp -r docs README.md SECURITY.md CHANGELOG.md changelog.d frontend/_docs-src/
@@ -586,11 +586,11 @@ target `prod`, `nginx/Dockerfile.prod`) or re-tagged under the same name, then
 
 ### Post-deploy smoke
 
-Public reads only — fine to run from the laptop. First the edge:
+Public reads only - fine to run from the laptop. First the edge:
 
 ```bash
 curl -s https://ciphra.ch/health            # {"status":"healthy","schema":10,"app_schema":10}
-curl -s https://ciphra.ch/_app/version.json # changes on every build — compare with before
+curl -s https://ciphra.ch/_app/version.json # changes on every build - compare with before
 curl -sI 'https://ciphra.ch/sw.js?x=1' | grep -i cache-control   # no-cache
 curl -sI https://ciphra.ch/ | grep -iE '^HTTP|strict-transport|content-security|x-content-type'
 ```
@@ -598,7 +598,7 @@ curl -sI https://ciphra.ch/ | grep -iE '^HTTP|strict-transport|content-security|
 Static files answer **405** to anything but GET/HEAD (adapter-node 6), so probe
 them with `-I` or a plain GET, not `-X POST`.
 
-Then the app, in a browser — it is client-rendered behind the auth gate, so
+Then the app, in a browser - it is client-rendered behind the auth gate, so
 curl only sees the shell (the SSR `<head>` carries titles + canonical since
 #235, the body does not):
 
@@ -612,7 +612,7 @@ cd frontend && PLAYWRIGHT_NO_WEBSERVER=1 PLAYWRIGHT_BASE_URL=https://ciphra.ch \
 ### Service restart
 
 ```bash
-# Restart just the app plane (api/nginx/frontend) — data persists
+# Restart just the app plane (api/nginx/frontend) - data persists
 sudo systemctl restart ciphra-app
 
 # Restart the data plane (postgres + redis). Stops the app plane too
@@ -634,11 +634,11 @@ docker stats --no-stream
 ### Read logs
 
 ```bash
-# Cron logs — usually silent (success means no output)
+# Cron logs - usually silent (success means no output)
 tail -f /var/log/ciphra-health.log    # if it has lines, healthcheck is failing
 tail -f /var/log/ciphra-backup.log    # full backup output
 
-# Container logs — actual app behavior
+# Container logs - actual app behavior
 docker logs ciphra-api --tail=50
 docker logs ciphra-nginx --tail=50
 docker logs ciphra-frontend --tail=50
@@ -692,9 +692,9 @@ If a cron job is broken: `grep "$(date -u +%Y-%m-%d)" /var/log/syslog
 ### `ciphra-liveness` is red
 
 Check in order:
-1. `docker ps` — are all containers up?
-2. `docker logs ciphra-nginx --tail=20` — recent errors?
-3. `tail -20 /var/log/ciphra-health.log` — what's the script saying?
+1. `docker ps` - are all containers up?
+2. `docker logs ciphra-nginx --tail=20` - recent errors?
+3. `tail -20 /var/log/ciphra-health.log` - what's the script saying?
 4. Manual probe:
    ```bash
    curl -k -H "CF-Connecting-IP: 127.0.0.1" \
@@ -702,7 +702,7 @@ Check in order:
      "https://ciphra.ch:8443/health"
    # Expected: {"status":"healthy","schema":10,"app_schema":10}
    # `schema` > `app_schema` means a rollback left an older image on a newer
-   # (additive) schema — supported, see §Deploying → Rollback and the schema.
+   # (additive) schema - supported, see §Deploying → Rollback and the schema.
    ```
 5. If healthy here but cron still failing: env var problem in cron context. Verify
    `.env` is readable by `ubuntu` and contains `HEALTHCHECK_URL_LIVENESS`.
@@ -711,7 +711,7 @@ Check in order:
 
 The VPS can't reach the internet. Check Infomaniak status page. If
 the VPS is reachable via SSH but pulse is red, the VPS has egress
-network broken — check provider firewall.
+network broken - check provider firewall.
 
 ### `ciphra-backup` is red
 
@@ -734,7 +734,7 @@ journalctl -t ciphra-deploy --since '6 hours ago'   # every attempt, incl. throt
 journalctl -u ciphra-deploy --since '1 hour ago'
 ```
 
-The journal carries git's real error. Reproduce it in the unit's own context —
+The journal carries git's real error. Reproduce it in the unit's own context -
 `sudo` keeps `HOME=/home/ubuntu` while the unit sets `HOME=/root`, so a fetch
 can work by hand and fail under systemd:
 
@@ -746,7 +746,7 @@ sudo env HOME=/root GIT_TERMINAL_PROMPT=0 \
 
 `GIT_TERMINAL_PROMPT=0` and `</dev/null` matter: a prompting git otherwise eats
 your next pasted line as a username. **A credential prompt here is not an auth
-problem** — the clone is anonymous against a public repo and the box holds no
+problem** - the clone is anonymous against a public repo and the box holds no
 GitHub credential by design. git retries with authentication when it receives a
 200 whose body it cannot parse, so "could not read Username" means *the response
 was malformed*, not *access was denied*. Check the transport before the
@@ -771,7 +771,7 @@ Two layers. **nginx** (`nginx/ciphra.conf`, per client IP after
 **429** per route, on top of the per-account login lockout.
 
 `assets` exists since #247 (1.5.3): a cold load after a deploy fetches dozens
-of hashed chunks at once, which used to exhaust the `public` budget — blank
+of hashed chunks at once, which used to exhaust the `public` budget - blank
 page, 503s on `/_app/immutable/*`. If that symptom comes back, look at this
 zone first.
 
@@ -802,8 +802,8 @@ sudo journalctl -u ciphra-app --since "5 min ago" --no-pager
 
 For the frontend specifically: adapter-node reads `ORIGIN` at runtime and
 refuses to start unless it is a **single valid URL**.
-`golive/docker-compose.app.yml` sets `ORIGIN: ${FRONTEND_ORIGIN:-https://ciphra.ch}`
-— deliberately not `CORS_ORIGINS`, which is a comma-separated list for Flask.
+`golive/docker-compose.app.yml` sets `ORIGIN: ${FRONTEND_ORIGIN:-https://ciphra.ch}` -
+deliberately not `CORS_ORIGINS`, which is a comma-separated list for Flask.
 A list there (or a bad `FRONTEND_ORIGIN`) = a crash-looping `ciphra-frontend`.
 
 For api specifically: if logs show `relation "users" does not exist`,
@@ -816,7 +816,7 @@ container CMD (not direct gunicorn). See
 Closed before broader announcement. 3.1 ships in code; **3.2 + 3.3 are
 operator actions** (Cloudflare dashboard / VPS file).
 
-### 3.1 — CSP: script-src `'unsafe-inline'` dropped ✅ (code)
+### 3.1 - CSP: script-src `'unsafe-inline'` dropped ✅ (code)
 
 CSP is now emitted by **SvelteKit per-response** (`frontend/vite.config.ts`
 → `kitConfig.csp`, mode `hash`), not by nginx. `script-src` no longer allows
@@ -824,7 +824,7 @@ CSP is now emitted by **SvelteKit per-response** (`frontend/vite.config.ts`
 the two `src/app.html` author scripts (dark-mode pre-paint init + SW
 registration) are pinned by sha256 hash. `style-src` KEEPS `'unsafe-inline'`
 (~970 dynamic inline `style=""` attributes can't be hashed). The nginx CSP
-`add_header` was removed from `nginx/ciphra.conf` — **do not re-add it** (a
+`add_header` was removed from `nginx/ciphra.conf` - **do not re-add it** (a
 second CSP header would intersect with SvelteKit's, and the per-build script
 hashes only live in the app).
 
@@ -839,16 +839,16 @@ hashes only live in the app).
     white flash, SW registers, the Cloudflare beacon loads.
   - A violation = a missing hash → add it to `kit.csp.directives['script-src']`.
 
-### 3.2 — Cloudflare WAF rate-limit on `/api/login` (operator, ~15 min)
+### 3.2 - Cloudflare WAF rate-limit on `/api/login` (operator, ~15 min)
 
 Edge-throttle login bruteforce before it reaches origin (origin already has
-flask-limiter + per-account lockout + the nginx `api_login` zone — this is
+flask-limiter + per-account lockout + the nginx `api_login` zone - this is
 defense-in-depth, so the edge rule can be coarse).
 
 ⚠️ ciphra.ch is on the Cloudflare **Free** plan. Free rate limiting is capped
 at a **10-second** window, **IP** counting, and the builder exposes **no HTTP
 method field**. That's fine: `/api/login` only accepts POST (a GET just
-404/405s), so match the path alone — no method filter needed. (1-min/1-hr
+404/405s), so match the path alone - no method filter needed. (1-min/1-hr
 windows + method-aware matching + longer block durations require CF **Pro**.)
 
 Cloudflare dashboard → **ciphra.ch** → Security → WAF → **Rate limiting rules**
@@ -863,7 +863,7 @@ while stopping scripted hammering.
 
 Verify: `for i in $(seq 1 15); do curl -s -o /dev/null -w "%{http_code}\n" -X POST https://ciphra.ch/api/login -H 'content-type: application/json' -d '{}'; done` → the first ~10 return 400/401, then 429/403 once the edge rule trips.
 
-### 3.3 — Logrotate for `/var/log/ciphra-*.log` (operator, ~15 min)
+### 3.3 - Logrotate for `/var/log/ciphra-*.log` (operator, ~15 min)
 
 Config is versioned at `scripts/ciphra.logrotate`. Install on the VPS:
 
@@ -882,23 +882,23 @@ These are known gaps in the production posture. Not blocking 10-15
 migrants but should close before broader rollout (Inselspital
 announcement / Verbände).
 
-- ✅ **CSP migration to SvelteKit hash mode (done 2026-06-20)** — `script-src`
+- ✅ **CSP migration to SvelteKit hash mode (done 2026-06-20)** - `script-src`
   `'unsafe-inline'` dropped. See the "Track 3 P0 hardening" section above (3.1).
-- ✅ **Offsite backup secondary (done 2026-08)** — cross-vendor secondary
+- ✅ **Offsite backup secondary (done 2026-08)** - cross-vendor secondary
   active via `RCLONE_SECONDARY` in `.env`; the nightly dump lands on both
   legs. No longer Infomaniak-only.
-- ✅ **Logrotate (config shipped 2026-06-20)** — `scripts/ciphra.logrotate`;
+- ✅ **Logrotate (config shipped 2026-06-20)** - `scripts/ciphra.logrotate`;
   operator install steps in the "Track 3 P0 hardening" section above (3.3).
-- **Calendar-driven age key rotation reminder** — currently manual.
+- **Calendar-driven age key rotation reminder** - currently manual.
   Add an entry to a calendar (or cron itself, sending ntfy on
   Dec 15 and Jun 15).
-- ✅ **Scanner edge-blocking (done 2026-06-12)** — Cloudflare Bot Fight
+- ✅ **Scanner edge-blocking (done 2026-06-12)** - Cloudflare Bot Fight
   Mode + a custom WAF rule block `*.php` / dotfile / CMS probe paths at
   the edge (403). Origin-side companion: the nginx 444 sink in
   `nginx/ciphra.conf`. Login bruteforce is still bounded by
   flask-limiter + per-account lockout + the nginx `api_login` zone. The
   dedicated CF rate-limit rule on `/api/login` is now spec'd as an operator
-  step — see "Track 3 P0 hardening" above (3.2).
+  step - see "Track 3 P0 hardening" above (3.2).
 
 ## Operator memory references
 
@@ -906,13 +906,13 @@ These live in the operator's personal memory at
 `~/.claude/projects/-home-danileau-work-ciphra/memory/`, NOT in the
 repo. They capture lessons + runbooks beyond what's in committed docs.
 
-- `project_launch_complete.md` — top-level launch status
-- `project_redis_ratelimit_architecture.md` — redis design rationale
-- `project_age_key_rotation_runbook.md` — full rotation procedure
-- `project_session_handoff_20260608_evening.md` — Track 1 setup notes
-- `feedback_never_print_secret_files.md` — mechanical guard for secrets
-- `feedback_nftables_redirect_localhost.md` — why nginx binds 0.0.0.0
-- `feedback_infomaniak_hypervisor_firewall.md` — VPS port-22 default
-- `feedback_docker_build_ipv6.md` — `--network=host` trick for builds
-- `feedback_golive_rsync_drift.md` — laptop is canonical; diff the VPS copy
+- `project_launch_complete.md` - top-level launch status
+- `project_redis_ratelimit_architecture.md` - redis design rationale
+- `project_age_key_rotation_runbook.md` - full rotation procedure
+- `project_session_handoff_20260608_evening.md` - Track 1 setup notes
+- `feedback_never_print_secret_files.md` - mechanical guard for secrets
+- `feedback_nftables_redirect_localhost.md` - why nginx binds 0.0.0.0
+- `feedback_infomaniak_hypervisor_firewall.md` - VPS port-22 default
+- `feedback_docker_build_ipv6.md` - `--network=host` trick for builds
+- `feedback_golive_rsync_drift.md` - laptop is canonical; diff the VPS copy
   before overwriting (it may carry hot-patches)

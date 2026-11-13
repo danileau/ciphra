@@ -1,5 +1,5 @@
 /**
- * ciphra — SignupFlow component tests (CIPH-741).
+ * ciphra - SignupFlow component tests (CIPH-741).
  *
  * Ravi's veto: this is the most security-critical new surface and must
  * have tests. We cover:
@@ -80,7 +80,7 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-describe('SignupFlow — error states', () => {
+describe('SignupFlow - error states', () => {
     it('shows password-mismatch error and does not call register', async () => {
         const { container } = render(SignupFlow);
         fillSignupForm(container, 'longenoughpw12', 'differentpw12');
@@ -125,7 +125,7 @@ describe('SignupFlow — error states', () => {
     });
 });
 
-describe('SignupFlow — recovery-gate screen', () => {
+describe('SignupFlow - recovery-gate screen', () => {
     async function reachRecoveryScreen(events?: Record<string, (e: CustomEvent) => void>) {
         vi.mocked(crypto.createVault).mockResolvedValue({
             recovery_code: 'RECO-1111-2222',
@@ -183,7 +183,7 @@ describe('SignupFlow — recovery-gate screen', () => {
         const buttons = Array.from(container.querySelectorAll('button')) as HTMLButtonElement[];
         const proceed = buttons[buttons.length - 1];
 
-        // Click without acknowledging — must be a no-op.
+        // Click without acknowledging - must be a no-op.
         await fireEvent.click(proceed);
         expect(onComplete).not.toHaveBeenCalled();
 

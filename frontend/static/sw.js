@@ -18,7 +18,7 @@ self.addEventListener('fetch', (event) => {
 	// Only handle http/https
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-	// Cross-origin fetches (e.g. epilepc migration bundle) bypass the SW entirely —
+	// Cross-origin fetches (e.g. epilepc migration bundle) bypass the SW entirely -
 	// let the browser handle them natively so real CORS / network errors surface.
 	if (url.origin !== self.location.origin) return;
 

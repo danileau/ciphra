@@ -1,19 +1,19 @@
 /**
- * CIPH-892 / CIPH-893 / CIPH-894 — Sprint 2 audit.
+ * CIPH-892 / CIPH-893 / CIPH-894 - Sprint 2 audit.
  *
  * Three surgical UX-differentiation stories share a single audit file.
  * Each test locks one structural invariant so a future refactor can't
  * silently undo the differentiation:
  *
- *   - CIPH-892 — every browse-route scope in app.css declares the four
+ *   - CIPH-892 - every browse-route scope in app.css declares the four
  *     `--rhythm-*` tokens, AND `.card` consumes `--rhythm-card-radius`.
  *     Calendar / journal / reports / dashboard each read distinct.
  *
- *   - CIPH-893 — JournalEmpty + ReportsEmpty primitives exist, are
+ *   - CIPH-893 - JournalEmpty + ReportsEmpty primitives exist, are
  *     consumed by their respective routes, and follow the inventory
  *     discipline (README entry per primitive).
  *
- *   - CIPH-894 — PhaseContextCard carries the emphasis density treatment
+ *   - CIPH-894 - PhaseContextCard carries the emphasis density treatment
  *     (heavier accent rail + cohort-tinted background gradient).
  */
 
@@ -24,7 +24,7 @@ import { resolve } from 'node:path';
 const SRC_ROOT = resolve(__dirname, '..');
 const APP_CSS = readFileSync(resolve(SRC_ROOT, 'app.css'), 'utf8');
 
-describe('CIPH-892 — per-route silhouette rhythm tokens', () => {
+describe('CIPH-892 - per-route silhouette rhythm tokens', () => {
 	const ROUTES = ['calendar', 'journal', 'reports', 'dashboard'];
 	const RHYTHM_TOKENS = [
 		'--rhythm-card-padding',
@@ -67,7 +67,7 @@ describe('CIPH-892 — per-route silhouette rhythm tokens', () => {
 		// Search the source tree for `card-rhythmic` references outside
 		// app.css + the test files themselves. The honest fix only counts
 		// if it's actually consumed at canonical surfaces.
-		// CIPH-902 — the journal redesigned away from per-route card
+		// CIPH-902 - the journal redesigned away from per-route card
 		// rhythm into its own timeline pattern (.journal-card with a
 		// 2px type-color rail). The dashboard rail picked up the slack:
 		// CompanionMain (howAreYou hero) + CompanionRail (reports CTA)
@@ -95,7 +95,7 @@ describe('CIPH-892 — per-route silhouette rhythm tokens', () => {
 			expect(m, `[data-route="${route}"] missing --rhythm-card-radius`).not.toBeNull();
 			values.push(m![1].trim());
 		}
-		// At least 3 distinct values across the 4 routes — proves the
+		// At least 3 distinct values across the 4 routes - proves the
 		// rhythm differentiation lands. (Allowing 1 collision keeps room
 		// for future "dashboard = journal" if intentional.)
 		const distinct = new Set(values);
@@ -106,7 +106,7 @@ describe('CIPH-892 — per-route silhouette rhythm tokens', () => {
 	});
 });
 
-describe('CIPH-893 — per-surface empty primitives', () => {
+describe('CIPH-893 - per-surface empty primitives', () => {
 	const PRIMITIVES = [
 		{
 			name: 'JournalEmpty.svelte',
@@ -145,7 +145,7 @@ describe('CIPH-893 — per-surface empty primitives', () => {
 	});
 });
 
-describe('CIPH-894 — PhaseContextCard emphasis density', () => {
+describe('CIPH-894 - PhaseContextCard emphasis density', () => {
 	const PCC = readFileSync(
 		resolve(SRC_ROOT, 'lib/components/PhaseContextCard.svelte'),
 		'utf8',

@@ -1,5 +1,5 @@
 /**
- * CIPH-pi24-2 — public-shell footer + conditions/[id] domain cleanup.
+ * CIPH-pi24-2 - public-shell footer + conditions/[id] domain cleanup.
  *
  * Pins three changes:
  *  - Footer Domains <div> block removed (lines 60-66 pre-fix); the user

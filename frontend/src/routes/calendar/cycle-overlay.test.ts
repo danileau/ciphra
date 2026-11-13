@@ -1,5 +1,5 @@
 /**
- * CIPH-855a — Calendar cycle-overlay render contract.
+ * CIPH-855a - Calendar cycle-overlay render contract.
  *
  * Static parse of `calendar/+page.svelte` to assert the overlay is
  * gated on cohort and uses the shared cycleState module, not a local

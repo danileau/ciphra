@@ -1,16 +1,16 @@
 <!--
-	CIPH-712 — Epilepc migration landing.
+	CIPH-712 - Epilepc migration landing.
 
 	Activates ONLY when the URL fragment contains `#migrate=<token>&source=<host>`.
 	Without the fragment we render a minimal not-found message and offer the
 	user the way back to `/`. Ciphra has no other discovery surface for epilepc:
 	this route is not linked from anywhere in normal navigation.
 
-	Token never leaves the client — fragments are not sent to the ciphra server.
+	Token never leaves the client - fragments are not sent to the ciphra server.
 	Bundle is fetched directly from the source (epilepc) and encrypted under
 	the new user's master_key before any POST to ciphra.
 
-	CIPH-780 — visual parity with /login. Same wrapper, same wordmark,
+	CIPH-780 - visual parity with /login. Same wrapper, same wordmark,
 	same card shell. Every phase renders inside the same rounded-2xl card
 	so the user feels zero discontinuity from the login tab they likely
 	arrived from.
@@ -64,7 +64,7 @@
 	let errorDetail = '';
 	let originConfirmed = false;
 	let currentOrigin = '';
-	// Design review 2026-06-11 — the app verifies its own origin instead
+	// Design review 2026-06-11 - the app verifies its own origin instead
 	// of leaving the whole phishing check to the user. 'mismatch' hard-
 	// stops the transfer; 'dev' (loopback) skips the pill for e2e/local.
 	let ciphraStatus: OriginStatus = 'mismatch';
@@ -74,13 +74,13 @@
 
 	let bundle: EpilepcBundle | null = null;
 	let mapped: MappedDocs | null = null;
-	// INC-001 — the base URL the bundle actually came from. May differ from
+	// INC-001 - the base URL the bundle actually came from. May differ from
 	// `source` when the www-fallback kicked in; the completion signal has to
 	// go to the same place, or it silently misses.
 	let resolvedBase = '';
-	// CIPH 3.6 — username carried over from a 409 signup into the resume-login.
+	// CIPH 3.6 - username carried over from a 409 signup into the resume-login.
 	let existingUsername = '';
-	// INC-001 follow-up — which auth form the signup phase is showing.
+	// INC-001 follow-up - which auth form the signup phase is showing.
 	// Defaults to register: most migrants are genuinely new. Anyone whose
 	// first attempt failed already has an account and needs the other tab.
 	let authTab: 'register' | 'login' = 'register';
@@ -88,7 +88,7 @@
 	let progressDone = 0;
 	let progressTotal = 0;
 
-	// CIPH 3.5 — elapsed-time counter. The fetch of a large bundle can take a
+	// CIPH 3.5 - elapsed-time counter. The fetch of a large bundle can take a
 	// couple of minutes; a bare spinner reads as "hung". One timer spans fetch
 	// + import so the user always sees it's still working.
 	let elapsedSec = 0;
@@ -103,7 +103,7 @@
 	}
 	onDestroy(stopElapsed);
 
-	// CIPH-760 — preview date range across all imported collections.
+	// CIPH-760 - preview date range across all imported collections.
 	let dateRangeStart = '';
 	let dateRangeEnd = '';
 
@@ -170,7 +170,7 @@
 			phase = 'no-fragment';
 			return;
 		}
-		// Token: no whitespace. Source: normalized to a bare host —
+		// Token: no whitespace. Source: normalized to a bare host -
 		// hostname-only and full-URL inputs both resolve (P2 debt), deep
 		// links / credentials / exotic schemes are rejected.
 		const srcHost = /\s/.test(tok) ? null : hostOf(src);
@@ -197,12 +197,12 @@
 
 	function handleSignupComplete() {
 		// SignupFlow has already created the vault and populated the auth store.
-		// Recovery acknowledgment gate has passed — now require origin confirmation
+		// Recovery acknowledgment gate has passed - now require origin confirmation
 		// before any bytes are pulled from the epilepc source (CIPH-721).
 		phase = 'confirm-origin';
 	}
 
-	// CIPH 3.6 — the account already exists (the user reloaded after a prior
+	// CIPH 3.6 - the account already exists (the user reloaded after a prior
 	// signup that did create it server-side, but the session was lost). Offer to
 	// log in and continue, in-place, so the URL-fragment migrate token survives.
 	function handleUsernameExists(e: CustomEvent<{ username: string }>) {
@@ -231,12 +231,12 @@
 			// Token + source are URL-fragment values, not server-known.
 			// Fetch goes directly to the epilepc host.
 			//
-			// INC-001 — try more than one base. If `source` names a host that
+			// INC-001 - try more than one base. If `source` names a host that
 			// only redirects (an apex canonicalising to www, say), the browser
 			// refuses to follow the 301 because a redirect in a `mode: 'cors'`
 			// request must carry CORS headers of its own, and mod_rewrite /
 			// CDN redirects do not. The fetch then fails with a bare
-			// `TypeError: Failed to fetch` and the user is stranded — with the
+			// `TypeError: Failed to fetch` and the user is stranded - with the
 			// source none the wiser, because the request never reached it.
 			//
 			// Retrying the `www.` variant recovers that automatically. It is
@@ -263,7 +263,7 @@
 					break;
 				} catch (netErr) {
 					// Only network-level failures fall through to the next base.
-					// Any real HTTP response (401/410/404/5xx) is handled below —
+					// Any real HTTP response (401/410/404/5xx) is handled below -
 					// we must not retry those and mask a token error.
 					lastNetErr = netErr;
 				}
@@ -333,7 +333,7 @@
 			// Append migrated medications to it (if any).
 			blueprint.loadFromDocuments();
 			const current = (await import('svelte/store')).get(blueprint) || defaultEpilepsyBlueprint();
-			// INC-001 — a user who already has a NON-epilepsy blueprint (very
+			// INC-001 - a user who already has a NON-epilepsy blueprint (very
 			// likely after a failed first attempt: the dashboard requires a
 			// blueprint, so it pushes them through /setup) keeps it, but must
 			// still gain the episode types the imported seizures are filed
@@ -344,14 +344,14 @@
 				medications: mergeMedications(withEpisodes.medications || [], mapped.medications),
 			};
 			// A silently-failed blueprint save used to leave the documents
-			// imported but unrenderable — the same invisible-data outcome.
+			// imported but unrenderable - the same invisible-data outcome.
 			if (!(await blueprint.save(next))) {
 				throw new Error('blueprint_save_failed');
 			}
-			// Track-3 3.4 — bulk import. One request per BATCH_SIZE docs instead
+			// Track-3 3.4 - bulk import. One request per BATCH_SIZE docs instead
 			// of one per doc (233 docs → 3 requests). Idempotent server-side via
 			// an opaque client_key = "v1:" + base64url(sha256(username:source_id)),
-			// so a resumed/retried batch returns `skipped`, never a duplicate —
+			// so a resumed/retried batch returns `skipped`, never a duplicate -
 			// this is the durable guarantee; the localStorage `done` checkpoint is
 			// now just a fast-path skip. created+skipped both count as success.
 			const uname = get(auth).username || '';
@@ -369,7 +369,7 @@
 				const items = await Promise.all(
 					chunk.map(async (d) => ({ data: d, clientKey: await migrationClientKey(uname, d.source_id as string) })),
 				);
-				// INC-001 rehearsal — when a batch fails because the server is
+				// INC-001 rehearsal - when a batch fails because the server is
 				// momentarily overloaded, retry the BATCH. Dropping straight to
 				// one-request-per-document is the worst possible reaction: it
 				// turns 1 request into 2N and guarantees the rate limit bites.
@@ -385,7 +385,7 @@
 
 				// Genuinely unavailable (an old server without the endpoint):
 				// fall back to per-document saves. Same end state, just slower.
-				// `skipReload` matters — reloading after each write doubled the
+				// `skipReload` matters - reloading after each write doubled the
 				// request count for no benefit; one reload at the end is enough.
 				if (!ok) {
 					for (const d of chunk) {
@@ -417,17 +417,17 @@
 			}
 
 			clearCheckpoint();
-			// Slice 3b — signal the source (epilepc) that the import succeeded.
+			// Slice 3b - signal the source (epilepc) that the import succeeded.
 			// epilepc stamps `users.migrated_at` and locks the user into read+
 			// export-only mode on its side, preventing data divergence.
 			// Fire-and-forget: the migration itself has succeeded on ciphra's
 			// side; the lockdown is a downstream nice-to-have. We log and
 			// move on if the signal fails.
 			void signalMigrationComplete();
-			// CIPH-761 — show the one-shot Tagebuch-private tour after a
+			// CIPH-761 - show the one-shot Tagebuch-private tour after a
 			// successful import, unless the user has already seen it on this
 			// browser. The tour has its own explicit "continue" button to
-			// /today — no setTimeout redirect.
+			// /today - no setTimeout redirect.
 			const seen = browser && localStorage.getItem(TOUR_FLAG_KEY) === '1';
 			if (seen) {
 				phase = 'done';
@@ -440,7 +440,7 @@
 			// user cannot act on. The checkpoint means a retry resumes, so say so.
 			const msg = e instanceof Error ? e.message : String(e);
 			setError(/save_failed|Failed to save/i.test(msg) ? 'migrate.error_overloaded' : 'migrate.error_import', msg);
-			// stay on importing/preview so user can retry — checkpoint preserved
+			// stay on importing/preview so user can retry - checkpoint preserved
 			phase = 'preview';
 		} finally {
 			busy = false;
@@ -449,7 +449,7 @@
 	}
 
 	async function signalMigrationComplete() {
-		// INC-001 — address the base the bundle actually came from. Rebuilding
+		// INC-001 - address the base the bundle actually came from. Rebuilding
 		// this from `source` would re-run the redirect that the fetch had to
 		// work around, so the signal would never land and epilepc would never
 		// move the user to read-only. Falls back to `source` only if we somehow
@@ -495,7 +495,7 @@
 	style="background: var(--surface)"
 >
 	<div class="w-full max-w-md">
-		<!-- Wordmark + tagline header — identical to /login -->
+		<!-- Wordmark + tagline header - identical to /login -->
 		<div class="flex justify-center mb-3 mt-2">
 			<Wordmark size={56} />
 		</div>
@@ -504,7 +504,7 @@
 		</p>
 
 		{#if phase === 'tour'}
-			<!-- CIPH-761 — one-shot post-import Tagebuch-private tour. Uses
+			<!-- CIPH-761 - one-shot post-import Tagebuch-private tour. Uses
 				 the shared Modal primitive (CIPH-834). Not dismissable: the
 				 user must tap Continue so we know they saw the notice. -->
 			<Modal open={true} dismissable={false} title={$t('migrate.tour_title')}>
@@ -538,8 +538,8 @@
 						</p>
 
 						<!-- INC-001 follow-up: a migrant who ALREADY has a ciphra
-						     account had to fake a registration — fill in a username
-						     and type a password twice — purely to trigger the 409
+						     account had to fake a registration - fill in a username
+						     and type a password twice - purely to trigger the 409
 						     that offers login. That is exactly the position anyone
 						     whose first attempt failed is in. Same tab pattern as
 						     /login, so the choice is where users expect it. -->
@@ -573,7 +573,7 @@
 							<LoginForm on:login-complete={handleLoginComplete} />
 						{/if}
 					{:else if phase === 'login-existing'}
-						<!-- CIPH 3.6 — account already exists (reload after a prior
+						<!-- CIPH 3.6 - account already exists (reload after a prior
 						     signup). Log in in-place; the URL-fragment migrate token
 						     is preserved, and the import resumes from the checkpoint. -->
 						<h1 class="text-lg font-semibold mb-2" style="color: var(--text-primary)">
@@ -584,7 +584,7 @@
 						</p>
 						<LoginForm initialUsername={existingUsername} on:login-complete={handleLoginComplete} />
 					{:else if phase === 'confirm-origin'}
-						<!-- Design review 2026-06-11 — from→to reading order (source
+						<!-- Design review 2026-06-11 - from→to reading order (source
 						     above target), machine origin-check with hard-stop on
 						     mismatch, and one sentence on what actually happens to
 						     the data. The checkbox stays as a deliberate ritual: the
@@ -796,7 +796,7 @@
 </main>
 
 <style>
-	/* CIPH 3.5 — indeterminate progress bar for the fetch phase (no known
+	/* CIPH 3.5 - indeterminate progress bar for the fetch phase (no known
 	   length to show a real %). A segment sweeps left to right to signal work. */
 	.migrate-indeterminate {
 		overflow: hidden;

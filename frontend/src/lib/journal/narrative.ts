@@ -1,9 +1,9 @@
 /**
- * ciphra — the journal's narrative feed.
+ * ciphra - the journal's narrative feed.
  *
  * WHAT CHANGED AND WHY
  *
- * /journal used to render one card per logged DAY — 631 of them for a
+ * /journal used to render one card per logged DAY - 631 of them for a
  * two-year persona, 69,000px of page, ~110px of chrome per day to hold one
  * grey line reading `Pain level: 7 1-10 · Sleep hours: 5.1 h · Mood: 7 1-10`.
  * Every day looked identical, including the day with a migraine attack, so
@@ -16,12 +16,12 @@
  *
  * So the journal keeps what no other surface holds: **what the person wrote**.
  * Diary entries, the notes field of a daily entry, and note markers. Measured
- * values are not repeated here — they are the whole of /reports.
+ * values are not repeated here - they are the whole of /reports.
  *
  * THE ONE EXCEPTION, and it is deliberate: a day's EPISODES ride along as
  * context. "Aura zuerst, dann Schmerz von links" means something different
  * beside `1× Migraine with aura` than it does alone, and dropping episodes
- * entirely would have re-created the original complaint — the day that
+ * entirely would have re-created the original complaint - the day that
  * mattered being invisible. Episodes are context on a written day; they never
  * make an unwritten day appear.
  */
@@ -31,7 +31,7 @@ import type { Blueprint } from '#lib/blueprint/types.ts';
 export type JournalTextKind = 'diary' | 'note' | 'marker';
 
 export interface JournalText {
-	/** Document id — identity for keyed `{#each}` and for opening the moment view. */
+	/** Document id - identity for keyed `{#each}` and for opening the moment view. */
 	id: number;
 	kind: JournalTextKind;
 	text: string;
@@ -56,7 +56,7 @@ export interface JournalDay {
 	/** `YYYY-MM` */
 	monthKey: string;
 	texts: JournalText[];
-	/** Episodes recorded that day. Context only — never a reason to appear. */
+	/** Episodes recorded that day. Context only - never a reason to appear. */
 	episodes: JournalEpisode[];
 }
 
@@ -97,7 +97,7 @@ function episodeNoteTexts(data: any): string[] {
 /**
  * The written content of one document, or null if it carries none.
  *
- * `title` wins over `notes` for markers — the epilepc migration puts the short
+ * `title` wins over `notes` for markers - the epilepc migration puts the short
  * human title in `title` and long prose in `notes`, the same preference
  * `noteMarkerText` applies for the PDF.
  */
@@ -170,7 +170,7 @@ export interface NarrativeFilter {
  * Days that hold writing, newest first.
  *
  * A day qualifies on its TEXT alone. `withEpisodeOnly` narrows that set; it
- * never widens it, so an episode without a note still does not appear here —
+ * never widens it, so an episode without a note still does not appear here -
  * that is the calendar's and /reports' job.
  */
 export function buildNarrative(
@@ -195,7 +195,7 @@ export function buildNarrative(
 		}
 
 		// Episodes are collected for EVERY in-range entry, including days with
-		// no writing — a day that later qualifies through a separate diary doc
+		// no writing - a day that later qualifies through a separate diary doc
 		// still needs its context.
 		const eps = episodesOf(doc, blueprint);
 		if (eps.length > 0) {

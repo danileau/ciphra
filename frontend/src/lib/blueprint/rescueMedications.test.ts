@@ -2,14 +2,14 @@
  * Bedarfsmedikation ("as-needed" / rescue) preset contract.
  *
  * Single-source model (CIPH-pi19): preset rescue meds are seeded directly into
- * the editable `medications` list as `asNeeded` starter entries — there is no
+ * the editable `medications` list as `asNeeded` starter entries - there is no
  * separate preset-only `rescueMedications` array anymore. The FAB picker,
  * Settings editor, and exports all read `medications`.
  *
  * Asserts:
  *   - Each opinionated preset seeds the expected count of as-needed meds.
  *   - Each is a well-formed MedicationSlot (id / name / dose / asNeeded).
- *   - Presets with no clinical rescue protocol seed zero as-needed meds — so
+ *   - Presets with no clinical rescue protocol seed zero as-needed meds - so
  *     the FAB's third mode chip stays hidden for those cohorts.
  */
 
@@ -82,7 +82,7 @@ describe('Bedarfsmedikation preset contract', () => {
 
 describe('medication event doc shape', () => {
 	// The shape the FAB writes and the render surfaces (journal/PDF/CSV/
-	// dashboard) read. `type: 'event'` + `kind: 'medication'` — the kind
+	// dashboard) read. `type: 'event'` + `kind: 'medication'` - the kind
 	// discriminator keeps med events distinct from freeform note-marker events.
 	it('a medication event has type, kind, date, time, medicationId', () => {
 		const doc = {
@@ -100,7 +100,7 @@ describe('medication event doc shape', () => {
 		expect(doc.medicationId).toBeTruthy();
 	});
 
-	it('dose is optional — caller may rely on the configured med dose at render time', () => {
+	it('dose is optional - caller may rely on the configured med dose at render time', () => {
 		const doc: { type: 'event'; kind: 'medication'; date: string; time: string; medicationId: string; dose?: string } = {
 			type: 'event',
 			kind: 'medication',

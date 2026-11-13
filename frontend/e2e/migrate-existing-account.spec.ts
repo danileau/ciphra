@@ -1,5 +1,5 @@
 /**
- * INC-001 — migrating into a ciphra account that ALREADY EXISTS.
+ * INC-001 - migrating into a ciphra account that ALREADY EXISTS.
  *
  * This is the reporter's exact situation, and it was never covered by a test.
  * He registered inside the migrate flow, the fetch failed, and he was left
@@ -15,8 +15,8 @@
  *     URL-fragment token intact. If that path is broken the user is simply
  *     stuck, because there is no other way into the flow.
  *
- *  2. His account has NO blueprint — registration completed but the import
- *     never ran — and `/` requires one, so ciphra pushes exactly these users
+ *  2. His account has NO blueprint - registration completed but the import
+ *     never ran - and `/` requires one, so ciphra pushes exactly these users
  *     into `/setup`. If he completes the wizard with a non-epilepsy condition
  *     before retrying, the imported seizures land under a blueprint with no
  *     matching episode types: data present, nothing rendered. That is what
@@ -49,13 +49,13 @@ test.use({
 	// Unlike the other migration specs, this one visits ciphra BEFORE the
 	// migrate page (it has to: the account must already exist). That installs
 	// the service worker, which then serves the /migrate document from cache
-	// and bypasses page.route() — so the CSP relaxation never applies and the
+	// and bypasses page.route() - so the CSP relaxation never applies and the
 	// bundle fetch is refused by the renderer. Blocking the SW keeps the test
 	// measuring the migration, not the cache.
 	serviceWorkers: 'block',
 });
 
-/** Register on /login — i.e. an account that exists BEFORE any migration. */
+/** Register on /login - i.e. an account that exists BEFORE any migration. */
 async function registerStandalone(page: Page): Promise<string> {
 	const user = randUser('e2e_exist_');
 	await page.goto('/login?mode=register');
@@ -82,13 +82,13 @@ test('an existing account resumes via login and imports correctly', async ({ pag
 
 	// ── 1. The account exists first, and has been through /setup ─────────
 	const username = await registerStandalone(page);
-	// Deliberately NOT epilepsy — the wizard offers whatever the user picks,
+	// Deliberately NOT epilepsy - the wizard offers whatever the user picks,
 	// and a stranded migrant is pushed here before they retry.
 	await selectCohort(page, /Migräne|Migraine/i);
 
 	// ── 2. Log out, so the migrate link opens on the sign-up form ────────
 	await page.getByRole('button', { name: /Log out|Abmelden/i }).click();
-	// Assert the STATE (logged out), not a particular landing URL — the app
+	// Assert the STATE (logged out), not a particular landing URL - the app
 	// may send a logged-out user to / or /login depending on where they were.
 	await expect(page.getByRole('button', { name: /Log out|Abmelden/i })).toHaveCount(0, {
 		timeout: 30_000,
@@ -115,7 +115,7 @@ test('an existing account resumes via login and imports correctly', async ({ pag
 	await page.locator('#login-pass').fill(TEST_PASSWORD);
 	await page.getByTestId('login-submit').click();
 
-	// The fragment token survived the login — origin confirmation appears.
+	// The fragment token survived the login - origin confirmation appears.
 	const confirm = page.getByTestId('migrate-confirm-origin');
 	await confirm.waitFor({ timeout: 60_000 });
 	await page.locator('input[type="checkbox"]').check();
@@ -141,7 +141,7 @@ test('an existing account resumes via login and imports correctly', async ({ pag
 
 	// ── 7. The imported seizures must actually RENDER ────────────────────
 	// The account's blueprint is migraine, not epilepsy. Without
-	// ensureEpisodeTypes the entries import and then display as nothing —
+	// ensureEpisodeTypes the entries import and then display as nothing -
 	// indistinguishable, to the user, from the migration having failed again.
 	// Read the persisted blueprint out of ciphra's own warm cache
 	// (idb.ts: DB `ciphra_cache`, store `decrypted_documents`).
@@ -177,8 +177,8 @@ test('an existing account resumes via login and imports correctly', async ({ pag
 });
 
 test('the login tab avoids the fake-registration detour entirely', async ({ page }) => {
-	// Same starting position as the test above — an account that already
-	// exists — but taking the route a user would actually want: pick "log in",
+	// Same starting position as the test above - an account that already
+	// exists - but taking the route a user would actually want: pick "log in",
 	// instead of filling in a registration whose only purpose is to be
 	// rejected. That detour is what the reporter would otherwise have faced.
 	resetMigrationState();
@@ -194,7 +194,7 @@ test('the login tab avoids the fake-registration detour entirely', async ({ page
 	const { token } = parseMigrationLink(link);
 	await page.goto(withSource(link, token, EPILEPC_HOST));
 
-	// Register stays the default — most migrants really are new.
+	// Register stays the default - most migrants really are new.
 	await expect(page.locator('#signup-user')).toBeVisible({ timeout: 30_000 });
 
 	// One click to the login form: no username invented, no password typed

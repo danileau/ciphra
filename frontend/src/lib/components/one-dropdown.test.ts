@@ -3,7 +3,7 @@
  *
  * ciphra spent a year with two kinds of dropdown. Three components rolled
  * their own listbox, each writing open/close, outside-click, Escape, keyboard
- * navigation and placement again — and every form that needed a choice used a
+ * navigation and placement again - and every form that needed a choice used a
  * native `<select>`, because writing a fourth listbox by hand was not worth
  * it. The result reached a user as "most of the dropdowns show the list on
  * top of the clicked field, and some show it only while the click is held":
@@ -15,7 +15,7 @@
  * a `<select>` is four lines, a listbox was two hundred.
  *
  * If a new `<select>` genuinely belongs somewhere, this test is the place to
- * say why — add the file to ALLOWED with a sentence.
+ * say why - add the file to ALLOWED with a sentence.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -56,7 +56,7 @@ describe('the app has one dropdown', () => {
 		expect(
 			offenders,
 			`These render a native <select>: ${offenders.join(', ')}. Its options panel is ` +
-				'browser chrome — it cannot be styled, placed, or kept open on mouse-up. ' +
+				'browser chrome - it cannot be styled, placed, or kept open on mouse-up. ' +
 				'Use Listbox.svelte, or add the file to ALLOWED here with the reason.',
 		).toEqual([]);
 	});
