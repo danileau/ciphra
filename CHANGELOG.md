@@ -13,7 +13,7 @@ app at **/docs → Changelog** and here on the public repo.
 
 <!-- Nothing yet. Pending entries live in changelog.d/ — see changelog.d/README.md. -->
 
-## [1.5.4] — 2026-11-12
+## [1.5.4] - 2026-11-12
 
 ### Fixed
 - **The welcome note for people who moved over from epilepc is right again.**
@@ -31,7 +31,7 @@ app at **/docs → Changelog** and here on the public repo.
   Existing accounts and invitations are converted automatically; you do not
   need to do anything.
 
-## [1.5.3] — 2026-11-12
+## [1.5.3] - 2026-11-12
 
 ### Fixed
 - **Notes you write on an episode now appear in your journal.** A note added
@@ -54,7 +54,7 @@ app at **/docs → Changelog** and here on the public repo.
   they were too many requests. Those files now have their own, larger
   allowance. The limits that protect sign-in and your data are unchanged.
 
-## [1.5.2] — 2026-11-12
+## [1.5.2] - 2026-11-12
 
 ### Fixed
 - **Signing in with a username your browser filled in works again.** On some
@@ -85,7 +85,7 @@ app at **/docs → Changelog** and here on the public repo.
   ciphra runs (it never installs packages or reads XML while serving you), but
   they are patched regardless.
 
-## [1.5.1] — 2026-10-26
+## [1.5.1] - 2026-10-26
 
 ### Changed
 - **The pages that describe ciphra now match what it does.** The landing page
@@ -130,7 +130,7 @@ app at **/docs → Changelog** and here on the public repo.
   unpacks compressed data (Node2Shell). ciphra never unpacked untrusted data
   this way, so it was not exploitable here — patched regardless.
 
-## [1.5.0] — 2026-09-19
+## [1.5.0] - 2026-09-19
 
 Your medication history now reaches back to before you used ciphra: the doses
 you were on earlier, and the medications that were tried and stopped again. A
@@ -205,7 +205,7 @@ records about you.
   page had no title. The main navigation, the dialog close button and the
   landing page's browser title were English-only.
 
-## [1.4.0] — 2026-09-16
+## [1.4.0] - 2026-09-16
 
 Your medications now keep a history: a dose change, a stop or a switch to
 another medication is recorded with the day it took effect, and your reports
@@ -365,7 +365,7 @@ entry saved offline, or in someone else's account, could end up wrong.
 - Malformed requests that used to crash the server are refused cleanly, and one
   bad entry in a bulk import no longer fails the whole import.
 
-## [1.3.0] — 2026-08-30
+## [1.3.0] - 2026-08-30
 
 The first release under the 1.x line. ciphra has been serving real users since
 0.1.0 in June; the version now says so. From here the SemVer rules in
@@ -421,7 +421,7 @@ Write for a user, not a commit log: "Reports export now offers a period
 picker", not "add exportPeriods.ts".
 -->
 
-## [0.1.0] — 2026-06-11
+## [0.1.0] - 2026-06-11
 
 Baseline: the first version tracked under this changelog. ciphra went live for
 its first users on this date. Earlier history lives in the git log and the

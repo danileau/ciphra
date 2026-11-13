@@ -92,7 +92,7 @@ nothing.
 2. Run `node scripts/changelog.mjs release X.Y.Z`. It moves every pending
    entry — the fragments in [`changelog.d/`](../changelog.d/README.md), plus
    anything still under `[Unreleased]` in [`CHANGELOG.md`](../CHANGELOG.md) —
-   into a new `## [X.Y.Z] — YYYY-MM-DD` section, resets `[Unreleased]`, updates
+   into a new `## [X.Y.Z] - YYYY-MM-DD` section, resets `[Unreleased]`, updates
    the link references at the bottom, deletes the fragments, and sets
    [`VERSION`](../VERSION) and `frontend/package.json` `"version"`. Read the new
    section before committing; add a short intro paragraph if the release

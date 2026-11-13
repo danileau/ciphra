@@ -42,7 +42,7 @@ fixture() {
 
 <!-- Nothing yet. Pending entries live in changelog.d/ — see changelog.d/README.md. -->
 
-## [1.3.0] — 2026-08-30
+## [1.3.0] - 2026-08-30
 
 ### Added
 - Old.
@@ -128,7 +128,7 @@ printf '### Fixed\n- A failed save said "Saved".\n\n### Security\n- Locked offli
 if ( cd "$d" && node scripts/changelog.mjs release 1.4.0 --date 2026-09-20 >/dev/null ); then
 	c="$d/CHANGELOG.md"
 	checks=(
-		"grep -q '^## \[1.4.0\] — 2026-09-20$' '$c'"
+		"grep -q '^## \[1.4.0\] - 2026-09-20$' '$c'"
 		"grep -q 'Dose history' '$c'"
 		"grep -q 'Locked offline entries' '$c'"
 		"grep -q '^\[1.4.0\]: https://github.com/danileau/ciphra/releases/tag/v1.4.0$' '$c'"

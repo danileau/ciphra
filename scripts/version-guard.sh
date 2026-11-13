@@ -44,14 +44,14 @@ PKG_VERSION="$(
 [ -f CHANGELOG.md ] || fail "CHANGELOG.md is missing."
 # Match `## [X.Y.Z]` at line start; brackets are literal.
 if ! grep -Eq "^##[[:space:]]+\[${VERSION//./\\.}\]" CHANGELOG.md; then
-	fail "CHANGELOG.md has no section for [$VERSION]. Move the [Unreleased] notes into a '## [$VERSION] — YYYY-MM-DD' section."
+	fail "CHANGELOG.md has no section for [$VERSION]. Move the [Unreleased] notes into a '## [$VERSION] - YYYY-MM-DD' section."
 fi
 
 # 4 — that section is dated. The release workflow reads the section as the
 # GitHub release body, and an undated heading is the tell for "promoted the
 # [Unreleased] block and forgot to finish it".
 if ! grep -Eq "^##[[:space:]]+\[${VERSION//./\\.}\][[:space:]]*[—-][[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}" CHANGELOG.md; then
-	fail "CHANGELOG.md's [$VERSION] section has no release date. Write '## [$VERSION] — YYYY-MM-DD'."
+	fail "CHANGELOG.md's [$VERSION] section has no release date. Write '## [$VERSION] - YYYY-MM-DD'."
 fi
 
 echo "✅ version-guard: VERSION=$VERSION, package.json matches, CHANGELOG has a dated [$VERSION]."

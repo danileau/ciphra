@@ -29,7 +29,7 @@ Intro.
 
 ${UNRELEASED_PLACEHOLDER}
 
-## [1.3.0] — 2026-08-30
+## [1.3.0] - 2026-08-30
 
 ### Added
 - Something old.
@@ -140,7 +140,7 @@ describe('withPendingFragments — the in-app view', () => {
 describe('releaseChangelog', () => {
 	it('moves everything pending into a dated section and updates the links', () => {
 		const out = releaseChangelog(CHANGELOG, [doseHistory, syncFix], '1.4.0', '2026-09-20');
-		expect(out).toContain(`## [Unreleased]\n\n${UNRELEASED_PLACEHOLDER}\n\n## [1.4.0] — 2026-09-20\n\n### Added\n`);
+		expect(out).toContain(`## [Unreleased]\n\n${UNRELEASED_PLACEHOLDER}\n\n## [1.4.0] - 2026-09-20\n\n### Added\n`);
 		expect(out.indexOf('## [1.4.0]')).toBeLessThan(out.indexOf('## [1.3.0]'));
 		expect(out).toContain('[Unreleased]: https://git.example.org/you/ciphra/compare/v1.4.0...HEAD\n[1.4.0]: https://git.example.org/you/ciphra/releases/tag/v1.4.0\n[1.3.0]:');
 		// Nothing is dropped.
