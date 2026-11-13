@@ -1,9 +1,9 @@
 /**
- * CIPH-801 — palette discipline enforcement.
+ * CIPH-801 - palette discipline enforcement.
  *
  * Every preset's accentColor and every episodeTypes[].color MUST be
  * one of the six DATA_PALETTE tokens. Also verifies that within any
- * single preset no two adjacent episodeTypes share the same color —
+ * single preset no two adjacent episodeTypes share the same color -
  * this keeps stacked charts scannable and avoids color-blind
  * collisions in the common case.
  *
@@ -21,7 +21,7 @@ function isBlueprint(v: unknown): v is { accentColor?: string; conditionId?: str
 	return typeof v === 'object' && v !== null && 'accentColor' in v && 'episodeTypes' in v;
 }
 
-describe('CIPH-801 — preset palette discipline', () => {
+describe('CIPH-801 - preset palette discipline', () => {
 	const blueprints = Object.values(presetsMod).filter(isBlueprint);
 
 	it('has at least the expected number of blueprints', () => {
@@ -67,7 +67,7 @@ describe('CIPH-801 — preset palette discipline', () => {
 	});
 });
 
-describe('CIPH-801 — conditionInfo palette discipline', () => {
+describe('CIPH-801 - conditionInfo palette discipline', () => {
 	for (const [id, info] of Object.entries(conditionInfoMap)) {
 		it(`${id}: color is in DATA_PALETTE`, () => {
 			expect(PALETTE.has(info.color)).toBe(true);

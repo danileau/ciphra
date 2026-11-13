@@ -70,7 +70,7 @@ class TestVerifierFrom:
         assert server.verifier_from(chain['verifier'], None) == chain['verifier']
 
     def test_an_old_client_auth_is_hashed_once_more(self, client, chain):
-        # The old `*_auth` value is SHA-256(key) — the proof. Storing it as is
+        # The old `*_auth` value is SHA-256(key) - the proof. Storing it as is
         # would make a database leak a working credential.
         import server
         assert server.verifier_from(None, chain['legacy_auth']) == chain['verifier']

@@ -1,5 +1,5 @@
 /**
- * CIPH-pi22-JC-1 — touch-target floor for /journal interactive controls.
+ * CIPH-pi22-JC-1 - touch-target floor for /journal interactive controls.
  *
  * WCAG 2.5.5 says interactive targets should be ≥44×44 CSS pixels. PI v22's
  * J1 audit caught 4 failures on this surface (search-toggle 40×40, search-
@@ -15,8 +15,8 @@
  * patterns we lock are the actual classnames Tailwind compiles, so a real
  * regression has to mutate the same string.
  *
- * Personas: Anna (bipolar — manic-episode tremor + drug-induced typing
- * fatigue make 44pt the practical floor for her); Hans (epilepsy — focal
+ * Personas: Anna (bipolar - manic-episode tremor + drug-induced typing
+ * fatigue make 44pt the practical floor for her); Hans (epilepsy - focal
  * episodes can leave fine-motor weakness for hours; an under-spec'd target
  * is genuinely unusable on a post-seizure day).
  */
@@ -44,7 +44,7 @@ describe('CIPH-pi22-JC-1 /journal touch-target floor (44pt WCAG 2.5.5)', () => {
 	});
 
 	it('filter chip CSS sets min-height: 44px', () => {
-		// Locked against the previous 36px regression — and against the 32px
+		// Locked against the previous 36px regression - and against the 32px
 		// one introduced by the v2 rewrite, which this test caught. Chips have
 		// no equivalent path elsewhere, so the grid-cell "Equivalent"
 		// exception WCAG 2.5.5 allows does not apply to them.
@@ -52,7 +52,7 @@ describe('CIPH-pi22-JC-1 /journal touch-target floor (44pt WCAG 2.5.5)', () => {
 	});
 
 	it('every text row in the feed is reachable as its own control', () => {
-		// The rows are buttons, not nested links inside a link — the previous
+		// The rows are buttons, not nested links inside a link - the previous
 		// layout had a "Show details" link inside a card that was itself a
 		// link, on some cards but not others.
 		expect(JOURNAL).toMatch(/class="jr-text jr-text--\{txt\.kind\}"/);
@@ -85,7 +85,7 @@ describe('CIPH-pi22-JC-1 /journal touch-target floor (44pt WCAG 2.5.5)', () => {
 
 	it('locks against accidental regression below 44 for any min-h-[Npx] in /journal source', () => {
 		// Any explicit min-h-[Npx] / min-height: Npx that lands below 44 is
-		// a candidate WCAG 2.5.5 violation — fail the test and force the
+		// a candidate WCAG 2.5.5 violation - fail the test and force the
 		// dev to either justify (e.g. a tag chip that's not interactive)
 		// or fix. Excludes vendor / generated patterns.
 		const numeric = [

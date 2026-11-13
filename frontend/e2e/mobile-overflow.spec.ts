@@ -1,5 +1,5 @@
 /**
- * Mobile layout bug hunt — deterministic horizontal-overflow detector.
+ * Mobile layout bug hunt - deterministic horizontal-overflow detector.
  *
  * The "find-bugs challenge" backbone. Unlike visual-smoke.spec.ts (which
  * screenshots for a human and asserts `true`), this FAILS the build when a
@@ -12,7 +12,7 @@
  *                        viewport, with tag/class/id + computed overflow-x
  *
  * What it does NOT catch (use the screenshots + an eyeball / model pass):
- *  - text overlapping a box, cramped spacing, ugly wrapping — these are
+ *  - text overlapping a box, cramped spacing, ugly wrapping - these are
  *    subjective; full-page PNGs land in e2e/_screenshots/overflow/.
  *
  * Run (public routes need no backend):
@@ -28,7 +28,7 @@ test.setTimeout(180_000);
 
 // UI_LOCALE forces the app language before any page script runs. ciphra's
 // primary locale is German (Swiss), whose strings are materially longer than
-// English — the same overflow class FONT_SCALE simulates appears in `de` at
+// English - the same overflow class FONT_SCALE simulates appears in `de` at
 // DEFAULT font size. Set UI_LOCALE=de to reproduce the real user condition.
 test.beforeEach(async ({ page }) => {
 	const loc = process.env.UI_LOCALE;
@@ -84,7 +84,7 @@ interface Offender {
 
 /**
  * Runs in the page. Returns the page overflow delta plus the LEAF-most
- * elements crossing the viewport edge — an element is reported only if no
+ * elements crossing the viewport edge - an element is reported only if no
  * descendant also overflows, so we name the box that introduces the shift
  * rather than every ancestor that inherits it.
  */
@@ -95,7 +95,7 @@ function detectOverflow() {
 	// documentElement.scrollWidth to the viewport, so on its own it never
 	// reports a shift: content running past the edge is silently cut off
 	// instead. body.scrollWidth still measures the laid-out content, so take
-	// the wider of the two — clipped-at-the-edge content is still a bug.
+	// the wider of the two - clipped-at-the-edge content is still a bug.
 	const scrollW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
 	const all = Array.from(document.querySelectorAll('body *'));
 
@@ -120,7 +120,7 @@ function detectOverflow() {
 		const cs = getComputedStyle(el);
 		return parseFloat(cs.marginLeft) < 0 || parseFloat(cs.marginRight) < 0;
 	};
-	// True if an ancestor scroll-contains horizontal overflow — then this
+	// True if an ancestor scroll-contains horizontal overflow - then this
 	// element's beyond-viewport rect is scrolled content, NOT a page shift.
 	const inScrollContainer = (el: Element) => {
 		for (let p = el.parentElement; p; p = p.parentElement) {
@@ -131,7 +131,7 @@ function detectOverflow() {
 	};
 
 	// (1) PAGE-LEVEL: elements crossing the viewport edge that are NOT inside a
-	//     scroll/clip container — only these actually grow the document and
+	//     scroll/clip container - only these actually grow the document and
 	//     cause the horizontal scrollbar / shift.
 	const crossing = all.filter((el) => {
 		if (el instanceof SVGElement) return false; // SVG sizing is not box-model
@@ -143,7 +143,7 @@ function detectOverflow() {
 	const crossLeaves = crossing.filter((el) => !crossing.some((o) => o !== el && el.contains(o)));
 
 	// (2) VISIBLE SPILL: an element whose content is wider than its box while
-	//     overflow-x is `visible` (the default) — content spills OUT and is
+	//     overflow-x is `visible` (the default) - content spills OUT and is
 	//     painted over neighbours. This is the "text overlaps the box" class.
 	//     We exclude `hidden`/`clip`/`auto`/`scroll` because those clip or
 	//     scroll by design (incl. ellipsis truncation) and don't visually
@@ -167,7 +167,7 @@ function detectOverflow() {
 			// direct children, to dismiss the idiom consistently across engines.
 			if (Array.from(el.querySelectorAll('*')).some(hasNegMargin)) return false;
 			// Exclude content living inside a deliberate horizontal scroll
-			// container (overflow-x:auto/scroll on an ancestor) — e.g. the
+			// container (overflow-x:auto/scroll on an ancestor) - e.g. the
 			// scrollable encryption diagram. The user scrolls; not a bug.
 			for (let p = el.parentElement; p; p = p.parentElement) {
 				const ox = getComputedStyle(p).overflowX;
@@ -224,7 +224,7 @@ async function checkRoute(
 		.catch(() => {});
 	await page.waitForTimeout(900); // charts + reactive cascades settle
 	// FONT_SCALE simulates iOS Dynamic Type / browser "larger text" accessibility
-	// settings — a very common real-world overflow trigger that default-font
+	// settings - a very common real-world overflow trigger that default-font
 	// testing misses. e.g. FONT_SCALE=1.3 ≈ iOS "Large".
 	const scale = Number(process.env.FONT_SCALE || 0);
 	if (scale > 1) {
@@ -246,7 +246,7 @@ async function checkRoute(
 
 /**
  * Log in as a pre-seeded data-rich persona. These accounts carry ~2 years
- * (~650 logs) of real data — the only way data-driven overflow (long chips,
+ * (~650 logs) of real data - the only way data-driven overflow (long chips,
  * dense charts, multi-day bands, packed tables) actually renders. Seed first:
  *   docker exec -e CIPHRA_ALLOW_DEMO_SEED=1 ciphra-api python seed_<persona>.py
  */
@@ -300,7 +300,7 @@ async function registerAndConfigure(page: import('@playwright/test').Page) {
 }
 
 for (const vp of WIDTHS) {
-	test.describe(`mobile overflow — public — ${vp.name} (${vp.width}px)`, () => {
+	test.describe(`mobile overflow - public - ${vp.name} (${vp.width}px)`, () => {
 		test.use({ viewport: { width: vp.width, height: vp.height } });
 		for (const route of PUBLIC_ROUTES) {
 			test(`${route.label}`, async ({ page }) => {
@@ -309,7 +309,7 @@ for (const vp of WIDTHS) {
 		}
 	});
 
-	test.describe(`mobile overflow — authed (fresh) — ${vp.name} (${vp.width}px)`, () => {
+	test.describe(`mobile overflow - authed (fresh) - ${vp.name} (${vp.width}px)`, () => {
 		test.use({ viewport: { width: vp.width, height: vp.height } });
 		test.describe.configure({ mode: 'serial' });
 		test(`authed routes`, async ({ page }) => {
@@ -324,7 +324,7 @@ for (const vp of WIDTHS) {
 	// different cohort's components (epilepsy=discrete bands, endo=cycle strip,
 	// MS=relapse multi-day, hypertension=AM/PM split + reference lines).
 	for (const persona of ['hans', 'elena', 'lukas', 'klaus']) {
-		test.describe(`mobile overflow — seeded:${persona} — ${vp.name} (${vp.width}px)`, () => {
+		test.describe(`mobile overflow - seeded:${persona} - ${vp.name} (${vp.width}px)`, () => {
 			test.use({ viewport: { width: vp.width, height: vp.height } });
 			test.describe.configure({ mode: 'serial' });
 			test(`authed routes`, async ({ page }) => {

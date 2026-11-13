@@ -7,7 +7,7 @@
 	export let data: any;
 	export let options: any = {};
 	/**
-	 * PI v15 LB-4 — Screen-reader text alternative for the chart.
+	 * PI v15 LB-4 - Screen-reader text alternative for the chart.
 	 * Without this the canvas is invisible to assistive tech. Pass a short
 	 * `ariaLabel` summarising the chart and an optional `srTable` so SR
 	 * users can hear the actual data points instead of a chart blob.
@@ -24,7 +24,7 @@
 	let Chart: any = null;
 
 	// CIPH-745: coalesce reactive bursts. Svelte's `afterUpdate` fires on
-	// every reactive tick — a dashboard page can easily drive 5–10 ticks
+	// every reactive tick - a dashboard page can easily drive 5–10 ticks
 	// for one user action (store cascades, derived stores, i18n updates).
 	// Chart.js' `update()` walks the dataset each time, and on mid-range
 	// phones that's visibly janky. We coalesce updates into a single
@@ -46,7 +46,7 @@
 				if (!chart) return;
 				chart.data = data;
 				chart.options = mergeDefaults(options);
-				// 'none' skips animation — keeps quick successive updates cheap.
+				// 'none' skips animation - keeps quick successive updates cheap.
 				chart.update('none');
 			});
 		}, DEBOUNCE_MS);
@@ -63,7 +63,7 @@
 
 	function mergeDefaults(opts: any): any {
 		const dark = isDarkMode();
-		// CIPH-891 follow-up — pull tick + grid colors from the live CSS
+		// CIPH-891 follow-up - pull tick + grid colors from the live CSS
 		// vars so charts honour the cream/text-secondary brand tokens
 		// instead of cold Tailwind slate. Falls back to known brand
 		// values when running outside a DOM (SSR / vitest).
@@ -103,14 +103,14 @@
 		};
 	}
 
-	// pi24 dogfood: the tick-row plugin shipped in pi24-5e was removed —
+	// pi24 dogfood: the tick-row plugin shipped in pi24-5e was removed -
 	// at 12m/24m axis widths each tick was sub-pixel, and the row pulled
 	// the eye toward forensic detail on a glance surface. The correlation
 	// question it tried to answer ("did triggers spike with episodes?")
 	// is better served by tooltip enrichment at the bin level (see
 	// callbacks.afterBody on the caller-side chart options).
 
-	// Dose bands (2026-09-17) — the before/after structure behind a chart:
+	// Dose bands (2026-09-17) - the before/after structure behind a chart:
 	// a medication's dose periods as subtle background shades with a thin
 	// boundary where the dose changed (geometry: lib/reports/doseBands.ts).
 	// Callers opt in with `options.plugins.doseBands`; charts without it are
@@ -207,7 +207,7 @@
 	});
 
 	// Theme switch re-merges options so tick/grid colors re-read the live
-	// CSS vars. Rides the existing debounced update path — cheap.
+	// CSS vars. Rides the existing debounced update path - cheap.
 	$: if (chart && $resolvedTheme) scheduleUpdate();
 
 	afterUpdate(() => {
@@ -230,7 +230,7 @@
 </script>
 
 {#if browser}
-<!-- No min-height — parent controls vertical sizing via h-* classes.
+<!-- No min-height - parent controls vertical sizing via h-* classes.
      Chart.js with responsive: true + maintainAspectRatio: false will
      fill whatever box the parent sets. -->
 <!-- overflow-hidden: Chart.js momentarily oversizes the <canvas> during the
@@ -243,7 +243,7 @@
 		aria-label={ariaLabel}
 	></canvas>
 	{#if srTable}
-		<!-- PI v15 LB-4 — visually hidden data-table mirror. Lets screen-
+		<!-- PI v15 LB-4 - visually hidden data-table mirror. Lets screen-
 		     reader users navigate the chart's underlying data points. -->
 		<table class="sr-only">
 			<caption>{srTable.caption}</caption>

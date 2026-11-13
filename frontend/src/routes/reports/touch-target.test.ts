@@ -1,5 +1,5 @@
 /**
- * CIPH-pi23-A1 — touch-target floor for /reports interactive controls.
+ * CIPH-pi23-A1 - touch-target floor for /reports interactive controls.
  *
  * Anchor surface for the discrete cohort. WCAG 2.5.5 says interactive
  * targets should be ≥44×44 CSS pixels. Audit caught 1 chrome violation:
@@ -91,7 +91,7 @@ describe('CIPH-pi23-A1 /reports touch-target floor (44pt WCAG 2.5.5)', () => {
 		if (symptomRule !== -1) {
 			excludeRanges.push([symptomRule, symptomRule + 400]);
 		}
-		// `.report-sheet` (36px) is decorative — the mini-document graphic
+		// `.report-sheet` (36px) is decorative - the mini-document graphic
 		// inside the doctor-export scope cards, not an interactive target.
 		// The card itself (`.report-card`, a <button>, min-height 138px) is
 		// the touch target and clears the floor with room to spare.

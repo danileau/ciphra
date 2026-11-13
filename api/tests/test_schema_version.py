@@ -1,5 +1,5 @@
 """
-Schema ledger — the migration runner and the boot-time compatibility check.
+Schema ledger - the migration runner and the boot-time compatibility check.
 
 The behaviour that matters most here is the one that is easy to get backwards:
 an older image meeting a NEWER database must keep running when every migration

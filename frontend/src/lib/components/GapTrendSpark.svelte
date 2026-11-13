@@ -1,12 +1,12 @@
 <script lang="ts">
-	// CIPH-pi24-5c — Marker-event gap-trend sparkline. Renders the gap (days)
+	// CIPH-pi24-5c - Marker-event gap-trend sparkline. Renders the gap (days)
 	// between successive marker events as a tiny inline-SVG line: historical
 	// gaps as filled dots, the current in-progress gap as a hollow trailing
-	// dot. The shape carries the morbus-AI signal — slope up = gaps growing
+	// dot. The shape carries the morbus-AI signal - slope up = gaps growing
 	// (treatment working), slope down = regressing. A static "longest gap so
 	// far" line below provides a reference point without leaderboard framing.
 	// Klara's prior streak objection (Companion.svelte:124) is met by showing
-	// trend, not a single resetting counter — and by hiding the card entirely
+	// trend, not a single resetting counter - and by hiding the card entirely
 	// when the preset doesn't declare a `markerEvent` (chronic_pain, burnout,
 	// depression, etc.).
 	import { t } from '#lib/i18n/index.ts';

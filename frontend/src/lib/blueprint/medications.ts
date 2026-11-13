@@ -7,15 +7,15 @@ import { translateUnit } from '#lib/i18n/index.ts';
  * Medication model reconciliation (CIPH-881 follow-up, 2026-06-16).
  *
  * There are two medication lists on a blueprint:
- *   - `medications` (MedicationSlot[]) — the user's own meds, edited in
+ *   - `medications` (MedicationSlot[]) - the user's own meds, edited in
  *     Settings, each with an `asNeeded` ("Bei Bedarf") flag. This is what the
  *     user thinks of as "their Bedarfsmedikation".
- *   - `rescueMedications` (RescueMedication[]) — a hardcoded per-preset list
+ *   - `rescueMedications` (RescueMedication[]) - a hardcoded per-preset list
  *     (e.g. Midazolam/Diazepam for epilepsy) that originally backed the FAB
  *     "Bedarfsmed." quick-add. Labels are i18n keys; unit is a separate key.
  *
  * Both surface as "Bedarfsmedikation" in the UI but were wired to different
- * sources — the FAB ignored what the user configured. The fix:
+ * sources - the FAB ignored what the user configured. The fix:
  *   - The PICKER is sourced from configured as-needed meds only (see
  *     `bedarfMedsForPicker`).
  *   - All RENDER / COUNT / EXPORT paths resolve a logged `medicationId`
@@ -35,14 +35,14 @@ export interface MedDisplay {
 type Translator = (key: string, params?: Record<string, string | number>) => string;
 
 /** Every as-needed medication the user has configured, stopped ones included
- *  — the set that historical intakes can refer to. */
+ *  - the set that historical intakes can refer to. */
 function allBedarfMeds(bp: Blueprint | null | undefined): MedicationSlot[] {
 	return (bp?.medications ?? []).filter((m) => m.asNeeded);
 }
 
 /** The meds offered in the FAB "Bedarfsmedikation" picker: the user's own
  *  as-needed medications that are part of the regimen on `date` (default
- *  today), each carrying the dose that applies that day — so an intake logged
+ *  today), each carrying the dose that applies that day - so an intake logged
  *  after a dose change is stamped with the new dose, and a stopped medication
  *  is not offered. */
 export function bedarfMedsForPicker(
@@ -76,7 +76,7 @@ export interface MedAdherence {
 }
 
 /**
- * Adherence for one medication over a set of logged-day docs — the model
+ * Adherence for one medication over a set of logged-day docs - the model
  * behind the doctor-PDF table.
  *
  * Two models, by med kind:
@@ -90,14 +90,14 @@ export interface MedAdherence {
  *
  * Only days on which the medication was actually part of the regimen count
  * (dose history, 2026-09-16). Before that, a medication started yesterday was
- * "taken" on every logged day of the month — assume-taken has to know when
+ * "taken" on every logged day of the month - assume-taken has to know when
  * there was something to assume. A logged day that mentions the medication
  * explicitly always counts, even outside its recorded periods, so nothing the
  * user entered is ever silently dropped. Documents without a date count only
  * for a medication with no recorded start or end (the pre-history shape).
  *
  * History the person filled in afterwards (`reported`, 2026-09-19) is not a
- * regimen ciphra was tracking, so it never puts a day in the denominator —
+ * regimen ciphra was tracking, so it never puts a day in the denominator -
  * otherwise "and before that I was on 10 mg" would turn every already-logged
  * day it reaches into a missed dose.
  */
@@ -142,7 +142,7 @@ export interface MedPeriodAdherence extends MedAdherence {
 /**
  * Adherence split by dose period, for every period that overlaps
  * `[window.from, window.to]`, oldest first. A titration from 10 mg to 12 mg
- * inside the window reads as two rows — each dose with its own days — instead
+ * inside the window reads as two rows - each dose with its own days - instead
  * of one row claiming 12 mg throughout.
  */
 export function medAdherenceByPeriod(
@@ -170,7 +170,7 @@ export function medAdherenceByPeriod(
 
 /** Label for why a medication was stopped, from the fixed list (2026-09-19).
  *  Written out per case rather than built from the value, so the key orphan
- *  detector can see every one of them — and so this is the single place the
+ *  detector can see every one of them - and so this is the single place the
  *  doctor PDF and the app agree on the wording. */
 export function stopReasonLabel(reason: MedicationStopReason, t: Translator): string {
 	switch (reason) {
@@ -211,7 +211,7 @@ export function resolveMedDisplay(
  *  New presets seed these straight into `medications`, so for fresh blueprints
  *  this is a no-op. Returns a migrated CLONE when something changed, or `null`
  *  when the blueprint is already in the single-source shape (so callers can
- *  skip the persist). Pure — needs `t` to turn preset i18n label keys into the
+ *  skip the persist). Pure - needs `t` to turn preset i18n label keys into the
  *  plain `MedicationSlot.name` the editor and FAB render. */
 export function foldRescueMedications(
 	bp: Blueprint | null | undefined,
@@ -219,7 +219,7 @@ export function foldRescueMedications(
 ): Blueprint | null {
 	if (!bp || !bp.rescueMedications || bp.rescueMedications.length === 0) return null;
 	// NEVER touch a user who already has medications. A configured or
-	// epilepc-migrated list is curated data — appending preset rescue meds
+	// epilepc-migrated list is curated data - appending preset rescue meds
 	// (Midazolam/Diazepam) would contaminate it. Only SEED a brand-new/empty
 	// list. Existing users keep the now-unused `rescueMedications` field (it's
 	// harmless; resolveMedDisplay reads it only as a fallback for already-logged

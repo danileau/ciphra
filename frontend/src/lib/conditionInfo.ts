@@ -1,7 +1,7 @@
 import { DATA_1, DATA_2, DATA_3, DATA_4, DATA_5, DATA_6 } from './dataPalette';
 
 /**
- * ciphra — Public condition info data.
+ * ciphra - Public condition info data.
  *
  * Each condition has structured metadata for SEO-optimized
  * public info pages at /conditions/[id]. All display strings
@@ -478,7 +478,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 		relatedConditions: ['endometriosis', 'anxiety_depression', 'diabetes'],
 	},
 
-	// CIPH-pi24-4a-full — cancer_treatment (narrative cohort).
+	// CIPH-pi24-4a-full - cancer_treatment (narrative cohort).
 	cancer_treatment: {
 		id: 'cancer_treatment',
 		icon: 'shield-plus',
@@ -503,7 +503,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 		relatedConditions: ['anxiety_depression', 'chronic_pain', 'long_covid'],
 	},
 
-	// CIPH-pi24-4b-full — hashimoto (discrete cohort, lab-driven).
+	// CIPH-pi24-4b-full - hashimoto (discrete cohort, lab-driven).
 	hashimoto: {
 		id: 'hashimoto',
 		icon: 'droplet',
@@ -525,7 +525,7 @@ export const conditionInfoMap: Record<string, ConditionInfo> = {
 		relatedConditions: ['diabetes', 'menopause', 'anxiety_depression'],
 	},
 
-	// CIPH-pi24-4c-full — rheumatoid_arthritis (phase cohort, flare/remission).
+	// CIPH-pi24-4c-full - rheumatoid_arthritis (phase cohort, flare/remission).
 	rheumatoid_arthritis: {
 		id: 'rheumatoid_arthritis',
 		icon: 'flame',

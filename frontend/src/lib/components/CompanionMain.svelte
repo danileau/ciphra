@@ -1,11 +1,11 @@
 <script lang="ts">
-	// CIPH-750 — Dashboard main-column wrapper.
+	// CIPH-750 - Dashboard main-column wrapper.
 	// Thin render-only component: receives all reactive state + handlers
 	// from Companion.svelte and emits the main-column sections. Splitting
 	// the markup (without duplicating the reactive cascade) is how we
 	// de-risked the rail-layout story that was deferred twice.
 	//
-	// CIPH-900 — Dropped the episode bar-chart and the top-symptoms bar-
+	// CIPH-900 - Dropped the episode bar-chart and the top-symptoms bar-
 	// chart from the dashboard. Both lived as scope-pickered cards on the
 	// main column since PI v6 / CIPH-781. Anna-test (cycle cohort) flagged
 	// the dashboard as "lot of not matching colours, structurally
@@ -28,7 +28,7 @@
 	import type { CiphraDocument } from '#lib/stores/documents.ts';
 	import type { Blueprint } from '#lib/blueprint/types.ts';
 
-	// CIPH-854 — cohort drives ordering + which extra cards render.
+	// CIPH-854 - cohort drives ordering + which extra cards render.
 	export let cohort: Cohort;
 	export let activePhase: {
 		id: string;
@@ -40,15 +40,15 @@
 
 	export let hasCycleVital: boolean;
 	// Discriminated-union cycle state from Companion.svelte. Kept `any` at
-	// the boundary to avoid re-exporting the inline type — all the typed
+	// the boundary to avoid re-exporting the inline type - all the typed
 	// logic lives in the parent.
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	export let cycleState: any;
 	export let PHASE_COLORS: Record<string, string>;
 
-	// CIPH-781 — "Wie geht's dir?" trend chart now lives in the main column
+	// CIPH-781 - "Wie geht's dir?" trend chart now lives in the main column
 	// alongside the other charts. Rail keeps auxiliary content only.
-	// CIPH-900 — only chart left on the dashboard, slimmed to sparkline.
+	// CIPH-900 - only chart left on the dashboard, slimmed to sparkline.
 	export let howAreYouChartData: unknown;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	export let howAreYouChartOptions: any;
@@ -57,7 +57,7 @@
 	export let howAreYouHeadlineParts: { arrow: string; text: string } | null;
 	export let episodeNoun: string;
 
-	// pi24 dashboard rework — primary-card spec from
+	// pi24 dashboard rework - primary-card spec from
 	// resolvePrimaryDashboardCard. Drives the switch in the primary slot
 	// below. When spec.kind is 'cycle-phase' or 'active-phase', the
 	// existing anchor blocks above already carry the answer; the primary
@@ -70,7 +70,7 @@
 	export let allDocs: CiphraDocument[] = [];
 	export let bp: Blueprint | null = null;
 
-	// CIPH-921b — single dashboard accent = the CONDITION color (the one
+	// CIPH-921b - single dashboard accent = the CONDITION color (the one
 	// /conditions and the header badge use), passed down from Companion.
 	// Previously each card pulled cohortPalette(cohort)[0]; for phase/cycle
 	// cohorts that diverges from the condition color (violet/rose vs the
@@ -82,7 +82,7 @@
 	$: accentHex = conditionColor || cohortPalette(cohort)[0];
 	$: vitalNeutralHex = cohortPalette(cohort)[4];
 
-	// CIPH-763b — concrete number types for sr-only caption reductions
+	// CIPH-763b - concrete number types for sr-only caption reductions
 	// (inline annotations aren't allowed in {expression} blocks).
 	$: howAreYouEpisodesTotal = howAreYouTrend
 		? (howAreYouTrend.episodes as number[]).reduce((a: number, b: number) => a + b, 0)
@@ -151,7 +151,7 @@
      - 'cycle-phase' / 'active-phase': anchor blocks above already handle
        it; primary slot stays empty
      - 'vital-trend' / 'top-triggers' / 'treatment-cycle': dedicated
-       cards land in later commits — until they do, fall through to
+       cards land in later commits - until they do, fall through to
        LastEntriesStrip so no Helena-style void appears
      - null: silent empty state (hero only, per no-gaslight rule) -->
 {#if primarySpec?.kind === 'episode-trend' && howAreYouChartData && howAreYouTrend}
@@ -206,7 +206,7 @@
 	<LastEntriesStrip docs={allDocs} {bp} />
 {/if}
 
-<!-- CIPH-920 — "Muster" insight cards. Capability-driven (see insights.ts):
+<!-- CIPH-920 - "Muster" insight cards. Capability-driven (see insights.ts):
      each card self-gates on what the blueprint declares + enough logged
      data, so the section fills the formerly-naked main column with
      cross-signal insight (sleep↔episodes, trigger lift, circadian, type
@@ -214,13 +214,13 @@
      cohorts/users without the data. -->
 <InsightsSection docs={allDocs} {bp} {accentHex} neutralHex={vitalNeutralHex} />
 
-<!-- CIPH-900 — Episode bar-chart + Top-symptoms bar-chart removed. The
+<!-- CIPH-900 - Episode bar-chart + Top-symptoms bar-chart removed. The
      deep trend lives at /reports (year heatmap + monthly grid + sums).
      Today's entries moved to CompanionRail. Encryption badge moved to
      the authed footer (CIPH-903). -->
 
 <style>
-	/* CIPH-900 — howAreYou hero card. The whole card is an <a>; we add a
+	/* CIPH-900 - howAreYou hero card. The whole card is an <a>; we add a
 	   subtle hover affordance (border tint, view-trend chevron underline)
 	   without making the card feel "buttoned." */
 	.hay-hero {
@@ -235,7 +235,7 @@
 	.hay-hero:focus-visible .hay-link {
 		text-decoration: underline;
 	}
-	/* CIPH-915 — chart height bumped to accommodate the bottom legend
+	/* CIPH-915 - chart height bumped to accommodate the bottom legend
 	   that now matches the /reports trend chart style. */
 	.hay-spark {
 		height: 200px;

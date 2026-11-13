@@ -1,5 +1,5 @@
 <!--
-	LoginForm — password-login flow extracted from /login for symmetry with
+	LoginForm - password-login flow extracted from /login for symmetry with
 	SignupFlow.svelte. Owns: username/password fields, loginInit →
 	deriveAuthKey → login → decryptMasterKey → auth.login. Emits
 	`login-complete` on success; the parent is responsible for post-login
@@ -31,7 +31,7 @@
 	let technicalError = '';
 	let touched: Record<string, boolean> = {};
 
-	// A11y validation reactives — used by aria-invalid + aria-describedby
+	// A11y validation reactives - used by aria-invalid + aria-describedby
 	// linking on the inputs (PI v13 a11y review LB-2). PI v16: dropped a
 	// password-length check on the login form. The server is the policy
 	// enforcer at login time; advertising a min-length on the login screen
@@ -50,7 +50,7 @@
 		clearError();
 		// Read what the fields show, not the bound copies. iOS autofill can set
 		// an input's value without firing `input`, which is the only event
-		// bind:value listens to — the field showed a username while the form
+		// bind:value listens to - the field showed a username while the form
 		// sent '' and the server answered "Invalid username" (2026-11-03).
 		const form = e.currentTarget as HTMLFormElement;
 		const userEl = form.querySelector<HTMLInputElement>('#login-user');

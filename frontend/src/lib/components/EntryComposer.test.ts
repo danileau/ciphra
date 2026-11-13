@@ -1,5 +1,5 @@
 /**
- * CIPH-850 — EntryComposer primitive contract + behaviour test.
+ * CIPH-850 - EntryComposer primitive contract + behaviour test.
  *
  * Covers the prop boundary established when /log/[date] was extracted:
  *   - mount with minimal props (empty blueprint arrays)
@@ -14,7 +14,7 @@
  *   - copy-previous-day merges previousDoc fields into form state
  *
  * Mounted via @testing-library/svelte; i18n loads its real store (de
- * default in jsdom). No store mocks needed — the primitive doesn't touch
+ * default in jsdom). No store mocks needed - the primitive doesn't touch
  * the documents store after extraction.
  *
  * @vitest-environment jsdom
@@ -122,14 +122,14 @@ describe('CIPH-850 EntryComposer contract', () => {
 		expect(payload.private).toBeUndefined();
 	});
 
-	it('CIPH-905 — autosave is removed; the Save button becomes the explicit contract', async () => {
+	it('CIPH-905 - autosave is removed; the Save button becomes the explicit contract', async () => {
 		vi.useFakeTimers({ shouldAdvanceTime: true });
 		const props = baseProps();
 		const { container } = render(EntryComposer, { props });
 		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
 		await fireEvent.input(ta, { target: { value: 'no autosave please' } });
 		// The 3-s debounce that used to fire onSave is gone. Advance the
-		// clock well past the old window — onSave must NOT have been
+		// clock well past the old window - onSave must NOT have been
 		// called automatically.
 		vi.advanceTimersByTime(5000);
 		expect(props.onSave).not.toHaveBeenCalled();
@@ -166,7 +166,7 @@ describe('CIPH-850 EntryComposer contract', () => {
 		finish(true);
 	});
 
-	it('a failed save says so and keeps the input — no "saved" flash', async () => {
+	it('a failed save says so and keeps the input - no "saved" flash', async () => {
 		const props = { ...baseProps(), onSave: vi.fn().mockResolvedValue(false) };
 		const { container } = render(EntryComposer, { props });
 		const ta = container.querySelector('textarea') as HTMLTextAreaElement;
@@ -410,7 +410,7 @@ describe('CIPH-850 EntryComposer contract', () => {
 		await fireEvent.click(container.querySelector('.log-btn-save') as HTMLButtonElement);
 		await waitFor(() => expect(props.onSave).toHaveBeenCalledTimes(1));
 		expect(props.onSave.mock.calls[0][0].private).toBe(true);
-		// Saved-feedback shows for 2.5s — advance past that so the save button
+		// Saved-feedback shows for 2.5s - advance past that so the save button
 		// re-renders, then query a fresh node and click.
 		vi.advanceTimersByTime(2600);
 		await waitFor(() => {

@@ -1,9 +1,9 @@
 <!--
-	pi24 dashboard — WithinPhaseRollupCard.
+	pi24 dashboard - WithinPhaseRollupCard.
 
 	Rendered when resolvePrimaryDashboardCard returns kind='active-phase'.
 	Sits adjacent to PhaseContextCard (the anchor block at the top of
-	CompanionMain) — that card says "you're in a flare, day N";
+	CompanionMain) - that card says "you're in a flare, day N";
 	this card says "during this flare you've logged X, Y, Z".
 
 	Campfire consensus: PhaseContextCard alone isn't enough during a

@@ -4,11 +4,11 @@
 	What the list shows is dated, because a medication is no longer one fixed
 	dose: the dose that applies today, since when (if known), and anything
 	already planned ("from 17.09.: 12 mg"). Stopped medications move to their
-	own list instead of disappearing — their days are still in every report,
+	own list instead of disappearing - their days are still in every report,
 	and they can be resumed. Each medication's recorded steps are one tap away.
 
 	Every change goes through MedicationChangeDialog. This component only
-	applies the dialog's result to the RAW blueprint and saves it — never
+	applies the dialog's result to the RAW blueprint and saves it - never
 	`$resolvedBlueprint`, which strips custom items (see customizations.ts).
 -->
 <script lang="ts">
@@ -41,7 +41,7 @@
 	import DatePicker from '#lib/components/DatePicker.svelte';
 
 	// Render from the resolved view (medications are not customized, so it is
-	// the same list); mutate the raw store — see `persist`.
+	// the same list); mutate the raw store - see `persist`.
 	$: bp = $resolvedBlueprint;
 	$: meds = bp?.medications ?? [];
 	const today = todayISO();
@@ -125,7 +125,7 @@
 		historyOpen = true;
 	}
 
-	/** Periods the person filled in afterwards, oldest first — the rows the
+	/** Periods the person filled in afterwards, oldest first - the rows the
 	 *  history list offers to take back. */
 	function reportedPeriodsOf(m: MedicationSlot) {
 		return medPeriods(m)
@@ -305,7 +305,7 @@
 								{#each changes as c}
 									<li class="text-xs flex gap-2" style="color: var(--text-secondary)">
 										<span class="shrink-0 tabular-nums" style="color: var(--text-muted)">{fmt(c.date)}</span>
-										<span>{describe(c)}{c.note ? ` — ${c.note}` : ''}</span>
+										<span>{describe(c)}{c.note ? ` - ${c.note}` : ''}</span>
 									</li>
 								{/each}
 							</ol>
@@ -372,7 +372,7 @@
 								{#each changes as c}
 									<li class="text-xs flex gap-2" style="color: var(--text-secondary)">
 										<span class="shrink-0 tabular-nums" style="color: var(--text-muted)">{fmt(c.date)}</span>
-										<span>{describe(c)}{c.note ? ` — ${c.note}` : ''}</span>
+										<span>{describe(c)}{c.note ? ` - ${c.note}` : ''}</span>
 									</li>
 								{/each}
 							</ol>

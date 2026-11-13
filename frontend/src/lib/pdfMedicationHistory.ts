@@ -1,7 +1,7 @@
 /**
  * Medication dose history in the doctor PDF and the CSV (2026-09-16).
  *
- * Data prep only — the drawing stays inline in pdf.ts, like the other chart
+ * Data prep only - the drawing stays inline in pdf.ts, like the other chart
  * primitives (pdfDailyMonthChart.ts, pdfCycleStrip.ts). Every function here is
  * pure so the report's medication content is testable without jsPDF.
  *
@@ -10,9 +10,9 @@
  * was stopped stays in the record for the days it was taken.
  *
  * STRUCTURE ONLY. Nothing here compares symptoms or episodes before and after
- * a change, and nothing may. Placing a change on the time axis — and shading
- * the dose periods behind a chart (2026-09-17) — documents what was recorded;
- * stating what happened around it would be an assessment — the line
+ * a change, and nothing may. Placing a change on the time axis - and shading
+ * the dose periods behind a chart (2026-09-17) - documents what was recorded;
+ * stating what happened around it would be an assessment - the line
  * `pdf.no-assessment.test.ts` holds for the whole document.
  */
 import type { MedicationPeriod, MedicationSlot } from '#lib/blueprint/types.ts';
@@ -29,7 +29,7 @@ export interface DateWindow {
 	to: string;
 }
 
-/** "10 mg · 2× täglich" — the same regimen text Settings shows. */
+/** "10 mg · 2× täglich" - the same regimen text Settings shows. */
 export function regimenText(p: { dose?: string; schedule?: string } | undefined): string {
 	return [p?.dose, p?.schedule].map((s) => (s ?? '').trim()).filter(Boolean).join(' · ');
 }
@@ -57,7 +57,7 @@ export interface AdherenceRow extends MedPeriodAdherence {
 
 /**
  * Adherence rows for the doctor PDF: one per dose period overlapping the
- * window, for every medication — stopped ones included, since the days they
+ * window, for every medication - stopped ones included, since the days they
  * were taken are still in the window. A medication with no day in the window
  * yields no row. Medications keep their Settings order; periods run oldest
  * first.
@@ -96,7 +96,7 @@ export interface MedChangeRow {
 
 /**
  * Every start, dose change and stop taking effect inside the window, as
- * table rows. Wording is descriptive only ("Abgesetzt", "10 mg → 12 mg") —
+ * table rows. Wording is descriptive only ("Abgesetzt", "10 mg → 12 mg") -
  * never why it mattered or what followed.
  *
  * The reason a person typed for a change is deliberately NOT a column. It is
@@ -116,7 +116,7 @@ export function medicationChangeRows(
 		if (c.kind === 'change') {
 			change = t('pdf.med_change_dose', { before: regimenText(c.before), after: regimenText(c.after) });
 		} else if (c.kind === 'start') {
-			const regimen = regimenText(c.after) || '—';
+			const regimen = regimenText(c.after) || '-';
 			const replaced = nameOf(c.switchedFrom);
 			change = replaced
 				? t('pdf.med_change_start_switch', { regimen, name: replaced })
@@ -138,7 +138,7 @@ export interface DayMedMark {
 	labels: string[];
 }
 
-/** The short form of a regimen: its dose — or its schedule when `other`
+/** The short form of a regimen: its dose - or its schedule when `other`
  *  carries the same dose, since the dose alone would read as no change. */
 function regimenDetail(
 	p: { dose?: string; schedule?: string } | undefined,
@@ -160,7 +160,7 @@ export function medMarkLabel(c: MedChange, t: TranslateFn): string {
 }
 
 /**
- * One mark per DAY that holds a medication change inside the month — the
+ * One mark per DAY that holds a medication change inside the month - the
  * same one-mark-per-day rule as the note markers on that chart. Several
  * changes on one day (a switch: A stops, B starts) share the mark and list
  * their labels in the order `medicationChanges` sorts them.
@@ -196,7 +196,7 @@ export interface PlacedLabel {
 
 /**
  * Greedy row packing for tick labels under a chart. Each mark is a short tick
- * at `x` with a label of `width` to its right — or to its left when it would
+ * at `x` with a label of `width` to its right - or to its left when it would
  * run past `xMax`. Tick and label occupy one interval of their row, so a mark
  * takes the first row where that interval touches no other. A mark that fits
  * in no row keeps a bare tick in the first row with room for the tick alone.
@@ -235,18 +235,18 @@ export function layoutTickLabels(
 /* ─── 3b. Change rows in the day-by-day grid ──────────────────────────── */
 
 /** The grid's label for one change: "Lamotrigin: 50 mg → 75 mg",
- *  "Brivaracetam: Beginn · 50 mg", "Levetiracetam: Abgesetzt". Short forms —
+ *  "Brivaracetam: Beginn · 50 mg", "Levetiracetam: Abgesetzt". Short forms -
  *  the changes table carries the full regimen. The arrow is the one the
  *  changes table draws as a vector (pdf.ts `vectorArrowHooks`). */
 export function gridChangeLabel(c: MedChange, meds: MedicationSlot[], t: TranslateFn): string {
 	let text: string;
 	if (c.kind === 'change') {
 		text = t('pdf.med_change_dose', {
-			before: regimenDetail(c.before, c.after) || '—',
-			after: regimenDetail(c.after, c.before) || '—',
+			before: regimenDetail(c.before, c.after) || '-',
+			after: regimenDetail(c.after, c.before) || '-',
 		});
 	} else if (c.kind === 'start') {
-		text = t('pdf.med_change_start', { regimen: regimenDetail(c.after) || '—' });
+		text = t('pdf.med_change_start', { regimen: regimenDetail(c.after) || '-' });
 	} else {
 		const next = c.switchedTo ? meds.find((m) => m.id === c.switchedTo)?.name : '';
 		text = next ? t('pdf.med_change_stop_switch', { name: next }) : t('pdf.med_change_stop');
@@ -282,7 +282,7 @@ export interface TimelineSegment {
 	dose: string;
 	schedule: string;
 	/** True when this segment starts inside the window straight after the
-	 *  previous period ended — a dose/schedule change, drawn as a boundary. */
+	 *  previous period ended - a dose/schedule change, drawn as a boundary. */
 	changeAtStart: boolean;
 }
 
@@ -367,7 +367,7 @@ export interface DoseBandLayer {
 	 *  the axis unshaded. The leftmost names the medication; the rest carry
 	 *  the dose alone. */
 	labels: DoseBandLabel[];
-	/** Another medication changed on the same axis too — the chart must say
+	/** Another medication changed on the same axis too - the chart must say
 	 *  which one its background shows. */
 	othersChanged: boolean;
 }
@@ -376,7 +376,7 @@ export interface DoseBandLayer {
  * The before/after structure for one chart: the dose periods of the
  * medication that changed most recently inside the axis (`medsChangedIn`),
  * through the shared geometry in reports/doseBands.ts. Null when no
- * medication started, changed or stopped on the axis — that chart renders
+ * medication started, changed or stopped on the axis - that chart renders
  * exactly as it would without dose history.
  *
  * STRUCTURE ONLY. The doses and dates the person recorded; nothing counted
@@ -416,7 +416,7 @@ export function doseBandLayer(meds: MedicationSlot[], bins: AxisBin[], t: Transl
 
 /* ─── 7. Page 1: the regimen on the report's end date ─────────────────── */
 
-/** The period `p` directly follows — present only when `p` began with a
+/** The period `p` directly follows - present only when `p` began with a
  *  change, not a start. */
 function periodBefore(med: MedicationSlot, p: MedicationPeriod): MedicationPeriod | null {
 	const periods = medPeriods(med);
@@ -428,7 +428,7 @@ function periodBefore(med: MedicationSlot, p: MedicationPeriod): MedicationPerio
 /**
  * One line per medication for page 1, as of `asOf` (the report window's end,
  * clipped to today by the caller):
- *   - taken that day: "Lamotrigin 100 mg · seit 24.09.2026 (vorher 75 mg)" —
+ *   - taken that day: "Lamotrigin 100 mg · seit 24.09.2026 (vorher 75 mg)" -
  *     "seit" only when the period's start is recorded, "vorher" only when the
  *     period began with a change;
  *   - stopped inside the window: "Levetiracetam · abgesetzt ab 12.09.2026".
@@ -486,7 +486,7 @@ export interface TherapyRow {
 	/** "03/2023 – 05/2026", "seit 01.06.2026", "Beginn nicht erfasst – 05/2026". */
 	period: string;
 	regimen: string;
-	/** Why it ended, from the fixed list — empty when none was given. */
+	/** Why it ended, from the fixed list - empty when none was given. */
 	reason: string;
 	/** True when the person filled this period in from memory. */
 	remembered: boolean;
@@ -495,7 +495,7 @@ export interface TherapyRow {
 }
 
 /**
- * Every dose period of every medication, oldest first — the therapy as a
+ * Every dose period of every medication, oldest first - the therapy as a
  * whole, which is what a first consultation asks about. Unlike every other
  * reader here this one has no window: the history before ciphra is the point.
  *
@@ -532,7 +532,7 @@ export function therapyRows(
 	return rows.sort((a, b) => (a.sortKey === b.sortKey ? a.name.localeCompare(b.name) : a.sortKey < b.sortKey ? -1 : 1));
 }
 
-/** True when any period was filled in from memory — the provenance line only
+/** True when any period was filled in from memory - the provenance line only
  *  claims it when it is true. */
 export function hasRememberedHistory(meds: MedicationSlot[]): boolean {
 	return meds.some((med) => medPeriods(med).some((p) => p.reported));

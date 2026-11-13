@@ -1,7 +1,7 @@
-# /admin surface audit — pi24-5b
+# /admin surface audit - pi24-5b
 
 > **ARCHIVED 2026-08-22.** Point-in-time dry-run (2026-05-12), never updated
-> since. The surface has moved past it — `admin/+page.svelte` now renders a
+> since. The surface has moved past it - `admin/+page.svelte` now renders a
 > Sparkline-first metrics block (Slice 2) the doc predates, and the is_admin
 > seed mechanism it cites has since been inverted. Kept as a record of the
 > dry-run, not a description of the current admin surface. Was
@@ -16,7 +16,7 @@ bootstrap `UPDATE users SET is_admin = TRUE` flip).
 
 Up from a baseline of **3.7** after pi24-5b shipped the today-lens.
 This is **not** a 4.7+ surface and should not be sold as one. Admin
-is a maintenance tool — no cohort has it as a primary surface
+is a maintenance tool - no cohort has it as a primary surface
 (`blueprint/cohort.ts:67`), and the open-lens rule caps non-primary
 surfaces accordingly.
 
@@ -33,14 +33,14 @@ operator workflow.
 
 ## Surface inventory (post-pi24-5b)
 
-**Row 1 — footprint + moderation outcomes (5 cards):**
+**Row 1 - footprint + moderation outcomes (5 cards):**
 - Total users
 - Active users (30d)
 - Total documents
 - Lockouts (30d) + lockouts today
 - Deletions (30d) + deletions today &larr; *new in pi24-5b*
 
-**Row 2 — recent activity (4 cards):**
+**Row 2 - recent activity (4 cards):**
 - Active users (7d)
 - New users (7d) + new today &larr; *today sub-line new in pi24-5b*
 - Successful logins (30d)
@@ -69,7 +69,7 @@ SUCCESS/FAILED/ADMIN_*), IP.
 
 ## What's still missing (backlog, ordered by leverage)
 
-### High leverage — would actually change operator behavior
+### High leverage - would actually change operator behavior
 
 1. **Anomaly affordance, not just a counter.** Red `15 today` is
    noise unless paired with "your baseline is 0-2/day; this is a
@@ -91,7 +91,7 @@ SUCCESS/FAILED/ADMIN_*), IP.
    relabel to "24h" or anchor to local midnight (server-side TZ
    awareness needed).
 5. **Audit log retention.** `/api/admin/audit/retention` endpoint
-   exists (`server.py:1590`) — no UI to invoke it. Add a "purge
+   exists (`server.py:1590`) - no UI to invoke it. Add a "purge
    audit > 90 days" affordance gated behind a confirmation.
 6. **User table search/filter.** Sortable is fine at n &le; 20;
    becomes friction at n &ge; 100. Username substring filter +
@@ -100,15 +100,15 @@ SUCCESS/FAILED/ADMIN_*), IP.
 ### Low leverage (current scale)
 
 7. Pagination on audit log. It's an `ORDER BY created_at DESC
-   LIMIT 100` (default) — fine for a 10-user dev DB; rethink at
+   LIMIT 100` (default) - fine for a 10-user dev DB; rethink at
    1k+ users.
 8. Export to CSV (audit + users). Useful if there's ever a SAR
-   (subject access request) — until then, nobody is asking.
+   (subject access request) - until then, nobody is asking.
 
 ## Score rationale
 
 - Operator primary surface? No. Cap applies.
-- Functional? Yes — every action works, the table sorts, the
+- Functional? Yes - every action works, the table sorts, the
   audit log shows what it should.
 - **Insightful?** Marginally. The today-lens is the first
   affordance that says "look at this" rather than "look at the
@@ -120,5 +120,5 @@ SUCCESS/FAILED/ADMIN_*), IP.
 
 - Anomaly detection (high leverage, backlog item #1).
 - Audit-log retention UI (medium, backlog item #5).
-- Real test coverage for the admin surface (none today — there
+- Real test coverage for the admin surface (none today - there
   are no `routes/admin/*.test.ts` files).

@@ -17,8 +17,8 @@
  *                           24-month report covered half of it
  *
  * These are source-shape assertions, which is normally a weak form. For
- * `pdf.ts` it is the practical one — the logic lives inside a ~2000-line
- * `generateDoctorPdf` of jsPDF draw calls with no extractable seam — and it
+ * `pdf.ts` it is the practical one - the logic lives inside a ~2000-line
+ * `generateDoctorPdf` of jsPDF draw calls with no extractable seam - and it
  * is the form the file's five existing test suites already use
  * (pdf.kpi-glance, pdf.cohort-accent, pdf-effective-columns, …). Behaviour
  * is verified against generated PDFs; these pin the shape so a future edit

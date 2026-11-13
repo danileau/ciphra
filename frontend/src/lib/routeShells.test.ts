@@ -1,5 +1,5 @@
 /**
- * CIPH-833 — route-shell registry enforcement.
+ * CIPH-833 - route-shell registry enforcement.
  *
  * For each route that actually exists in `frontend/src/routes/`,
  * assert that `shellFor(path)` returns the expected shell + guards.
@@ -9,14 +9,14 @@
 import { describe, it, expect } from 'vitest';
 import { shellFor } from './routeShells';
 
-describe('CIPH-833 — route shell registry', () => {
+describe('CIPH-833 - route shell registry', () => {
 	const cases: Array<{
 		path: string;
 		shell: ReturnType<typeof shellFor>['shell'];
 		requiresAuth: boolean;
 		requiresBlueprint: boolean;
 	}> = [
-		// Landing — `/` is the public landing for unauthenticated visitors
+		// Landing - `/` is the public landing for unauthenticated visitors
 		// but the authed-app dashboard for logged-in users. requiresBlueprint
 		// is true so fresh registrants are redirected to /setup instead of
 		// landing on the caregiver-fallback Companion branch.
@@ -46,7 +46,7 @@ describe('CIPH-833 — route shell registry', () => {
 		{ path: '/setup', shell: 'authed-app', requiresAuth: true, requiresBlueprint: false },
 		{ path: '/settings', shell: 'authed-app', requiresAuth: true, requiresBlueprint: false },
 
-		// Primary authed pages — both guards on.
+		// Primary authed pages - both guards on.
 		{ path: '/log/today', shell: 'authed-app', requiresAuth: true, requiresBlueprint: true },
 		{ path: '/log/2026-04-14', shell: 'authed-app', requiresAuth: true, requiresBlueprint: true },
 		{ path: '/journal', shell: 'authed-app', requiresAuth: true, requiresBlueprint: true },

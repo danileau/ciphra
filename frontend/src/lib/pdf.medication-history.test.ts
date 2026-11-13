@@ -2,16 +2,16 @@
  * Medication dose history in the doctor PDF and the CSV (2026-09-16).
  *
  * Before dose history, the PDF printed one adherence row per medication at
- * its CURRENT dose for the whole window — a titration from 50 to 75 mg in the
- * middle of September read as "75 mg" on every day of it — and the CSV had no
+ * its CURRENT dose for the whole window - a titration from 50 to 75 mg in the
+ * middle of September read as "75 mg" on every day of it - and the CSV had no
  * scheduled-medication column at all.
  *
  * Three product rules are pinned here:
  *   1. A change is a step in time: every surface reads the dose of the day.
  *   2. Stopped medications stay in the record for the days they were taken.
  *   3. Structure, never numbers or verdicts. The PDF places a change on the
- *      time axis — and, since 2026-09-17, shades the dose periods behind the
- *      charts (pdf.medication-structure.test.ts) — but never counts or
+ *      time axis - and, since 2026-09-17, shades the dose periods behind the
+ *      charts (pdf.medication-structure.test.ts) - but never counts or
  *      compares symptoms or episodes before and after it. Per-event tick
  *      marks go on the DAILY chart only; the monthly trajectory gets periods.
  *
@@ -201,7 +201,7 @@ describe('the medication changes section', () => {
 		expect(texts).toContain('Abgesetzt · Wechsel auf Brivaracetam');
 	});
 
-	it('never prints the reason a person typed — free text leaves the device only by explicit choice', () => {
+	it('never prints the reason a person typed - free text leaves the device only by explicit choice', () => {
 		const { texts } = doctorPdf('month', 8, SEPTEMBER);
 		const all = texts.join('\n');
 		expect(all).not.toContain('Aufdosierung laut Dr. M.');
@@ -217,7 +217,7 @@ describe('the medication changes section', () => {
 	});
 
 	it('draws the arrow instead of printing a glyph Helvetica does not have', () => {
-		// A raw U+2192 comes out of jsPDF as the bytes 0x21 0x92 — "!'" on paper.
+		// A raw U+2192 comes out of jsPDF as the bytes 0x21 0x92 - "!'" on paper.
 		const { raw, texts } = doctorPdf('month', 8, SEPTEMBER);
 		expect(raw).not.toContain('!\x92');
 		expect(texts.some((s) => s.includes('→'))).toBe(false);
@@ -366,12 +366,12 @@ describe('CSV dose columns', () => {
 				expect(i, `${label} column`).toBeGreaterThan(0);
 				return i;
 			};
-			const lam = col('Lamotrigin — Dosis');
-			const lev = col('Levetiracetam — Dosis');
-			const bri = col('Brivaracetam — Dosis');
+			const lam = col('Lamotrigin - Dosis');
+			const lev = col('Levetiracetam - Dosis');
+			const bri = col('Brivaracetam - Dosis');
 			col('Midazolam');
-			expect(cols).not.toContain('Midazolam — Dosis');
-			expect(cols).not.toContain('Valproat — Dosis');
+			expect(cols).not.toContain('Midazolam - Dosis');
+			expect(cols).not.toContain('Valproat - Dosis');
 			// Dose columns sit between the vitals and the as-needed counts.
 			expect(lam).toBeLessThan(col('Midazolam'));
 
@@ -390,7 +390,7 @@ describe('CSV dose columns', () => {
 
 /* ─── Markers only ────────────────────────────────────────────────────── */
 
-describe('markers only — no before/after reading', () => {
+describe('markers only - no before/after reading', () => {
 	it('the medication readers never touch symptoms or episodes', () => {
 		// Comments may explain the rule; code may not read the data it forbids.
 		const code = HELPER_SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
@@ -421,6 +421,6 @@ describe('markers only — no before/after reading', () => {
 
 describe('as-needed medications are not graded', () => {
 	it('prints no adherence percentage for an as-needed medication', () => {
-		expect(PDF_SRC).toMatch(/r\.total > 0 && !r\.med\.asNeeded \? `\$\{r\.pct\}%` : '—'/);
+		expect(PDF_SRC).toMatch(/r\.total > 0 && !r\.med\.asNeeded \? `\$\{r\.pct\}%` : '-'/);
 	});
 });

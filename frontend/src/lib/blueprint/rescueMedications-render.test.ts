@@ -1,5 +1,5 @@
 /**
- * CIPH-881b — Rescue-medication render coverage source-parse guards.
+ * CIPH-881b - Rescue-medication render coverage source-parse guards.
  *
  * The paired-ship rule for PI v12 model extensions says: "both halves of
  * 881 ship or neither". 881a wires data + FAB; 881b extends every render

@@ -1,8 +1,8 @@
 /**
- * /reports — a dose change gives the reader a before/after structure
+ * /reports - a dose change gives the reader a before/after structure
  * (operator decisions 2026-09-17): dose bands behind the charts, the change as
  * an event, a divider in the monthly grid, and the medication that applies
- * today always visible. Structure only — nothing is counted per dose period.
+ * today always visible. Structure only - nothing is counted per dose period.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

@@ -1,9 +1,9 @@
 /**
- * CIPH-921c — Condition-driven app accent.
+ * CIPH-921c - Condition-driven app accent.
  *
  * The authed app's primary chrome accent (`--accent` + companions) was set
  * per COHORT in app.css (`[data-cohort="phase"] { --accent: violet }`, …), so
- * every condition in a cohort shared one accent — and it diverged from the
+ * every condition in a cohort shared one accent - and it diverged from the
  * per-condition color shown on `/conditions` and the dashboard badge. Rita
  * (rheumatoid_arthritis, phase cohort) got violet buttons while `/conditions`
  * shows her in rust. This derives the accent trio from the CONDITION color
@@ -12,7 +12,7 @@
  *
  * Source of truth for the hue is `conditionInfoMap[id].color` (the same value
  * `/conditions` uses), with the blueprint's own `accentColor` then the cohort
- * slot-1 as fallbacks — mirrors the badge logic in Companion.svelte.
+ * slot-1 as fallbacks - mirrors the badge logic in Companion.svelte.
  */
 import { conditionInfoMap } from './conditionInfo';
 import { cohortPalette } from './cohortPalette';
@@ -22,7 +22,7 @@ import type { Blueprint } from './blueprint/types';
 export interface ConditionAccent {
 	/** Primary accent hex (button/link/ring fill). */
 	hex: string;
-	/** Hover state — the accent at −8% lightness, matching the app.css convention. */
+	/** Hover state - the accent at −8% lightness, matching the app.css convention. */
 	hover: string;
 	/** "r, g, b" triple for `rgba(var(--accent-rgb), α)` call sites. */
 	rgb: string;
@@ -109,7 +109,7 @@ const AA = 4.5;
  * Chrome-safe the condition hue for use as a button fill: some `/conditions`
  * tones are a DATA-VIZ palette (olive #7f821b, clay #a87559) that dips just
  * below AA with white button text. Darken minimally until white text clears
- * AA — without touching the shared DATA/semantic palette (olive doubles as
+ * AA - without touching the shared DATA/semantic palette (olive doubles as
  * `--success`, so retuning the raw token would shift success states app-wide).
  * Most tones already pass and are returned unchanged. Theme-independent:
  * button contrast is white-on-accent in both light and dark mode.

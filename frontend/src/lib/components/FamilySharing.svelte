@@ -5,7 +5,7 @@
 	 * grants → revoke.
 	 *
 	 * Component stays invisible in nav/layout unless the user actually has
-	 * active grants OR clicks "+ Create invite" — ciphra stays a private
+	 * active grants OR clicks "+ Create invite" - ciphra stays a private
 	 * notebook by default.
 	 */
 	import { onMount } from 'svelte';
@@ -50,7 +50,7 @@
 	let loading = false;
 	let errorMsg = '';
 	// The grant list could not be fetched. Without this the section read
-	// "no invitations" — and hid the revoke buttons — while grants existed.
+	// "no invitations" - and hid the revoke buttons - while grants existed.
 	let loadFailed = false;
 	// A revoke that did not go through. Shown next to the revoke buttons:
 	// "revoke all" is the panic button, and it used to fail in silence.
@@ -82,7 +82,7 @@
 	// plaintext, leaking the patient's social graph ("Grandma", "Dr.
 	// Schmidt") to a server breach. Encrypt with the patient's master
 	// key (the only audience) before sending. Backwards-compat: legacy
-	// plaintext labels still render — decrypt throws and we fall back.
+	// plaintext labels still render - decrypt throws and we fall back.
 	async function tryDecryptLabel(stored: string, masterKey: Uint8Array): Promise<string> {
 		try {
 			return await decryptData(stored, masterKey);
@@ -150,7 +150,7 @@
 			revealed = false;
 			await load();
 		} catch {
-			// Offline, or the key derivation failed — the button used to just
+			// Offline, or the key derivation failed - the button used to just
 			// stop spinning.
 			errorMsg = $t('family.error_create');
 		} finally {
@@ -208,7 +208,7 @@
 		await runRevoke(() => api.familyGrantRevokeAll(), $t('family.error_revoke_all'));
 	}
 
-	// Both revokes ignored `!res.ok` — including the panic button. A failure
+	// Both revokes ignored `!res.ok` - including the panic button. A failure
 	// now says plainly that access was NOT removed.
 	async function runRevoke(
 		send: () => Promise<{ ok: boolean }>,
@@ -334,14 +334,14 @@
 			</button>
 
 			<!-- Say once more what is about to be shared, at the moment the
-				 link is copied — the last point before it leaves. -->
+				 link is copied - the last point before it leaves. -->
 			<p class="text-sm mb-3" style="color: var(--text-secondary)">
 				<strong style="color: var(--text-primary)">
 					{createdShareMask === SHARE_MASK_EVERYTHING
 						? $t('family.scope_everything')
 						: $t('family.scope_shared_only')}
 				</strong>
-				— {createdShareMask === SHARE_MASK_EVERYTHING
+				- {createdShareMask === SHARE_MASK_EVERYTHING
 					? $t('family.scope_everything_hint')
 					: $t('family.scope_shared_only_hint')}
 			</p>

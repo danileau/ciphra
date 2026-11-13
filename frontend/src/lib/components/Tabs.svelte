@@ -1,13 +1,13 @@
 <!--
-	CIPH-857 — Tabs primitive.
+	CIPH-857 - Tabs primitive.
 
 	ARIA tab pattern with roving tabindex. Left/Right arrow keys + Home/End
 	move focus; Enter/Space (native button click) activates the focused tab.
 
 	Props:
-		tabs: array of { id, label } — id is written to the `tab` query param.
+		tabs: array of { id, label } - id is written to the `tab` query param.
 		current: the currently active tab id (parent reads from page.url).
-		onSelect: (id) => void — parent navigates; parent owns the URL.
+		onSelect: (id) => void - parent navigates; parent owns the URL.
 		labelledBy: optional id of a heading describing the tabset (for aria-labelledby).
 		ariaLabel: optional fallback label when no heading exists.
 -->

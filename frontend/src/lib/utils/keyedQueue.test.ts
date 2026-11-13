@@ -1,5 +1,5 @@
 /**
- * createKeyedQueue — serialises the /reports grid's read-modify-write edits
+ * createKeyedQueue - serialises the /reports grid's read-modify-write edits
  * per day. Rapid "+" clicks used to read the same stale entry: two clicks,
  * one increment; on an empty day, one new entry per click.
  */

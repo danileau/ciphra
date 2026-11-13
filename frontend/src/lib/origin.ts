@@ -3,17 +3,17 @@
  *
  * Two jobs:
  *
- * 1. `originStatus()` — classify the origin the app is actually running
+ * 1. `originStatus()` - classify the origin the app is actually running
  *    on, so /migrate can verify "you are on ciphra.ch" for the user
  *    instead of leaving the whole phishing check to a human comparing
  *    strings. Returns 'canonical' (ciphra.ch family over https), 'dev'
- *    (localhost / loopback, any scheme — e2e + local dev), or
+ *    (localhost / loopback, any scheme - e2e + local dev), or
  *    'mismatch' (anything else → hard-stop the transfer).
  *
- * 2. `hostOf()` — normalize an origin-ish input (bare hostname,
+ * 2. `hostOf()` - normalize an origin-ish input (bare hostname,
  *    host:port, or full URL) to a plain host. Closes the P2 tech-debt
  *    where EPILEPC_ORIGIN was hostname-only while CIPHRA_ORIGIN was a
- *    full URL — that asymmetry caused the apex/www CORS bug during the
+ *    full URL - that asymmetry caused the apex/www CORS bug during the
  *    first migration test (2026-06-08). Anything ciphra receives as a
  *    "source" goes through this normalizer.
  *
@@ -21,11 +21,11 @@
  * apex → 200, no redirect; `www.ciphra.ch` is not configured / NXDOMAIN).
  * `www` is kept in the accepted-host set defensively in case it is ever
  * pointed at the origin, but the canonical host cross-origin callers must
- * use is the apex. (Earlier notes had this reversed — corrected here and
+ * use is the apex. (Earlier notes had this reversed - corrected here and
  * in feedback_apex_www_redirect_breaks_cors.)
  */
 
-/** The one host cross-origin callers must use. Apex — www is unconfigured. */
+/** The one host cross-origin callers must use. Apex - www is unconfigured. */
 export const CIPHRA_CANONICAL_HOST = 'ciphra.ch';
 
 const CIPHRA_HOSTS: ReadonlySet<string> = new Set(['ciphra.ch', 'www.ciphra.ch']);
@@ -51,7 +51,7 @@ export function originStatus(origin: string): OriginStatus {
  *  `host:port`). Accepts `epilepc.ch`, `epilepc.ch:8080`,
  *  `https://epilepc.ch`, `https://epilepc.ch/`. Rejects (returns null):
  *  empty input, whitespace, credentials, non-http(s) schemes, and
- *  anything carrying a path / query / fragment — a migration source is
+ *  anything carrying a path / query / fragment - a migration source is
  *  a host, never a deep link. */
 export function hostOf(value: string): string | null {
 	const trimmed = value.trim().toLowerCase();

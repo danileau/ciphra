@@ -1,4 +1,4 @@
-# CIPH-pi20-LB-4 — dev-only Python dependencies for the API.
+# CIPH-pi20-LB-4 - dev-only Python dependencies for the API.
 #
 # These install only in the `dev` build target of api/Dockerfile so the
 # production image stays minimal. Run tests with:

@@ -1,5 +1,5 @@
 /**
- * CIPH-835 — allowlist of i18n key prefixes that are accessed
+ * CIPH-835 - allowlist of i18n key prefixes that are accessed
  * dynamically (template strings, variable labels, blueprint-driven
  * lookups). The `keys-used.test.ts` orphan detector would otherwise
  * flag them because they never appear as a static `$t('…')` literal.
@@ -12,18 +12,18 @@
  * A prefix matches a key if the key starts with the prefix string.
  */
 export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
-	// SignupFlow username validation (2026-06-21) — the active username
+	// SignupFlow username validation (2026-06-21) - the active username
 	// error is computed by usernameError() and rendered via `$t(userErrKey)`,
 	// so the specific key (auth.error_username_short / _format) is dynamic.
 	'auth.error_username_',
 
-	// PublicFooter theme switch (2026-06-12) — the three option labels
+	// PublicFooter theme switch (2026-06-12) - the three option labels
 	// are looked up via `$t(opt.labelKey)` from the THEME_OPTIONS array.
 	// theme_light / theme_dark / theme_system are also statically used
 	// in settings; theme_system_short exists only for the footer pill.
 	'settings.theme_',
 
-	// Blueprint preset + label keys — every preset in blueprint/presets.ts
+	// Blueprint preset + label keys - every preset in blueprint/presets.ts
 	// has its label/title referenced via `$t(info.titleKey)` etc. Preset
 	// `conditionLabel` values live under `landing.template_*`.
 	'condition.',
@@ -32,7 +32,7 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 	'landing.template_',
 	'landing.template_desc_',
 
-	// CIPH-881 — rescue medication labels are blueprint-driven; the FAB
+	// CIPH-881 - rescue medication labels are blueprint-driven; the FAB
 	// + journal + reports + PDF + CSV + dashboard all look them up via
 	// `$t(med.label)` where label is the i18n-key string on the
 	// blueprint preset's rescueMedications entry.
@@ -58,30 +58,30 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 	'seizure.',
 	'seizures.',
 
-	// CIPH-pi24-5c — Marker-event noun labels are blueprint-driven:
+	// CIPH-pi24-5c - Marker-event noun labels are blueprint-driven:
 	// each preset's `markerEvent.nounKey` is looked up at render via
 	// `$t(markerGapTrend.nounKey)` in CompanionRail. Static analysis
 	// can't trace through the data attribute.
 	'marker_noun.',
 
-	// Cycle phase keys — `$t('cycle.phase_' + cs.phase)` in
+	// Cycle phase keys - `$t('cycle.phase_' + cs.phase)` in
 	// CompanionMain; phases are follicular, luteal, ovulation, menstrual.
 	'cycle.phase_',
 
-	// CIPH-920 — circadian daypart adverbs looked up via
+	// CIPH-920 - circadian daypart adverbs looked up via
 	// `$t('insight.daypart_' + ins.topKey)` in InsightsSection; keys are
 	// daypart_night / _morning / _afternoon / _evening.
 	'insight.daypart_',
 
-	// Section-jump nav — `$t(`nav_section.${sid}`)` in log/[date]/+page.svelte
+	// Section-jump nav - `$t(`nav_section.${sid}`)` in log/[date]/+page.svelte
 	'nav_section.',
 
-	// Migration errorKey lookups — `$t(errorKey)` where errorKey is
+	// Migration errorKey lookups - `$t(errorKey)` where errorKey is
 	// 'migrate.error_…'. All migrate.* keys are referenced, some of
 	// them only through the dynamic errorKey path.
 	'migrate.error_',
 
-	// PDF keys — pdf.ts invokes `t('pdf.foo')` via a direct translator
+	// PDF keys - pdf.ts invokes `t('pdf.foo')` via a direct translator
 	// reference rather than `$t(...)`; the regex still catches most of
 	// them but this covers PDF-section sub-keys addressed dynamically
 	// (e.g. per-scope labels constructed with template strings).
@@ -100,7 +100,7 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 	'stream.',
 
 	// Protocol (log page) dynamic labels (group labels, duration labels,
-	// etc.) — many come from blueprint preset definitions.
+	// etc.) - many come from blueprint preset definitions.
 	'protocol.',
 
 	// Info-pages conditional intro/outro keys.
@@ -110,7 +110,7 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 	'quick_action.',
 	'quickadd.',
 
-	// CIPH-882 — Custom-item modal/section labels are looked up
+	// CIPH-882 - Custom-item modal/section labels are looked up
 	// dynamically via `$t(section.titleKey)`, `$t(errorKey)`, etc.
 	// Static `$t('customization.label')` calls are still detected;
 	// only the dynamic add/edit/section/error families need this.
@@ -118,12 +118,12 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
 ];
 
 /**
- * CIPH-835 — AUDIT BACKLOG.
+ * CIPH-835 - AUDIT BACKLOG.
  *
  * The following individual keys are flagged by the orphan detector
  * but kept here explicitly (rather than a broad prefix) so a future
  * agent can audit and delete them one-by-one. "When in doubt, leave
- * + document" — we prefer a visible TODO list over premature removal
+ * + document" - we prefer a visible TODO list over premature removal
  * that might break a wizard path we haven't traced.
  *
  * A key listed here is treated as "allowlisted for now". To shrink
@@ -132,7 +132,7 @@ export const DYNAMIC_KEY_PREFIXES: readonly string[] = [
  * same commit.
  */
 export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
-	// 'Startseiten-Layout' select hidden (design review 2026-06-11) —
+	// 'Startseiten-Layout' select hidden (design review 2026-06-11) -
 	// it wrote blueprint.primaryBrowseSurface but getPrimaryBrowseSurface()
 	// has no runtime consumer, so the control was a placebo. NOT dead:
 	// these keys come back in the same PR that ships a real consumer
@@ -144,7 +144,7 @@ export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
 	'settings.primary_surface_calendar',
 	'settings.primary_surface_trend',
 
-	// Landing rewrite leftovers — `/` no longer renders these sections.
+	// Landing rewrite leftovers - `/` no longer renders these sections.
 	// Strongly suspected dead. Delete in a follow-up after one more
 	// visual QA round to confirm no conditional render path.
 	'landing.nav_origin',
@@ -197,7 +197,7 @@ export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
 	'landing.feature_custom_desc',
 	'landing.footer_features',
 
-	// Tech / crypto explanation — page likely deleted or merged into
+	// Tech / crypto explanation - page likely deleted or merged into
 	// /privacy. Suspected dead.
 	'tech.flow_register_title',
 	'tech.flow_register_desc',
@@ -218,9 +218,9 @@ export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
 	'tech.why_hardening_title',
 	'tech.why_hardening_desc',
 
-	// Setup wizard — live wizard uses a DIFFERENT subset of setup.*
+	// Setup wizard - live wizard uses a DIFFERENT subset of setup.*
 	// keys. These look redundant but the wizard is structurally
-	// complex — keep until a wizard-specific audit pass.
+	// complex - keep until a wizard-specific audit pass.
 	'setup.symptoms_subtitle',
 	'setup.symptoms_add',
 	'setup.group_delete',
@@ -266,13 +266,13 @@ export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
 	'setup.mode_legacy_desc',
 	'setup.confirm_mode',
 
-	// Settings tracking-mode toggle — feature may be WIP.
+	// Settings tracking-mode toggle - feature may be WIP.
 	'settings.tracking_mode',
 	'settings.tracking_mode_desc',
 	'settings.mode_protokoll',
 	'settings.mode_legacy',
 
-	// Calendar header/summary keys — page renders month directly;
+	// Calendar header/summary keys - page renders month directly;
 	// suspected dead but low-risk to keep.
 	'calendar.title',
 	'calendar.week',
@@ -281,31 +281,31 @@ export const ORPHAN_AUDIT_BACKLOG: readonly string[] = [
 	'calendar.day_detail',
 	'calendar.summary',
 
-	// Nav aliases — `nav.protocol` / `nav.stream` replaced by
+	// Nav aliases - `nav.protocol` / `nav.stream` replaced by
 	// `nav.dashboard` / `nav.journal` (nav.today renamed in CIPH-871).
 	'nav.protocol',
 	'nav.stream',
 
-	// Common aliases — `common.yesterday` / `common.month` /
+	// Common aliases - `common.yesterday` / `common.month` /
 	// `common.entry` may be referenced via helper utilities. Audit
 	// helpers before deletion.
 	'common.yesterday',
 	'common.month',
 	'common.entry',
 
-	// Auth flash keys — login/register flash messages may be wired
+	// Auth flash keys - login/register flash messages may be wired
 	// through a flash-store path not picked up by the static regex.
 	'auth.login_success',
 	'auth.register_success',
 	'auth.enable_recovery',
 
-	// Family / private / quickadd — flash or settings-surface paths.
+	// Family / private / quickadd - flash or settings-surface paths.
 	// Keep until audited. ('family.private_hidden' was audited on
 	// 2026-09-19 and deleted: `family.private_context` says the same
 	// thing with both numbers, and is the one the banner renders.)
 	'private.toggle_make_private',
 
-	// Migrate phases — invoked via store-driven phase label lookup,
+	// Migrate phases - invoked via store-driven phase label lookup,
 	// likely wired through a `phase → labelKey` map rather than a
 	// literal `$t(...)` site. Keep.
 	'migrate.signup_continue',

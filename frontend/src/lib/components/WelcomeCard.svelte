@@ -1,5 +1,5 @@
 <!--
-	WelcomeCard — first-moment explainer that mounts at the top of the
+	WelcomeCard - first-moment explainer that mounts at the top of the
 	dashboard for users who haven't dismissed it. Two variants driven by
 	`auth.registrationSource`:
 
@@ -11,7 +11,7 @@
 
 	Dismiss is one-shot and ACCOUNT-DURABLE (2026-06-12): recorded on the
 	encrypted blueprint doc (`dismissedWelcome`), so it survives fresh
-	browsers / private windows / cleared site data — the localStorage-only
+	browsers / private windows / cleared site data - the localStorage-only
 	v1 kept resurfacing the migrate card on every new profile. localStorage
 	stays as a fallback lane (instant flip + caregivers without an own
 	blueprint). Per-variant so dismissing one doesn't auto-dismiss the other.
@@ -38,7 +38,7 @@
 	let dismissed = true; // start hidden; flip on mount so SSR doesn't flash
 	$: variant = $auth.registrationSource === 'migrate' ? 'migrated' : 'new';
 	$: storageKey = variant === 'migrated' ? KEY_MIGRATE : KEY_WEB;
-	// Account-level dismissal from the encrypted blueprint — the durable
+	// Account-level dismissal from the encrypted blueprint - the durable
 	// lane. Null blueprint (caregiver) falls through to localStorage only.
 	$: bpVariantKey = (variant === 'migrated' ? 'migrate' : 'web') as 'web' | 'migrate';
 	$: bpDismissed = !!$resolvedBlueprint?.dismissedWelcome?.includes(bpVariantKey);
@@ -67,10 +67,10 @@
 		try {
 			localStorage.setItem(storageKey, '1');
 		} catch {
-			/* fail silent — the visible flip is the user signal that mattered */
+			/* fail silent - the visible flip is the user signal that mattered */
 		}
 		// Durable lane: record on the encrypted blueprint so the dismissal
-		// follows the account, not the browser profile. Fire-and-forget —
+		// follows the account, not the browser profile. Fire-and-forget -
 		// the local flip above already happened; a failed save just means
 		// the card may show once more on another device.
 		// MUST use the RAW blueprint, never $resolvedBlueprint: resolveBlueprint
@@ -169,7 +169,7 @@
 			     bullet so they can scan rather than wade through a wall
 			     of text. Each tile is a self-contained micro-moment:
 			     verb-first title, single-sentence body. The recovery-code
-			     bullet that used to live here was dropped — the welcome
+			     bullet that used to live here was dropped - the welcome
 			     card only mounts AFTER the user clicked through the
 			     signup recovery screen, so "save the PDF before closing
 			     this page" is either redundant (they already did) or
@@ -233,7 +233,7 @@
 
 <style>
 	.welcome-card {
-		/* CIPH-921c — the onboarding banner's accent stripe follows the
+		/* CIPH-921c - the onboarding banner's accent stripe follows the
 		   per-condition color (the ciphra✱ logo stays brand-rust). */
 		border-left: 3px solid var(--accent);
 	}
@@ -293,7 +293,7 @@
 		}
 	}
 
-	/* New-user variant — icon-anchored feature rows. Each row is a
+	/* New-user variant - icon-anchored feature rows. Each row is a
 	   visual unit: tinted circle holding an icon, then verb-first
 	   title and supporting body. ADHD-friendly hooks: distinct color
 	   per row, generous whitespace, scannable left-edge. */
@@ -343,7 +343,7 @@
 	}
 
 	/* Closing "and there's more" line. Visually distinct from the
-	   feature rows — muted, italic, with a tiny compass icon. Sits
+	   feature rows - muted, italic, with a tiny compass icon. Sits
 	   below a soft divider so it reads as a sign-off, not a fourth
 	   feature. */
 	.welcome-explore {

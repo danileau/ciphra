@@ -4,7 +4,7 @@
 #
 # init_db() and apply_audit_retention() are normally guarded by
 # `if __name__ == '__main__':` in server.py, which only fires under
-# `python server.py` — not under gunicorn. Production used to silently skip
+# `python server.py` - not under gunicorn. Production used to silently skip
 # schema creation. This script closes that gap.
 
 set -e

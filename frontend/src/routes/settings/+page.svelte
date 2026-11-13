@@ -38,7 +38,7 @@
 
 	$: currentPreset = bp ? presets.find(p => p.id === bp.conditionId) : null;
 
-	// CIPH-857 — tab query param (?tab=account|tracking|sharing). Default: account.
+	// CIPH-857 - tab query param (?tab=account|tracking|sharing). Default: account.
 	type SettingsTab = 'account' | 'tracking' | 'sharing';
 	const VALID_TABS: SettingsTab[] = ['account', 'tracking', 'sharing'];
 	const tabParam = pageStore((p) => p.url.searchParams.get('tab'));
@@ -61,8 +61,8 @@
 
 	$: cohortDefault = bp ? getCohort(bp.conditionId) : 'custom';
 
-	// CIPH-pi18-3 — DatePicker display format. Lives in the Appearance
-	// section of the Account tab — it's a display preference, not a
+	// CIPH-pi18-3 - DatePicker display format. Lives in the Appearance
+	// section of the Account tab - it's a display preference, not a
 	// tracking preference (Jonas dry-run #1).
 	async function setDateFormat(value: DateFormatChoice) {
 		if (!bp) return;
@@ -73,7 +73,7 @@
 	}
 	$: currentDateFormat = bp?.dateFormat ?? 'dd.mm.yyyy';
 
-	// Today's date rendered in each format — used as live option labels so
+	// Today's date rendered in each format - used as live option labels so
 	// the user sees the actual SHAPE rather than a fixed "31.05.2026" sample.
 	// Recomputed on locale change so the page stays fresh through the day.
 	function sampleDate(format: DateFormatChoice): string {
@@ -100,7 +100,7 @@
 	let passwordSuccess = false;
 	let passwordLoading = false;
 
-	// CIPH-pi20-LB-2 — Local-cache wipe affordance. Counterpart to the
+	// CIPH-pi20-LB-2 - Local-cache wipe affordance. Counterpart to the
 	// docs/SECURITY_MODEL.md "What the browser stores": lets the user
 	// wipe IndexedDB plaintext + SW navigation cache without ending
 	// the session.
@@ -117,7 +117,7 @@
 			}
 			const m = await import('#lib/idb.ts');
 			// Cache partitions are keyed `${username}:self` / `:linked:N`, never
-			// the bare username — the old `getAllDocs(username)` always returned 0,
+			// the bare username - the old `getAllDocs(username)` always returned 0,
 			// understating the on-device plaintext disclosure. Count the user's own
 			// partition (linked-vault caches aren't the user's own data).
 			const docs = await m.getAllDocs(`${state.username}:self`);
@@ -142,7 +142,7 @@
 		}
 	}
 
-	// CIPH-882 — Custom blueprint items: add/edit/hide/delete
+	// CIPH-882 - Custom blueprint items: add/edit/hide/delete
 	const CUSTOM_SECTIONS: ReadonlyArray<{ kind: CustomKind; titleKey: string; addKey: string }> = [
 		{ kind: 'symptom', titleKey: 'customization.section_custom_symptoms', addKey: 'customization.add_symptom' },
 		{ kind: 'trigger', titleKey: 'customization.section_custom_triggers', addKey: 'customization.add_trigger' },
@@ -197,7 +197,7 @@
 		}
 		await blueprint.save(next);
 		closeCustomModal();
-		// Confirm the save — the modal used to just close, leaving no signal the
+		// Confirm the save - the modal used to just close, leaving no signal the
 		// item was created (Loránd feedback: defining an episode type gave no
 		// feedback). The list below also re-renders reactively; the toast is the
 		// explicit "done" the user was missing.
@@ -211,7 +211,7 @@
 		}
 	}
 
-	// Rename the profile — writes a custom `displayLabel` over the preset's
+	// Rename the profile - writes a custom `displayLabel` over the preset's
 	// translated name. The conditionId badge stays fixed (encryption/cohort key).
 	let editingName = false;
 	let nameDraft = '';
@@ -242,7 +242,7 @@
 		if (!bp) return;
 		// Episodes are not part of `Blueprint.customizations.hidden*`
 		// (CIPH-301b schema covers symptoms / triggers / vitals only).
-		// The template guards the affordance — defensive guard here too.
+		// The template guards the affordance - defensive guard here too.
 		if (kind === 'episode') return;
 		const next: Blueprint = JSON.parse(JSON.stringify(bp));
 		const cz = next.customizations || (next.customizations = {});
@@ -281,7 +281,7 @@
 		if (arr) {
 			(cz as Record<string, { id: string }[]>)[arrayKey] = arr.filter((x) => x.id !== item.id);
 		}
-		// Strip from hide lists too — orphan ids would be confusing if the
+		// Strip from hide lists too - orphan ids would be confusing if the
 		// user re-adds an item with the same label later (it will get a
 		// fresh id but a leftover hide entry would do nothing).
 		for (const k of ['hiddenSymptoms', 'hiddenTriggers', 'hiddenVitals'] as const) {
@@ -299,7 +299,7 @@
 	// template expression named only `section.kind`, so Svelte never re-ran it
 	// when the blueprint changed: a symptom you had just created did not
 	// appear until the page was reloaded. `{#if bp}` around the list does not
-	// help — an if-block that stays truthy is not re-created.
+	// help - an if-block that stays truthy is not re-created.
 	$: customsByKind = {
 		symptom: bp?.customizations?.customSymptoms ?? [],
 		trigger: bp?.customizations?.customTriggers ?? [],
@@ -332,7 +332,7 @@
 	onMount(() => {
 		if (!$isAuthenticated) goto('/login');
 		documents.load();
-		// CIPH-pi20-LB-2 — read the IndexedDB-cached doc count once on
+		// CIPH-pi20-LB-2 - read the IndexedDB-cached doc count once on
 		// mount so the privacy row shows a real number, not a placeholder.
 		refreshCachedCount();
 	});
@@ -346,7 +346,7 @@
 	$: bpResolved = $resolvedBlueprint;
 
 	function goToSetup() {
-		// CIPH-874 — "Profil anpassen" is fine-tuning (symptom/trigger/vital
+		// CIPH-874 - "Profil anpassen" is fine-tuning (symptom/trigger/vital
 		// toggles), NOT a preset change. The `?customize=1` param makes
 		// /setup skip the preset-picker step for users who already have a
 		// blueprint. Switching preset happens via the "Vorlage wechseln"
@@ -454,7 +454,7 @@
 			const res = await deleteAccount(authKey);
 			if (res.ok) {
 				// Await the on-disk wipe before navigating (PI v16) and clear ALL
-				// session state — links + active vault too — so nothing survives
+				// session state - links + active vault too - so nothing survives
 				// into the next mount on this tab.
 				await auth.logout();
 				documents.clear();
@@ -474,13 +474,13 @@
 </script>
 
 <svelte:head>
-	<title>{$t('nav.settings')} — ciphra</title>
+	<title>{$t('nav.settings')} - ciphra</title>
 </svelte:head>
 
 <div class="layout-default py-6 space-y-6">
 	<h1 id="settings-heading" class="text-2xl font-bold" style="color: var(--text-primary)">{$t('nav.more')}</h1>
 
-	<!-- CIPH-857 — Tabs: Account / Tracking / Sharing -->
+	<!-- CIPH-857 - Tabs: Account / Tracking / Sharing -->
 	<Tabs
 		tabs={tabList}
 		current={tab}
@@ -520,7 +520,7 @@
 				<form on:submit|preventDefault={handleChangePassword} class="space-y-3">
 					<!-- Tells the password manager WHICH login the new password
 					     belongs to. Without a username field it guesses, and can
-					     save or update an entry whose username is wrong or empty —
+					     save or update an entry whose username is wrong or empty -
 					     which then fills the login form with a name no account has. -->
 					<input type="text" name="username" autocomplete="username"
 						value={$auth.username ?? ''} readonly hidden aria-hidden="true" tabindex="-1" />
@@ -580,7 +580,7 @@
 		</button>
 	</section>
 
-	<!-- CIPH-pi20-LB-2 — Local data row. Sibling action to logout: same
+	<!-- CIPH-pi20-LB-2 - Local data row. Sibling action to logout: same
 		 wipe path (IndexedDB plaintext + SW cache), session preserved.
 		 docs/SECURITY_MODEL.md "What the browser stores" is the long-form
 		 disclosure this row points users at. -->
@@ -596,14 +596,14 @@
 				{$t('settings.local_data_count', { count: String(cachedDocCount) })}
 			{/if}
 		</p>
-		<!-- 2026-06-07 — disabled-on-(cachedDocCount===0) gate removed.
+		<!-- 2026-06-07 - disabled-on-(cachedDocCount===0) gate removed.
 			 Three problems with it: (a) read as "broken trust signal"
 			 by users who expected a privacy action to always work,
 			 (b) cachedDocCount is set once on mount and never refreshes,
 			 so a session that logged entries showed a stale 0 and
 			 trapped the button disabled, (c) clearLocalCache() also
 			 purges the service-worker cache which can hold shell assets
-			 even when IndexedDB is empty — the IDB count alone is the
+			 even when IndexedDB is empty - the IDB count alone is the
 			 wrong gate. Always-active except while clearing. -->
 		<button
 			type="button"
@@ -637,7 +637,7 @@
 			</div>
 
 			{#if bp}
-			<!-- CIPH-pi18-3 — DatePicker display format. Folded into Appearance
+			<!-- CIPH-pi18-3 - DatePicker display format. Folded into Appearance
 				 because it's a display preference, alongside language. Live
 				 sample dates so the user sees the actual SHAPE on switch. -->
 			<div>
@@ -659,7 +659,7 @@
 			</div>
 			{/if}
 
-			<!-- Dark mode (design review 2026-06-11) — outside the {#if bp}
+			<!-- Dark mode (design review 2026-06-11) - outside the {#if bp}
 				 above on purpose: caregivers without a blueprint log at
 				 night too. Default 'light' (post-launch conservatism);
 				 'system' follows the OS live. -->
@@ -682,7 +682,7 @@
 		</div>
 	</section>
 
-	<!-- Danger zone — kept in Account tab because account-deletion is
+	<!-- Danger zone - kept in Account tab because account-deletion is
 		 conceptually "end of my account", and users look here for logout. -->
 	<hr style="border: none; border-top: 1px dashed var(--border); margin-top: 24px; margin-bottom: 8px;" aria-hidden="true" />
 	<section aria-labelledby="settings-danger-heading" class="space-y-4" style="margin-top: 16px">
@@ -766,7 +766,7 @@
 	</section>
 	{/if}
 
-	<!-- Medications (CIPH-411b) — moved up to right after Profile so people
+	<!-- Medications (CIPH-411b) - moved up to right after Profile so people
 		 find it without scrolling past customizations / primary-surface /
 		 template-switcher. User feedback 2026-05-04. -->
 	{#if bp}
@@ -777,7 +777,7 @@
 	</section>
 	{/if}
 
-	<!-- CIPH-882 — Custom blueprint items (per-kind sections). Sits above
+	<!-- CIPH-882 - Custom blueprint items (per-kind sections). Sits above
 	     the Profil-anpassen / template-switcher blocks so users discover
 	     additive customization before navigating away. Episodes have no
 	     hide-toggle (they're not part of the pre-301b hide-filter set);
@@ -812,7 +812,7 @@
 							<div class="flex items-center gap-1 shrink-0">
 								<!-- Episodes intentionally have no Hide toggle: the
 									`Blueprint.customizations.hidden*` schema (CIPH-301b)
-									covers symptoms / triggers / vitals only — preset
+									covers symptoms / triggers / vitals only - preset
 									episodes are not user-hideable either, so adding a
 									hide affordance just for *custom* episodes would be
 									inconsistent. Delete is the only removal action. -->
@@ -866,7 +866,7 @@
 	<!-- CIPH-852 'Startseiten-Layout' select removed (design review
 	     2026-06-11): it wrote blueprint.primaryBrowseSurface but
 	     getPrimaryBrowseSurface() has zero runtime consumers, so the
-	     control changed nothing — a placebo that quietly broke the
+	     control changed nothing - a placebo that quietly broke the
 	     contract that settings do things. The plumbing
 	     ($lib/blueprint/preferences.ts, preset declarations, cohort
 	     defaults) is intact; re-add this block in the same PR that
@@ -877,7 +877,7 @@
 	     one-blueprint-per-user model a condition switch is a deliberate, rare
 	     action (and its old "data is preserved" copy was misleading). Switching
 	     remains reachable from the per-condition pages (/conditions/[id]).
-	     Profil anpassen below stays — it's fine-tuning, not a preset change. -->
+	     Profil anpassen below stays - it's fine-tuning, not a preset change. -->
 
 	</div>
 	{/if}
@@ -886,13 +886,13 @@
 	{#if tab === 'sharing'}
 	<div role="tabpanel" id="tabpanel-sharing" aria-labelledby="tab-sharing" class="space-y-4">
 
-		<!-- Family sharing — patient view -->
+		<!-- Family sharing - patient view -->
 		<FamilySharing />
 
-		<!-- Linked accounts — caregiver view -->
+		<!-- Linked accounts - caregiver view -->
 		<LinkedAccounts />
 
-		<!-- Data export — moved here from its own section. Exporting IS a form
+		<!-- Data export - moved here from its own section. Exporting IS a form
 			 of sharing (PDF to a doctor, JSON to a backup). -->
 		<section class="card p-5">
 			<h3 class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('settings.export_data')}</h3>
@@ -910,7 +910,7 @@
 	{/if}
 </div>
 
-<!-- primitive-exempt: Modal — two bespoke confirmation dialogs (switch preset,
+<!-- primitive-exempt: Modal - two bespoke confirmation dialogs (switch preset,
 	 remove preset) with a blur backdrop and in-dialog danger chrome the current
 	 Modal primitive does not expose. Sweep target for a future visual pass. -->
 <!-- Confirm switch modal -->

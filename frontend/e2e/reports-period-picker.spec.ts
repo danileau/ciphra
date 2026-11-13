@@ -1,5 +1,5 @@
 /**
- * /reports export period picker — the reported case, end to end.
+ * /reports export period picker - the reported case, end to end.
  *
  * "if there is no data in 2024, but in 2023 and 2025 onclick should show
  *  only this possibilities as available"
@@ -7,11 +7,11 @@
  * Seeds entries in two non-adjacent years and asserts the year picker offers
  * exactly those two, never the empty gap year. Unit coverage for the period
  * maths lives in `src/lib/reports/exportPeriods.test.ts`; this spec exists
- * because green units are not a shipped feature — it pins that the cards
+ * because green units are not a shipped feature - it pins that the cards
  * actually open a picker, that focus and Escape behave, and that a pick
  * produces a PDF named for the calendar period.
  *
- * Needs the api (registration) — same gate as doctor-pdf-download.spec.ts.
+ * Needs the api (registration) - same gate as doctor-pdf-download.spec.ts.
  */
 import { test, expect, type Page } from '@playwright/test';
 import { registerNewUser, selectCohort } from './_helpers/testUser';
@@ -61,7 +61,7 @@ test('year picker offers only the years that hold data', async ({ page }) => {
 	const ids = await page.getByTestId('period-option').evaluateAll((els) =>
 		els.map((el) => el.getAttribute('data-period-id')),
 	);
-	// Newest first, and 2024 — which holds nothing — is absent.
+	// Newest first, and 2024 - which holds nothing - is absent.
 	expect(ids).toEqual(['year:2025-12', 'year:2023-12']);
 
 	// Escape closes and hands focus back to the card that opened it.
@@ -89,7 +89,7 @@ test('2-year card offers sliding pairs, including the one straddling the gap', a
 	// 2024–2025 and 2023–2024: both partly empty, both offered.
 	expect(ids).toEqual(['2years:2025-12', '2years:2024-12']);
 
-	// Coverage is stated as a fact about the export. No judgment label —
+	// Coverage is stated as a fact about the export. No judgment label -
 	// see lib/reports/no-coverage-judgment.test.ts.
 	const firstRow = page.getByTestId('period-option').first();
 	await expect(firstRow).toContainText(/1\s*(von|of|sur|su)\s*24/);

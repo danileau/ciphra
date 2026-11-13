@@ -2,16 +2,16 @@
 
 What changed in ciphra, newest first. Format follows
 [Keep a Changelog](https://keepachangelog.com); versions follow
-[SemVer](https://semver.org) — see [`docs/VERSIONING.md`](docs/VERSIONING.md)
+[SemVer](https://semver.org) - see [`docs/VERSIONING.md`](docs/VERSIONING.md)
 for what MAJOR / MINOR / PATCH mean here.
 
 This file is written for the people who use ciphra: what's new, what's fixed,
-and — for the rare breaking change — what you need to do. It is readable in the
+and - for the rare breaking change - what you need to do. It is readable in the
 app at **/docs → Changelog** and here on the public repo.
 
 ## [Unreleased]
 
-<!-- Nothing yet. Pending entries live in changelog.d/ — see changelog.d/README.md. -->
+<!-- Nothing yet. Pending entries live in changelog.d/ - see changelog.d/README.md. -->
 
 ## [1.5.4] - 2026-11-12
 
@@ -58,7 +58,7 @@ app at **/docs → Changelog** and here on the public repo.
 
 ### Fixed
 - **Signing in with a username your browser filled in works again.** On some
-  phones — reported on an iPhone with Brave — the browser put a saved
+  phones - reported on an iPhone with Brave - the browser put a saved
   username in the field without telling the page, so ciphra sent an empty one
   and answered "wrong username or password" for credentials that were right.
   ciphra now reads what the field actually shows, also for the password and
@@ -90,20 +90,20 @@ app at **/docs → Changelog** and here on the public repo.
 ### Changed
 - **The pages that describe ciphra now match what it does.** The landing page
   said the server stores a username, an auth-hash, encrypted blobs and
-  timestamps — "that is the entire list" — which stopped being true when
+  timestamps - "that is the entire list" - which stopped being true when
   per-invite sharing added one bit per entry, and imports added a key that
   stops a repeated import duplicating your history. Both are named now, as is
   the audit log. `/docs → Security model` always listed them; the rest of the
   app now says the same thing.
 - The feature documentation covers what shipped since: dose history backwards
   in time, the treatment-history export, the before-and-after shading on the
-  reports charts, and — for family sharing — that a caregiver sees the
+  reports charts, and - for family sharing - that a caregiver sees the
   medication list including the reason a medication was changed or stopped.
 
 ### Fixed
 - **Dropdowns open below the field again, and stay open.** Most of the
-  choices in ciphra — language, date format, appearance, the duration of an
-  episode, the group of a custom symptom, why a medication was stopped — were
+  choices in ciphra - language, date format, appearance, the duration of an
+  episode, the group of a custom symptom, why a medication was stopped - were
   the browser's own dropdown. Its list is drawn by the operating system, so
   it opened over the field it belonged to, closed when you let go of the
   mouse, and never looked like the rest of the app. All of them are ciphra's
@@ -113,7 +113,7 @@ app at **/docs → Changelog** and here on the public repo.
   picker is still used, because there it is the better one.
 - **A symptom you add now appears straight away.** Creating a custom symptom,
   trigger, vital or episode type in Settings saved it, but the list kept
-  showing what it had shown when the page opened — you had to reload to see
+  showing what it had shown when the page opened - you had to reload to see
   your own entry.
 - **The totals under the monthly table follow the month.** Paging back a month
   redrew the day-by-day grid and left the sums and percentages of the month
@@ -128,7 +128,7 @@ app at **/docs → Changelog** and here on the public repo.
   a critical flaw in it.
 - Updated the runtime that serves ciphra's pages, closing a flaw in how it
   unpacks compressed data (Node2Shell). ciphra never unpacked untrusted data
-  this way, so it was not exploitable here — patched regardless.
+  this way, so it was not exploitable here - patched regardless.
 
 ## [1.5.0] - 2026-09-19
 
@@ -137,8 +137,8 @@ you were on earlier, and the medications that were tried and stopped again. A
 new *Treatment history* export puts all of it on one document for a first
 consultation. A dose change also structures your reports into before and
 after. This release further fixes several places where ciphra answered in
-German whatever your language — the calendar after a reload, and a broken
-family-invite link — and corrects what the privacy policy says the server
+German whatever your language - the calendar after a reload, and a broken
+family-invite link - and corrects what the privacy policy says the server
 records about you.
 
 ### Added
@@ -146,24 +146,24 @@ records about you.
   When a medication's dose changed, the trend charts on the reports page shade
   each dose period in the background and mark the day of the change, so you and
   your doctor can read the curve before and after it at a glance. The reports
-  page also shows the medication you take today — since when, and the dose
-  before — lists the change among your recent events, and marks the day in the
+  page also shows the medication you take today - since when, and the dose
+  before - lists the change among your recent events, and marks the day in the
   monthly table. ciphra shows the structure; it does not compare or judge the
   periods for you.
 - **Your medication history can now reach back before ciphra.** Under a
   medication in Settings, *Add an earlier dose* records what you took before
-  the app knew about it — 12 mg, then 10 mg, then the 8 mg it has on record.
+  the app knew about it - 12 mg, then 10 mg, then the 8 mg it has on record.
   Days you already logged stay exactly as they are. You give a month rather
   than a day, and "I don't remember" is an answer: nobody recalls that a dose
   changed on a Tuesday three years ago.
 - **Medications you no longer take can be added.** *Add a medication from the
   past* records a drug that was tried and stopped, with the period, the dose
-  and — from a short list — why it ended. It appears under "Stopped" and in
+  and - from a short list - why it ended. It appears under "Stopped" and in
   your reports, without claiming anything about the days it covers.
 - **A treatment-history export for a first consultation.** Next to Month and
   Year there is now a *Treatment history* report: every medication you have
   recorded, oldest first, with its dose periods and how each one ended, over
-  the whole span rather than one window. It holds no symptom or episode data —
+  the whole span rather than one window. It holds no symptom or episode data -
   it answers "what has been tried", nothing else.
 - `/reports` lists the medications you took previously under the current ones,
   and points at Settings when a medication has no recorded start.
@@ -181,7 +181,7 @@ records about you.
   logs authentication events; it also records every time a document is
   created, changed or deleted, along with family-sharing and admin actions.
   The page says so, and adds the one category it was missing: the bookkeeping
-  about your account and your invitations — including that the name you give
+  about your account and your invitations - including that the name you give
   an invitation is stored as plain text. What the log has never held is what
   you wrote.
 - **A family member now sees how much is being kept back from them.** The line
@@ -191,7 +191,7 @@ records about you.
   both halves of the sentence read correctly for a single entry.
 - **The calendar spoke German to everyone after a reload.** Opening or
   refreshing the calendar in English, French or Italian left every day's
-  screen-reader label in German — and reading "no entry" on days that had
+  screen-reader label in German - and reading "no entry" on days that had
   one. Both are right now, in every language.
 - **A broken family-invite link explained itself in German.** The message on
   `/join` is now in the language of the person opening it, which for an
@@ -214,8 +214,8 @@ account locks and family invitations are checked, and fixes several ways an
 entry saved offline, or in someone else's account, could end up wrong.
 
 ### Added
-- **Medication changes now have a history.** When a dose changes — say from
-  2× 10 mg to 2× 12 mg starting tomorrow — choose *Change* on the medication,
+- **Medication changes now have a history.** When a dose changes - say from
+  2× 10 mg to 2× 12 mg starting tomorrow - choose *Change* on the medication,
   say what is changing and from when, and ciphra shows you exactly how it will
   be recorded before it saves anything. Days before the change keep the dose
   you actually took; days after it show the new one. You can also record that
@@ -227,7 +227,7 @@ entry saved offline, or in someone else's account, could end up wrong.
   changed or stopped; the reports page shows a medication timeline next to your
   trend chart; and the PDF for your doctor lists adherence per dose, the changes
   in the report period, and a timeline. The CSV export gets a dose-of-the-day
-  column per daily medication. ciphra shows *when* a dose changed — it does not
+  column per daily medication. ciphra shows *when* a dose changed - it does not
   compare how you were before and after. The reason you type for a change stays
   in the app and is not printed in the PDF.
 
@@ -251,18 +251,18 @@ entry saved offline, or in someone else's account, could end up wrong.
 - Error messages about loading or saving entries were shown in English whatever
   your language.
 - **Reloading the page while viewing someone else's account could show your own
-  entries under their name** — and a new entry could then be saved to the wrong
+  entries under their name** - and a new entry could then be saved to the wrong
   account. Switching between accounts quickly could also leave the previous
   account's entries on screen. The account named in the banner is now always
-  the one you see and write to — until it has loaded you see the loading
-  indicator — and "Retry" reloads everything that account needs.
+  the one you see and write to - until it has loaded you see the loading
+  indicator - and "Retry" reloads everything that account needs.
 - **A save that failed could still say "Saved".** The day view, the quick-add
   sheet and deleting an entry now tell you when something did not go through,
   and keep what you typed so you can try again. (Saving while offline still
-  counts as saved — it syncs later, as before.)
+  counts as saved - it syncs later, as before.)
 - Pressing Enter or Ctrl+S twice in a row could save the same entry twice, and
   Ctrl+S on an empty day saved an empty entry.
-- Leaving a day with unsaved changes — including with the arrow keys — threw the
+- Leaving a day with unsaved changes - including with the arrow keys - threw the
   changes away without asking. ciphra now asks first.
 - In someone else's account, the quick-add sheet and the day view offered a
   diary entry and a "private" switch. Those entries disappeared from your view
@@ -282,7 +282,7 @@ entry saved offline, or in someone else's account, could end up wrong.
   security documentation now lists every setting ciphra keeps in the browser.
 - A doctor PDF exported for someone else's account drew their charts against
   your own vital targets. It now uses theirs.
-- **"Revoke all" could fail without telling you** — and so could revoking a
+- **"Revoke all" could fail without telling you** - and so could revoking a
   single invitation. You now see clearly when access was not removed, so you can
   try again. Creating an invitation or changing what it may see also reports a
   failure instead of silently stopping, and if your invitations cannot be
@@ -310,15 +310,15 @@ entry saved offline, or in someone else's account, could end up wrong.
   and could not be scrolled, and the bottom navigation bar covered its buttons.
 - **Signing in with the right password could fail on a phone.** When you
   tapped the eye icon to check your password, the keyboard could quietly
-  capitalize its first letter, autocorrect it or swap in curly quotes — so the
+  capitalize its first letter, autocorrect it or swap in curly quotes - so the
   password ciphra received was no longer the one you typed. Password fields now
   keep exactly what you type, and the login form tells your password manager
   which saved login to fill.
 - A recovery or family code typed with a capital letter or a double space was
   accepted but then rejected as wrong. Codes now work however they are
   capitalized or spaced.
-- **If you had entered the same medication twice — once per dose, because a
-  dose change could not be recorded any other way — ciphra now offers to
+- **If you had entered the same medication twice - once per dose, because a
+  dose change could not be recorded any other way - ciphra now offers to
   combine the two.** Settings points them out; *Combine* asks which dose came
   first and from which day the other one applied, shows the resulting history,
   and keeps every day you logged against either entry. Deleting one of them
@@ -334,7 +334,7 @@ entry saved offline, or in someone else's account, could end up wrong.
   sign-in.
 - **If ciphra's database briefly can't be reached, requests are refused, not
   waved through, and you stay signed in.** The server used to skip its sign-in
-  check during such an outage — and signed out anyone who had ever changed or
+  check during such an outage - and signed out anyone who had ever changed or
   reset their password. The app now treats it like being offline.
 - **An account suspended by an administrator stays suspended.** Signing in with
   the right password, or resetting it with the recovery code, used to lift the
@@ -357,7 +357,7 @@ entry saved offline, or in someone else's account, could end up wrong.
   what can still be learned about whether an account exists: registration tells
   you a name is taken, and a lockout tells you the account is real.
 - IP addresses in the audit log are now shortened after 30 days and the entries
-  deleted after 90 even while the server keeps running — this used to happen
+  deleted after 90 even while the server keeps running - this used to happen
   only when it restarted. IPv6 addresses are now shortened correctly; some used
   to be garbled instead. The security model also now spells out that the audit
   log records when documents are created, changed and deleted (never their
@@ -369,7 +369,7 @@ entry saved offline, or in someone else's account, could end up wrong.
 
 The first release under the 1.x line. ciphra has been serving real users since
 0.1.0 in June; the version now says so. From here the SemVer rules in
-[`docs/VERSIONING.md`](docs/VERSIONING.md) apply in full — in particular, a
+[`docs/VERSIONING.md`](docs/VERSIONING.md) apply in full - in particular, a
 breaking change bumps MAJOR rather than MINOR.
 
 ### Added
@@ -380,7 +380,7 @@ breaking change bumps MAJOR rather than MINOR.
   looking at (footer → "Quellcode"). Operators of a modified copy point it at
   their own repository with `PUBLIC_SOURCE_URL`; unset, it links here.
 - **You now choose what a family invitation may see.** When you create one, pick
-  "everything except the diary" — which stays the default — or "everything,
+  "everything except the diary" - which stays the default - or "everything,
   diary included". Some people want a relative to see the whole picture; others
   keep the diary to themselves, and both are now a choice rather than an
   assumption. You can change it later on any invitation you have already sent.
@@ -395,8 +395,8 @@ breaking change bumps MAJOR rather than MINOR.
   account with you, this is the control you use to switch between their data
   and your own.
 - **Someone you gave family access to could read your diary and your locked
-  entries.** The app said they couldn't — the banner on their screen even said
-  how many entries were being kept back — but nothing was filtering them. Family
+  entries.** The app said they couldn't - the banner on their screen even said
+  how many entries were being kept back - but nothing was filtering them. Family
   access now shows only what you share: the diary and any entry you locked stay
   with you. If you have given someone access, their copy of those entries is
   removed from their device the next time they open ciphra.
@@ -410,12 +410,12 @@ breaking change bumps MAJOR rather than MINOR.
 Pending entries are files in changelog.d/, one per change (changelog.d/README.md),
 using these headings (omit empty ones); a release compiles them into a section:
 
-### Added        — new capability (→ MINOR)
-### Changed      — behaviour of something that already existed (→ MINOR/PATCH)
-### Fixed        — a bug is gone (→ PATCH)
-### Security     — a hardening or vulnerability fix (→ PATCH, or MAJOR if it changes the data contract)
-### Deprecated   — still works, going away
-### Removed      — gone (often → MAJOR)
+### Added        - new capability (→ MINOR)
+### Changed      - behaviour of something that already existed (→ MINOR/PATCH)
+### Fixed        - a bug is gone (→ PATCH)
+### Security     - a hardening or vulnerability fix (→ PATCH, or MAJOR if it changes the data contract)
+### Deprecated   - still works, going away
+### Removed      - gone (often → MAJOR)
 
 Write for a user, not a commit log: "Reports export now offers a period
 picker", not "add exportPeriods.ts".
@@ -432,7 +432,7 @@ above.
 - Zero-knowledge health tracking: client-side encryption, condition blueprints,
   daily logging, cohort-aware dashboard / calendar / journal / reports, the
   doctor PDF and CSV export, family sharing, recovery codes, epilepc migration,
-  and the admin surface. (Established feature set — see
+  and the admin surface. (Established feature set - see
   [`docs/FEATURES.md`](docs/FEATURES.md).)
 
 [Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.4...HEAD

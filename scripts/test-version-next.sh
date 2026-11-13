@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-version-next — prove the bump table in docs/VERSIONING.md is what
+# test-version-next - prove the bump table in docs/VERSIONING.md is what
 # scripts/version-next.sh actually implements.
 #
 # Builds a throwaway git repo per case so the assertions are deterministic and
@@ -53,7 +53,7 @@ case_is() {
 	rm -rf "$dir"
 }
 
-echo "version-next — bump table (docs/VERSIONING.md)"
+echo "version-next - bump table (docs/VERSIONING.md)"
 echo
 
 case_is "feat → MINOR" 1.4.2 1.5.0 \

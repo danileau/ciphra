@@ -3,7 +3,7 @@
  *
  * These are behavioural tests over pure functions, deliberately not the
  * source-grep style used by the older reports tests (`expect(SOURCE)
- * .toContain(...)`) — that style only exists because the logic was trapped
+ * .toContain(...)`) - that style only exists because the logic was trapped
  * inline in a 2100-line component, and it pins the text rather than the
  * contract. Extracting the logic is what makes real assertions possible.
  */
@@ -72,7 +72,7 @@ describe('buildMonthIndex', () => {
 	});
 });
 
-describe('availablePeriods — month', () => {
+describe('availablePeriods - month', () => {
 	it('offers every month holding data, newest first', () => {
 		const opts = availablePeriods(index({ '2025-01': 3, '2024-11': 2, '2025-03': 1 }), 'month');
 		expect(opts.map((o) => o.endMonth)).toEqual(['2025-03', '2025-01', '2024-11']);
@@ -94,7 +94,7 @@ describe('availablePeriods — month', () => {
 	});
 });
 
-describe('availablePeriods — year (the reported case)', () => {
+describe('availablePeriods - year (the reported case)', () => {
 	// "if there is no data in 2024, but in 2023 and 2025 onclick should show
 	// only this possibilities as available"
 	const gapYear = index({ '2023-04': 5, '2023-09': 3, '2025-02': 7 });
@@ -122,7 +122,7 @@ describe('availablePeriods — year (the reported case)', () => {
 	});
 });
 
-describe('availablePeriods — 2 years (sliding pairs, partly empty offered)', () => {
+describe('availablePeriods - 2 years (sliding pairs, partly empty offered)', () => {
 	const gapYear = index({ '2023-04': 5, '2025-02': 7 });
 
 	it('slides consecutive year pairs across the data range, newest first', () => {
@@ -163,7 +163,7 @@ describe('availablePeriods — 2 years (sliding pairs, partly empty offered)', (
 	});
 });
 
-describe('availablePeriods — empty', () => {
+describe('availablePeriods - empty', () => {
 	it('returns no options for every scope when there is no data', () => {
 		const empty = index({});
 		expect(availablePeriods(empty, 'month')).toEqual([]);
@@ -239,7 +239,7 @@ describe('end-to-end from documents', () => {
 	});
 });
 
-describe('hasExportableData — gates the dashboard "Export for doctor" link', () => {
+describe('hasExportableData - gates the dashboard "Export for doctor" link', () => {
 	it('false with nothing, or only writing / private data', () => {
 		expect(hasExportableData(null)).toBe(false);
 		expect(hasExportableData([])).toBe(false);

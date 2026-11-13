@@ -1,5 +1,5 @@
 """
-CIPH-pi20-LB-5 — production guardrail for the demo-seed scripts.
+CIPH-pi20-LB-5 - production guardrail for the demo-seed scripts.
 
 Why this lives in its own (tracked) file:
 
@@ -15,7 +15,7 @@ Why this lives in its own (tracked) file:
 Two checks run inside `assert_demo_seed_allowed(dsn)`:
 
   1. `CIPHRA_ALLOW_DEMO_SEED=1` must be exported. Explicit operator
-     opt-in; the literal string '1' only — 'true' / 'yes' / 'on' do
+     opt-in; the literal string '1' only - 'true' / 'yes' / 'on' do
      NOT count, to keep the gate unambiguous.
   2. `dsn` (typically the active DATABASE_URL) is checked against
      production-looking patterns. Even when opted in, a DSN
@@ -41,7 +41,7 @@ def assert_demo_seed_allowed(dsn: str) -> None:
         raise DemoSeedRefused(
             "Demo seeding is disabled by default. To enable for a local "
             "dev database, export CIPHRA_ALLOW_DEMO_SEED=1. These scripts "
-            "create users with the literal password 'Test$12345_' — never "
+            "create users with the literal password 'Test$12345_' - never "
             "run them against real user data."
         )
     lower = dsn.lower()

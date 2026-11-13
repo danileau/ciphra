@@ -6,7 +6,7 @@ build/
 .env
 *.log
 # .claude/ is ignored by default (personal state), but the SHARED team setup
-# — the guardrail hook, checked-in settings, skills, and subagents — is tracked
+# - the guardrail hook, checked-in settings, skills, and subagents - is tracked
 # so every clone + CI + future session inherits the same rules. Personal,
 # machine-specific config stays local via settings.local.json.
 .claude/*
@@ -16,7 +16,7 @@ build/
 !.claude/agents/
 .claude/settings.local.json
 api/seed_*.py
-# CIPH-pi20-LB-5 — explicit un-ignore: the production guardrail must be
+# CIPH-pi20-LB-5 - explicit un-ignore: the production guardrail must be
 # tracked + reviewable + testable in fresh clones, even though the seed
 # scripts that USE it are intentionally local-only.
 !api/seed_guardrail.py
@@ -31,11 +31,11 @@ golive/
 # design-review scratch (static mockups)
 tmp/
 
-# INC-001 deploy-gate reports (scripts/verify-migration-prod.sh) — local
+# INC-001 deploy-gate reports (scripts/verify-migration-prod.sh) - local
 # evidence with machine-specific timestamps, regenerated on demand
 .inc001/
 
-# AI-assistant configuration — operator-local, not part of the product.
+# AI-assistant configuration - operator-local, not part of the product.
 # The working agreement, the PreToolUse guardrail hook, the skills and the
 # review agent all still live here on disk and still run; they are simply not
 # something a public repository should publish or a contributor should need.

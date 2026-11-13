@@ -7,12 +7,12 @@
 
    Brand: "Confident. Warm. Precise."
    Metaphor: A private annotation on your health.
-   The asterisk * is the soul — password mask, wildcard, footnote.
+   The asterisk * is the soul - password mask, wildcard, footnote.
    ═══════════════════════════════════════════════════════════ */
 
 @layer base {
 	:root {
-		/* Design review 2026-06-11 — pin native chrome (scrollbars, picker
+		/* Design review 2026-06-11 - pin native chrome (scrollbars, picker
 		   panels, iOS keyboard) to the active theme. The dark value lives
 		   in the [data-theme='dark'] block below. */
 		color-scheme: light;
@@ -36,7 +36,7 @@
 		--surface-muted: #f3f0ed;
 		--surface-inset: #ede8e3;
 		/* RGB triples for rgba() translucency (sticky navs, blurred
-		   headers). One mechanism everywhere — see the warm-overrides
+		   headers). One mechanism everywhere - see the warm-overrides
 		   block (bottom of this file) for why those rules live outside
 		   @layer (Tailwind tree-shaking dropped the bg-white\/95
 		   override from every prod build, 2026-06-12). */
@@ -46,7 +46,7 @@
 		/* ── Text ── */
 		--text-primary: #2c2520;
 		--text-secondary: #64594e;
-		/* Design review 2026-06-11 — was #97918a (3.12:1 on white, below AA
+		/* Design review 2026-06-11 - was #97918a (3.12:1 on white, below AA
 		   for the 13–14px body copy it labels). #736d63 clears 4.5:1 on all
 		   three light surfaces (white 5.13, --surface 4.84, --surface-muted
 		   4.52) while staying clearly lighter than --text-secondary (6.82). */
@@ -62,7 +62,7 @@
 		   in-flight). Danger kept as hard red for destructive + errors. */
 		--danger: #DC2626;
 		--danger-hover: #b91c1c;
-		/* Text on a --danger fill — same pattern as --on-brand. */
+		/* Text on a --danger fill - same pattern as --on-brand. */
 		--on-danger: #ffffff;
 		--danger-rgb: 220, 38, 38;        /* CIPH-203b: enables rgba(var(--danger-rgb), …) for tinted bg */
 		--success-rgb: 127, 130, 27;      /* olive */
@@ -75,15 +75,15 @@
 		   Used for chart series, condition accents, episode-type markers.
 		   Keep small (≤6) so charts stay scannable. Pull from --data-N
 		   rather than raw hex. The TS mirror lives in
-		   `src/lib/dataPalette.ts` and MUST stay in sync — both files
+		   `src/lib/dataPalette.ts` and MUST stay in sync - both files
 		   update together when the palette changes. Vitest enforces
 		   that presets use only these six values. */
-		--data-1: #b23c2c;  /* brand rust — primary, mirrors --brand */
-		--data-2: #8a2a1f;  /* deep brick — darker brand-adjacent */
-		--data-3: #9f630b;  /* ochre — information / warmth */
-		--data-4: #7f821b;  /* olive — calm / logged */
-		--data-5: #5c6b73;  /* anchor slate — cool neutral for separation */
-		--data-6: #a87559;  /* clay terracotta — warm tertiary */
+		--data-1: #b23c2c;  /* brand rust - primary, mirrors --brand */
+		--data-2: #8a2a1f;  /* deep brick - darker brand-adjacent */
+		--data-3: #9f630b;  /* ochre - information / warmth */
+		--data-4: #7f821b;  /* olive - calm / logged */
+		--data-5: #5c6b73;  /* anchor slate - cool neutral for separation */
+		--data-6: #a87559;  /* clay terracotta - warm tertiary */
 		--data-1-rgb: 178, 60, 44;
 		--data-2-rgb: 138, 42, 31;
 		--data-3-rgb: 159, 99, 11;
@@ -95,9 +95,9 @@
 		--ochre-rgb: 159, 99, 11;
 		--olive-rgb: 127, 130, 27;
 
-		/* CIPH-890 — Cohort × Route palette.
+		/* CIPH-890 - Cohort × Route palette.
 		   Source of truth: `src/lib/cohortPalette.ts`. The TS module
-		   and these CSS vars MUST stay in sync — vitest does not
+		   and these CSS vars MUST stay in sync - vitest does not
 		   currently parse this file but `cohortPalette.test.ts`
 		   enforces the matrix on the JS side. Update both together.
 
@@ -137,7 +137,7 @@
 		--cohort-custom-5: #5c6b73;
 		--cohort-custom-6: #6b7b8a;
 
-		/* CIPH-891 — RGB triples for `rgba(var(--cohort-X-N-rgb), alpha)`
+		/* CIPH-891 - RGB triples for `rgba(var(--cohort-X-N-rgb), alpha)`
 		   alpha-tint use sites (selected-chip backgrounds, soft hover
 		   fills). Source of truth: `cohortPalette.ts:COHORT_PALETTE_RGB`. */
 		--cohort-cycle-1-rgb: 182, 48, 106;
@@ -171,23 +171,23 @@
 		--cohort-custom-5-rgb: 92, 107, 115;
 		--cohort-custom-6-rgb: 107, 123, 138;
 
-		/* CIPH-891 — Cohort-aware semantic tokens.
-		   --accent          = cohort slot 1 (primary)         — replaces --brand for chrome
-		   --accent-hover    = -8% lightness of slot 1         — pre-computed per cohort
-		   --accent-info     = cohort slot 3 (information)     — replaces --ochre for chrome
-		   --accent-calm     = cohort slot 4 (success/calm)    — replaces --olive for chrome
-		   --accent-neutral  = cohort slot 5 (cool neutral)    — for separators/dividers
+		/* CIPH-891 - Cohort-aware semantic tokens.
+		   --accent          = cohort slot 1 (primary)         - replaces --brand for chrome
+		   --accent-hover    = -8% lightness of slot 1         - pre-computed per cohort
+		   --accent-info     = cohort slot 3 (information)     - replaces --ochre for chrome
+		   --accent-calm     = cohort slot 4 (success/calm)    - replaces --olive for chrome
+		   --accent-neutral  = cohort slot 5 (cool neutral)    - for separators/dividers
 
 		   Defaults below = discrete cohort = today's brand identity.
 		   `[data-cohort="X"]` overrides further down replace these per
 		   cohort. The `--brand`,
-		   `--ochre`, `--olive` tokens above are NOT redirected — they
+		   `--ochre`, `--olive` tokens above are NOT redirected - they
 		   stay invariant for brand-mark sites (wordmarks, landing CTAs).
 
 		   --accent-hover is pre-computed (not derived via `hsl(from …)`)
 		   because that CSS Color Level 5 syntax requires Firefox 128+,
 		   and a CSS rule the browser doesn't understand is dropped
-		   entirely — the result was buttons turning white on hover.
+		   entirely - the result was buttons turning white on hover.
 		   Pre-computation has older-browser support and one trivial
 		   tradeoff: the hover values are baked at design time. If the
 		   palette ships changes, regenerate via the script in
@@ -205,18 +205,18 @@
 	}
 
 	/* ═══ Dark theme (design review 2026-06-11, Phase 7) ═══
-	   Warm-dark derivation of the palette — same hue family (rust /
+	   Warm-dark derivation of the palette - same hue family (rust /
 	   ochre / olive on warm brown), not generic slate. Every text token
 	   below clears WCAG AA 4.5:1 on --surface-card (measured: primary
 	   14.1, secondary 8.9, muted 4.9, brand 5.7, olive 7.8, ochre 6.7,
-	   danger 5.8). Applied via `data-theme` on <html> — see
+	   danger 5.8). Applied via `data-theme` on <html> - see
 	   $lib/stores/theme.ts (preference) and app.html (pre-paint apply).
 
 	   Deliberately NOT themed: the doctor PDF (print stays light), the
 	   --data-* / --cohort-* chart+accent matrices (mid-tones that work
 	   on both surfaces; revisit per-cohort dark variants only with
 	   dogfood evidence). --accent-hover still darkens on hover in dark
-	   mode — visible, slightly muted; acceptable v1 residual. */
+	   mode - visible, slightly muted; acceptable v1 residual. */
 	[data-theme='dark'] {
 		color-scheme: dark;
 
@@ -252,7 +252,7 @@
 		--success-rgb: 179, 182, 92;
 	}
 
-	/* CIPH-891 — Per-cohort accent overrides. Scoped on `[data-cohort]`
+	/* CIPH-891 - Per-cohort accent overrides. Scoped on `[data-cohort]`
 	   so chrome inside the authed app picks up cohort identity, while
 	   landing/login/migrate (which never get a meaningful blueprint)
 	   stay on the discrete-cohort defaults declared in `:root` above. */
@@ -315,7 +315,7 @@
 
 	/* CIPH-890/891 route-shift removed (design review 2026-06-11):
 	   the per-route `--route-l/s-shift` variables shipped for ~6 weeks
-	   with zero consumers — the `hsl(from …)` pattern only ever existed
+	   with zero consumers - the `hsl(from …)` pattern only ever existed
 	   in comments, and the one attempt to wire it produced the PI v13
 	   hover-white bug class. The PI v13 critique called the visual
 	   effect "fake differentiation" even when applied. Decision: route
@@ -323,34 +323,34 @@
 	   cohort identity keeps the `--accent-*` system above.
 	   Guard: `lib/route-shift-removed.test.ts`.
 
-	   CIPH-892 — each route block below carries rhythm tokens
+	   CIPH-892 - each route block below carries rhythm tokens
 	   driving silhouette differences (card padding, gap, radius,
 	   border style). The four browse surfaces feel distinct at
 	   a glance: calendar tight grid / journal stream / reports
 	   clinical / dashboard hub. */
 	[data-route="calendar"] {
-		/* tight grid rhythm — small radii, small gaps, square cells */
+		/* tight grid rhythm - small radii, small gaps, square cells */
 		--rhythm-card-padding: 8px;
 		--rhythm-card-gap: 4px;
 		--rhythm-card-radius: 8px;
 		--rhythm-section-gap: 16px;
 	}
 	[data-route="journal"] {
-		/* stream rhythm — generous card chrome, vertical breathing */
+		/* stream rhythm - generous card chrome, vertical breathing */
 		--rhythm-card-padding: 16px;
 		--rhythm-card-gap: 8px;
 		--rhythm-card-radius: 12px;
 		--rhythm-section-gap: 12px;
 	}
 	[data-route="reports"] {
-		/* clinical rhythm — compact rows, hairline separators */
+		/* clinical rhythm - compact rows, hairline separators */
 		--rhythm-card-padding: 6px;
 		--rhythm-card-gap: 0px;
 		--rhythm-card-radius: 6px;
 		--rhythm-section-gap: 20px;
 	}
 	[data-route="dashboard"] {
-		/* hub rhythm — generous nested cards, soft shadows */
+		/* hub rhythm - generous nested cards, soft shadows */
 		--rhythm-card-padding: 16px;
 		--rhythm-card-gap: 24px;
 		--rhythm-card-radius: 14px;
@@ -364,19 +364,19 @@
    sites follow data-theme).
 
    DELIBERATELY AFTER the @layer block / utilities (root cause verified
-   2026-06-12 by an isolated repro): lightningcss — Vite's CSS
-   transformer — deduplicates rules with identical selector + property
+   2026-06-12 by an isolated repro): lightningcss - Vite's CSS
+   transformer - deduplicates rules with identical selector + property
    set and IGNORES !important while doing it. When this block sat before
    the utilities, the `.bg-white\/95` override (single background-color
    declaration, exactly matching the utility's property set) was deleted
    from every prod build and the authed header shipped white-on-dark.
    Sibling overrides only survived because Tailwind's utilities carry an
    extra --tw-*-opacity declaration (different property set, no dedup).
-   Placed after utilities, the dedup keeps THIS rule instead — which is
+   Placed after utilities, the dedup keeps THIS rule instead - which is
    also cascade-correct. THE TRAP, for future readers: any single-
    property !important override of a fixed-alpha Tailwind utility is at
    risk; dev mode does not run lightningcss, so only a build-output
-   check catches it — see lib/built-css-guard.test.ts. */
+   check catches it - see lib/built-css-guard.test.ts. */
 .bg-white { background-color: var(--surface-card) !important; }
 .bg-surface { background-color: var(--surface) !important; }
 .bg-surface-muted, .hover\:bg-surface-muted:hover { background-color: var(--surface-muted) !important; }
@@ -395,16 +395,16 @@
 
 
 /* Global horizontal-overflow guard. A sub-pixel / few-px overshoot from any
-   descendant makes the WHOLE page — navigation header included — draggable
+   descendant makes the WHOLE page - navigation header included - draggable
    sideways on real iOS Safari. It breaks the feel and (because iOS counts
    100vw / fixed elements differently) does NOT reproduce in headless WebKit,
    so per-element detection misses it. Clip it at the root.
 
-   `overflow-x: clip` — NOT `hidden`: clip does not turn the root into a
+   `overflow-x: clip` - NOT `hidden`: clip does not turn the root into a
    scroll container, so `position: sticky` (the journal month headers) keeps
    working. `hidden` would force overflow-y to compute to `auto` and break
    sticky. Independent inner scroll containers (e.g. the /reports grid-table's
-   overflow-x:auto wrapper) are unaffected — this only clips the root. */
+   overflow-x:auto wrapper) are unaffected - this only clips the root. */
 html,
 body {
 	max-width: 100%;
@@ -464,7 +464,7 @@ body {
 
 	/* ═══ CARDS ═══ */
 
-	/* Primary card — white on warm surface (standard weight).
+	/* Primary card - white on warm surface (standard weight).
 	   CIPH-892: border-radius pulls from the per-route rhythm token so
 	   each surface gets a recognizable card silhouette. */
 	.card {
@@ -474,14 +474,14 @@ body {
 		transition: all 0.2s ease-out;
 	}
 
-	/* CIPH-892 (honest fix) — `.card-rhythmic` opts the card into FULL
+	/* CIPH-892 (honest fix) - `.card-rhythmic` opts the card into FULL
 	   rhythm consumption: padding + radius from per-route tokens. Use
 	   this on the canonical surface cards (entry list, day-detail,
 	   export controls) so calendar/journal/reports/dashboard feel
 	   demonstrably distinct, not just 2px of corner-roundness apart.
 
 	   Cards that need explicit padding (e.g., `card-anchor` with its
-	   own 24px) keep their utility classes — opt-in only. */
+	   own 24px) keep their utility classes - opt-in only. */
 	.card-rhythmic {
 		padding: var(--rhythm-card-padding, 16px);
 	}
@@ -496,7 +496,7 @@ body {
 		gap: var(--rhythm-section-gap, 24px);
 	}
 
-	/* CIPH-202 — Card weight hierarchy: anchor / standard / inline.
+	/* CIPH-202 - Card weight hierarchy: anchor / standard / inline.
 	   Anchor = the page's primary action card. Heavy 2px accent border
 	   (cohort-aware via --accent in CIPH-891), larger padding, slightly
 	   larger heading. One per page max. */
@@ -515,7 +515,7 @@ body {
 		color: var(--text-primary);
 	}
 
-	/* Inline weight — secondary info, badges, encryption note. No border,
+	/* Inline weight - secondary info, badges, encryption note. No border,
 	   muted background, tight padding. */
 	.card-inline {
 		background: var(--surface-muted);
@@ -544,7 +544,7 @@ body {
 		box-shadow: 0 4px 16px rgba(44, 37, 32, 0.06);
 	}
 
-	/* Tinted card — for emphasis sections */
+	/* Tinted card - for emphasis sections */
 	.card-ochre {
 		background: var(--ochre-light);
 		border: 1px solid rgba(159, 99, 11, 0.15);
@@ -586,7 +586,7 @@ body {
 
 	.btn-primary {
 		@apply inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 rounded-xl min-h-[44px];
-		/* CIPH-891 — cohort-aware. Discrete cohort = brand rust (no
+		/* CIPH-891 - cohort-aware. Discrete cohort = brand rust (no
 		   visual change for existing presets). hover uses HSL relative
 		   syntax to darken without per-cohort hover tokens. */
 		background: var(--accent);
@@ -624,11 +624,11 @@ body {
 	}
 	/* iOS Safari auto-zooms any focused input whose font-size is < 16px, and
 	   because our viewport meta intentionally omits `maximum-scale` (an a11y
-	   requirement — users must be able to pinch-zoom), the page never zooms
+	   requirement - users must be able to pinch-zoom), the page never zooms
 	   back out: it stays stuck at the zoomed-in width until the user manually
 	   pinches out. Bumping to 16px on touch devices kills the focus-zoom
 	   without touching the denser desktop sizing. `pointer: coarse` targets
-	   touch primary-input devices (phones/tablets) — exactly where it bites.
+	   touch primary-input devices (phones/tablets) - exactly where it bites.
 	   Same `.input` selector, later source order inside the layer → wins. */
 	@media (pointer: coarse) {
 		.input { font-size: 16px; }
@@ -641,7 +641,7 @@ body {
 	     Apply alongside `.input` for form selects, or alongside any custom
 	     wrapper for inline selects.
 	   - `.select-styled` is the standalone chip variant (login/footer locale
-	     pickers, etc.) — includes its own surface/border. */
+	     pickers, etc.) - includes its own surface/border. */
 	.select-chevron {
 		appearance: none;
 		-webkit-appearance: none;
@@ -683,7 +683,7 @@ body {
 	}
 
 	/* ═══ NUMBER DISPLAY ═══ */
-	/* Data numbers use ochre — "information is ochre" */
+	/* Data numbers use ochre - "information is ochre" */
 	.num-data {
 		font-weight: 700;
 		color: var(--ochre);
@@ -749,7 +749,7 @@ body {
 		background: var(--accent);
 	}
 
-	/* Focus visible for all interactive components — cohort-aware. */
+	/* Focus visible for all interactive components - cohort-aware. */
 	.btn-primary:focus-visible,
 	.btn-secondary:focus-visible,
 	.card-interactive:focus-visible,
@@ -777,7 +777,7 @@ body {
 
 	   A small, opinionated set of page-container widths. Apply on
 	   the outermost page wrapper; never nest these inside each
-	   other. All tokens collapse to full width below 640px — mobile
+	   other. All tokens collapse to full width below 640px - mobile
 	   behavior is unchanged.
 
 	   Hard ceiling is 1280px (`layout-data-wide`) so text columns
@@ -788,14 +788,14 @@ body {
 	   CIPH-746 but only 4 of 18 routes used them; the other 14 each
 	   hardcoded their own `max-w-*` or nothing at all, which is the
 	   drift they were introduced to prevent. `routes/page-width.test.ts`
-	   now pins the assignment — a new page that hardcodes a width
+	   now pins the assignment - a new page that hardcodes a width
 	   fails the suite. Add the route to a tier, not a one-off class.
 
 	   The layout itself deliberately imposes NO width: `<main>` is
 	   `flex-1` with no container, so a page that sets nothing renders
 	   edge-to-edge. That is why "no class" was never a safe default.
 
-	   THREE DOCUMENTED EXCEPTIONS — none is a fixed page container:
+	   THREE DOCUMENTED EXCEPTIONS - none is a fixed page container:
 
 	   • AUTH CARDS (/login, /migrate, /join/[grantId]). These centre a
 	     448px card in the viewport rather than flowing content down a
@@ -813,16 +813,16 @@ body {
 	     expresses "widens at a breakpoint", and pinning it to a fixed
 	     768 would break that grid. Left as CSS on purpose.
 	   ═══════════════════════════════════════════════════════════ */
-	.layout-narrow    { @apply w-full max-w-xl  mx-auto px-4 sm:px-6; } /* 576  — (unused: see AUTH CARDS below) */
-	.layout-reading   { @apply w-full max-w-3xl mx-auto px-4 sm:px-6; } /* 768  — /docs, /docs/[slug], /privacy, /terms, /setup */
-	.layout-default   { @apply w-full max-w-4xl mx-auto px-4 sm:px-6; } /* 896  — /settings, /conditions/[id] */
+	.layout-narrow    { @apply w-full max-w-xl  mx-auto px-4 sm:px-6; } /* 576  - (unused: see AUTH CARDS below) */
+	.layout-reading   { @apply w-full max-w-3xl mx-auto px-4 sm:px-6; } /* 768  - /docs, /docs/[slug], /privacy, /terms, /setup */
+	.layout-default   { @apply w-full max-w-4xl mx-auto px-4 sm:px-6; } /* 896  - /settings, /conditions/[id] */
 	/* px-6 at every breakpoint, unlike the others: the landing's bands sit on
 	   alternating full-bleed backgrounds where 16px reads as cramped. Keeping
 	   the tier's own padding avoids a 24→16px mobile regression on the one
 	   page most visitors see first. */
-	.layout-landing   { @apply w-full max-w-5xl mx-auto px-6; }        /* 1024 — the landing page's section bands */
-	.layout-data      { @apply w-full max-w-6xl mx-auto px-4 sm:px-6; } /* 1152 — /journal, /calendar, /admin */
-	.layout-data-wide { @apply w-full max-w-7xl mx-auto px-4 sm:px-6; } /* 1280 — /reports */
+	.layout-landing   { @apply w-full max-w-5xl mx-auto px-6; }        /* 1024 - the landing page's section bands */
+	.layout-data      { @apply w-full max-w-6xl mx-auto px-4 sm:px-6; } /* 1152 - /journal, /calendar, /admin */
+	.layout-data-wide { @apply w-full max-w-7xl mx-auto px-4 sm:px-6; } /* 1280 - /reports */
 }
 
 @layer utilities {

@@ -14,7 +14,7 @@ import {
 	SCOPE_MONTHS,
 } from './reportWindow';
 
-describe('reportWindow — boundaries', () => {
+describe('reportWindow - boundaries', () => {
 	it('a month window is that month', () => {
 		const w = reportWindow('month', 2025, 2); // March 2025
 		expect(w.startISO).toBe('2025-03-01');
@@ -52,7 +52,7 @@ describe('reportWindow — boundaries', () => {
 	});
 });
 
-describe('reportWindow — kind', () => {
+describe('reportWindow - kind', () => {
 	it('names a December anchor as the calendar period it is', () => {
 		expect(reportWindow('year', 2023, 11).kind).toBe('calendar-year');
 		expect(reportWindow('2years', 2025, 11).kind).toBe('calendar-years');
@@ -94,7 +94,7 @@ describe('formatWindowRange', () => {
 	});
 
 	it('states a trailing window as what it is, never as a year', () => {
-		// en-GB abbreviates September as "Sept" — the ICU short form, not a typo.
+		// en-GB abbreviates September as "Sept" - the ICU short form, not a typo.
 		const label = formatWindowRange(reportWindow('year', 2025, 7), 'en-GB');
 		expect(label).toBe('Sept 2024 – Aug 2025');
 		expect(label).not.toMatch(/^\d{4}$/);
@@ -119,7 +119,7 @@ describe('formatWindowRange', () => {
 	});
 });
 
-describe('scopeFileTag — same rule as the label', () => {
+describe('scopeFileTag - same rule as the label', () => {
 	it('names a month by its own prefix', () => {
 		expect(scopeFileTag('month', 2025, 2)).toBe('2025-03');
 	});
@@ -134,7 +134,7 @@ describe('scopeFileTag — same rule as the label', () => {
 		expect(scopeFileTag('2years', 2025, 7)).toBe('2years-2025-08');
 	});
 
-	it('agrees with the window kind — filename and label cannot drift', () => {
+	it('agrees with the window kind - filename and label cannot drift', () => {
 		for (const [scope, y, m] of [
 			['month', 2025, 2],
 			['year', 2023, 11],

@@ -1,10 +1,10 @@
-# Prod frontend — multi-stage build of the SvelteKit app.
+# Prod frontend - multi-stage build of the SvelteKit app.
 #
 # adapter-auto picks adapter-node in a container env, producing build/index.js
 # that listens on $PORT (default 3000). nginx upstream points at frontend:3000.
 #
 # If you decide to switch to adapter-static (fully prerendered SPA), drop the
-# runtime stage entirely and have nginx serve `build/` directly — but that's
+# runtime stage entirely and have nginx serve `build/` directly - but that's
 # a code-side decision in vite.config.ts (kitConfig.adapter).
 
 # ─── builder ────────────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@
 FROM node:24.22.1-alpine AS builder
 WORKDIR /app
 
-# Install with npm ci against a locked manifest — reproducible images.
+# Install with npm ci against a locked manifest - reproducible images.
 COPY package.json package-lock.json* ./
 RUN npm ci
 
@@ -28,7 +28,7 @@ COPY . .
 #   rm -rf frontend/_docs-src && mkdir frontend/_docs-src
 #   cp -r docs README.md SECURITY.md CHANGELOG.md changelog.d frontend/_docs-src/
 # This COPY lifts them to the absolute path the plugin checks. Launch
-# (v0.1.0) missed this — prod /docs rendered empty until 2026-06-12.
+# (v0.1.0) missed this - prod /docs rendered empty until 2026-06-12.
 COPY _docs-src/ /docs-src/
 
 RUN npm run build && npm prune --omit=dev
@@ -39,7 +39,7 @@ WORKDIR /app
 
 # Drop privileges + shrink the supply-chain surface. node-alpine ships a `node`
 # user uid 1000 and a global npm at /usr/local/lib/node_modules/npm that vendors
-# sigstore/undici — those pick up their own HIGH CVEs (CVE-2026-48815,
+# sigstore/undici - those pick up their own HIGH CVEs (CVE-2026-48815,
 # CVE-2026-12151 in 2026-07) yet npm is never used at runtime (the app runs
 # `node build/index.js`). Remove it so the scanner has nothing to flag. The apk
 # upgrade + CACHEBUST (commit SHA from release-images.yml) keep the Alpine base

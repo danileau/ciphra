@@ -1,9 +1,9 @@
-# Dependabot config (2026-06-12) — replaces the unfilled template stub
+# Dependabot config (2026-06-12) - replaces the unfilled template stub
 # (package-ecosystem: "") whose invalid config made every updater run
 # error since at least 2026-06-07.
 #
 # Discipline (feedback_dependabot_major_versions): NEVER blind-merge
-# major bumps — a major rides its own PR, gets read release notes, and
+# major bumps - a major rides its own PR, gets read release notes, and
 # a local test pass. Minor/patch are grouped weekly to keep PR noise
 # down; they still go through CI like everything else.
 version: 2
@@ -20,7 +20,7 @@ updates:
       # Tailwind 4 is a ground-up rewrite (PostCSS plugin moved to
       # @tailwindcss/postcss, CSS-first config, changed default behaviours).
       # It needs a deliberate migration + full visual-regression pass, not a
-      # dependabot bump — hold the major until we do it on purpose. v3
+      # dependabot bump - hold the major until we do it on purpose. v3
       # minor/patch still flow through.
       - dependency-name: tailwindcss
         update-types: [version-update:semver-major]
@@ -28,7 +28,7 @@ updates:
       # no urgency; hold the v24 line until a deliberate upgrade.
       - dependency-name: jsdom
         update-types: [version-update:semver-major]
-      # @types/node majors TRACK THE NODE RUNTIME MAJOR — 24.x describes
+      # @types/node majors TRACK THE NODE RUNTIME MAJOR - 24.x describes
       # Node 24, 26.x describes Node 26. This app runs Node 24 (Dockerfile.prod
       # builder + runtime, CI node-version: 24), so the types must stay on 24.
       # They had drifted to 25 and dependabot was proposing 26: types two majors
@@ -64,7 +64,7 @@ updates:
 
   # Base images are pinned to exact versions, so something has to move them:
   # a floating tag only refreshes when the image happens to be rebuilt.
-  # Majors stay held — the Node major tracks @types/node (see above).
+  # Majors stay held - the Node major tracks @types/node (see above).
   - package-ecosystem: docker
     directories: [/frontend, /nginx, /api]
     schedule:
@@ -89,7 +89,7 @@ updates:
       interval: weekly
       day: monday
     groups:
-      # Actions are low-risk infra — standard, well-maintained actions
+      # Actions are low-risk infra - standard, well-maintained actions
       # whose major bumps (checkout v4→v6, etc.) rarely change behavior.
       # Unlike app deps (npm/pip), group ALL update-types into one weekly
       # PR instead of one-per-action. The majors-ride-their-own-PR rule

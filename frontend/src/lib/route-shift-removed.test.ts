@@ -1,5 +1,5 @@
 /**
- * Design review 2026-06-11 — route-shift removal guard.
+ * Design review 2026-06-11 - route-shift removal guard.
  *
  * The CIPH-890 per-route HSL modulation (`--route-l-shift` /
  * `--route-s-shift` CSS vars + `applyRouteShift*` TS helpers) shipped
@@ -37,7 +37,7 @@ describe('route-shift stays removed', () => {
 	it('no --route-l-shift / --route-s-shift custom properties anywhere', () => {
 		const offenders = files.filter((f) => {
 			const body = readFileSync(f, 'utf-8');
-			// Declarations or var() reads — comments mentioning the history
+			// Declarations or var() reads - comments mentioning the history
 			// are fine, actual `--route-…-shift:` or `var(--route-…)` are not.
 			return /--route-[ls]-shift\s*:/.test(body) || /var\(\s*--route-[ls]-shift/.test(body);
 		});
@@ -59,7 +59,7 @@ describe('route-shift stays removed', () => {
 		const body = readFileSync(join(SRC, 'lib/cohortPalette.ts'), 'utf-8');
 		expect(body).not.toMatch(/export function applyRouteShift/);
 		expect(body).not.toMatch(/export function routeShift\(/);
-		// pathToRoute survives — it drives the rhythm tokens.
+		// pathToRoute survives - it drives the rhythm tokens.
 		expect(body).toMatch(/export function pathToRoute/);
 	});
 });

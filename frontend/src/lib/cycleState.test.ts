@@ -1,5 +1,5 @@
 /**
- * CIPH-855a — cycleState module tests.
+ * CIPH-855a - cycleState module tests.
  *
  * The cycle computation was extracted from Companion.svelte so Calendar
  * can render per-day phase overlays. The extraction is lossless only
@@ -115,7 +115,7 @@ describe('computeCycleAnchor', () => {
 	});
 
 	it('flags irregular for variance > 5 days', () => {
-		// 20, 40, 30 → mean 30, std ≈ 8.2 — clears the 5-day threshold.
+		// 20, 40, 30 → mean 30, std ≈ 8.2 - clears the 5-day threshold.
 		const docs = [
 			mkDoc('2026-01-01', { cycle_length: 20 }),
 			mkDoc('2026-02-01', { cycle_length: 40 }),

@@ -5,7 +5,7 @@
  *
  * The `layout-*` width tokens have existed since CIPH-746. On 2026-08-21 an
  * audit found only 4 of 18 routes using them: the other 14 each hardcoded
- * their own `max-w-*` or set nothing at all. Nothing had gone wrong loudly —
+ * their own `max-w-*` or set nothing at all. Nothing had gone wrong loudly -
  * the pages simply drifted to six different widths, which is exactly the
  * outcome the tokens were introduced to prevent.
  *
@@ -18,7 +18,7 @@
  * HOW TO ADD A PAGE
  *
  * Put it in TIERS with the token it uses, or in EXCEPTIONS with the reason it
- * cannot use one. Both are cheap. Neither is optional — a new `+page.svelte`
+ * cannot use one. Both are cheap. Neither is optional - a new `+page.svelte`
  * that appears in neither map fails `every page is classified`, on purpose.
  *
  * The tier definitions and the reasoning behind each exception live in
@@ -33,7 +33,7 @@ const ROUTES = __dirname;
 
 /** Route file → the width token it must carry. */
 const TIERS: Record<string, string> = {
-	'+page.svelte': 'layout-landing', //          1024 — landing section bands
+	'+page.svelte': 'layout-landing', //          1024 - landing section bands
 	'docs/+page.svelte': 'layout-reading', //      768
 	'docs/[slug]/+page.svelte': 'layout-reading', //   768
 	'privacy/+page.svelte': 'layout-reading', //   768
@@ -44,7 +44,7 @@ const TIERS: Record<string, string> = {
 	'journal/+page.svelte': 'layout-data', //     1152
 	'calendar/+page.svelte': 'layout-data', //    1152
 	'admin/+page.svelte': 'layout-data', //       1152
-	'reports/+page.svelte': 'layout-data-wide', // 1280 — data tables
+	'reports/+page.svelte': 'layout-data-wide', // 1280 - data tables
 };
 
 /** Route file → why it carries no tier. Each is a real pattern, not an oversight. */
@@ -82,7 +82,7 @@ describe('every page has a declared width', () => {
 		expect(PAGES.length).toBeGreaterThan(15);
 	});
 
-	it('every page is classified — a new one must be assigned, not defaulted', () => {
+	it('every page is classified - a new one must be assigned, not defaulted', () => {
 		const unclassified = PAGES.filter((p) => !(p in TIERS) && !(p in EXCEPTIONS));
 		expect(
 			unclassified,
@@ -119,7 +119,7 @@ describe('tiered pages do not reimplement a container by hand', () => {
 	// Once a page has a token, a second hand-rolled container is either nested
 	// inside it (which the tokens forbid) or competing with it. `reports`
 	// reimplemented `layout-data-wide` in scoped CSS for months exactly that
-	// way — invisible to any audit that greps for class names.
+	// way - invisible to any audit that greps for class names.
 	//
 	// The rule is ELEMENT-AWARE, and it has to be. `max-w-<size> mx-auto` is
 	// also how you centre a paragraph, and a centred paragraph is capping LINE
@@ -136,7 +136,7 @@ describe('tiered pages do not reimplement a container by hand', () => {
 	const REVIEWED: Record<string, number> = {
 		// The "nothing to report yet" branch: a 672px centred column of
 		// explanatory text, shown instead of the 1280px table page, never with
-		// it. Narrower on purpose — it is prose, not data.
+		// it. Narrower on purpose - it is prose, not data.
 		'reports/+page.svelte': 1,
 	};
 
@@ -164,7 +164,7 @@ describe('the tokens themselves', () => {
 		}
 	});
 
-	it('the width scale stays small — a tier per page is not a system', () => {
+	it('the width scale stays small - a tier per page is not a system', () => {
 		const defined = [...css.matchAll(/^\t\.(layout-[a-z-]+)\s*\{/gm)].map((m) => m[1]);
 		expect(defined.length).toBeLessThanOrEqual(6);
 	});

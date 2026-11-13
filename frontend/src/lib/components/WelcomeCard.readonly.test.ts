@@ -2,7 +2,7 @@
  * The migrated-user welcome card's epilepc note.
  *
  * Until 2026-11-12 the title read "epilepc closes {date}" while the component
- * passed `date` to the BODY key, which has no placeholder — so every migrated
+ * passed `date` to the BODY key, which has no placeholder - so every migrated
  * user saw a literal "{date}", next to a shutdown date that had already
  * passed. epilepc is read-only until at least the end of 2026; what follows is
  * decided from usage.

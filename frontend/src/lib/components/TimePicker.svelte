@@ -1,5 +1,5 @@
 <!--
-	TimePicker — fully custom, brand-consistent.
+	TimePicker - fully custom, brand-consistent.
 
 	Replaces the native browser time-picker popover. Native chrome is
 	browser-OS controlled (the AM/PM dropdown in some browsers) and
@@ -9,7 +9,7 @@
 	Value contract: 24h `HH:MM` string (matches the previous native input
 	contract), so callers don't change.
 
-	PI v17 — same brand-consistency + locale fix as DatePicker.svelte.
+	PI v17 - same brand-consistency + locale fix as DatePicker.svelte.
 -->
 <script lang="ts">
 	import { onMount, onDestroy, createEventDispatcher } from 'svelte';

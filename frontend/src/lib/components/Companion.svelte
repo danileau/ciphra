@@ -11,7 +11,7 @@
 	import CompanionRail from '#lib/components/CompanionRail.svelte';
 	import WelcomeCard from '#lib/components/WelcomeCard.svelte';
 
-	// CIPH-764 reverted post senior review — country-specific helplines
+	// CIPH-764 reverted post senior review - country-specific helplines
 	// without explicit user country selection conflict with zero-knowledge.
 	// Replaced by CIPH-790 (settings-based opt-in help section).
 	import { familyLinks, activeVaultReady } from '#lib/stores/familyLinks.ts';
@@ -26,7 +26,7 @@
 	import { conditionInfoMap } from '#lib/conditionInfo.ts';
 	import { hasExportableData } from '#lib/reports/exportPeriods.ts';
 
-	// CIPH-921 — the dashboard condition label must use the SAME per-condition
+	// CIPH-921 - the dashboard condition label must use the SAME per-condition
 	// color as /conditions (the landing #conditions section + condition deep
 	// pages), not a uniform olive badge. Source of truth is conditionInfoMap;
 	// fall back to the blueprint's own accent for custom/unlisted conditions.
@@ -35,7 +35,7 @@
 	$: conditionColor =
 		(bp && conditionInfoMap[bp.conditionId]?.color) || bp?.accentColor || cohortAccentHex;
 
-	// CIPH-873 — exportForDoctor() helper + generateDoctorPdf import removed.
+	// CIPH-873 - exportForDoctor() helper + generateDoctorPdf import removed.
 	// The "Export for doctor" rail button now deep-links to
 	// /reports?action=export which opens the scope picker.
 
@@ -51,11 +51,11 @@
 	$: todayStr = todayISO();
 	$: todayEntries = allDocs.filter(d => String(d.data.date || '').startsWith(todayStr));
 
-	// CIPH-854 — Cohort drives home card ordering + which extra context
+	// CIPH-854 - Cohort drives home card ordering + which extra context
 	// cards render. `cohortOf` reads blueprint.conditionId.
 	$: cohort = cohortOf(bp);
 
-	// pi24 dashboard rework — primary card slot is governed by
+	// pi24 dashboard rework - primary card slot is governed by
 	// resolvePrimaryDashboardCard(bp, summary). The summary is computed
 	// here from $documents + bp. CompanionMain switches on primarySpec.kind
 	// to render the right card in the primary slot (or nothing, when the
@@ -109,9 +109,9 @@
 	})();
 	$: primarySpec = resolvePrimaryDashboardCard(bp, dashboardSummary) as DashboardCardSpec | null;
 
-	// CIPH-854 — Active multi-day phase. For phase-band cohort only: find
+	// CIPH-854 - Active multi-day phase. For phase-band cohort only: find
 	// the most-recent entry-streak where any multiDay episode type has
-	// value > 0 on each consecutive day ending at today (or yesterday —
+	// value > 0 on each consecutive day ending at today (or yesterday -
 	// a user who hasn't logged yet today is still in the phase). Returns
 	// the episode type + start date + day count. Null when no phase active.
 	$: activePhase = (() => {
@@ -191,7 +191,7 @@
 		};
 	})();
 
-	// CIPH-pi24-5c — Marker-event gap-trend. Only computed for presets that
+	// CIPH-pi24-5c - Marker-event gap-trend. Only computed for presets that
 	// declare `markerEvent` (10 cleanly-episodic conditions: epilepsy,
 	// migraine, bipolar, MS, long-COVID, asthma, RA, IBD, IBS, diabetes).
 	// Returns null for ≥3-events gate, hiding the card on day-1 users and on
@@ -224,7 +224,7 @@
 		// This keeps the whole card in one unit: the header reads "Tage ohne
 		// {type}", the big number is the current days-without (open run, no
 		// −1 since it isn't terminated by an episode), and `bestGap` must be
-		// comparable to it — the longest run the user actually went WITHOUT an
+		// comparable to it - the longest run the user actually went WITHOUT an
 		// episode, not the raw interval. Previously gaps were raw intervals,
 		// so the longest read one day higher than the streak card's count and
 		// the two contradicted (154 vs 153). One unit, one number now.
@@ -246,7 +246,7 @@
 		return { historicalGaps, currentGap, bestGap, nounKey: bp.markerEvent.nounKey };
 	})();
 
-	// CIPH-881b — Count rescue-medication events in the current month so the
+	// CIPH-881b - Count rescue-medication events in the current month so the
 	// dashboard rail can render a "Rescue meds this month" counter card. Only
 	// surfaced when the active blueprint declares rescueMedications, so
 	// presets without a clinical rescue protocol stay clean.
@@ -265,7 +265,7 @@
 	// menopause, PMOS). Heavy lifting lives in `$lib/cycleState.ts` so the
 	// Calendar route can reuse the anchor + phase math to render its
 	// phase-colored day-cell overlay. PHASE_COLORS comes from the same
-	// module (still pulled from data palette — CIPH-801).
+	// module (still pulled from data palette - CIPH-801).
 	$: hasCycleVital = hasCycleTracking(bp);
 	$: cycleState = hasCycleVital ? computeCycleStateToday(bp, allDocs) : null;
 
@@ -285,7 +285,7 @@
 	}, 0);
 
 	// pi24 dogfood: the cohort-completeness chip-bar was removed. The
-	// previous design treated "filled = N positive values today" — which
+	// previous design treated "filled = N positive values today" - which
 	// punished good days (no symptoms, no episodes = "you missed it"),
 	// and forced 3 categories on cohorts whose users don't measure all
 	// three daily. The new hero shows ONLY a positive recap when the
@@ -300,7 +300,7 @@
 		}
 		if (todayEpisodeCount > 0) {
 			// episodeNoun is cohort-aware (e.g. "Anfall", "Migräne"). Singular
-			// form is used regardless of count — declining the noun in 4
+			// form is used regardless of count - declining the noun in 4
 			// locales for every blueprint isn't worth the i18n surface.
 			parts.push(`${todayEpisodeCount} ${episodeNoun}`);
 		}
@@ -310,7 +310,7 @@
 		return parts;
 	})();
 
-	// CIPH-900 — Episode bar-chart and Top-symptoms bar-chart removed from
+	// CIPH-900 - Episode bar-chart and Top-symptoms bar-chart removed from
 	// the dashboard. Both lived as scope-pickered charts on Companion since
 	// PI v6; Anna-test (cycle cohort) flagged the dashboard as a "lot of not
 	// matching colours and structurally confusing". /reports already surfaces
@@ -319,7 +319,7 @@
 	// single sparkline-hero ("Wie geht's dir?") that links into /reports for
 	// the full trend view.
 
-	// ─── "Wie geht's dir?" — 12-month combined trend (CIPH-715, slimmed for CIPH-900) ─────────────
+	// ─── "Wie geht's dir?" - 12-month combined trend (CIPH-715, slimmed for CIPH-900) ─────────────
 	// Team-designed: one headline answer + one shared-axis line chart (no
 	// double-y-axis, no normalization). Episodes bold + brand, symptom-days
 	// faint + secondary. Linus's veto: text caption for SR users.
@@ -361,23 +361,23 @@
 		return { months, episodes, symptomDays, epTrend, epDelta, last, prev };
 	})();
 
-	// CIPH-723 — condition-specific noun for episodes (e.g. "Anfall", "Tremor",
+	// CIPH-723 - condition-specific noun for episodes (e.g. "Anfall", "Tremor",
 	// "IOP-Spitze"). Falls back to the generic "Episoden" when the blueprint
 	// doesn't override.
 	$: episodeNoun = bp?.episodeNoun ? $t(bp.episodeNoun) : $t('companion.how_episodes');
 
-	// CIPH-900 — Cohort-aware sparkline. Episode line uses cohort slot 1
+	// CIPH-900 - Cohort-aware sparkline. Episode line uses cohort slot 1
 	// (the cohort's primary), symptom-days line uses slot 5 (anchor slate,
 	// cohort-invariant). The previous hardcoded `#DC2626` brick-red bled
 	// danger semantics into a cycle-cohort dashboard themed magenta-rose.
 	$: cohortAccentHex = cohortPalette(cohort)[0];
 	$: cohortNeutralHex = cohortPalette(cohort)[4]; // anchor slate, shared
 
-	// CIPH-915 — Dashboard chart aligned to the /reports trend style.
+	// CIPH-915 - Dashboard chart aligned to the /reports trend style.
 	// Visible point markers, bottom legend, dual y-axis with tick labels.
 	// One chart "look" across the app so dashboard ↔ reports feel like
 	// the same product. Data window stays at 12 months on the dashboard
-	// (vs. 24 in reports) — dashboard is the at-a-glance view.
+	// (vs. 24 in reports) - dashboard is the at-a-glance view.
 	$: howAreYouChartData = howAreYouTrend ? {
 		labels: howAreYouTrend.months.map((m) => m.label),
 		datasets: [
@@ -413,9 +413,9 @@
 
 	// pi24 dogfood: tick-row visualization removed. The trigger-day count
 	// per month bin is surfaced via tooltip enrichment instead (see the
-	// tooltip callbacks below). Triggers carry a dual write shape — array
+	// tooltip callbacks below). Triggers carry a dual write shape - array
 	// (DayDetail.svelte:71) or object map (EntryComposer.svelte:139,
-	// Record<string, boolean>) — and EntryComposer's spread-merge can
+	// Record<string, boolean>) - and EntryComposer's spread-merge can
 	// graft list ids onto numeric keys with truthy string values, so a
 	// naive `Object.values(trs).some(v => v)` over-counts. The detection
 	// below treats the array shape as authoritative and only consults
@@ -479,7 +479,7 @@
 				type: 'linear' as const,
 				position: 'left' as const,
 				beginAtZero: true,
-				// CIPH-918 — axis title disambiguates the two independently-
+				// CIPH-918 - axis title disambiguates the two independently-
 				// scaled lines. Dual-axis (CIPH-915) made "is this 1 or 2?"
 				// ambiguous because each line reads against a different scale;
 				// the title ties the left numbers to the accent episode line.
@@ -505,9 +505,9 @@
 		},
 	};
 
-	// CIPH-763a — split arrow from text so the decorative unicode glyph can
+	// CIPH-763a - split arrow from text so the decorative unicode glyph can
 	// be `aria-hidden`. VoiceOver reads ↗ as "north-east arrow" which is
-	// noise — the text itself already says "weniger/mehr als letzten Monat".
+	// noise - the text itself already says "weniger/mehr als letzten Monat".
 	$: howAreYouHeadlineParts = (() => {
 		if (!howAreYouTrend) return null;
 		const { epTrend, last, prev } = howAreYouTrend;
@@ -524,7 +524,7 @@
 		return { arrow, text };
 	})();
 
-	// CIPH-900 — episodeChart + symptomChart bar charts removed from
+	// CIPH-900 - episodeChart + symptomChart bar charts removed from
 	// dashboard (see comment near howAreYou). /reports owns the deep view.
 
 	function handleEditEntry(entry: CiphraDocument) {
@@ -547,7 +547,7 @@
 	     user has no blueprint.
 	     The $documentsError condition keeps us in the loading state while the
 	     layout auto-retries a failed initial load (cacheless-device fetch
-	     hiccup) — otherwise an authed returning user would flash the
+	     hiccup) - otherwise an authed returning user would flash the
 	     caregiver-empty screen on top of the error banner. When the retry
 	     succeeds the error clears and $documents/$blueprint populate.
 	     $activeVaultReady: after a reload inside a linked vault the documents
@@ -560,7 +560,7 @@
 {:else if !bp}
 	<!-- Caregiver-mode empty state: user has no blueprint of their own.
 		 Split links into live vs revoked so the page reads: "here's who
-		 you're actively helping, and here's what was revoked — clean it up." -->
+		 you're actively helping, and here's what was revoked - clean it up." -->
 	{@const liveLinks = $familyLinks.filter(l => !l.revoked)}
 	{@const revokedLinks = $familyLinks.filter(l => l.revoked)}
 	<div class="max-w-2xl mx-auto px-4 py-10 space-y-5">
@@ -617,7 +617,7 @@
 		 to a 2-column grid (main ~1fr, rail 340px) with secondary content
 		 (trend chart, quick-action CTA, encryption badge) moved to the rail
 		 so the main column can stay focused on today-first flow. Below lg
-		 both components render as a single stacked stream — identical to
+		 both components render as a single stacked stream - identical to
 		 the pre-split layout. All reactive state (bp, cycle, compliance,
 		 charts, confirm-delete) stays in this shell; the two subcomponents
 		 are thin render-only wrappers to de-risk the split that was
@@ -630,7 +630,7 @@
 		     (per-variant key). Renders nothing once dismissed. -->
 		<WelcomeCard />
 		<!-- pi24 dogfood: hero is greeting + a positive recap WHEN today is
-		     logged. When today isn't logged, the hero stays silent — a
+		     logged. When today isn't logged, the hero stays silent - a
 		     blank day is also a valid good day. "+ Eintrag" affordances
 		     on BottomNav and /journal cover the add-today path; no nag
 		     here, no progress bar, no chips. -->
@@ -657,15 +657,15 @@
 					<a href="/log/today" class="text-xs font-medium hover:underline shrink-0" style="color: var(--accent)">{$t('common.edit')}</a>
 				</div>
 			{:else}
-				<!-- 2026-06-07 — no-today-log affordance. Mobile users reach
+				<!-- 2026-06-07 - no-today-log affordance. Mobile users reach
 					 /log/today via the BottomNav center FAB; desktop users had
 					 no entry point at all after the desktop FAB was dropped in
 					 pi24. PI v24 memo "dashboard CTA (S5+S1 hero)" planned for
-					 this slot — finally implementing it. Right-aligned + brick-
+					 this slot - finally implementing it. Right-aligned + brick-
 					 primary mirror the "Bearbeiten" link position when today
 					 IS logged, so the hero divider area carries one consistent
 					 "today's action" affordance in both states. No leading
-					 prompt copy — feedback_no_gaslight_good_days requires the
+					 prompt copy - feedback_no_gaslight_good_days requires the
 					 absence of judgment; the button speaks for itself. -->
 				<div class="mt-5 pt-5 flex items-center justify-end" style="border-top: 1px solid var(--border)">
 					<a
@@ -718,7 +718,7 @@
 		</aside>
 		</div>
 
-		<!-- CIPH-903 — encryption.badge + asterisk-divider moved into the
+		<!-- CIPH-903 - encryption.badge + asterisk-divider moved into the
 			 authed footer so the trust signal renders on every authed page,
 			 not just the dashboard. -->
 	</div>

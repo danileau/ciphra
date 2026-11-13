@@ -2,9 +2,9 @@
  * Shared month-aggregate math (design review 2026-06-11).
  *
  * Phase-day coverage and episode-count totals were computed three times
- * independently — `monthSummaryInsight.ts` (calendar rail), inline in
+ * independently - `monthSummaryInsight.ts` (calendar rail), inline in
  * `routes/reports/+page.svelte`, and `pdfPhaseDistribution.ts` (doctor
- * PDF) — and had already diverged on the legacy document shape:
+ * PDF) - and had already diverged on the legacy document shape:
  * migrated epilepc docs store counts under `data.seizures`, and only
  * two of the four call sites applied the fallback. A migrated user
  * could see "12 Phasentage" on one surface and 11 on another.
@@ -13,7 +13,7 @@
  * `effectiveColumns` precedent (screen and export must agree).
  * Rendering and presentation shaping stay at the call sites.
  *
- * Parity is pinned by `monthAggregates.test.ts` — including a fixture
+ * Parity is pinned by `monthAggregates.test.ts` - including a fixture
  * doc in the legacy `seizures` shape that must count identically
  * everywhere.
  */
@@ -51,7 +51,7 @@ export function multiDayEpisodeDays(
 	return days;
 }
 
-/** Number of distinct days on which ANY multiDay episode was active —
+/** Number of distinct days on which ANY multiDay episode was active -
  *  the reports "Phasentage" stat. Union over `multiDayEpisodeDays`. */
 export function anyPhaseDayCount(blueprint: Blueprint, docs: CiphraDocument[]): number {
 	const union = new Set<string>();

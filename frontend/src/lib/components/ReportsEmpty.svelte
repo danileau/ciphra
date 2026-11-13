@@ -1,9 +1,9 @@
 <!--
-	CIPH-893 — Reports empty state.
+	CIPH-893 - Reports empty state.
 
 	Clinical "Insufficient data" panel: tabular silhouette with greyed
 	dashes as cell content + a footnote. Distinct from the Asterisk
-	hero — speaks the language of a clinical report (rows + columns)
+	hero - speaks the language of a clinical report (rows + columns)
 	even when empty.
 -->
 <script lang="ts">
@@ -34,10 +34,10 @@
 		<tbody>
 			{#each Array(4) as _}
 				<tr>
-					<td>—</td>
-					<td>—</td>
-					<td>—</td>
-					<td>—</td>
+					<td>-</td>
+					<td>-</td>
+					<td>-</td>
+					<td>-</td>
 				</tr>
 			{/each}
 		</tbody>

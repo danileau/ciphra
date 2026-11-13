@@ -1,5 +1,5 @@
 <!--
-	CIPH-903 — Minimal authed footer.
+	CIPH-903 - Minimal authed footer.
 
 	Watermark + shorthand links only, per the brand-voice rule "trust apps
 	don't sparkle." Settings / locale / admin live in the navigation; this
@@ -22,11 +22,11 @@
 	// Focus surfaces: a sticky save bar / wizard chrome already owns the
 	// bottom of the screen. The footer would sit underneath them and read
 	// as visual debris, not as a closing signature.
-	// Admin is also hidden — operators don't need a patient-facing
+	// Admin is also hidden - operators don't need a patient-facing
 	// "Ende-zu-Ende verschlüsselt" reassurance line on an ops console;
 	// it reads as duplicate of the admin page's own zero-knowledge note
-	// (which is itself dropped — see admin/+page.svelte).
-	// 2026-06-07 — /setup removed from the hidden list. The wizard is
+	// (which is itself dropped - see admin/+page.svelte).
+	// 2026-06-07 - /setup removed from the hidden list. The wizard is
 	// the first thing a freshly-registered authed user sees; without
 	// the footer (and without the header's wordmark, which is added in
 	// parallel via the layout shell) the page reads as logged-out chrome.
@@ -48,12 +48,12 @@
 			<nav class="authed-footer-links" aria-label={$t('footer.links_aria')}>
 				<a href="/privacy">{$t('privacy.title')}</a>
 				<a href="/terms">{$t('terms.title')}</a>
-				<!-- AGPL-3.0 §13 — an authed user is "interacting with it
+				<!-- AGPL-3.0 §13 - an authed user is "interacting with it
 					 remotely", so the source offer has to reach this shell too,
 					 not only the public footer. URL is per-deployment; see
 					 $lib/source.ts. -->
 				<a href={sourceUrl} target="_blank" rel="noopener">{$t('footer.source')}</a>
-				<!-- CIPH-912 — `/#security` removed: routes to the public
+				<!-- CIPH-912 - `/#security` removed: routes to the public
 					 landing's #security anchor, but authed users land on the
 					 Companion dashboard so the anchor never resolves.
 					 Privacy + Terms cover the legal/info needs. -->
@@ -78,7 +78,7 @@
 		border-top: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
-		/* CIPH-912 — bumped from 6px to 12px so the trust line
+		/* CIPH-912 - bumped from 6px to 12px so the trust line
 		   ("✱ Ende-zu-Ende verschlüsselt") doesn't crowd the
 		   wordmark+links row when content wraps on narrow widths. */
 		gap: 12px;

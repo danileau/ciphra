@@ -46,7 +46,7 @@ function entryDoc(id: number, date: string, episodes: Record<string, number>): C
 	} as unknown as CiphraDocument;
 }
 
-describe('monthSummaryInsightFor — phase cohort (Anna)', () => {
+describe('monthSummaryInsightFor - phase cohort (Anna)', () => {
 	it('returns phase-day-coverage with sorted segments by day count desc', () => {
 		const docs = [
 			entryDoc(1, '2026-05-01', { manic: 1 }),
@@ -99,7 +99,7 @@ describe('monthSummaryInsightFor — phase cohort (Anna)', () => {
 	});
 });
 
-describe('monthSummaryInsightFor — discrete cohort (Hans)', () => {
+describe('monthSummaryInsightFor - discrete cohort (Hans)', () => {
 	it('returns top point-event episode by total count', () => {
 		const docs = [
 			entryDoc(1, '2026-05-01', { focal: 1 }),
@@ -152,14 +152,14 @@ describe('monthSummaryInsightFor — discrete cohort (Hans)', () => {
 	});
 });
 
-describe('monthSummaryInsightFor — cohorts without an insight branch', () => {
+describe('monthSummaryInsightFor - cohorts without an insight branch', () => {
 	it('cycle / narrative / custom return null', () => {
 		expect(monthSummaryInsightFor('cycle', bipolarBlueprint(), [], 31)).toBeNull();
 		expect(monthSummaryInsightFor('narrative', bipolarBlueprint(), [], 31)).toBeNull();
 		expect(monthSummaryInsightFor('custom', bipolarBlueprint(), [], 31)).toBeNull();
 	});
 
-	it('null is the documented contract — callers should hide the chip block', () => {
+	it('null is the documented contract - callers should hide the chip block', () => {
 		// Pin the discriminated-union exhaustiveness so a future cohort
 		// addition forces a TypeScript review here.
 		const insight = monthSummaryInsightFor('cycle', bipolarBlueprint(), [], 31);

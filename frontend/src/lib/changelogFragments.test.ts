@@ -3,7 +3,7 @@
  *
  * Pending entries live in changelog.d/, one file per change, because every PR
  * editing CHANGELOG.md's [Unreleased] block conflicted with every other open
- * PR — and resolving one lost #192's entries. These tests pin the compiler
+ * PR - and resolving one lost #192's entries. These tests pin the compiler
  * that the release script and the in-app /docs view share.
  */
 import { describe, it, expect } from 'vitest';
@@ -122,7 +122,7 @@ describe('pending entries', () => {
 	});
 });
 
-describe('withPendingFragments — the in-app view', () => {
+describe('withPendingFragments - the in-app view', () => {
 	it('shows fragments under [Unreleased] without touching released sections', () => {
 		const out = withPendingFragments(CHANGELOG, [doseHistory]);
 		const unreleased = out.slice(out.indexOf('## [Unreleased]'), out.indexOf('## [1.3.0]'));

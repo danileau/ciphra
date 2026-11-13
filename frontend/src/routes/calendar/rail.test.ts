@@ -1,5 +1,5 @@
 /**
- * CIPH-pi19-B — Persistent right-rail on lg:.
+ * CIPH-pi19-B - Persistent right-rail on lg:.
  *
  * Guards the lg+ 2-column grid wrapper, the rail's non-modal contract
  * (no role=dialog / aria-modal / scrim), the railSelectedDate
@@ -176,7 +176,7 @@ describe('CIPH-pi19-C trigger heatmap row', () => {
 
 	it('5-bucket opacity ramp covers 0 / 1 / 2 / 3-4 / 5+', () => {
 		// The discrete ramp must distinguish "no triggers" from "1 trigger"
-		// — a continuous mapping (0.2 + count * 0.15) would hide that.
+		// - a continuous mapping (0.2 + count * 0.15) would hide that.
 		expect(MINI).toMatch(/if\s*\(count\s*<=\s*0\)\s*return 0/);
 		expect(MINI).toMatch(/if\s*\(count\s*===\s*1\)\s*return 0\.3/);
 		expect(MINI).toMatch(/if\s*\(count\s*===\s*2\)\s*return 0\.5/);
@@ -223,7 +223,7 @@ describe('CIPH-pi19-C trigger heatmap row', () => {
 });
 
 describe('CIPH-pi19-D motion + visual-smoke contract', () => {
-	it('rail aside has NO transition: directive — re-target is instant', () => {
+	it('rail aside has NO transition: directive - re-target is instant', () => {
 		// Modal's fly transition was a dialog affordance. The rail is a
 		// layout element; sliding it on every day-pick would feel like
 		// the modal we just dissolved. This test asserts that none of

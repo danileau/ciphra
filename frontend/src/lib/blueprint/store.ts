@@ -10,7 +10,7 @@ function createBlueprintStore() {
 	let loaded = false;
 	// Remember the blueprint document's server id once loaded, so save() can
 	// reliably UPDATE it instead of re-deriving "does one exist?" from
-	// $documents — which is briefly empty during a reload and would otherwise
+	// $documents - which is briefly empty during a reload and would otherwise
 	// cause save() to CREATE a duplicate blueprint doc.
 	let bpDocId: number | null = null;
 
@@ -73,7 +73,7 @@ export const blueprint = createBlueprintStore();
 /** Whether a blueprint has been set up */
 export const hasBlueprint = derived(blueprint, ($bp) => $bp !== null);
 
-/** CIPH-882 — blueprint with `customizations.custom*` arrays merged into
+/** CIPH-882 - blueprint with `customizations.custom*` arrays merged into
  *  the primary collections. Most consumers should subscribe to this store
  *  instead of `blueprint` so user-added items render automatically. The
  *  setup wizard works on a local `working` variable and calls

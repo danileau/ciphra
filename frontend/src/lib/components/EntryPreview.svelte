@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * EntryPreview — read-only render of a CiphraDocument.
+	 * EntryPreview - read-only render of a CiphraDocument.
 	 *
 	 * Extracted from Companion / Journal / Calendar (CIPH-415) to consolidate
 	 * the chip-rich entry layout that was duplicated three times. Action
@@ -20,26 +20,26 @@
 	export let bp: Blueprint | null = null;
 	export let showDate: boolean = true;
 	export let compact: boolean = false;
-	/** CIPH-901a — when true, suppress the leading type-label
+	/** CIPH-901a - when true, suppress the leading type-label
 	 *  ("Eintrag" / "Notiz" / "Tagebuch"). Used in surfaces where the
 	 *  parent already carries type via a colored left rail (calendar
 	 *  day-detail panel, future journal redesign), so the type isn't
 	 *  signalled twice. The day-summary chips below carry the content. */
 	export let hideType: boolean = false;
-	/** CIPH-911b — when true, ALWAYS suppress multiDay episode chips
+	/** CIPH-911b - when true, ALWAYS suppress multiDay episode chips
 	 *  regardless of other content. Set when this card is rendered
 	 *  inside a journal closed-phase streak group: the streak header
 	 *  ("Gemischte Episode · 4 Tage") + the bracket carry the phase
 	 *  identity, so a "1× Gemischte Episode" chip on each day inside
 	 *  the bracket is redundant. The card may end up empty for days
-	 *  with only the multiDay logged — that's acceptable here because
+	 *  with only the multiDay logged - that's acceptable here because
 	 *  the streak bracket is the meaningful chrome. */
 	export let inStreak: boolean = false;
 	/** Optional. Used to rank chips by frequency over the past 30 days
 	 *  (CIPH-413). When omitted, chips render in source order. */
 	export let recentDocs: CiphraDocument[] | undefined = undefined;
 
-	// Positive markers (slept_well) aren't symptoms — suppress them from
+	// Positive markers (slept_well) aren't symptoms - suppress them from
 	// the chip strip. Legacy stored blueprints still list them, so we filter
 	// at render time rather than at preset time.
 	const POSITIVE_MARKERS = new Set(['slept_well']);
@@ -123,7 +123,7 @@
 			return matched.join(' · ');
 		}
 		// eslint-disable-next-line no-console
-		console.warn('[EntryPreview] paired vitals have mismatched times — listing separately');
+		console.warn('[EntryPreview] paired vitals have mismatched times - listing separately');
 		const aFmt = formatVitalValue(aRaw);
 		const bFmt = formatVitalValue(bRaw);
 		return [aFmt, bFmt].filter(Boolean).join(' / ');
@@ -145,7 +145,7 @@
 		return type;
 	}
 
-	// CIPH-881 — rescue-medication events are type:'event' + kind:'medication'.
+	// CIPH-881 - rescue-medication events are type:'event' + kind:'medication'.
 	// Render distinctly from freeform note-marker events so journal / calendar
 	// / dashboard never collapse them into a generic "Event" row.
 	$: isMedEvent = entry.data?.type === 'event' && entry.data?.kind === 'medication';
@@ -156,16 +156,16 @@
 		return resolveMedDisplay(bp, (doc.data as any)?.medicationId, $t).unit;
 	}
 
-	// CIPH-713 — diary docs are always private; entries/events become private
+	// CIPH-713 - diary docs are always private; entries/events become private
 	// when the user toggles the lock. Either way, render a small lock icon
 	// next to the type badge so the UI matches what's been excluded from any
 	// export.
 	$: isPrivate = entry.data?.type === 'diary' || entry.data?.private === true;
 
-	// CIPH-915 — defensive id-resolution. Orphan ids in the saved doc
+	// CIPH-915 - defensive id-resolution. Orphan ids in the saved doc
 	// (legacy data, dropped customizations, migration leftovers) used
 	// to fall through `symptomLabelFor` / `triggerLabelFor` / `epLabelFor`
-	// to "return id" — the raw id rendered as a chip. A doc with
+	// to "return id" - the raw id rendered as a chip. A doc with
 	// `data.symptoms = { "0": true, ... }` would render a stray "0"
 	// chip in the journal. Filter unknown ids out before they reach
 	// the chip rows.
@@ -189,10 +189,10 @@
 		: Object.entries(entry.data.triggers || {}).filter(([k, v]) => v && isKnownTrigger(k)).map(([k]) => k)) : [];
 	$: vitalEntries = bp ? Object.entries(entry.data.vitals || {}).filter(([k, v]) => v != null && String(v).trim() !== '' && String(v).trim() !== '0' && (bp.vitals || []).some((vt) => vt.id === k)) : [];
 
-	// CIPH-907c — When hideType is true the parent surface (journal day-
+	// CIPH-907c - When hideType is true the parent surface (journal day-
 	// header, calendar bottom sheet) shows a phase tag for active multiDay
 	// episodes. Rendering them again as chips here is duplication.
-	// BUT — if the entry has nothing else logged (only the multiDay
+	// BUT - if the entry has nothing else logged (only the multiDay
 	// episode), suppressing the chip leaves the card body empty. Smoke
 	// flagged this. So dedup is conditional: hide multiDay chips ONLY
 	// when there's other content to fill the card. Empty-content entries
@@ -215,7 +215,7 @@
 			})
 		: epEntriesRaw;
 
-	// CIPH-413 — rank by 30-day frequency
+	// CIPH-413 - rank by 30-day frequency
 	function buildFrequencyMap(docs: CiphraDocument[] | undefined, kind: 'symptoms' | 'triggers'): Map<string, number> {
 		const map = new Map<string, number>();
 		if (!docs) return map;
@@ -246,7 +246,7 @@
 		? [...trigIdsRaw].sort((a, b) => (trigFreq.get(b) || 0) - (trigFreq.get(a) || 0))
 		: trigIdsRaw;
 
-	// CIPH-410/414 — group vitals into paired cards / lab pills / daily-mean line.
+	// CIPH-410/414 - group vitals into paired cards / lab pills / daily-mean line.
 	type VitalGroup = {
 		paired: { pairLabel: string; vitalA: VitalField; valA: unknown; vitalB: VitalField; valB: unknown }[];
 		labs:   { vital: VitalField; value: unknown }[];
@@ -299,14 +299,14 @@
 		return v && v !== key ? v : fallback;
 	}
 
-	// CIPH-412 — collapse chips for daily_log entries with many chips
+	// CIPH-412 - collapse chips for daily_log entries with many chips
 	$: needsCollapse = entry.data.type === 'entry' && (symIds.length > 3 || trigIds.length > 2);
 	let expanded = false;
 	$: showChips = !needsCollapse || expanded;
 
 	$: chipSize = compact ? 'text-[10px]' : 'text-[11px]';
 
-	// CIPH-411 pill style — single neutral background, optional left stripe.
+	// CIPH-411 pill style - single neutral background, optional left stripe.
 	function pillStyle(stripe: string | null): string {
 		const base = 'background: var(--surface-muted); color: var(--text-primary);';
 		if (!stripe) return base;
@@ -334,7 +334,7 @@
 	{#if showDate}
 		<span class="text-xs font-normal" style="color: var(--text-muted)">{hideType && !isPrivate ? '' : ' · '}{formatDate(entry)}</span>
 	{/if}
-	<!-- CIPH-907c — Summary count line ("· 4 Symptome · 1 Episoden · 2
+	<!-- CIPH-907c - Summary count line ("· 4 Symptome · 1 Episoden · 2
 		 Vitals") suppressed when hideType is true. The journal's day-
 		 header phase tag + the chips below already say everything; the
 		 summary was a third reference to the same data. -->
@@ -358,7 +358,7 @@
 		<p class="text-xs mt-0.5" style="color: var(--text-muted)">{epLabelFor(entry.data.episodeType)}</p>
 	{/if}
 
-	<!-- CIPH-760 — preserved epilepc raw type_name (e.g. "Fokal rechts") -->
+	<!-- CIPH-760 - preserved epilepc raw type_name (e.g. "Fokal rechts") -->
 	{#if entry.data.epilepc_original_type}
 		<p class="text-xs mt-0.5" style="color: var(--text-muted)">
 			{$t('entry.original_type_label').replace('{value}', String(entry.data.epilepc_original_type))}
@@ -375,11 +375,11 @@
 	{/if}
 
 	{#if showChips}
-		<!-- CIPH-902 — Per-chip color stripes (red on episodes, brand on
+		<!-- CIPH-902 - Per-chip color stripes (red on episodes, brand on
 			 triggers) dropped: a calm timeline shouldn't fight the rail
 			 color. The "Nx" count prefix on episodes carries the "this is
 			 an episode" signal; symptoms vs triggers stay legible by label.
-			 +N truncation also dropped — let card height carry "loud day
+			 +N truncation also dropped - let card height carry "loud day
 			 vs quiet day" as visual rhythm. -->
 		{#if epEntries.length > 0}
 			<div
@@ -433,7 +433,7 @@
 		{/if}
 	{/if}
 
-	<!-- Vital snippets — paired cards, lab pills, then daily-mean line (CIPH-410/414) -->
+	<!-- Vital snippets - paired cards, lab pills, then daily-mean line (CIPH-410/414) -->
 	{#if entry.data.type === 'entry' && (groupedVitals.paired.length > 0 || groupedVitals.labs.length > 0 || groupedVitals.means.length > 0)}
 		{#if groupedVitals.paired.length > 0}
 			<div class="flex flex-col gap-1 mt-2">
@@ -477,7 +477,7 @@
 	>{entry.data.text}</p>
 {/if}
 
-<!-- CIPH-881b — rescue-medication pill: brand-tinted, distinct from
+<!-- CIPH-881b - rescue-medication pill: brand-tinted, distinct from
 	 freeform-event "Event" badge so journal / calendar / dashboard show
 	 the medication clearly. -->
 {#if isMedEvent}
@@ -509,10 +509,10 @@
 	<p class="text-xs mt-1.5 italic line-clamp-2" style="color: var(--text-secondary)">"{entry.data.notes}"</p>
 {/if}
 
-<!-- CIPH-911b — placeholder for empty cards inside a closed-phase streak.
+<!-- CIPH-911b - placeholder for empty cards inside a closed-phase streak.
 	 When inStreak suppresses the multiDay chip and there's nothing else
 	 to render, the card would be visually empty. The bracket header
-	 already says "Gemischte Episode · 4 Tage" — show a quiet "Phase
+	 already says "Gemischte Episode · 4 Tage" - show a quiet "Phase
 	 weiter aktiv" inside the card so it doesn't read as broken. -->
 {#if inStreak && !hasNonMultiDayContent && entry.data.type === 'entry'}
 	<p class="entry-preview-streak-placeholder">{$t('entry_preview.phase_continues')}</p>
@@ -520,14 +520,14 @@
 
 <style>
 	/* Diary text matches the body size of every other journal entry (the
-	   notes/secondary text-xs = 12px) — it previously rendered at 14px and read
+	   notes/secondary text-xs = 12px) - it previously rendered at 14px and read
 	   as larger than other cards. Same sans stack as the rest of the app
 	   (CIPH-902's serif treatment was reverted earlier). */
 	.entry-preview-diary-text {
 		font-size: 12px;
 		line-height: 1.5;
 	}
-	/* CIPH-911b — placeholder for streak-only days. */
+	/* CIPH-911b - placeholder for streak-only days. */
 	.entry-preview-streak-placeholder {
 		font-size: 12px;
 		font-style: italic;

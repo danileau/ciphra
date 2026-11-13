@@ -1,5 +1,5 @@
 /**
- * Dose bands — geometry of the before/after structure (2026-09-17).
+ * Dose bands - geometry of the before/after structure (2026-09-17).
  */
 import { describe, it, expect } from 'vitest';
 import { binPosition, dayBins, doseBands, medsChangedIn, monthBins } from './doseBands';

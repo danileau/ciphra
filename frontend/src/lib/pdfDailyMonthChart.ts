@@ -1,5 +1,5 @@
 /**
- * CIPH-pi21-Track-B-5 — Daily-month chart aggregation.
+ * CIPH-pi21-Track-B-5 - Daily-month chart aggregation.
  *
  * When `scope === 'month'` the doctor PDF replaces the implicit 24-month
  * trajectory with a per-day chart for the focus month. This module owns
@@ -23,7 +23,7 @@ export interface DailyMonthSeries {
  * flag if any symptom is truthy.
  *
  * `episodeCols` is the cohort's episode-type id list (per `blueprint.episodeTypes`)
- * — same list the 24-month aggregation walks. Passing it in keeps the daily
+ * - same list the 24-month aggregation walks. Passing it in keeps the daily
  * + monthly aggregations on identical column semantics so the line chart in
  * month-scope and year-scope reads the same data.
  */

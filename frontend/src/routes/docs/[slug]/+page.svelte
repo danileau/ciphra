@@ -13,7 +13,7 @@
 		<header>
 			<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{doc.meta.title}</h1>
 		</header>
-		<!-- First-party, in-repo markdown — see lib/docs.ts on why {@html} is safe here. -->
+		<!-- First-party, in-repo markdown - see lib/docs.ts on why {@html} is safe here. -->
 		<article class="doc-prose">{@html doc.html}</article>
 	{:else}
 		<p class="text-sm" style="color: var(--text-secondary)">
@@ -73,7 +73,7 @@
 	}
 	/* A document that exists in the repository but is not published in
 	   the app (see lib/docs-manifest.ts). Reads as a name, not as a
-	   broken link — dotted underline, no colour, no pointer. */
+	   broken link - dotted underline, no colour, no pointer. */
 	.doc-prose :global(.doc-offsite) {
 		color: var(--text-muted);
 		text-decoration: underline dotted;

@@ -1,4 +1,4 @@
-// Usernames — the one place a typed or autofilled username is turned into the
+// Usernames - the one place a typed or autofilled username is turned into the
 // string the server sees.
 //
 // The server rule (api/server.py USERNAME_RE) is `^[a-z0-9_]{3,64}$` after
@@ -25,7 +25,7 @@ export function isValidUsername(canonical: string): boolean {
  * What is wrong with a username, for the "technical details" disclosure.
  *
  * Names the length and the code points of the characters that are not
- * allowed — never the value itself. An autofilled "username" can be a saved
+ * allowed - never the value itself. An autofilled "username" can be a saved
  * recovery code, and this text is on screen.
  */
 export function describeUsername(canonical: string): string {

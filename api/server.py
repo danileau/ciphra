@@ -1,5 +1,5 @@
 """
-ciphra — API Server
+ciphra - API Server
 Thin encrypted blob store. The server never sees plaintext health data.
 """
 
@@ -67,7 +67,7 @@ CORS(app, supports_credentials=True, origins=CORS_ORIGINS)
 
 # Storage: redis in production (survives `systemctl restart ciphra-app`,
 # shared across gunicorn workers). Falls back to in-memory if REDIS_URL
-# is unset — fine for local dev + tests, NOT for prod (counters reset on
+# is unset - fine for local dev + tests, NOT for prod (counters reset on
 # restart + are per-worker, so the effective limit becomes N_workers ×
 # configured limit).
 _RATELIMIT_STORAGE = os.environ.get('REDIS_URL', 'memory://')
@@ -79,7 +79,7 @@ limiter = Limiter(
     # Enablement is its OWN switch, never a side effect of another flag.
     # RATELIMIT_ENABLED defaults ON; only an explicit '0' disables it (local
     # dev that wants no throttling). This used to be tied to CIPHRA_DEV_MOCKS,
-    # so the mock-data toggle silently disabled the entire rate limiter — a
+    # so the mock-data toggle silently disabled the entire rate limiter - a
     # footgun: one env var set in a prod-like deploy killed a whole control
     # class with no independent signal. Decoupled 2026-08-22.
     enabled=os.environ.get('RATELIMIT_ENABLED', '1') != '0',
@@ -91,7 +91,7 @@ def _too_large(_e):
     return jsonify({'error': 'request_too_large'}), 413
 
 
-# SAST/DAST F5 — keep every API error in the JSON shape clients expect.
+# SAST/DAST F5 - keep every API error in the JSON shape clients expect.
 # Flask's default error pages are HTML ("The browser or proxy sent a request
 # that this server could not understand…") which both leaks the framework and
 # breaks the API contract for callers doing res.json(). These handlers catch
@@ -114,7 +114,7 @@ def _method_not_allowed(_e):
 
 @app.errorhandler(500)
 def _internal_error(_e):
-    # The F5 contract above covered 400/404/405/413 but not 500 — so an
+    # The F5 contract above covered 400/404/405/413 but not 500 - so an
     # unhandled exception still escaped as Flask's raw HTML page, leaking the
     # framework and breaking res.json() for callers. A black-box scan hit this
     # by POSTing a non-object JSON body (see _json_object): the crash fired
@@ -129,11 +129,11 @@ def _json_object() -> dict:
 
     Every route previously wrote `data = request.get_json() or {}`. That
     guards an empty/absent body, but a body that is valid JSON yet not an
-    object — a top-level array `[1,2,3]` or scalar `123` — is truthy, survives
+    object - a top-level array `[1,2,3]` or scalar `123` - is truthy, survives
     the `or {}`, and then blows up on the first `data.get(...)` with
     AttributeError (list/int has no `.get`). Because that happens above each
     route's try/except, it surfaced as an unhandled 500 on pre-auth endpoints
-    (register, login, login/init) — a malformed-input contract bug reachable
+    (register, login, login/init) - a malformed-input contract bug reachable
     by anyone.
 
     `request.get_json()` (non-silent) keeps the existing behaviour for a
@@ -151,8 +151,8 @@ def _str_field(data: dict, key: str) -> str:
     """A string field from a JSON body: '' when absent or null, 400 otherwise.
 
     Routes used to read `(data.get('username') or '').strip()`. The `or ''`
-    covers a missing or null field, but any TRUTHY non-string — `123`, `[1]`,
-    `{"a":1}` — sails through and `.strip()` raises AttributeError. Like the
+    covers a missing or null field, but any TRUTHY non-string - `123`, `[1]`,
+    `{"a":1}` - sails through and `.strip()` raises AttributeError. Like the
     non-object body `_json_object` catches, that fired above the route's
     try/except, so it was an unhandled 500 on pre-auth endpoints (register,
     login, login/init, recover/init, recover). Raising BadRequest sends it to
@@ -176,7 +176,7 @@ def _is_text(value, max_len=None, min_len=1) -> bool:
     database instead, as a 500: a non-string (psycopg2 cannot adapt a dict, and
     turns a list into an ARRAY the TEXT column rejects), and a string holding
     U+0000, which PostgreSQL text cannot contain at all (psycopg2 refuses it
-    with ValueError). No ciphra field legitimately holds either — they are
+    with ValueError). No ciphra field legitimately holds either - they are
     base64, compact JSON, an opaque key, or a short label. `max_len=None` leaves
     the length to MAX_CONTENT_LENGTH.
     """
@@ -196,7 +196,7 @@ def _as_int(value):
 
     Refuses bool on purpose. In Python `True` IS an int: `int(True) == 1` and
     `True in (1, 3)` both hold, so a JSON `true` quietly passed as the number 1
-    — as a share_class, a share_mask, a document id. Refuses floats rather
+    - as a share_class, a share_mask, a document id. Refuses floats rather
     than truncating 1.9 to 1.
     """
     if isinstance(value, bool):
@@ -230,7 +230,7 @@ def set_security_headers(resp):
     resp.headers.setdefault('Permissions-Policy',
         'camera=(), microphone=(), geolocation=(), payment=()'
     )
-    # Only set HSTS when the request itself was HTTPS — avoids locking dev
+    # Only set HSTS when the request itself was HTTPS - avoids locking dev
     # setups out of plain-http localhost.
     if request.is_secure:
         resp.headers.setdefault(
@@ -266,7 +266,7 @@ def get_db():
 # Both matter here because the deploy is pull-based and rolls back on its own:
 # a release that adds a column, fails its health check, and gets rolled back
 # leaves the previous image running against the newer schema. That has to be a
-# defined, survivable state — so:
+# defined, survivable state - so:
 #
 #   compatible=True   an older image can still run against a database that has
 #                     this migration. True for anything additive: a new
@@ -281,7 +281,7 @@ def get_db():
 # refuse to boot on the schema the failed release had already applied.
 #
 # To add one: append with the next number, set `compatible` honestly, and bump
-# SCHEMA_VERSION. Never renumber or edit a shipped migration — databases in the
+# SCHEMA_VERSION. Never renumber or edit a shipped migration - databases in the
 # field have already recorded it.
 SCHEMA_VERSION = 10
 
@@ -290,7 +290,7 @@ SCHEMA_VERSION = 10
 # `share_class` is ONE bit of metadata the server is allowed to learn about a
 # document: whether its owner considers it shareable, or personal. Operator
 # decision 2026-08-30, and it is what makes a per-invite scope enforceable at
-# all — the document TYPE lives inside the ciphertext, so the server cannot
+# all - the document TYPE lives inside the ciphertext, so the server cannot
 # work this out for itself. It stays at two classes deliberately: a full
 # per-type label would tell the server the type of every document, which is a
 # larger disclosure and was not approved. Named in SECURITY_MODEL.md.
@@ -309,7 +309,7 @@ def _share_class(data):
     """The share_class in a request body, or None if absent/invalid.
 
     Only the OWNER may set this. Caregiver write paths must not pass a body
-    through to here — see family_documents_create.
+    through to here - see family_documents_create.
     """
     value = _as_int(data.get('share_class'))
     return value if value in (SHARE_CLASS_SHAREABLE, SHARE_CLASS_PERSONAL) else None
@@ -330,7 +330,7 @@ def _valid_share_mask(raw) -> bool:
 # older image booted after a rollback still writes recovery_auth / grant_auth
 # for new sign-ups and invitations. Without the per-boot pass, the roll-forward
 # would leave those rows with no verifier: recovery and the claim would fail
-# for exactly those people, silently, and SHA-256(key) — a working proof —
+# for exactly those people, silently, and SHA-256(key) - a working proof -
 # would stay in the database.
 _PROOF_NOT_KEY_CONVERSION = (
     " UPDATE users SET recovery_verifier ="
@@ -358,7 +358,7 @@ MIGRATIONS = [
     # One metadata bit per user, used by /admin to count epilepc migrations.
     (7, 'users.registration_source',
      "ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_source VARCHAR(16) DEFAULT 'web'", True),
-    # Track-3 3.4 — bulk-import idempotency. `client_key` is an OPAQUE,
+    # Track-3 3.4 - bulk-import idempotency. `client_key` is an OPAQUE,
     # server-blind token the client supplies (sha256(username:source_id)) so a
     # retried migration batch is a no-op instead of duplicating docs. Nullable
     # + a PARTIAL unique index → existing rows and all normal single-doc saves
@@ -370,13 +370,13 @@ MIGRATIONS = [
     # Per-invite sharing scope. Additive, so an older image simply never
     # selects either column and keeps behaving as it did. `share_mask`
     # defaults to 1 (shareable only), which is what every existing grant
-    # already effectively had after the client-side filter shipped — so no
+    # already effectively had after the client-side filter shipped - so no
     # grant's visible content changes on the day this lands.
     (9, 'sharing scope: share_class + share_mask',
      "ALTER TABLE encrypted_documents ADD COLUMN IF NOT EXISTS share_class SMALLINT;"
      " ALTER TABLE family_grants ADD COLUMN IF NOT EXISTS share_mask INTEGER NOT NULL DEFAULT 1", True),
     # Proof, not key (2026-11-12). /recover used to receive the raw
-    # recovery_key and /family/grants/claim the raw family_key — the very keys
+    # recovery_key and /family/grants/claim the raw family_key - the very keys
     # that unwrap recovery_vault and wrapped_master, both stored here. Now the
     # client sends proof = SHA-256(key) and the server stores
     # verifier = SHA-256(proof). The old column held SHA-256(key), which IS
@@ -402,7 +402,7 @@ def _apply_migrations(cur):
     """Bring the database up to SCHEMA_VERSION and record where it got to.
 
     Existing databases predate the ledger: they record version 0 while already
-    carrying every column. That is why each statement stays idempotent — the
+    carrying every column. That is why each statement stays idempotent - the
     first run after this ships replays 1-8 as no-ops and stamps the result.
     """
     cur.execute("""
@@ -433,7 +433,7 @@ def _apply_migrations(cur):
         # once, because it means a rollback happened.
         logger.warning(
             "schema: database is at version %s, this image knows %s. "
-            "Running anyway — every migration in between is additive.",
+            "Running anyway - every migration in between is additive.",
             current, SCHEMA_VERSION,
         )
         return current
@@ -477,7 +477,7 @@ def init_db():
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                 )
             """)
-            # Opaque document store — no record_type, no event dates.
+            # Opaque document store - no record_type, no event dates.
             # Server sees only: user_id + encrypted blob + upload timestamp.
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS encrypted_documents (
@@ -534,7 +534,7 @@ def init_db():
                 if converted:
                     logger.warning(
                         "proof-not-key: converted %s row(s) written in the old "
-                        "format — an older image ran against this database "
+                        "format - an older image ran against this database "
                         "(rollback?)", converted)
     logger.info("Database initialized (schema version %s)", applied)
 
@@ -561,7 +561,7 @@ def _token_subject(user_id: int):
     Returns {'password_version', 'is_admin'}, or None when the row is gone.
     Raises AuthStoreUnavailable when the lookup itself fails.
 
-    This is where a token's authority comes from — not from its claims. The
+    This is where a token's authority comes from - not from its claims. The
     lookup it replaces returned password_version 1 both for a missing row and
     on ANY exception, which failed open twice over: a deleted user's token
     (pv 1 unless they had changed their password) kept working until it
@@ -657,13 +657,13 @@ def admin_required(f):
 #              its owner locked out indefinitely (the lockout-DoS fixed in #158).
 #   admin      POST /api/admin/users/<id>/lock. Meant to stop the account being
 #              used at all, so a correct credential must NOT clear it. Before
-#              this split it did — login and recovery both cleared any lock on
+#              this split it did - login and recovery both cleared any lock on
 #              success, which made the admin lock a no-op against anyone who
 #              knew their own password.
 #
 # Told apart without a schema change, by how far ahead the lock points. An
 # automatic lock is never more than 15 minutes out; an admin lock is set a
-# century out. Anything more than a day ahead is an admin lock — a margin wide
+# century out. Anything more than a day ahead is an admin lock - a margin wide
 # enough that no plausible clock skew between app and database blurs the two.
 AUTO_LOCK_DURATION = timedelta(minutes=15)
 ADMIN_LOCK_DURATION = timedelta(days=36500)
@@ -673,7 +673,7 @@ RECOVERY_MAX_ATTEMPTS = 3
 
 # Stable error code for "correct credential, but an admin locked this account".
 # 403, not 429: waiting will not help. Only ever sent to a caller who has just
-# proven the credential — a wrong guess against an admin-locked account gets
+# proven the credential - a wrong guess against an admin-locked account gets
 # the same 429 as any locked account, so the two locks look alike from outside.
 ACCOUNT_SUSPENDED = 'account_suspended'
 
@@ -689,16 +689,16 @@ def _lock_state(locked_until, now):
     return 'admin' if locked_until - now > ADMIN_LOCK_THRESHOLD else 'auto'
 
 
-# Counting a failure is ONE statement. It used to be read-then-write — SELECT
-# login_attempts, then SET login_attempts = <read value + 1> — so concurrent
+# Counting a failure is ONE statement. It used to be read-then-write - SELECT
+# login_attempts, then SET login_attempts = <read value + 1> - so concurrent
 # wrong guesses read the same count and wrote the same +1, and a parallel burst
 # got many more than five guesses in before the lock.
 #
 # The CASEs handle an EXPIRED lock. Nothing but a success ever reset the
 # counters, so once an account had been locked, the lock ran out with the
 # counter still at 5 and every later typo re-locked it for another 15 minutes.
-# An expired lock now means the cooldown was served: both counters restart —
-# the lock is shared, so its expiry clears both — and this failure counts as
+# An expired lock now means the cooldown was served: both counters restart -
+# the lock is shared, so its expiry clears both - and this failure counts as
 # the first. Every SET expression sees the row as it was before the UPDATE.
 _COUNT_FAILED_LOGIN_SQL = """
     UPDATE users SET
@@ -732,7 +732,7 @@ def _count_failed_attempt(cur, sql, user_id, now):
 
 
 def _apply_auto_lock(cur, user_id, now):
-    """Start a 15-minute lock — unless an admin lock is already in place.
+    """Start a 15-minute lock - unless an admin lock is already in place.
 
     The guard matters for a lock that lands between this request's SELECT and
     here: overwriting a century-long admin lock with a 15-minute one would
@@ -758,12 +758,12 @@ def _anonymize_ip(ip):
     An IPv4-mapped IPv6 address (`::ffff:1.2.3.4`) is an IPv4 client and is
     truncated as one. Idempotent: an already-anonymized value maps to itself,
     which is what lets the retention job skip rows it has already done.
-    Anything unparseable returns None — dropping a value we cannot truncate is
+    Anything unparseable returns None - dropping a value we cannot truncate is
     the safe direction.
 
     Reimplemented on `ipaddress`: the string-splitting version mangled
     compressed IPv6 (`2001:db8::1` → `2001:db8:::`, `::ffff:1.2.3.4` →
-    `::ffff::`) — invalid addresses, and for the mapped form one that kept
+    `::ffff::`) - invalid addresses, and for the mapped form one that kept
     nothing of the network at all.
     """
     if not ip or not isinstance(ip, str):
@@ -795,7 +795,7 @@ _RETENTION_LOCK_KEY = 0x636970687261
 
 def apply_audit_retention():
     """Delete audit rows older than AUDIT_RETENTION_DAYS; anonymize IPs older
-    than AUDIT_IP_ANONYMIZE_DAYS. Idempotent — safe on every boot, daily, and
+    than AUDIT_IP_ANONYMIZE_DAYS. Idempotent - safe on every boot, daily, and
     on demand.
 
     Returns what actually happened, so callers stop reporting success blind:
@@ -938,8 +938,8 @@ def verify_proof(proof_b64, legacy_key_b64, verifier: str) -> bool:
     verifier = SHA-256(proof), proof = SHA-256(key). A current client sends the
     proof. A client cached from before 2026-11-12 still sends the raw key; it
     is hashed once more here so those users are not locked out while their
-    PWA updates. Accepting it changes nothing about exposure — that client has
-    already sent the key — and the legacy branch can go once old clients are
+    PWA updates. Accepting it changes nothing about exposure - that client has
+    already sent the key - and the legacy branch can go once old clients are
     gone.
     """
     if proof_b64 is not None:
@@ -957,7 +957,7 @@ def verifier_from(verifier_b64, legacy_auth_b64):
 
     Current clients send `*_verifier` = SHA-256(SHA-256(key)). An old client
     sends `*_auth` = SHA-256(key), which is the proof itself and must never be
-    stored as is — hash it once more.
+    stored as is - hash it once more.
     """
     if verifier_b64 is not None:
         return verifier_b64
@@ -1055,7 +1055,7 @@ def health():
 @limiter.limit("3 per minute")
 def register():
     """Accepts a pre-built vault bundle from the browser. The server never
-    sees the password, master_key, or recovery_code — those stay on device."""
+    sees the password, master_key, or recovery_code - those stay on device."""
     data = _json_object()
     username = _str_field(data, 'username').strip().lower()
     auth_hash = data.get('auth_hash')
@@ -1066,7 +1066,7 @@ def register():
     recovery_params = data.get('recovery_params')
     recovery_verifier = data.get('recovery_verifier')
     legacy_recovery_auth = data.get('recovery_auth')  # pre-2026-11-12 client
-    # Optional metadata-only flag — the /migrate flow passes 'migrate' so
+    # Optional metadata-only flag - the /migrate flow passes 'migrate' so
     # the /admin dashboard can count epilepc migrations vs. organic signups.
     # Unknown values are silently coerced to 'web' (no client-driven leak).
     raw_source = (data.get('source') or 'web')
@@ -1106,11 +1106,11 @@ def register():
             with conn.cursor() as cur:
                 cur.execute("SELECT id FROM users WHERE username = %s", (username,))
                 if cur.fetchone():
-                    # Generic error — same status code/string whether the
+                    # Generic error - same status code/string whether the
                     # username is taken, malformed, or the bundle is bad.
                     # The client distinguishes via the user-facing copy
                     # ("try another username"), the server doesn't disclose.
-                    # The 409 itself still says "taken" — an enumeration
+                    # The 409 itself still says "taken" - an enumeration
                     # oracle registration cannot avoid; see SECURITY_MODEL.md.
                     return jsonify({'error': 'registration_failed'}), 409
 
@@ -1132,7 +1132,7 @@ def register():
         # Two registrations of the same name at once both pass the SELECT
         # above; the unique index lets one INSERT through and rejects the
         # other. That loser is the same "taken" case as the pre-check, not a
-        # server fault — same 409, same body.
+        # server fault - same 409, same body.
         return jsonify({'error': 'registration_failed'}), 409
     except Exception:
         logger.exception("Registration failed")
@@ -1144,7 +1144,7 @@ def _encode_vault_params(params: dict) -> str:
     `btoa(JSON.stringify(obj))`.
 
     The separators matter and are the whole point of this helper. A real
-    user's blob is produced by JSON.stringify, which is COMPACT — no space
+    user's blob is produced by JSON.stringify, which is COMPACT - no space
     after ',' or ':'. Python's json.dumps defaults to `', '` / `': '`, so a
     server-generated blob was 192 base64 chars where a real one is ~156. That
     single formatting gap turned the anti-enumeration fake params into an
@@ -1161,7 +1161,7 @@ def _encode_vault_params(params: dict) -> str:
 def _fake_auth_params(username: str) -> str:
     """Deterministic fake params for unknown users, to thwart enumeration.
     Uses HMAC(SECRET_KEY, username) as the salt so timing + response shape
-    match a real user. Params must match what the client expects — including
+    match a real user. Params must match what the client expects - including
     the compact JSON serialization (see _encode_vault_params)."""
     fake_salt = hmac.new(SECRET_KEY.encode(), username.encode(), hashlib.sha256).digest()
     params = {
@@ -1222,13 +1222,13 @@ def login():
                     return jsonify({'error': 'Invalid credentials'}), 401
 
                 # Compute the lock state, but DON'T reject on it yet. A correct
-                # password must succeed even during an AUTOMATIC lock —
+                # password must succeed even during an AUTOMATIC lock -
                 # otherwise an attacker who only knows the username can lock
                 # the account (5 wrong guesses → 15 min) and, with repeated
                 # locks, deny the real user indefinitely. That lock gates
                 # FAILED attempts, not a proven identity. (Guessing stays
                 # bounded: wrong attempts are still rejected, and nginx +
-                # flask-limiter cap the rate.) An ADMIN lock is the exception —
+                # flask-limiter cap the rate.) An ADMIN lock is the exception -
                 # see "Account locks" above.
                 now = datetime.now(timezone.utc)
                 lock = _lock_state(user['locked_until'], now)
@@ -1237,7 +1237,7 @@ def login():
                     if lock == 'admin':
                         audit(conn, user['id'], 'LOGIN_REFUSED_LOCKED')
                         return jsonify({'error': ACCOUNT_SUSPENDED}), 403
-                    # Success clears both counters AND an automatic lock —
+                    # Success clears both counters AND an automatic lock -
                     # identity is proven. The WHERE re-checks for an admin lock
                     # that landed after the SELECT above, which must survive;
                     # RETURNING hands back the password_version as of this
@@ -1273,7 +1273,7 @@ def login():
                         },
                     }), 200
                 else:
-                    # Wrong password. If already locked — either kind — reject
+                    # Wrong password. If already locked - either kind - reject
                     # without letting the attacker make progress: no counter
                     # change, so an admin lock is never overwritten, and the
                     # same 429 for both, so a guesser cannot tell them apart.
@@ -1335,16 +1335,16 @@ def store_document():
         return jsonify({'error': 'Failed to store document'}), 500
 
 
-# Track-3 3.4 — bulk import. One round-trip stores up to BATCH_MAX_DOCS encrypted
+# Track-3 3.4 - bulk import. One round-trip stores up to BATCH_MAX_DOCS encrypted
 # docs (vs one request per doc, the reason for the migration rate-limit bump).
 # Partial-success: each blob gets its own status; one bad blob never fails the
 # batch. Idempotent via the opaque client_key (ON CONFLICT DO NOTHING), so a
 # retried/resumed migration re-sends the same batch and gets `skipped`, not
-# duplicates. Additive — the single POST /api/documents above is unchanged.
+# duplicates. Additive - the single POST /api/documents above is unchanged.
 BATCH_MAX_DOCS = int(os.environ.get('BATCH_MAX_DOCS', 100))
 # A real client_key is `v1:` + 43 base64url chars. The cap is generous for a
 # future scheme, and far below the ~2.7 KB a btree index entry may hold: a
-# longer key made the INSERT itself fail, which aborts the whole transaction —
+# longer key made the INSERT itself fail, which aborts the whole transaction -
 # the one bad blob failing the batch that the promise above rules out.
 CLIENT_KEY_MAX_LEN = 256
 
@@ -1446,7 +1446,7 @@ def classify_documents():
 
     Documents written before the sharing scope existed carry NULL, which the
     caregiver read treats as not-shareable. That is the safe direction, but it
-    means a caregiver sees less until the owner's client says which is which —
+    means a caregiver sees less until the owner's client says which is which -
     so the client sends the whole set in one call after its next load, and
     again before it creates or rescopes an invitation, where correctness
     actually matters.
@@ -1585,7 +1585,7 @@ def _fake_recovery_params(username: str) -> str:
 
 
 def _fake_recovery_vault(username: str) -> str:
-    # 60 bytes = nonce(12) + tag(16) + ct(32) — same shape as a real wrapped master key
+    # 60 bytes = nonce(12) + tag(16) + ct(32) - same shape as a real wrapped master key
     buf = b''
     counter = 0
     while len(buf) < 60:
@@ -1604,7 +1604,7 @@ def recover_init():
     """Returns recovery_params + recovery_vault so the browser can decrypt
     master_key locally using the recovery code.
 
-    Always returns 200 with structurally valid values — fake deterministic
+    Always returns 200 with structurally valid values - fake deterministic
     blobs for unknown users or users without recovery. Prevents enumeration
     of who has an account and who has recovery enabled. Real attempts fail
     at the subsequent /api/recover step when the recovery proof mismatches."""
@@ -1643,7 +1643,7 @@ def recover_init():
 def recover():
     """Client has decrypted master_key via recovery code and re-wrapped it with
     a new password. The client proves it holds recovery_key by sending
-    proof = SHA-256(recovery_key) — never the key itself, which unwraps the
+    proof = SHA-256(recovery_key) - never the key itself, which unwraps the
     recovery_vault stored here. Server checks SHA-256(proof) against
     recovery_verifier, then swaps auth/vault (recovery_vault stays untouched)."""
     data = _json_object()
@@ -1680,8 +1680,8 @@ def recover():
                 if not user or not user['recovery_verifier']:
                     return jsonify({'error': 'Invalid recovery code'}), 401
 
-                # Same lockout gate as login — 3 failed recoveries → 15 min
-                # lock — and the same DoS fix: compute the lock but let a
+                # Same lockout gate as login - 3 failed recoveries → 15 min
+                # lock - and the same DoS fix: compute the lock but let a
                 # correct recovery code through an AUTOMATIC lock, so an
                 # attacker who knows a username can't lock the real user out of
                 # recovery. An admin lock holds here too: recovery resets the
@@ -1709,7 +1709,7 @@ def recover():
                     return jsonify({'error': ACCOUNT_SUSPENDED}), 403
 
                 # The WHERE re-checks for an admin lock that landed after the
-                # SELECT — the swap must not clear it (see login).
+                # SELECT - the swap must not clear it (see login).
                 cur.execute("""
                     UPDATE users
                     SET auth_hash = %s, auth_params = %s, vault_params = %s,
@@ -1770,7 +1770,7 @@ def change_password():
                     # 403, not 401: the SESSION is valid, the re-entered
                     # password is not. The frontend reads any 401 on an
                     # authenticated request as an expired session and logs the
-                    # user out — a typo here used to sign them out of the app.
+                    # user out - a typo here used to sign them out of the app.
                     return jsonify({'error': 'Current password is incorrect'}), 403
 
                 cur.execute("""
@@ -1803,7 +1803,7 @@ def _revoke_grants_claimed_by(cur, user_id):
 
     Call before deleting the user. `family_grants.claimed_by_user_id` is ON
     DELETE SET NULL, so deleting a caregiver used to put their grant back to
-    "unclaimed" — still live, same family code — and whoever next held the
+    "unclaimed" - still live, same family code - and whoever next held the
     link or the code could claim the patient's data. The patient can invite
     again; nobody should inherit an invitation by default.
     """
@@ -1831,7 +1831,7 @@ def delete_account():
                     return jsonify({'error': 'User not found'}), 404
 
                 if not verify_auth(auth_key, user['auth_hash']):
-                    # 403, not 401 — see change_password.
+                    # 403, not 401 - see change_password.
                     return jsonify({'error': 'Invalid password'}), 403
 
                 audit(conn, request.user_id, 'ACCOUNT_DELETED')
@@ -1906,7 +1906,7 @@ def admin_stats():
                 """)
                 new_users_7d = cur.fetchone()['cnt']
 
-                # CIPH-pi24-5b — today-lens + deletions-count.
+                # CIPH-pi24-5b - today-lens + deletions-count.
                 # Failed-logins 30d hides a today spike behind a 30d denominator;
                 # today counters are the signal layer for an operator scanning
                 # the dashboard once a day. Deletions covers a gap that wasn't
@@ -1932,7 +1932,7 @@ def admin_stats():
                 new_users_today = cur.fetchone()['cnt']
 
                 # Both ways an account ends: an admin deleting it, and the
-                # user deleting their own (ACCOUNT_DELETED — the row survives
+                # user deleting their own (ACCOUNT_DELETED - the row survives
                 # with user_id and IP nulled). Only the admin path was counted,
                 # so self-service deletions never showed up here.
                 cur.execute("""
@@ -1949,7 +1949,7 @@ def admin_stats():
                 """)
                 deletions_today = cur.fetchone()['cnt']
 
-                # Slice 2 — migration metrics. Counts users whose registration
+                # Slice 2 - migration metrics. Counts users whose registration
                 # came via the epilepc /migrate flow (server-visible bit, no
                 # content leak). Read [[project_epilepc_lifecycle_plan]] for
                 # the design.
@@ -1974,7 +1974,7 @@ def admin_stats():
                 last_migration_row = cur.fetchone()
                 last_migration_at = last_migration_row['last_at'].isoformat() if last_migration_row and last_migration_row['last_at'] else None
 
-                # Dormant accounts — users who haven't logged in for >90 days
+                # Dormant accounts - users who haven't logged in for >90 days
                 # and aren't brand-new (registered >90 days ago).
                 cur.execute("""
                     SELECT COUNT(*) AS cnt FROM users
@@ -2015,7 +2015,7 @@ def admin_timeseries():
     """26-week sparkline series for the /admin dashboard.
 
     Returns one bucket per ISO-week, padded with zeros for weeks with no
-    data so the sparkline stays a continuous 26-point line. Cheap query —
+    data so the sparkline stays a continuous 26-point line. Cheap query -
     weekly aggregation over a ~half-year window."""
     try:
         with get_db() as conn:
@@ -2111,7 +2111,7 @@ def admin_lock_user(user_id):
                 cur.execute("SELECT id FROM users WHERE id = %s", (user_id,))
                 if not cur.fetchone():
                     return jsonify({'error': 'User not found'}), 404
-                # Lock indefinitely (far future) — admin must manually unlock.
+                # Lock indefinitely (far future) - admin must manually unlock.
                 # The distance is what marks it as an admin lock, which login
                 # and recovery refuse to clear (see "Account locks").
                 # Bumping password_version ends every session the user already
@@ -2195,7 +2195,7 @@ def admin_promote_user(user_id):
                 if not user:
                     return jsonify({'error': 'User not found'}), 404
                 cur.execute("UPDATE users SET is_admin = TRUE WHERE id = %s", (user_id,))
-                # Id, not username — same reason as ADMIN_DELETE_USER: audit
+                # Id, not username - same reason as ADMIN_DELETE_USER: audit
                 # rows must not carry a name that survives the account.
                 audit(conn, request.user_id, f'ADMIN_PROMOTE:{user_id}')
         return jsonify({'success': True}), 200
@@ -2406,7 +2406,7 @@ def family_grant_rescope(grant_id):
 def family_grant_revoke_all():
     """Panic revoke: cut every active grant the user has issued. Server-side
     access is stopped immediately; caregivers who already downloaded data
-    keep those copies — revocation can't reach local caches."""
+    keep those copies - revocation can't reach local caches."""
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
@@ -2446,7 +2446,7 @@ def _fake_grant_id(seed: bytes, max_grant_id: int) -> int:
 
     Real ids are SERIAL: positive, and no larger than the newest grant. The
     decoy used to be NEGATIVE, so every fake list announced itself and one
-    request told you whether a username had live invitations — which, when it
+    request told you whether a username had live invitations - which, when it
     did, meant the account existed.
 
     Drawn from [1, largest power of two <= max_grant_id], not [1, max]: a
@@ -2460,7 +2460,7 @@ def _fake_grant_id(seed: bytes, max_grant_id: int) -> int:
     which a decoy-holder does not have, and a wrong proof answers exactly
     like an unknown id (401). The proof check is a constant-time compare of
     two SHA-256 digests, so the found-vs-not-found timing difference is far
-    below network jitter — and it predates the change.
+    below network jitter - and it predates the change.
     """
     span = 1 << (max_grant_id.bit_length() - 1) if max_grant_id > 0 else 1
     return 1 + int.from_bytes(seed[:4], 'big') % span
@@ -2469,7 +2469,7 @@ def _fake_grant_id(seed: bytes, max_grant_id: int) -> int:
 def _fake_grants_for_username(username: str, max_grant_id: int = 0):
     """Deterministic fake grant list for usernames with no live grants.
 
-    That is an unknown username AND a real account with nothing to claim —
+    That is an unknown username AND a real account with nothing to claim -
     both get this, so those two are indistinguishable. What stays visible is a
     count other than one: the decoy list always has exactly one entry, and a
     patient with several live invitations returns several. SECURITY_MODEL.md
@@ -2497,7 +2497,7 @@ def family_grant_claim_init():
     client can test each against the family code locally. Fake list for
     unknown users (same anti-enumeration pattern as /login/init).
 
-    SAST/DAST F1 — requires auth. The legit caller is always an authenticated
+    SAST/DAST F1 - requires auth. The legit caller is always an authenticated
     caregiver (claiming itself needs a token), so this is no UX change, but it
     stops an ANONYMOUS party from harvesting `wrapped_master`/`grant_params`
     for any username (offline brute-force material). Family-code entropy
@@ -2548,7 +2548,7 @@ def family_grant_claim():
     legacy_key = data.get('proof')
     presented = grant_proof if grant_proof is not None else legacy_key
     # `type(...) is int`: isinstance(True, int) holds, and `WHERE id = true`
-    # is a type error in PostgreSQL — a 500.
+    # is a type error in PostgreSQL - a 500.
     if type(grant_id) is not int or not valid_b64(presented, 32, 32):
         return jsonify({'error': 'Invalid request'}), 400
     _redact_sensitive(data)
@@ -2565,7 +2565,7 @@ def family_grant_claim():
                 if g and g['source_user_id'] == request.user_id:
                     return jsonify({'error': 'Cannot claim your own grant'}), 400
                 # One answer for "no such live grant" and "wrong code". They
-                # used to differ — 404 and 401 — and claim/init hands out a
+                # used to differ - 404 and 401 - and claim/init hands out a
                 # decoy grant for usernames with nothing to claim, so posting
                 # any proof against the decoy's id sorted decoys (404) from real
                 # invitations (401). The client only ever special-cases 409.
@@ -2657,7 +2657,7 @@ def family_documents_list():
         with get_db() as conn:
             with conn.cursor() as cur:
                 # THE boundary. Out-of-scope rows are not filtered client-side,
-                # not marked, not sent — the caregiver never holds the
+                # not marked, not sent - the caregiver never holds the
                 # ciphertext, so no modified client and no look at IndexedDB
                 # gets them back.
                 #
@@ -2765,7 +2765,7 @@ def family_documents_update(doc_id):
         with get_db() as conn:
             with conn.cursor() as cur:
                 # Scoped exactly like the read. Without this a narrow-scope
-                # caregiver could overwrite a diary entry by guessing its id —
+                # caregiver could overwrite a diary entry by guessing its id -
                 # they could not READ it, but destroying what you cannot see is
                 # not meaningfully better. `share_class` is deliberately absent
                 # from the SET: a caregiver never reclassifies.
@@ -2804,7 +2804,7 @@ def family_documents_delete(doc_id):
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
-                # Same scope as the read — see family_documents_update.
+                # Same scope as the read - see family_documents_update.
                 cur.execute(
                     "DELETE FROM encrypted_documents"
                     " WHERE id = %s AND user_id = %s"
@@ -2835,7 +2835,7 @@ def admin_run_retention():
 
 
 # ───────────────────────────────────────────────────────────────────────────
-# CIPH-714 — DEV-ONLY mock epilepc endpoint.
+# CIPH-714 - DEV-ONLY mock epilepc endpoint.
 #
 # Pretends to be an epilepc instance serving a `ciphra-export` bundle. Used
 # to validate the receive-side migration flow (CIPH-712) without depending
@@ -2868,7 +2868,7 @@ if os.environ.get('CIPHRA_DEV_MOCKS') == '1':
 
     @app.route('/api/ciphra-export/<token>', methods=['GET', 'OPTIONS'])
     def mock_epilepc_export(token):
-        # DEV ONLY — do not ship.
+        # DEV ONLY - do not ship.
         headers = _dev_cors_headers()
         if request.method == 'OPTIONS':
             return ('', 204, headers)
@@ -2885,7 +2885,7 @@ if os.environ.get('CIPHRA_DEV_MOCKS') == '1':
             path = _FIXTURES_DIR / 'edge-wrong-version.json'
         elif token.startswith('dev-'):
             name = token[len('dev-'):]
-            # SAST/DAST F6 — defense-in-depth: reject anything that isn't a
+            # SAST/DAST F6 - defense-in-depth: reject anything that isn't a
             # plain fixture name before building the path. Flask's <token>
             # route converter already blocks slashes, but this removes any
             # doubt about path traversal even if this dev-only block (gated by
@@ -2902,16 +2902,16 @@ if os.environ.get('CIPHRA_DEV_MOCKS') == '1':
         body = path.read_text()
         return (body, 200, {**headers, 'Content-Type': 'application/json'})
 
-    logger.warning("CIPHRA_DEV_MOCKS=1 — mock epilepc endpoint registered. DO NOT enable in production.")
+    logger.warning("CIPHRA_DEV_MOCKS=1 - mock epilepc endpoint registered. DO NOT enable in production.")
 
 
 if __name__ == '__main__':
-    # Dev mode only — `python server.py` runs Flask's built-in server.
+    # Dev mode only - `python server.py` runs Flask's built-in server.
     # Production runs under gunicorn via api/entrypoint.sh which calls
     # init_db() + apply_audit_retention() before exec, so this block
     # never fires under gunicorn. Both paths are intentional.
     init_db()
     apply_audit_retention()
-    logger.info("ciphra API — encrypted by design")
+    logger.info("ciphra API - encrypted by design")
     logger.info(f"Database: {DATABASE_URL}")
     app.run(host='0.0.0.0', port=5000, debug=False)

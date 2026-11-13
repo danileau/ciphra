@@ -1,5 +1,5 @@
 /**
- * CIPH-855b — Phase-bands polish render contract.
+ * CIPH-855b - Phase-bands polish render contract.
  *
  * Guards the cohort-driven band-height swap, counter-dot dimming, and
  * band legend. Plus: PhaseContextCard accepts and displays the

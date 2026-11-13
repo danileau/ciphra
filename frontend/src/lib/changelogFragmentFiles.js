@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Reading changelog.d/ from disk — the only file access the changelog
+ * Reading changelog.d/ from disk - the only file access the changelog
  * fragments need, kept apart from the pure compiler in changelogFragments.js.
  * Node-only: imported by vite.config.ts (build time) and scripts/changelog.mjs,
  * never by code that ships to the browser.

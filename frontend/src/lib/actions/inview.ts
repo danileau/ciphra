@@ -1,10 +1,10 @@
 /**
- * CIPH-895 — `inview` Svelte action.
+ * CIPH-895 - `inview` Svelte action.
  *
  * Adds an `in-view` class to the host element the first time it
  * scrolls into the viewport. Lets a route opt sections into a
  * "fade-in on scroll" treatment via CSS without any JS-driven
- * animation library — we use the platform's `IntersectionObserver`
+ * animation library - we use the platform's `IntersectionObserver`
  * + a 200-ms transition declared in the host's `<style>` block.
  *
  * Honours `prefers-reduced-motion`: when the user has reduced motion,
@@ -35,10 +35,10 @@ export interface InviewOptions {
 	/** IntersectionObserver `rootMargin`. Default `'0px 0px -10% 0px'`
 	 *  fires the action slightly before the element fully enters view. */
 	rootMargin?: string;
-	/** Threshold 0..1. Default 0.1 — 10% visible triggers the reveal. */
+	/** Threshold 0..1. Default 0.1 - 10% visible triggers the reveal. */
 	threshold?: number;
 	/** When true, the class is removed when the element leaves view
-	 *  (re-triggers next time). Default false — once revealed, stays. */
+	 *  (re-triggers next time). Default false - once revealed, stays. */
 	once?: boolean;
 }
 

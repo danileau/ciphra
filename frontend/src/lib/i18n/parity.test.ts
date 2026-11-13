@@ -1,12 +1,12 @@
 /**
- * i18n parity test — every locale dictionary must define the same key set.
+ * i18n parity test - every locale dictionary must define the same key set.
  *
  * Background: PI v24-4 conditionInfoMap wiring shipped with 116 missing
  * translation strings across all 4 locales because the original blueprint
  * author wrote `condition.cancer_treatment.*` but not the equivalent for
  * hashimoto/rheumatoid_arthritis, and my dedup pass over-removed instead of
  * under-removing. svelte-check + the existing test suite didn't catch it
- * because missing-key fallback to the key string is by design at runtime —
+ * because missing-key fallback to the key string is by design at runtime -
  * `t('condition.X.title')` returns the literal `'condition.X.title'` rather
  * than throwing.
  *

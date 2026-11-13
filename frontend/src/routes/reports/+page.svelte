@@ -51,7 +51,7 @@
 	} from '#lib/reports/exportPeriods.ts';
 	import { weekdayLabels } from '#lib/i18n/dates.ts';
 
-	// Design review 2026-06-11 — month context travels from /calendar
+	// Design review 2026-06-11 - month context travels from /calendar
 	// via the focus-month handoff; fresh sessions start on today.
 	let currentDate = (() => {
 		const m = recallFocusMonth();
@@ -72,7 +72,7 @@
 	//
 	// A card now offers the periods that actually hold data. A calendar year
 	// is just a trailing-12 window anchored at December, so this needs no
-	// change in pdf.ts — see lib/reports/exportPeriods.ts.
+	// change in pdf.ts - see lib/reports/exportPeriods.ts.
 	//
 	// The one-step spirit survives where it still applies: a scope with
 	// exactly one available period exports straight away, so a user with a
@@ -99,7 +99,7 @@
 	}
 
 	// Note markers are the only export content the user authored as prose, and
-	// people write prose — a real export carried a third party's name and a
+	// people write prose - a real export carried a third party's name and a
 	// night-time detail. Inclusion is opt-in, decided here rather than at the
 	// moment of writing, so the choice is made while looking at the sentences
 	// that would be printed. Skipped entirely when the window holds none, so
@@ -170,7 +170,7 @@
 			recommended: c.scope === 'year' && !!preview && preview.monthsWithData >= 6,
 		};
 	});
-	// Whose record this is — the name that goes on a document a doctor reads
+	// Whose record this is - the name that goes on a document a doctor reads
 	// (2026-09-19). A caregiver exporting a linked patient used to stamp their
 	// OWN name on the patient's report and its file name.
 	$: exportUsername =
@@ -180,7 +180,7 @@
 
 	// The treatment history is not a period (2026-09-19): it covers everything
 	// recorded, including the years before ciphra, which the period picker
-	// cannot offer — its months come from logged entries only.
+	// cannot offer - its months come from logged entries only.
 	$: therapyCard = (() => {
 		const meds = bp?.medications ?? [];
 		if (meds.length === 0) return null;
@@ -207,12 +207,12 @@
 	$: bp = $resolvedBlueprint;
 	$: liveLinks = $familyLinks.filter(l => !l.revoked);
 
-	// CIPH-710 / CIPH-713 — every aggregation, summary, and export below uses
+	// CIPH-710 / CIPH-713 - every aggregation, summary, and export below uses
 	// `exportableDocs` (diary excluded, private excluded). `$documents` is
 	// only used for editing actions where we DO need to find private entries.
 	$: exportableDocs = $documents.filter(isExportable);
 
-	// pi24 reports rework — primary trend slot is governed by
+	// pi24 reports rework - primary trend slot is governed by
 	// resolveReportsPrimaryCard(bp, summary). Same pattern as the dashboard
 	// resolver but with /reports' clinician-pattern routing context
 	// (vital-pinned cohorts take priority over episode trend here).
@@ -259,7 +259,7 @@
 		await documents.load();
 		initialLoadDone = true;
 
-		// CIPH-873 — Deep-link from Companion "Export for doctor" button.
+		// CIPH-873 - Deep-link from Companion "Export for doctor" button.
 		// When `?action=export` is present, open the export menu and scroll
 		// it into view. Previous flow silently generated a current-month PDF
 		// with no scope choice; this respects the existing picker UI and
@@ -276,7 +276,7 @@
 		}
 	});
 
-	// Recent note-marker events (type === 'event') — shown on Reports so
+	// Recent note-marker events (type === 'event') - shown on Reports so
 	// users can verify the vertical lines that appear on the 24-month chart.
 	// Scope-aware: month view shows only that month; year view shows the full
 	// visible year. Cap at 8 to keep the card compact.
@@ -286,7 +286,7 @@
 			return dateStr.startsWith(String(currentYear));
 		};
 		// Dose history (2026-09-17): a medication starting, changing dose or
-		// stopping is an event too — listed with the note markers and intakes,
+		// stopping is an event too - listed with the note markers and intakes,
 		// newest first, from the blueprint rather than from a document.
 		const scopeFrom = viewMode === 'month' ? `${currentDate.slice(0, 7)}-01` : `${currentYear}-01-01`;
 		const scopeTo = viewMode === 'month' ? `${currentDate.slice(0, 7)}-31` : `${currentYear}-12-31`;
@@ -327,7 +327,7 @@
 		});
 	})();
 
-	// What was taken and stopped — the prior therapy a doctor asks about first
+	// What was taken and stopped - the prior therapy a doctor asks about first
 	// (2026-09-19). Independent of the window: it is history by definition.
 	$: previousMeds = (() => {
 		const today = todayISO();
@@ -348,7 +348,7 @@
 	})();
 
 	// A medication ciphra only knows from the day it was entered has a history
-	// nobody can see. Point at where that gets filled in — once, quietly.
+	// nobody can see. Point at where that gets filled in - once, quietly.
 	$: medsWithoutStart = (bp?.medications ?? []).filter(
 		(med) => periodOn(med, todayISO()) && !medStartDate(med),
 	).length;
@@ -365,12 +365,12 @@
 		return map;
 	})();
 
-	// CIPH-876 — Auto-expand the monthly episode-columns list to include any
+	// CIPH-876 - Auto-expand the monthly episode-columns list to include any
 	// non-curated episode type that has ≥1 occurrence in the visible month.
 	// Curated `gridEpisodeColumns` always render (even at zero) so the grid
 	// stays stable month-to-month; extras appear only when they have data.
 	// Order preserved from `bp.episodeTypes` for deterministic layout.
-	// CIPH-877 — mirrored symptom auto-expand. Curated `gridSymptomColumns`
+	// CIPH-877 - mirrored symptom auto-expand. Curated `gridSymptomColumns`
 	// always render; symptoms from any `symptomGroups.items` with ≥1 logged
 	// occurrence in the visible month get appended. Keeps the grid in sync
 	// with what the user is actually tracking, so no data we save is
@@ -415,7 +415,7 @@
 		return [...curated, ...extras];
 	})();
 
-	// CIPH — Trigger columns for the monthly table. The on-screen grid never
+	// CIPH - Trigger columns for the monthly table. The on-screen grid never
 	// had a trigger dimension, so logged Auslöser (preset OR custom) were
 	// invisible there. Mirror the symptom auto-expand: custom triggers are
 	// always shown; preset triggers appear once logged in the period.
@@ -434,9 +434,9 @@
 		return cols;
 	})();
 
-	// CIPH-885 — Per-month "auto-added" ID sets, used to decorate column
+	// CIPH-885 - Per-month "auto-added" ID sets, used to decorate column
 	// headers so a user seeing a column appear this month but not next month
-	// understands it reflects their data, not a bug. Purely additive — the
+	// understands it reflects their data, not a bug. Purely additive - the
 	// column is already rendering; this is just typography.
 	$: autoAddedSymptomSet = new Set<string>(
 		effectiveSymptomColumns.filter((id) => !(bp?.gridSymptomColumns || []).includes(id))
@@ -464,7 +464,7 @@
 		return doc?.data?.symptoms?.[col] || false;
 	}
 	// Triggers may be stored as a Record<string,boolean> (current) or a
-	// string[] (legacy / epilepc-migrated) — handle both.
+	// string[] (legacy / epilepc-migrated) - handle both.
 	function getTrigger(doc: any, col: string): boolean {
 		const trs = doc?.data?.triggers;
 		if (Array.isArray(trs)) return trs.includes(col);
@@ -526,7 +526,7 @@
 		d.setDate(1);
 		currentDate = d.toISOString().slice(0, 10);
 	}
-	// CIPH-883 — jump-to-today mirror of calendar/+page.svelte CIPH-878.
+	// CIPH-883 - jump-to-today mirror of calendar/+page.svelte CIPH-878.
 	// Reports is the most-deep-linked surface after PDFs; users scroll months
 	// back to compare and need a cheap way home.
 	function jumpToCurrentMonth() {
@@ -552,7 +552,7 @@
 	// `selectedNoteIds` is the opt-in result. Undefined means no review ran
 	// (the window held no note markers, or this is the deep-link path), so
 	// nothing is withheld. Filtering the DOCUMENT SET is what keeps
-	// generateDoctorPdf free of any selection concept — the export simply
+	// generateDoctorPdf free of any selection concept - the export simply
 	// never sees a note the user withheld.
 	async function exportForDoctor(option?: PeriodOption, selectedNoteIds?: Set<number>) {
 		if (!bp) return;
@@ -604,11 +604,11 @@
 	$: daysLogged = monthDocs.length;
 	$: daysInMonth = getDaysInMonth(currentDate);
 
-	// CIPH-909 (v2) — Bar charts dropped after smoke. They duplicated the
+	// CIPH-909 (v2) - Bar charts dropped after smoke. They duplicated the
 	// day-coverage strip + the monthly grid table without giving the user
 	// a clinical sentence to take to the doctor. Replaced by a "this
 	// month at a glance" stat block (delta vs last month + top symptoms
-	// + phase days) — answers the questions a doctor actually asks.
+	// + phase days) - answers the questions a doctor actually asks.
 	const POSITIVE_MARKERS_REPORTS = new Set(['slept_well']);
 
 	function totalEpisodesForMonth(prefix: string): number {
@@ -623,12 +623,12 @@
 		return total;
 	}
 
-	// CIPH-912 — Counter-only episode sum (excludes multiDay). For
+	// CIPH-912 - Counter-only episode sum (excludes multiDay). For
 	// cohorts where every episode type is multiDay (cycle: flare;
 	// IBD: flare; MS: relapse...), `totalEpisodes` and `phaseDays`
 	// resolve to the same number (one increment per active day, max),
 	// which made the 3-card "Episoden gesamt" stat read identical to
-	// the glance "Phase-Tage" — confusing redundancy. Splitting the
+	// the glance "Phase-Tage" - confusing redundancy. Splitting the
 	// two clarifies the model: counters are acute incidents, phase-
 	// days span a state. Each owns one slot in the report.
 	function counterOnlyForMonth(prefix: string): number {
@@ -655,12 +655,12 @@
 	$: prevMonthEpisodes = bp ? totalEpisodesForMonth(prevMonthPrefix) : 0;
 	$: episodeDelta = totalEpisodes - prevMonthEpisodes;
 	$: episodeTrend = episodeDelta > 0 ? 'up' : episodeDelta < 0 ? 'down' : 'flat';
-	// CIPH-912 — counter-only stats for the 3-card middle slot.
+	// CIPH-912 - counter-only stats for the 3-card middle slot.
 	$: currentMonthPrefix = currentDate.slice(0, 7);
 	$: counterEpisodesThisMonth = bp ? counterOnlyForMonth(currentMonthPrefix) : 0;
 	$: counterEpisodesThisYear = bp ? counterOnlyForMonth(String(currentYear)) : 0;
 
-	// Top 3 symptoms this month by day count. Tabular ranked list — much
+	// Top 3 symptoms this month by day count. Tabular ranked list - much
 	// more skimmable than a horizontal bar chart, and it's the format
 	// users already write down before a doctor visit.
 	$: topSymptomsThisMonth = (() => {
@@ -688,10 +688,10 @@
 
 	// Phase-days: total days in the month where ANY multiDay episode was
 	// active (flare, manic, depressive, MS relapse, IBD flare, ...). Only
-	// surfaces when the blueprint has multiDay episodes — discrete cohort
+	// surfaces when the blueprint has multiDay episodes - discrete cohort
 	// (epilepsy etc.) doesn't get a phase-days card.
 	$: hasMultiDayPhases = !!bp?.episodeTypes?.some((e) => e.multiDay);
-	// Shared math (design review 2026-06-11) — lib/monthAggregates.ts,
+	// Shared math (design review 2026-06-11) - lib/monthAggregates.ts,
 	// same day-sets as the calendar rail + doctor PDF.
 	$: phaseDaysThisMonth = hasMultiDayPhases && bp ? anyPhaseDayCount(bp, monthDocs) : 0;
 
@@ -745,9 +745,9 @@
 
 	$: yearDaysLogged = yearDocs.length;
 
-	// CIPH-909 (year-block) — year-scope counterparts of the month
+	// CIPH-909 (year-block) - year-scope counterparts of the month
 	// stat-block. Same shape so the two views read as one product, just
-	// scoped differently. No year-over-year delta — most users have <2y
+	// scoped differently. No year-over-year delta - most users have <2y
 	// of data, and the per-month view answers "is it getting better?"
 	// with last-month comparisons already.
 	$: topSymptomsThisYear = (() => {
@@ -775,7 +775,7 @@
 
 	$: phaseDaysThisYear = hasMultiDayPhases && bp ? anyPhaseDayCount(bp, yearDocs) : 0;
 
-	// CIPH-909 (year-parity) — scoped reactive accessors. Lets the shared
+	// CIPH-909 (year-parity) - scoped reactive accessors. Lets the shared
 	// summary-card row, recent-events block, export menu, and glance
 	// stat-block render once outside the month/year if-else and pull the
 	// right values for the current view. Month and year now feel like
@@ -795,15 +795,15 @@
 	$: scopedPhaseDays = viewMode === 'month' ? phaseDaysThisMonth : phaseDaysThisYear;
 	$: scopedCounterEpisodes = viewMode === 'month' ? counterEpisodesThisMonth : counterEpisodesThisYear;
 
-	// CIPH-914 — 24-month trend chart in /reports. The doctor-facing
+	// CIPH-914 - 24-month trend chart in /reports. The doctor-facing
 	// "complexity of all aggregated data" view that the team flagged was
 	// epilepc's strongest feature. Episodes (sum, all types) per month
 	// as a primary line in the cohort accent; symptom-days per month as
 	// a faint secondary line. Year mode shows the same 24-month window
 	// (anchor = currentYear's December); month mode shows it ending at
-	// the visible month — so navigating months keeps the chart in context.
+	// the visible month - so navigating months keeps the chart in context.
 	$: trendCohort = cohortOf(bp);
-	// CIPH-921c — trend line uses the CONDITION color (matches /conditions +
+	// CIPH-921c - trend line uses the CONDITION color (matches /conditions +
 	// dashboard chart); the secondary symptom/fact line stays a cohort neutral.
 	$: trendAccentHex = bp ? conditionColorOf(bp) : '#b23c2c';
 	$: trendNeutralHex = bp ? cohortPalette(trendCohort)[4] : '#5c6b73';
@@ -816,10 +816,10 @@
 	})();
 	$: trendChartData = (() => {
 		if (!bp?.episodeTypes?.length) return null;
-		// PI v17 — context-aware. Year-view shows the rolling 24-month
+		// PI v17 - context-aware. Year-view shows the rolling 24-month
 		// summary (the "complexity of all aggregated data" view that
 		// scored highest in epilepc). Month-view shows daily resolution
-		// for the displayed month — same shape, but each point is one
+		// for the displayed month - same shape, but each point is one
 		// day so the user can see the within-month rhythm next to the
 		// day-coverage strip and grid.
 		if (viewMode === 'month') {
@@ -905,7 +905,7 @@
 				}),
 			});
 		}
-		// PI v16 LB-23 — was findIndex(mo => ds.startsWith(mo.key)) per doc:
+		// PI v16 LB-23 - was findIndex(mo => ds.startsWith(mo.key)) per doc:
 		// O(docs × 24) per recompute, ~13K compares for 540 docs. Build a
 		// key→index Map once; loop is O(docs).
 		const keyToIdx = new Map<string, number>();
@@ -963,7 +963,7 @@
 	// pi24 dogfood: trend-chart tooltip needs the underlying Date for each
 	// bin so the title callback can format month-view as a full date
 	// (honoring bp.dateFormat) and year-view as full month name + 4-digit
-	// year — same pattern as the dashboard /. Labels alone aren't enough:
+	// year - same pattern as the dashboard /. Labels alone aren't enough:
 	// month view labels are bare day numbers ("5", "12") and year view
 	// labels are short month-year ("Mai 26").
 	$: trendBinDates = (() => {
@@ -985,7 +985,7 @@
 	// pi24 dogfood: tick-row visualization removed. The trigger-day count
 	// per chart bin (day in month-view, month in year-view) surfaces via
 	// tooltip enrichment instead. `docHasTrigger` consults known blueprint
-	// trigger ids when reading the object shape — EntryComposer's spread-
+	// trigger ids when reading the object shape - EntryComposer's spread-
 	// merge can graft list ids onto numeric keys with truthy string values,
 	// and a naive truthy scan would over-count those.
 	$: trendTriggerIds = bp?.triggers?.map((tr) => tr.id) ?? [];
@@ -1041,7 +1041,7 @@
 		}
 		return out;
 	})();
-	// Dose history — the window the trend chart covers (the visible month, or
+	// Dose history - the window the trend chart covers (the visible month, or
 	// the 24 months ending at trendAnchor), shared with the medication timeline
 	// card so the two read against the same dates.
 	$: medWindow = (() => {
@@ -1060,7 +1060,7 @@
 	$: medChangesInWindow = medicationChanges(bp?.medications ?? [], medWindow);
 	// Dose bands behind the trend chart (2026-09-17): the chart's bins as date
 	// ranges, the medications that changed on that axis (most recent first),
-	// and the chosen one's periods as background shades. Structure only — no
+	// and the chosen one's periods as background shades. Structure only - no
 	// number is derived per period (lib/reports/doseBands.ts).
 	$: trendAxisBins = (() => {
 		if (viewMode === 'month') {
@@ -1078,7 +1078,7 @@
 	$: trendBands = bandMed ? chartDoseBands(bandMed, trendAxisBins) : null;
 	$: trendBandSig = trendBands ? JSON.stringify(trendBands) : '';
 	// Per chart bin (day in month view, month in year view): one tooltip line
-	// per medication change. Tooltip, not a mark on the chart — the rule for
+	// per medication change. Tooltip, not a mark on the chart - the rule for
 	// aggregate-axis charts (see MedicationTimeline.svelte).
 	$: medChangeLinesByBin = (() => {
 		if (!trendChartData || medChangesInWindow.length === 0) return [] as string[][];
@@ -1102,14 +1102,14 @@
 	$: medChangeSig = medChangeLinesByBin.map((b) => b.join('|')).join('||');
 
 	// Cheap signature so the trendChartOptions memo (below) busts when the
-	// trigger window changes — sum is enough to detect any user-visible
+	// trigger window changes - sum is enough to detect any user-visible
 	// change without an O(n) JSON.stringify on each tick.
 	$: trendTriggerSig = trendTriggerByBin.length === 0
 		? '0'
 		: `${trendTriggerByBin.length}:${trendTriggerByBin.reduce((a, b) => a + b, 0)}`;
 
-	// PI v15 LB-4 — Screen-reader data-table mirror for the trend chart.
-	// PI v17 — caption + headers track viewMode so SR users get the right
+	// PI v15 LB-4 - Screen-reader data-table mirror for the trend chart.
+	// PI v17 - caption + headers track viewMode so SR users get the right
 	// context (24-month summary vs. daily-resolution-for-this-month).
 	$: trendTitle = viewMode === 'month'
 		? $t('reports.trend_title_month', { month: formatMonth(currentDate) })
@@ -1133,13 +1133,13 @@
 		};
 	})();
 
-	// PI v16 LB-23 — manual identity-stable memo for the options object.
+	// PI v16 LB-23 - manual identity-stable memo for the options object.
 	// The inner block returns a fresh object only when the only two reactive
 	// deps that actually matter (the cohort palette accent + neutral hex)
 	// change. Without this, ChartWrapper's ref-equality short-circuit
 	// (ChartWrapper.svelte:104-108) was always falling through to a chart
-	// .update() on every $documents mutation — chart-update storm on save.
-	// CIPH-pi24-5e+ — trigger-tick marker signature is a third dep so the
+	// .update() on every $documents mutation - chart-update storm on save.
+	// CIPH-pi24-5e+ - trigger-tick marker signature is a third dep so the
 	// memo also busts when triggers appear/disappear in the scope window
 	// (e.g. user adds an entry with triggers on the visible month).
 	let _prevAccent = '';
@@ -1175,7 +1175,7 @@
 		_prevDateFmt = dateFmt;
 		_prevBandSig = trendBandSig;
 		// Capture by value so the memoized options object holds onto its
-		// own snapshot of trigger counts AND its own ($t, $locale) view —
+		// own snapshot of trigger counts AND its own ($t, $locale) view -
 		// when any dep changes, the memo rebuilds and grabs fresh snapshots.
 		const triggerSnapshot = trendTriggerByBin;
 		const medChangeSnapshot = medChangeLinesByBin;
@@ -1189,7 +1189,7 @@
 			responsive: true,
 			maintainAspectRatio: false,
 			// The strip above the plot where the dose-band labels sit (drawn
-			// there so they never overlap the data — see ChartWrapper).
+			// there so they never overlap the data - see ChartWrapper).
 			layout: bands ? { padding: { top: 18 } } : undefined,
 			plugins: {
 				legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } },
@@ -1197,7 +1197,7 @@
 				tooltip: {
 					callbacks: {
 						// pi24 dogfood: tooltip title mirrors the dashboard
-						// / chart — full date in month-view (respecting
+						// / chart - full date in month-view (respecting
 						// bp.dateFormat) and full month name + 4-digit year
 						// in year-view. Default Chart.js title is the bare
 						// x-axis label ("5" or "Mai 26"); neither carries
@@ -1218,7 +1218,7 @@
 							const lines: string[] = [];
 							const n = triggerSnapshot[items[0].dataIndex] || 0;
 							if (n > 0) lines.push(plural(tt, lc, 'companion.tooltip_trigger_days', n));
-							// Dose history — name the medication change(s) in this bin.
+							// Dose history - name the medication change(s) in this bin.
 							lines.push(...(medChangeSnapshot[items[0].dataIndex] ?? []));
 							return lines;
 						},
@@ -1264,9 +1264,9 @@
 		return _trendOpts;
 	})();
 
-	// PI v17 (both dry-runs) — explicit range chip beneath the title gives
+	// PI v17 (both dry-runs) - explicit range chip beneath the title gives
 	// the user a visual cue that "month-view = 1 month" vs "year-view = 24
-	// months". Title text alone wasn't enough — the charts looked too
+	// months". Title text alone wasn't enough - the charts looked too
 	// similar on toggle.
 	$: trendRange = (() => {
 		if (viewMode === 'month') {
@@ -1339,7 +1339,7 @@
 			}
 		});
 	}
-	// CIPH-915 — Decrement episode count from the grid table. Mirrors
+	// CIPH-915 - Decrement episode count from the grid table. Mirrors
 	// increment but goes the other way; deletes the key entirely when
 	// the count would hit 0 so re-encryption diffs stay minimal.
 	function decrementGridEpisode(dayStr: string, episodeId: string) {
@@ -1360,11 +1360,11 @@
 </script>
 
 <svelte:head>
-	<title>{$t('nav.reports')} — ciphra</title>
+	<title>{$t('nav.reports')} - ciphra</title>
 </svelte:head>
 
 {#if !bp && (!initialLoadDone || !$activeVaultReady)}
-	<!-- Genuine loading state — we're still fetching/decrypting documents. -->
+	<!-- Genuine loading state - we're still fetching/decrypting documents. -->
 	<div class="layout-data-wide py-12 text-center">
 		<Asterisk size={32} spin color="muted" />
 		<p class="mt-3 text-sm" style="color: var(--text-muted)">{$t('common.loading')}</p>
@@ -1414,7 +1414,7 @@
 		</div>
 	</div>
 
-	<!-- CIPH-909 (year-parity) — Mode-specific nav at top. The summary
+	<!-- CIPH-909 (year-parity) - Mode-specific nav at top. The summary
 		 cards / recent events / export menu / glance block that follow
 		 are all SHARED and scoped via `scoped*` reactive values. -->
 	{#if viewMode === 'month'}
@@ -1450,7 +1450,7 @@
 		</div>
 	{/if}
 
-	<!-- Dose history (2026-09-17) — what is taken today, since when, and the
+	<!-- Dose history (2026-09-17) - what is taken today, since when, and the
 	     dose before, visible whatever window is on screen. -->
 	{#if currentMeds.length > 0}
 		<div class="card-inline mb-4" data-testid="reports-current-meds">
@@ -1482,11 +1482,11 @@
 		</div>
 	{/if}
 
-	<!-- Summary stats (scoped — month or year).
-		 CIPH-912 — Middle slot adapts to the cohort: cohorts with
+	<!-- Summary stats (scoped - month or year).
+		 CIPH-912 - Middle slot adapts to the cohort: cohorts with
 		 counter episodes (epilepsy, migraine, bipolar) show "Episoden
 		 gesamt"; cohorts with only multiDay episodes (cycle, MS, IBD)
-		 show "Phase-Tage" (since totalEpisodes would equal phaseDays —
+		 show "Phase-Tage" (since totalEpisodes would equal phaseDays -
 		 confusing redundancy). The glance block below drops both rows
 		 and keeps only top-symptoms (those are unique to glance). -->
 	<div class="grid grid-cols-3 gap-3 mb-6">
@@ -1516,24 +1516,24 @@
 		</div>
 	</div>
 
-	<!-- pi24 reports rework — primary trend slot is resolver-driven.
+	<!-- pi24 reports rework - primary trend slot is resolver-driven.
 	     resolveReportsPrimaryCard picks the kind from cohort + data:
 	     - 'episode-trend' (CIPH-914): existing dual-axis chart
 	     - 'vital-trend': VitalTrendReportsCard (line OR diverging-bar
 	       depending on active vital's range; carries chip selector for
 	       4+ vitals, secondary footer for 2-3)
-	     - 'last-entries': LastEntriesStrip — for Hashimoto pre-labs /
+	     - 'last-entries': LastEntriesStrip - for Hashimoto pre-labs /
 	       Cancer / Custom / sparse-data states. Same fallback shape as
 	       dashboard.
 	     - null: silent empty state (day-1 user). -->
 	{#if reportsPrimarySpec?.kind === 'episode-trend'}
-		<!-- CIPH-914 — 24-month trend chart. The "complexity of all
+		<!-- CIPH-914 - 24-month trend chart. The "complexity of all
 		     aggregated data" view that scored highest in epilepc.
 		     Renders above the recent events block. Episodes line +
 		     symptom-days line, dual y-axis so a low episode count stays
 		     readable when symptom-days dwarf it. Hides when there's no
 		     signal yet.
-		     PI v17 — chart card always renders in either view (month/year).
+		     PI v17 - chart card always renders in either view (month/year).
 		     The daily-month chart can collapse to "no entries" mid-month
 		     and used to vanish the whole card, breaking page silhouette
 		     + trust. Empty state now shows the title + range chip + a
@@ -1554,7 +1554,7 @@
 					/>
 				</div>
 				{#if bandMed && trendBands}
-					<!-- Names the shaded medication — never leave the reader guessing
+					<!-- Names the shaded medication - never leave the reader guessing
 					     which dose the background shows. -->
 					<div class="rpt-bands" data-testid="reports-dose-bands">
 						{#if bandCandidates.length === 1}
@@ -1574,7 +1574,7 @@
 					</div>
 				{/if}
 			{:else}
-				<!-- PI v17 (Jonas dry-run #2) — distinguish "no entries
+				<!-- PI v17 (Jonas dry-run #2) - distinguish "no entries
 				     at all" from "entries exist but no episodes/symptoms
 				     triggering signal". The latter is the common mid-month
 				     case where the user has logged diary days but no
@@ -1587,7 +1587,7 @@
 			{/if}
 		</div>
 	{:else if reportsPrimarySpec?.kind === 'vital-trend'}
-		<!-- pi24 reports — vital-trend primary for Hashimoto / hypertension /
+		<!-- pi24 reports - vital-trend primary for Hashimoto / hypertension /
 		     cardiovascular / diabetes / parkinson / bipolar. Card carries
 		     its own header + chart chrome. -->
 		<div class="mb-4">
@@ -1602,7 +1602,7 @@
 			/>
 		</div>
 	{:else if reportsPrimarySpec?.kind === 'last-entries'}
-		<!-- pi24 reports — last-entries fallback for cancer / custom /
+		<!-- pi24 reports - last-entries fallback for cancer / custom /
 		     Hashimoto-pre-labs / any blueprint that hasn't accrued
 		     primary-section data yet. Universal silent-empty-state pattern. -->
 		<div class="mb-4">
@@ -1612,13 +1612,13 @@
 	<!-- reportsPrimarySpec === null → render nothing (day-1, no data,
 	     no nag). The KPI block and stats above stand on their own. -->
 
-	<!-- Dose history — only when a medication started, changed or stopped
+	<!-- Dose history - only when a medication started, changed or stopped
 	     inside the window; a regimen that did not move adds nothing here. -->
 	{#if bp && medChangesInWindow.length > 0}
 		<MedicationTimeline meds={bp.medications} from={medWindow.from} to={medWindow.to} dateFormat={bp.dateFormat} />
 	{/if}
 
-	<!-- Recent note-marker events — closes the visibility gap. Users who
+	<!-- Recent note-marker events - closes the visibility gap. Users who
 		 create "Treatment adjusted" style markers couldn't see them anywhere
 		 in the UI before, only as vertical lines on the PDF trend chart.
 		 The `recentEvents` reactive is already scope-aware (month/year). -->
@@ -1635,7 +1635,7 @@
 						{#if item.change}
 							<span class="truncate font-medium" style="color: var(--olive)" data-testid="reports-event-med-change">{medChangeText(item.change)}</span>
 						{:else if ev && ev.data.kind === 'medication'}
-							<!-- CIPH-881b — rescue-medication events render with med
+							<!-- CIPH-881b - rescue-medication events render with med
 								 name + dose + time, distinct from freeform notes. -->
 							{@const med = resolveMedDisplay(bp, ev.data.medicationId, $t)}
 							{@const medLabel = med.label}
@@ -1771,7 +1771,7 @@
 		</div>
 	</div>
 
-	<!-- CIPH-909 (v3) — "auf einen Blick" stat block. After the
+	<!-- CIPH-909 (v3) - "auf einen Blick" stat block. After the
 		 3-card row split counter-episodes vs phase-days into mutually-
 		 exclusive slots, the glance no longer repeats those numbers.
 		 What's left here: month-over-month trend (delta) + top
@@ -1848,7 +1848,7 @@
 					type="button"
 					class="rpt-day-cell {doc ? (hasEp ? 'rpt-day-cell--episode' : 'rpt-day-cell--logged') : ''}"
 					title={doc ? `${dateStr}: ${dayTooltip(doc, bp)}` : dateStr}
-					aria-label={doc ? `${dateStr} — ${dayTooltip(doc, bp)}` : dateStr}
+					aria-label={doc ? `${dateStr} - ${dayTooltip(doc, bp)}` : dateStr}
 					on:click={() => goto(`/log/${dateStr}`)}
 				></button>
 			{/each}
@@ -1881,7 +1881,7 @@
 						{@const dayStr = `${currentDate.slice(0, 8)}${String(day).padStart(2, '0')}`}
 						{@const dayDoc = monthDocs.find(d => d.data.date === dayStr)}
 						{#each medChangesByDay.get(dayStr) ?? [] as change}
-							<!-- Dose history — a divider row on the day a dose started,
+							<!-- Dose history - a divider row on the day a dose started,
 							     changed or stopped: the grid reads "before" above it and
 							     "after" below it. -->
 							<tr class="rpt-medchange-row" data-testid="reports-grid-med-change">
@@ -1899,7 +1899,7 @@
 										type="button"
 										class="grid-symptom-toggle"
 										aria-pressed={present}
-										aria-label={`${dayStr} — ${itemLabels.get(col) ?? col}`}
+										aria-label={`${dayStr} - ${itemLabels.get(col) ?? col}`}
 										on:click|stopPropagation={() => toggleGridSymptom(dayStr, col)}
 									>
 										{#if present}
@@ -1913,11 +1913,11 @@
 							{#each effectiveEpisodeColumns as col}
 								{@const count = getEpisodeCount(dayDoc, col)}
 								{@const epColor = bp.episodeTypes.find(e => e.id === col)?.color || 'var(--danger)'}
-								<!-- CIPH-915 — +/- counter widget. Symmetric pair instead
+								<!-- CIPH-915 - +/- counter widget. Symmetric pair instead
 									 of the earlier cell-click + inline minus pattern.
 									 Both buttons share `.grid-counter-btn` styling so
 									 they read as a matched pair. Cell-wide click handler
-									 dropped — the buttons are the explicit affordance. -->
+									 dropped - the buttons are the explicit affordance. -->
 								<td class="px-2 py-1.5 text-center font-mono grid-episode-cell">
 									<div class="grid-counter">
 										{#if count > 0}
@@ -1955,7 +1955,7 @@
 										type="button"
 										class="grid-symptom-toggle"
 										aria-pressed={present}
-										aria-label={`${dayStr} — ${itemLabels.get(col) ?? col}`}
+										aria-label={`${dayStr} - ${itemLabels.get(col) ?? col}`}
 										on:click|stopPropagation={() => toggleGridTrigger(dayStr, col)}
 									>
 										{#if present}
@@ -2008,7 +2008,7 @@
 		</div>
 	</div>
 	{:else}
-		<!-- CIPH-893 — ReportsEmpty primitive: clinical tabular silhouette
+		<!-- CIPH-893 - ReportsEmpty primitive: clinical tabular silhouette
 			 instead of a generic icon, so the surface still reads as
 			 "the report" even when empty. -->
 		<ReportsEmpty daysLogged={monthDocs.length} threshold={7} />
@@ -2040,7 +2040,7 @@
 								type="button"
 								class="rpt-day-cell {doc ? (hasEp ? 'rpt-day-cell--episode' : 'rpt-day-cell--logged') : ''}"
 								title={doc ? `${dateStr}: ${dayTooltip(doc, bp)}` : dateStr}
-								aria-label={doc ? `${dateStr} — ${dayTooltip(doc, bp)}` : dateStr}
+								aria-label={doc ? `${dateStr} - ${dayTooltip(doc, bp)}` : dateStr}
 								on:click={() => goto(`/log/${dateStr}`)}
 							></button>
 						{/each}
@@ -2053,7 +2053,7 @@
 {/if}
 
 <style>
-	/* CIPH-877 — When auto-expanded columns make the grid wide, scale the
+	/* CIPH-877 - When auto-expanded columns make the grid wide, scale the
 	   typography and cell padding down so the whole table stays on-page
 	   without horizontal scroll on desktop. Two steps: compact (≥12 cols)
 	   and ultra (≥18 cols). */
@@ -2063,13 +2063,13 @@
 	:global(.grid-table--compact th) { padding-top: 6px !important; padding-bottom: 6px !important; }
 	:global(.grid-table--compact td) { padding-top: 4px !important; padding-bottom: 4px !important; }
 	:global(.grid-table--ultra) { font-size: 9.5px; }
-	/* CIPH-885 — subtle indicator on auto-added grid columns. Dotted
+	/* CIPH-885 - subtle indicator on auto-added grid columns. Dotted
 	   underline + middot after the label. Tooltip explains the semantics,
 	   so a user seeing a column appear/disappear across months reads it
 	   as data-driven, not a bug. */
 	:global(.rpt-col--auto) { text-decoration: underline dotted rgba(0,0,0,0.35); text-underline-offset: 3px; }
 	:global(.rpt-col-auto-dot) { margin-left: 2px; color: rgba(0,0,0,0.35); font-weight: 700; }
-	/* CIPH-883 — jump-to-current-month pill, mirror of .cal-today-btn */
+	/* CIPH-883 - jump-to-current-month pill, mirror of .cal-today-btn */
 	.rpt-today-btn {
 		font-size: 11px;
 		font-weight: 500;
@@ -2092,11 +2092,11 @@
 	:global(.grid-table--ultra th),
 	:global(.grid-table--ultra td) { padding-left: 2px !important; padding-right: 2px !important; }
 
-	/* CIPH-914 — 24-month trend chart container. */
+	/* CIPH-914 - 24-month trend chart container. */
 	.rpt-trend-chart {
 		height: 220px;
 	}
-	/* PI v17 — title + range chip block. min-height holds the card's top
+	/* PI v17 - title + range chip block. min-height holds the card's top
 	   region stable when the title string length changes between
 	   "Verlauf · 24 Monate" and "Verlauf · September 2026" (Linus dry-run). */
 	.rpt-trend-header {
@@ -2116,7 +2116,7 @@
 	.rpt-trend-range {
 		font-size: 0.75rem;
 	}
-	/* Dose bands — which medication the chart background shows. */
+	/* Dose bands - which medication the chart background shows. */
 	.rpt-bands {
 		display: flex;
 		flex-wrap: wrap;
@@ -2166,7 +2166,7 @@
 			height: 280px;
 		}
 	}
-	/* CIPH-915 — grid-cell +/- counter widget. Both buttons share
+	/* CIPH-915 - grid-cell +/- counter widget. Both buttons share
 	   matching style; the count sits between them. Tap-target stays
 	   reasonable (16px sq) without bloating the table column width. */
 	:global(.grid-counter) {
@@ -2210,7 +2210,7 @@
 	:global(.grid-counter-btn--solo) {
 		color: var(--text-secondary);
 	}
-	/* CIPH-909 (v2) — "This month at a glance" stat block. dl/dt/dd
+	/* CIPH-909 (v2) - "This month at a glance" stat block. dl/dt/dd
 	   semantics so screen readers announce the term/definition pairs
 	   correctly. Two-column on wider viewports; stacked on mobile. */
 	.rpt-glance-list {
@@ -2271,7 +2271,7 @@
 	.rpt-glance-delta--up { color: var(--danger); }
 	.rpt-glance-delta--flat { color: var(--text-muted); }
 	/* Width, centring and horizontal padding now come from
-	   `layout-data-wide` on the element — this rule reimplemented that token
+	   `layout-data-wide` on the element - this rule reimplemented that token
 	   by hand (1280 + auto margins + 16/24px sides, identical values) and was
 	   invisible to anyone auditing page widths by class name. What is left
 	   here is the vertical rhythm, which is genuinely this page's own: the
@@ -2309,7 +2309,7 @@
 		border: 1px solid var(--border);
 	}
 	.rpt-toggle-btn {
-		/* CIPH-pi23-A1 — 44pt min-height per WCAG 2.5.5. Padding pushed
+		/* CIPH-pi23-A1 - 44pt min-height per WCAG 2.5.5. Padding pushed
 		   from 6/16 to 11/16 so the 13px font + line-height lands at 44. */
 		padding: 11px 16px;
 		font-size: 13px;
@@ -2365,7 +2365,7 @@
 		text-align: center;
 	}
 
-	/* CIPH-909 (year-block) — `.rpt-year-stats` / `.rpt-stat-card` /
+	/* CIPH-909 (year-block) - `.rpt-year-stats` / `.rpt-stat-card` /
 	   `.rpt-stat-num` removed: year view now uses the unified
 	   `.rpt-glance-*` stat block (declared above with the month view). */
 
@@ -2428,7 +2428,7 @@
 		cursor: pointer;
 		transition: transform 0.15s ease-out;
 		margin: 0 auto;
-		/* PI v15 LB-3 — was a span+role=button; now a real <button>. Reset
+		/* PI v15 LB-3 - was a span+role=button; now a real <button>. Reset
 		   browser defaults so the cell still renders as a colored 18px square. */
 		border: none;
 		padding: 0;
@@ -2468,7 +2468,7 @@
 	}
 
 	.grid-symptom-cell {
-		/* PI v15 LB-3 — the <td> is no longer interactive; the inner <button>
+		/* PI v15 LB-3 - the <td> is no longer interactive; the inner <button>
 		   is. Keep the cell padding only. */
 		padding: 0;
 	}
@@ -2497,10 +2497,10 @@
 		border-radius: 3px;
 	}
 
-	/* CIPH-915 — `.grid-episode-cell` no longer needs cursor:pointer,
+	/* CIPH-915 - `.grid-episode-cell` no longer needs cursor:pointer,
 	   hover-background, or the hover-only "+" corner hint; the explicit
 	   [−] N [+] counter widget inside is the affordance. */
-	/* CIPH-915 — `.grid-episode-zero` removed; empty cells now show a
+	/* CIPH-915 - `.grid-episode-zero` removed; empty cells now show a
 	   centered "+" button instead of a muted "-" placeholder. */
 
 	/* ── Doctor-export scope cards ── */

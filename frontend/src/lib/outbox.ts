@@ -1,15 +1,15 @@
 /**
- * ciphra — offline write outbox.
+ * ciphra - offline write outbox.
  *
  * When a save/update/remove can't reach the server (offline, or the service
  * worker's 503 "offline" stub), the write is encrypted AT CAPTURE TIME and the
- * CIPHERTEXT is queued here. Flushing needs no master key — so a queued entry
+ * CIPHERTEXT is queued here. Flushing needs no master key - so a queued entry
  * survives the vault re-locking and replays cleanly when the network returns.
  *
  * Zero-knowledge: only ciphertext lives in this store, never plaintext. The
  * decrypted optimistic copy a user sees while offline is held in the in-memory
  * documents store (and re-derived from this ciphertext on reload, while the
- * master key is in memory) — it is never written to disk in the clear.
+ * master key is in memory) - it is never written to disk in the clear.
  *
  * Records are tagged with `username` so a different account logging in on the
  * same device can never replay the previous user's queued writes, and with
@@ -30,7 +30,7 @@ const STORE_NAME = 'pending';
 export type OutboxOp = 'create' | 'update' | 'remove';
 
 export interface OutboxRecord {
-	/** Primary key — opaque client id, stable across reloads. */
+	/** Primary key - opaque client id, stable across reloads. */
 	tempId: string;
 	/** Documents-store partition key, e.g. `hans:self` or `hans:linked:42`. */
 	cacheKey: string;
@@ -39,9 +39,9 @@ export interface OutboxRecord {
 	/** Linked-vault patient id, or null/undefined for the user's own vault. */
 	sourceUserId?: number | null;
 	op: OutboxOp;
-	/** Server document id — set for update/remove of an already-synced doc. */
+	/** Server document id - set for update/remove of an already-synced doc. */
 	serverId?: number;
-	/** Encrypted payload — set for create/update. */
+	/** Encrypted payload - set for create/update. */
 	ciphertext?: string;
 	/** Sharing class of the plaintext. Derived at capture time, because the
 	 *  queue holds ciphertext and the flush cannot look inside it. Without it
@@ -51,7 +51,7 @@ export interface OutboxRecord {
 	createdAt: number;
 }
 
-/** Number of pending writes for the active user — drives the UI indicator. */
+/** Number of pending writes for the active user - drives the UI indicator. */
 export const pendingCount = writable(0);
 
 function openDB(): Promise<IDBDatabase> {

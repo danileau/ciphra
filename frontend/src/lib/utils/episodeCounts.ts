@@ -1,6 +1,6 @@
 // Episode-counting helpers shared across analytics views.
 //
-// ciphra has two document types: `entry` (any structured health log —
+// ciphra has two document types: `entry` (any structured health log -
 // full form or quick-add) and `event` (narrative marker). Episode data
 // lives on `entry` docs only.
 

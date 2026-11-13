@@ -1,5 +1,5 @@
 <!--
-	PublicFooter — shared footer for public-shell routes (CIPH-916).
+	PublicFooter - shared footer for public-shell routes (CIPH-916).
 
 	Lifted from the inline `<footer>` that lived at the bottom of
 	`routes/+page.svelte`. Now mounted in `+layout.svelte` for the
@@ -7,7 +7,7 @@
 	all get the same footer chrome and aren't visually orphaned.
 
 	Auth-flow shells (login / migrate / stream / join) intentionally
-	skip the footer — they're focus surfaces.
+	skip the footer - they're focus surfaces.
 -->
 <script lang="ts">
 	import { t } from '#lib/i18n/index.ts';
@@ -21,7 +21,7 @@
 	// authed control surface; anonymous visitors had no override and the
 	// only path was login → settings → logout. Footer is ciphra's slot
 	// for preferences (CIPH-pi24-1B: language lives here, Threema/Proton
-	// pattern). Same store as the settings select — the two stay in sync.
+	// pattern). Same store as the settings select - the two stay in sync.
 	const THEME_OPTIONS: { value: ThemeChoice; labelKey: string }[] = [
 		{ value: 'light', labelKey: 'settings.theme_light' },
 		{ value: 'dark', labelKey: 'settings.theme_dark' },
@@ -60,7 +60,7 @@
 				<ul class="space-y-2 text-sm" style="color: var(--text-muted);">
 					<li><a href="/privacy" class="hover:underline" style="color: inherit;">{$t('privacy.title')}</a></li>
 					<li><a href="/terms" class="hover:underline" style="color: inherit;">{$t('terms.title')}</a></li>
-					<!-- Docs link is hardcoded English (no i18n key) — see /docs
+					<!-- Docs link is hardcoded English (no i18n key) - see /docs
 					     index for the why. The docs themselves are English-only;
 					     the link label matches. -->
 					<li><a href="/docs" class="hover:underline" style="color: inherit;">{$t('nav.documentation')}</a></li>
@@ -71,10 +71,10 @@
 				</ul>
 			</div>
 		</div>
-		<!-- pi24 P-Land-1 — Contact strip with explicit privacy-boundary
+		<!-- pi24 P-Land-1 - Contact strip with explicit privacy-boundary
 		     copy. Mailto, not a server form: a server endpoint here would
 		     create the wrong affordance on a "we can't read your data"
-		     page. The boundary copy makes the difference legible — the
+		     page. The boundary copy makes the difference legible - the
 		     user leaves the encrypted app context when emailing the team. -->
 		<div class="text-sm text-center mb-6">
 			<a

@@ -1,4 +1,4 @@
-# PDF_TEMPLATE — ciphra doctor PDF spec
+# PDF_TEMPLATE - ciphra doctor PDF spec
 
 > **SUPERSEDED 2026-05-21** by `CLINICAL_HANDOFF.md` after the 5-round
 > "design from scratch" campfire + tribunal. The new spec replaces
@@ -22,9 +22,9 @@ applies all 72 fixes. The campfire history is preserved in
 
 ## Philosophy
 
-ciphra is a **data-gathering tool, not a medical analysis tool — not
+ciphra is a **data-gathering tool, not a medical analysis tool - not
 even implicitly**. The doctor PDF is **a summary of the patient's
-own logged entries** — a printable / shareable export of the record
+own logged entries** - a printable / shareable export of the record
 the user has been keeping. It organizes those entries, formats
 them for fast scanning, and presents source metadata. The user
 decides who to share it with; ciphra does not pre-declare the
@@ -79,7 +79,7 @@ These apply to every section, every cohort, every mode:
    display sections, source-attributed metadata, and context
    dimensions. **Blueprints may not define diagnostic, prognostic,
    risk, triage, treatment-response, abnormality, recovery,
-   worsening, improvement, stability, or escalation rules** — moving
+   worsening, improvement, stability, or escalation rules** - moving
    clinical-inference logic into configuration does not avoid MDR
    exposure, configurable clinical decision logic is still clinical
    decision logic.
@@ -94,8 +94,8 @@ These apply to every section, every cohort, every mode:
    carries the line "Patient-entered data summary. ciphra organizes
    the user's recorded entries into a printable summary. ciphra
    does not diagnose, interpret, classify risk, evaluate treatment
-   response, or recommend action." Sharing the export with anyone
-   — including a clinician — is the user's choice; ciphra does not
+   response, or recommend action." Sharing the export with anyone -
+   including a clinician - is the user's choice; ciphra does not
    pre-declare the audience.
 
 ---
@@ -104,90 +104,90 @@ These apply to every section, every cohort, every mode:
 
 ### Data-capability predicates (declared in blueprint)
 
-- `supportsSymptomRating` — blueprint declares a numeric
+- `supportsSymptomRating` - blueprint declares a numeric
   patient-entered symptom rating field. (NOT "severity intensity
-  signal" — keep this as user-entered, not clinical severity.)
-- `supportsEventCount` — blueprint declares countable discrete-event
+  signal" - keep this as user-entered, not clinical severity.)
+- `supportsEventCount` - blueprint declares countable discrete-event
   fields.
-- `supportsEpisodeDuration` — blueprint declares duration fields
+- `supportsEpisodeDuration` - blueprint declares duration fields
   attached to events.
-- `supportsPhaseLabels` — blueprint declares user-entered phase
+- `supportsPhaseLabels` - blueprint declares user-entered phase
   labels with start/end dates (cycle phase, multiDay flare period).
-- `supportsVitals` — blueprint declares vital-sign measurement
+- `supportsVitals` - blueprint declares vital-sign measurement
   fields included in the cohort display template.
-- `supportsLabs` — blueprint declares laboratory-result fields
+- `supportsLabs` - blueprint declares laboratory-result fields
   included in the cohort display template.
-- `supportsGrowthFields` — blueprint declares pediatric growth
+- `supportsGrowthFields` - blueprint declares pediatric growth
   measurements (height, weight-for-age) with optional source-imported
   reference curves.
-- `supportsNarrative` — blueprint declares free-text diary or note
+- `supportsNarrative` - blueprint declares free-text diary or note
   fields.
-- `supportsMedicationLogging` — blueprint declares medication-use
+- `supportsMedicationLogging` - blueprint declares medication-use
   entry fields (scheduled doses, rescue doses, taken/skipped flags).
-- `supportsContextDimensions` — blueprint declares display-grouping
+- `supportsContextDimensions` - blueprint declares display-grouping
   context fields (e.g. `school_day`, `weekend`, `home`, `clinic`,
   `caregiver`, `teacher`).
-- `supportsWatchlistFields` — blueprint declares fields that a user
+- `supportsWatchlistFields` - blueprint declares fields that a user
   or clinician may flag as worth highlighting in the appendix
-  watchlist table. **Note**: watchlist is display-only — entries
+  watchlist table. **Note**: watchlist is display-only - entries
   match a literal field criterion (e.g. "show entries where
   bp_systolic was entered as a value > 180"). It is not risk
   classification, not alerting, not triage, and never renders on
   Page 1.
-- `hasCohortAppendix` — blueprint declares cohort-specific
+- `hasCohortAppendix` - blueprint declares cohort-specific
   reference material for the appendix.
 
 ### Data-presence predicates (data exists in scope window)
 
-- `hasAnySummaryData` — at least one entry, event, vital, lab,
+- `hasAnySummaryData` - at least one entry, event, vital, lab,
   medication, or narrative record exists in the report window.
-- `hasSymptomRatingData` — at least one symptom rating entry exists.
-- `hasEventData` — at least one event entry exists.
-- `hasDurationData` — at least one duration-tagged event entry exists.
-- `hasPhaseLabelData` — at least one user-entered phase label exists.
-- `hasVitalData` — at least one vital entry exists.
-- `hasLabData` — at least one lab record exists.
-- `hasNarrativeData` — at least one diary/note entry exists.
-- `hasMedicationLogData` — at least one medication-use entry exists.
-- `hasContextData` — at least one entry has a cohort-declared context
+- `hasSymptomRatingData` - at least one symptom rating entry exists.
+- `hasEventData` - at least one event entry exists.
+- `hasDurationData` - at least one duration-tagged event entry exists.
+- `hasPhaseLabelData` - at least one user-entered phase label exists.
+- `hasVitalData` - at least one vital entry exists.
+- `hasLabData` - at least one lab record exists.
+- `hasNarrativeData` - at least one diary/note entry exists.
+- `hasMedicationLogData` - at least one medication-use entry exists.
+- `hasContextData` - at least one entry has a cohort-declared context
   dimension assigned.
-- `hasConfiguredWatchlistMatch` — at least one entry matches a
+- `hasConfiguredWatchlistMatch` - at least one entry matches a
   literal display criterion declared by the blueprint's watchlist
   fields. **Display only.**
-- `hasMultipleObserverRoles` — entries in the window were authored
+- `hasMultipleObserverRoles` - entries in the window were authored
   by more than one role.
 
 ### Derived (display-routing) predicates
 
-- `primaryDisplayMode` — the layout mode selected by the cohort
+- `primaryDisplayMode` - the layout mode selected by the cohort
   template and available entered data; one of `symptom_ratings`,
   `event_series`, `vital_series`, `narrative_log`, `mixed`. Renamed
   from `primaryTrackingMode` because "tracking" implied analytic
   framing. **Not "dominant evidence mode."**
-- `trajectoryDisplayType` — the display format for values-over-time
+- `trajectoryDisplayType` - the display format for values-over-time
   rendering; one of `numeric_values_over_time`, `event_counts_over_time`,
   `duration_over_time`, `no_trajectory`. **No clinical framing**
   (no `recovery`, `stability`, `comfort`, `flare-control`,
   `function`).
-- `observerRole` — the role that observed the entry directly.
-- `authorRole` — the role that entered the entry into ciphra.
-- `showsMedicationLogSection` — the selected template includes a
+- `observerRole` - the role that observed the entry directly.
+- `authorRole` - the role that entered the entry into ciphra.
+- `showsMedicationLogSection` - the selected template includes a
   medication-log summary when medication entries exist. (Renamed
   from `requiresMedicationUseSection`. No "treatment burden,"
   no "primary clinical question.")
-- `showsWatchlistSection` — the selected template includes an
+- `showsWatchlistSection` - the selected template includes an
   appendix table listing watchlist matches. Off by default; opt-in
   per blueprint.
-- `isCustomCohort` — report from user-built blueprint.
+- `isCustomCohort` - report from user-built blueprint.
 
 ### Report-eligibility predicates (PDF-level gating)
 
-- `hasMinimumReportData` — the report has enough entries to render
+- `hasMinimumReportData` - the report has enough entries to render
   the normal summary view rather than the onboarding mode.
-- `isOnboardingMode` — report is in day-1 mode because
+- `isOnboardingMode` - report is in day-1 mode because
   `hasMinimumReportData` is false. Suppresses longitudinal display
   and any cross-time summaries.
-- `canRenderPdf` — identity, cohort selection, report window, and
+- `canRenderPdf` - identity, cohort selection, report window, and
   either normal data or onboarding eligibility are present.
 
 ---
@@ -217,7 +217,7 @@ matching criterion. No Page 1 surfacing, no markers on charts, no
 across the comparison window and the cohort blueprint declares which
 fields support the display. Format is selected by
 `trajectoryDisplayType`. **Never improving / worsening / stable /
-recovering / flaring — those are clinical interpretations.** The
+recovering / flaring - those are clinical interpretations.** The
 section reports direction + amount of change in neutral terms ("TSH
 values increased over the report window from 1.9 mU/L mean to 3.4
 mU/L mean") or omits when data is insufficient.
@@ -245,7 +245,7 @@ entries exist, and any already-entered baseline facts (medications
 configured at setup, declared cohort). It does not render empty
 metric rows, does not imply stability / improvement / worsening /
 response / risk, and does not promise any clinical claim once
-data accumulates — only that more entries will allow more
+data accumulates - only that more entries will allow more
 displays.
 **Modes:** all
 **Page:** 1
@@ -257,7 +257,7 @@ section 4+. Coexists with identity and provenance.
 **Gate:** `data-presence` (`hasAnySummaryData`)
 **Renders:** A responsive row of summary tiles for the data
 categories that have entries in the report window. Each tile shows
-a count, a total, a most-recent value, or a per-window metric —
+a count, a total, a most-recent value, or a per-window metric -
 all with units and denominators where applicable. The row collapses
 to the number of populated tiles. The tiles selected for display
 are pre-declared per cohort in a static priority order; ciphra
@@ -366,7 +366,7 @@ entries as data only.
 **Notes:** Renamed from "Medication Use and Burden." No "treatment
 burden," no "adherence-relevant" labeling, no "primary clinical
 signal" framing. The user may have logged "missed" or "skipped"
-flags themselves — those render as the user entered them, not as
+flags themselves - those render as the user entered them, not as
 ciphra-derived adherence assessment.
 
 ### 10. Vital, lab, and growth display
@@ -475,12 +475,12 @@ generation timestamp, and the controlling provenance statement:
 recorded entries and proxy-author entries into a printable summary.
 ciphra does not diagnose, interpret, classify risk, evaluate
 treatment response, or recommend action. Sharing this export
-with anyone — including a clinician — is the user's choice."**
+with anyone - including a clinician - is the user's choice."**
 **Modes:** all
 **Page:** Every page
 **Notes:** This is the load-bearing line. Promote it to Section 1
 identity copy as well. The audience is deliberately left to the
-user — naming the clinician as the intended reader would bake
+user - naming the clinician as the intended reader would bake
 "intended for clinical decision-making" into ciphra's documented
 purpose, which is exactly the MDR Rule 11 trap.
 
@@ -543,7 +543,7 @@ The PDF DOES:
 When adding a new section, predicate, or cohort module:
 
 1. State which **predicate(s)** gate the addition.
-2. Confirm the addition is **display, not inference** — re-read the
+2. Confirm the addition is **display, not inference** - re-read the
    global invariants and the "what this spec rules out" list.
 3. If the addition involves computing a label, classification, or
    priority signal, **stop**. Move the computation out of ciphra or
@@ -560,17 +560,17 @@ When adding a new section, predicate, or cohort module:
 ## File anchors
 
 - This spec lives at `frontend/src/lib/PDF_TEMPLATE.md`.
-- `frontend/src/lib/cohortSections.ts` — the typed cohort × section
+- `frontend/src/lib/cohortSections.ts` - the typed cohort × section
   gate for the SPINE.
-- `frontend/src/lib/pdf.ts` — the renderer.
-- `frontend/src/lib/pdfTrajectory.ts` — the neutralized trajectory
+- `frontend/src/lib/pdf.ts` - the renderer.
+- `frontend/src/lib/pdfTrajectory.ts` - the neutralized trajectory
   pill resolver (P-PDF-2). Bipolar polarity gets cohort-aware
   framing without value-judgment labels.
-- `frontend/src/lib/PDF_REWRITE.md` — PI v18/19 rewrite memo
+- `frontend/src/lib/PDF_REWRITE.md` - PI v18/19 rewrite memo
   (predecessor of this spec).
-- `memory/feedback_pdf_clinician_lens.md` — 5-doctor agents campfire
+- `memory/feedback_pdf_clinician_lens.md` - 5-doctor agents campfire
   findings (the framing for "doctor-facing" without crossing into
   device territory).
-- `memory/project_medical_device_assessment.md` — MDR/MepV
+- `memory/project_medical_device_assessment.md` - MDR/MepV
   positioning. ciphra is not a device under current scope; the
   invariants above are how we keep it that way.

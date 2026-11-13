@@ -4,7 +4,7 @@
  * Before the allowlist, `/docs` shipped every top-level `docs/*.md`.
  * That is how ciphra.ch ended up serving patients the operator runbook
  * and the product backlog: nobody chose it, a glob did. The failure mode
- * is silent in both directions — nothing breaks when a doc leaks into
+ * is silent in both directions - nothing breaks when a doc leaks into
  * the app, and nothing breaks when a doc a user needs quietly stops
  * being shipped.
  */
@@ -34,7 +34,7 @@ describe('in-app docs manifest', () => {
 		expect(both).toEqual([]);
 	});
 
-	it('every docs/*.md is classified — a new doc must be decided about', () => {
+	it('every docs/*.md is classified - a new doc must be decided about', () => {
 		const known = new Set<string>([...IN_APP_DOCS, ...NOT_IN_APP]);
 		const unclassified = readdirSync(join(REPO, 'docs'))
 			.filter((f) => f.endsWith('.md'))

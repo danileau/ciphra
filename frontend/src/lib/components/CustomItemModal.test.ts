@@ -1,5 +1,5 @@
 /**
- * CIPH-882 — CustomItemModal contract + behaviour test.
+ * CIPH-882 - CustomItemModal contract + behaviour test.
  *
  * Covers the prop boundary and the four kind-driven form modes:
  *   - mount with kind='symptom' → label input + group select rendered
@@ -11,7 +11,7 @@
  *   - submit while editing preserves the existing id
  *
  * Mounted via @testing-library/svelte; i18n loads its real store. No
- * store mocks needed — the modal is purely controlled by props.
+ * store mocks needed - the modal is purely controlled by props.
  *
  * @vitest-environment jsdom
  */
@@ -23,7 +23,7 @@ import { DATA_PALETTE } from '#lib/dataPalette.ts';
 
 afterEach(() => cleanup());
 
-describe('CustomItemModal — symptom kind', () => {
+describe('CustomItemModal - symptom kind', () => {
 	it('renders label input and group select with provided groups', () => {
 		const { getByTestId } = render(CustomItemModal, {
 			props: {
@@ -80,7 +80,7 @@ describe('CustomItemModal — symptom kind', () => {
 	});
 });
 
-describe('CustomItemModal — trigger kind', () => {
+describe('CustomItemModal - trigger kind', () => {
 	it('renders only the label input', () => {
 		const { getByTestId, queryByTestId } = render(CustomItemModal, {
 			props: { open: true, kind: 'trigger', editing: null, groups: [] },
@@ -91,7 +91,7 @@ describe('CustomItemModal — trigger kind', () => {
 	});
 });
 
-describe('CustomItemModal — vital kind', () => {
+describe('CustomItemModal - vital kind', () => {
 	it('renders label + unit + min + max', () => {
 		const { getByTestId } = render(CustomItemModal, {
 			props: { open: true, kind: 'vital', editing: null, groups: [] },
@@ -149,7 +149,7 @@ describe('CustomItemModal — vital kind', () => {
 	});
 });
 
-describe('CustomItemModal — episode kind', () => {
+describe('CustomItemModal - episode kind', () => {
 	it('renders all 6 DATA_PALETTE color chips', () => {
 		const { getByTestId } = render(CustomItemModal, {
 			props: { open: true, kind: 'episode', editing: null, groups: [] },
@@ -180,7 +180,7 @@ describe('CustomItemModal — episode kind', () => {
 	});
 });
 
-describe('CustomItemModal — close + label-required', () => {
+describe('CustomItemModal - close + label-required', () => {
 	it('clicking cancel dispatches close', async () => {
 		const onClose = vi.fn();
 		const { getByTestId, component } = render(CustomItemModal, {

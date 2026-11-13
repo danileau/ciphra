@@ -1,10 +1,10 @@
 /**
- * AGPL-3.0 §13 — the source offer of *this* deployment.
+ * AGPL-3.0 §13 - the source offer of *this* deployment.
  *
  * ciphra is network software: users interact with it remotely, so §13
  * obliges whoever operates it to offer THEIR users the Corresponding
  * Source of the version actually running. A fork that keeps pointing at
- * the upstream repository does not satisfy that — it advertises someone
+ * the upstream repository does not satisfy that - it advertises someone
  * else's code as if it were the code being served. That is worse than no
  * link at all, because it looks like compliance.
  *
@@ -17,7 +17,7 @@
  * purpose: the published container images are built once by our CI, and a
  * self-hoster pulls them rather than rebuilding. A static (build-time)
  * variable would be baked into the image and unchangeable without a
- * rebuild — which would make the setting useless for exactly the people
+ * rebuild - which would make the setting useless for exactly the people
  * who need it.
  *
  * Unset, it falls back to upstream. That is the correct value for an
@@ -27,7 +27,7 @@
 import { PUBLIC_SOURCE_URL } from '$app/env/public';
 
 /**
- * Upstream ciphra. The single place this URL is written down — every
+ * Upstream ciphra. The single place this URL is written down - every
  * surface renders `sourceUrl`, and `no-hardcoded-source.test.ts` fails
  * the build if a component hardcodes a repository link again.
  */
@@ -57,7 +57,7 @@ export function resolveSourceUrl(raw: string | undefined | null): string {
 }
 
 /**
- * Display form: host + path, no scheme, no trailing slash — what the
+ * Display form: host + path, no scheme, no trailing slash - what the
  * landing page prints next to "verify our claims yourself". Showing the
  * real host is the point: on a fork it must read as the fork.
  */

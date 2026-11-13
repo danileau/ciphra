@@ -1,5 +1,5 @@
 <!--
-	DayDetail — calendar-side-panel content (CIPH-910).
+	DayDetail - calendar-side-panel content (CIPH-910).
 
 	Replaces the per-doc EntryPreview stack inside the calendar bottom-
 	sheet / right-side panel. Smoke flagged the EntryPreview-stack as
@@ -15,7 +15,7 @@
 
 	Render-only. Edit / delete is the calendar's concern (the "Bearbeiten"
 	link in the panel header routes to /log/{date} for entries; events
-	and diaries open the journal moment-modal — out of scope here).
+	and diaries open the journal moment-modal - out of scope here).
 -->
 <script lang="ts">
 	import { t, locale, translateUnit } from '#lib/i18n/index.ts';
@@ -26,7 +26,7 @@
 	export let docs: CiphraDocument[];
 	export let bp: Blueprint | null;
 	/** The day shown. Needed for medication changes, which live on the
-	 *  blueprint rather than in a document — a change day can have no logged
+	 *  blueprint rather than in a document - a change day can have no logged
 	 *  document at all. Falls back to the documents' date. */
 	export let date: string | null = null;
 
@@ -38,8 +38,8 @@
 	$: diaryDocs = docs.filter((d) => d.data.type === 'diary');
 
 	// Aggregate symptoms / triggers / episode counts / vitals / notes
-	// across every entry doc for the day. Multi-entry days are rare —
-	// usually 1 entry per day — but the merge keeps display correct
+	// across every entry doc for the day. Multi-entry days are rare -
+	// usually 1 entry per day - but the merge keeps display correct
 	// when the model allows multiple.
 	$: aggregated = (() => {
 		const symptoms = new Set<string>();
@@ -50,7 +50,7 @@
 		for (const d of entryDocs) {
 			const data = d.data;
 			// Filter ids unknown to the current blueprint (deleted custom items,
-			// legacy/migration leftovers) so they don't render as raw-id chips —
+			// legacy/migration leftovers) so they don't render as raw-id chips -
 			// mirrors the CIPH-915 guard already in EntryPreview.
 			for (const [k, v] of Object.entries(data.symptoms || {})) {
 				if (v && !POSITIVE_MARKERS.has(k) && isKnownSymptom(k)) symptoms.add(k);
@@ -163,7 +163,7 @@
 		return u ? ' ' + u : '';
 	}
 
-	// Dose history — what changed on this day, and which scheduled doses were
+	// Dose history - what changed on this day, and which scheduled doses were
 	// marked missed, each at the dose that applied THAT day (not today's).
 	$: dayDate = date ?? ((docs[0]?.data?.date as string | undefined) || null);
 	$: medChanges = dayDate && bp ? medicationChanges(bp.medications ?? [], { from: dayDate, to: dayDate }) : [];
@@ -283,7 +283,7 @@
 								{:else}
 									{$t('medication.day_stop', { name: c.name })}
 								{/if}
-								{c.note ? ` — ${c.note}` : ''}
+								{c.note ? ` - ${c.note}` : ''}
 							</span>
 						</li>
 					{/each}
@@ -335,7 +335,7 @@
 {/if}
 
 <style>
-	/* CIPH-913 — visual polish. Smoke flagged the day-detail panel as
+	/* CIPH-913 - visual polish. Smoke flagged the day-detail panel as
 	   "shine-less, just text." Added: hairline divider + cohort-accent
 	   dot per section, vitals as a 2-column grid with right-aligned
 	   tabular values, the notes section reads as quote-pulled text. Calm

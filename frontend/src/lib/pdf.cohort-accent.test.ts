@@ -1,5 +1,5 @@
 /**
- * CIPH-pi18-2 Chunk 2 — Print-safe contrast for the cohort accents
+ * CIPH-pi18-2 Chunk 2 - Print-safe contrast for the cohort accents
  * the doctor PDF actually uses.
  *
  * `resolveCohortAccents(bp)` returns `primary` (slot 0) + `break`
@@ -57,7 +57,7 @@ function fixtureFor(cohort: string): Blueprint {
 	return structuredClone(found.blueprint);
 }
 
-describe('resolveCohortAccents — print-safe contrast', () => {
+describe('resolveCohortAccents - print-safe contrast', () => {
 	it.each(ALL_COHORTS_PALETTE)(
 		'%s primary clears WCAG AA 4.5:1 against PDF paper',
 		(cohort) => {
@@ -74,12 +74,12 @@ describe('resolveCohortAccents — print-safe contrast', () => {
 		},
 	);
 
-	it('cycle break falls back to slot-1 mulberry — stays in the rose family', () => {
+	it('cycle break falls back to slot-1 mulberry - stays in the rose family', () => {
 		const acc = resolveCohortAccents(fixtureFor('cycle'));
 		expect(acc.break).toEqual([122, 40, 69]); // CYCLE_TONES[1]
 	});
 
-	it('custom break falls back to slot-1 deep slate — stays in the slate family', () => {
+	it('custom break falls back to slot-1 deep slate - stays in the slate family', () => {
 		const acc = resolveCohortAccents(fixtureFor('custom'));
 		expect(acc.break).toEqual([51, 65, 85]); // CUSTOM_TONES[1]
 	});
@@ -94,7 +94,7 @@ describe('resolveCohortAccents — print-safe contrast', () => {
 		expect(acc.primary).toEqual([178, 60, 44]);
 	});
 
-	// Pin the soft-blend math at 12% — the area-fill alpha. If anyone tunes
+	// Pin the soft-blend math at 12% - the area-fill alpha. If anyone tunes
 	// this constant later, this test fails before the area-fill darkens or
 	// disappears (Linus dry-run #1 carryover).
 	it('primarySoft blends primary at 12% over BRAND.paper', () => {

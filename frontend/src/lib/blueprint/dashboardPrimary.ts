@@ -1,5 +1,5 @@
 /**
- * pi24 dashboard rework — primary card resolver.
+ * pi24 dashboard rework - primary card resolver.
  *
  * Decides which card occupies the 2/3 column's primary slot on `/` for a
  * given blueprint + the user's current data state. Replaces the old hard
@@ -22,7 +22,7 @@
  *    the hero. No "nothing recorded yet" copy. See
  *    `feedback_no_gaslight_good_days`.
  *  - Migraine top-triggers is OBSERVATIONAL ("Top recorded triggers"),
- *    never "Your triggers" / "Causes" — copy discipline lives in i18n,
+ *    never "Your triggers" / "Causes" - copy discipline lives in i18n,
  *    not here.
  *  - Autism (phase cohort) framing in i18n MUST stay "overload /
  *    regulation episodes", not "flare". Codex's caveat on the campfire.
@@ -66,7 +66,7 @@ export interface DashboardSummary {
 	hasActivePhase: boolean;
 	/**
 	 * Vital ids that have at least one non-empty value across any entry.
-	 * Used by the vital-primary routing — a cohort with a pinned default
+	 * Used by the vital-primary routing - a cohort with a pinned default
 	 * vital only renders the vital-trend card once that vital has data.
 	 */
 	presentVitalIds: Set<string>;
@@ -75,12 +75,12 @@ export interface DashboardSummary {
 /**
  * Per-condition vital pin. Each entry names the clinically recognizable
  * primary vital + a short list of secondaries the card may render as
- * sparkline companions. Pinned NOT chip-selectable — the dashboard has
+ * sparkline companions. Pinned NOT chip-selectable - the dashboard has
  * an opinion. Detail views (settings, /reports) can offer selection.
  */
 const VITAL_PRIMARY_MAP: Record<string, { primary: string; secondaries: string[] }> = {
 	// Hashimoto: TSH is the clinical anchor. T3/T4/TPO follow as companions
-	// when present. Lab-driven cohort — usually quarterly entries.
+	// when present. Lab-driven cohort - usually quarterly entries.
 	hashimoto: {
 		primary: 'tsh',
 		secondaries: ['free_t4', 'free_t3', 'tpo_antibodies'],
@@ -125,7 +125,7 @@ const VITAL_PRIMARY_MAP: Record<string, { primary: string; secondaries: string[]
  * trigger-hunting.
  *
  * Other trigger-rich cohorts (IBS, asthma) keep triggers in secondary
- * surfaces — /reports glance, journal — not on the dashboard.
+ * surfaces - /reports glance, journal - not on the dashboard.
  */
 const TOP_TRIGGERS_PRIMARY_CONDITIONS = new Set<string>([
 	'migraine',
@@ -135,7 +135,7 @@ const TOP_TRIGGERS_PRIMARY_CONDITIONS = new Set<string>([
 /**
  * Resolve which primary card the dashboard should show. Returns `null`
  * when no card has enough signal AND there's no last-entries fallback
- * — the dashboard renders just the hero (silent empty state).
+ * - the dashboard renders just the hero (silent empty state).
  */
 export function resolvePrimaryDashboardCard(
 	bp: Blueprint | null | undefined,
@@ -160,7 +160,7 @@ export function resolvePrimaryDashboardCard(
 
 	// 3) Cancer treatment routes to last-entries via the final fallback.
 	//    The campfire matrix called for a "treatment-cycle" card, but the
-	//    cancer_treatment blueprint has no regimen / cycle data primitive —
+	//    cancer_treatment blueprint has no regimen / cycle data primitive -
 	//    it tracks symptoms / episodes / triggers / vitals like every
 	//    other cohort. Inferring cycles from `chemo_day` trigger events
 	//    would be fragile (many users won't log it reliably). Cancer is
@@ -194,14 +194,14 @@ export function resolvePrimaryDashboardCard(
 	//    (discrete cohorts without a vital pin) and phase cohorts
 	//    between flares. Symptom-only days still render the trend
 	//    because the symptom-days line is half the existing chart's
-	//    payload — keeps the pre-pi24 visible behavior for users who
+	//    payload - keeps the pre-pi24 visible behavior for users who
 	//    track symptoms but no episodes.
 	if (bp.episodeTypes?.length && (summary.hasEpisodeData || summary.hasSymptomData)) {
 		return { kind: 'episode-trend' };
 	}
 
 	// 7) Final fallback: last-entries strip if anything has been logged.
-	//    No copy header, no "nothing recorded yet" — the strip simply
+	//    No copy header, no "nothing recorded yet" - the strip simply
 	//    mirrors what the user has done.
 	if (summary.hasAnyEntry) {
 		return { kind: 'last-entries' };

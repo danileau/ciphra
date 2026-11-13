@@ -4,7 +4,7 @@
  *
  * nginx and Cloudflare answer a dead upstream with an HTML 502/503/504 page.
  * `res.json()` threw a SyntaxError on it, and a SyntaxError is not a network
- * error — so an offline-capable write failed outright instead of queueing, and
+ * error - so an offline-capable write failed outright instead of queueing, and
  * `saveBatch` reported status 0 for what was really a 502. The status has to
  * reach the caller intact; that is what the queue/retry logic keys on.
  */

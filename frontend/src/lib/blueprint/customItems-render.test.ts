@@ -1,5 +1,5 @@
 /**
- * CIPH-882b — Custom-item render coverage source-parse guards.
+ * CIPH-882b - Custom-item render coverage source-parse guards.
  *
  * Mirror of `rescueMedications-render.test.ts`. Every render site that
  * translates a blueprint item id into a label must branch on

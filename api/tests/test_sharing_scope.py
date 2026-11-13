@@ -1,5 +1,5 @@
 """
-Per-invite sharing scope — what a family invitation is allowed to read.
+Per-invite sharing scope - what a family invitation is allowed to read.
 
 The point of this feature is that the boundary is the SERVER'S. A caregiver
 must never receive the ciphertext of a document outside their grant's scope,
@@ -10,12 +10,12 @@ readable by a modified client or by opening IndexedDB.
 So these tests assert the SQL, not the UI. The three things that would quietly
 undo the feature:
 
-  1. the read stops being fail-closed, and unclassified documents flow again —
+  1. the read stops being fail-closed, and unclassified documents flow again -
      that is every diary written before this shipped;
   2. a caregiver gets to set or change `share_class`, and can file themselves
      into a wider scope or reclassify their way into one;
   3. the write paths stay unscoped, so a narrow-scope caregiver can overwrite
-     or delete a diary entry by guessing its id — being unable to read what
+     or delete a diary entry by guessing its id - being unable to read what
      you destroy is not much of a consolation.
 """
 import json
@@ -82,7 +82,7 @@ class TestWritesAreScopedToo:
     def test_caregiver_writes_carry_the_same_predicate(self, fn):
         sql = statement(fn)
         assert 'share_class IS NOT NULL' in sql and '(share_class & %s) <> 0' in sql, \
-            f'{fn} is not scoped — a narrow grant could reach a diary entry by id'
+            f'{fn} is not scoped - a narrow grant could reach a diary entry by id'
 
     def test_a_caregiver_cannot_set_the_class_on_create(self):
         sql = statement('family_documents_create')
@@ -95,14 +95,14 @@ class TestWritesAreScopedToo:
         sql = statement('family_documents_update')
         assert 'SET encrypted_data = %s, updated_at = NOW()' in sql
         assert 'share_class =' not in sql.split('SET', 1)[1].split('WHERE', 1)[0], \
-            'the caregiver update writes share_class — it must only ever read it'
+            'the caregiver update writes share_class - it must only ever read it'
 
 
 class TestOwnerPaths:
     def test_the_owner_classify_is_pinned_to_the_caller(self):
         sql = statement('classify_documents')
         assert 'WHERE id = %s AND user_id = %s' in sql, \
-            'classify is not pinned to the caller — a caregiver could reclassify'
+            'classify is not pinned to the caller - a caregiver could reclassify'
         assert 'request.user_id' in sql
 
     def test_the_owner_update_leaves_an_absent_class_alone(self):
@@ -149,7 +149,7 @@ class TestGrantScope:
         # exactly the one whose scope a person changes their mind about.
         sql = statement('family_grant_rescope')
         assert 'claimed_at' not in sql and 'claimed_by_user_id' not in sql, \
-            'rescope refuses claimed grants — the only ones worth rescoping'
+            'rescope refuses claimed grants - the only ones worth rescoping'
 
     def test_the_scope_is_read_per_request_not_cached(self):
         # A changed scope has to bind on the caregiver's very next request,

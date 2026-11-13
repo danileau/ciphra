@@ -1,30 +1,30 @@
 <!--
-  ciphra* asterisk mark — the living brand element.
+  ciphra* asterisk mark - the living brand element.
 
   Usage:
-    <Asterisk />                     — static mark (logo size)
-    <Asterisk size={48} />           — large
-    <Asterisk spin />                — legacy fast spinner (kept for back-compat)
-    <Asterisk color="ochre" />       — ochre variant
-    <Asterisk muted />               — faded (empty state, watermark)
+    <Asterisk />                     - static mark (logo size)
+    <Asterisk size={48} />           - large
+    <Asterisk spin />                - legacy fast spinner (kept for back-compat)
+    <Asterisk color="ochre" />       - ochre variant
+    <Asterisk muted />               - faded (empty state, watermark)
 
   CIPH-204 modes (mode prop):
-    mode="static"   — default, decorative
-    mode="loading"  — gentle 3.6s rotation (skeleton placeholder)
-    mode="saved"    — quick scale + olive flash (~700ms)
-    mode="empty"    — slow opacity pulse (3s, empty-state icon)
+    mode="static"   - default, decorative
+    mode="loading"  - gentle 3.6s rotation (skeleton placeholder)
+    mode="saved"    - quick scale + olive flash (~700ms)
+    mode="empty"    - slow opacity pulse (3s, empty-state icon)
 
   All animations honor `prefers-reduced-motion`.
 
-  The mark is rotated 8° with asymmetric arms — designed, not typed.
+  The mark is rotated 8° with asymmetric arms - designed, not typed.
 -->
 <script lang="ts">
 	export let size: number = 20;
 	export let spin: boolean = false;
 	export let muted: boolean = false;
-	/** CIPH-891 — `accent` (cohort-aware) is the default. `brand` stays
+	/** CIPH-891 - `accent` (cohort-aware) is the default. `brand` stays
 	 *  invariant for the wordmark + landing where brand identity must
-	 *  not shift per cohort. `coral` was a dead variant — removed. */
+	 *  not shift per cohort. `coral` was a dead variant - removed. */
 	export let color: 'accent' | 'brand' | 'ochre' | 'olive' | 'white' | 'muted' = 'accent';
 	export let mode: 'static' | 'loading' | 'saved' | 'empty' = 'static';
 
@@ -83,7 +83,7 @@
 	}
 
 	/* Saved: scale + olive flash. Reduced-motion DOES still get the
-	   olive color-swap below — only the scale animation is killed,
+	   olive color-swap below - only the scale animation is killed,
 	   so blind/SR users still hear the flash via the live region in
 	   the parent and sighted reduced-motion users still see green. */
 	.ast-mode-saved {

@@ -1,9 +1,9 @@
 /**
- * ciphra — sharing classes.
+ * ciphra - sharing classes.
  *
  * The server holds ONE bit per document: whether its owner considers it
- * shareable, or personal. It cannot work this out for itself — the document
- * type lives inside the ciphertext — so the client stamps it at write time,
+ * shareable, or personal. It cannot work this out for itself - the document
+ * type lives inside the ciphertext - so the client stamps it at write time,
  * and the server uses it to decide what a family invitation may read.
  *
  * Two classes, deliberately. A per-type label would tell the server the type

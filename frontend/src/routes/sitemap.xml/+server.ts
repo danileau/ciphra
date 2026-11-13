@@ -1,7 +1,7 @@
 /**
  * Dynamic sitemap (SEO foundation 2026-06-12).
  *
- * Lists the PUBLIC, crawlable surfaces only — the marketing landing, the
+ * Lists the PUBLIC, crawlable surfaces only - the marketing landing, the
  * per-condition catalogue, the public docs, and the legal pages. The
  * signed-in app is deliberately excluded (it returns an auth-gated shell
  * with no content; also disallowed in robots.txt).
@@ -9,7 +9,7 @@
  * Locale note: ciphra is multilingual at runtime (de/en/fr/it) but serves
  * every language from the same URL (locale is a client-side preference,
  * not a path segment). Until URL-addressable locales land, the sitemap
- * lists one canonical URL per page and declares no hreflang alternates —
+ * lists one canonical URL per page and declares no hreflang alternates -
  * claiming alternates that don't have distinct URLs would mislead
  * crawlers. See the SEO plan / OPERATIONS follow-ups.
  */

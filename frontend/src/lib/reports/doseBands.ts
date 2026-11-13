@@ -1,15 +1,15 @@
 /**
- * Dose bands — the "before and after" structure on a chart (2026-09-17).
+ * Dose bands - the "before and after" structure on a chart (2026-09-17).
  *
  * A chart's background is split into one medication's dose periods: a subtle
  * shade per period, a boundary where the dose changed. The person reading it
  * (a doctor, most of all) sees the episode line before and after a change
- * against one axis — and draws their own conclusion. ciphra draws none: no
+ * against one axis - and draws their own conclusion. ciphra draws none: no
  * counts per period, no rates, no better/worse (operator decision, MDR
  * guardrail; see pdf.no-assessment.test.ts).
  *
  * Geometry only, shared by the /reports charts (Chart.js, via ChartWrapper)
- * and the doctor PDF (jsPDF): both place things along an x axis of BINS —
+ * and the doctor PDF (jsPDF): both place things along an x axis of BINS -
  * days in a month view, months in a 12/24-month view. A position is measured
  * in bin units where bin k spans [k − 0.5, k + 0.5], so it maps onto a
  * category axis (bin centres at 0, 1, 2 …) with one linear step.
@@ -29,7 +29,7 @@ export interface DoseBand {
 	end: number;
 	dose: string;
 	schedule: string;
-	/** 0, 1, 2 … in period order — callers alternate the shade on it. */
+	/** 0, 1, 2 … in period order - callers alternate the shade on it. */
 	index: number;
 }
 
@@ -59,7 +59,7 @@ export function binPosition(bins: AxisBin[], date: string, edge: 'start' | 'end'
 }
 
 /** Medications whose dose started, changed or stopped inside [from, to], the
- *  most recently changed first — the order a chart offers them in, and the
+ *  most recently changed first - the order a chart offers them in, and the
  *  first is the default. */
 export function medsChangedIn(meds: MedicationSlot[], from: string, to: string): MedicationSlot[] {
 	const latest = new Map<string, string>();
@@ -72,7 +72,7 @@ export function medsChangedIn(meds: MedicationSlot[], from: string, to: string):
 }
 
 /** The bands and boundaries for one medication on an axis. Empty when the
- *  medication did not change inside the axis range — a single band across the
+ *  medication did not change inside the axis range - a single band across the
  *  whole chart would be decoration, not structure. */
 export function doseBands(
 	med: MedicationSlot,

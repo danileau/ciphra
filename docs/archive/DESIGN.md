@@ -9,22 +9,22 @@ This document is the single source of truth for every visual and interaction dec
 ## 1. Brand DNA
 
 ### What ciphra is
-An encrypted health companion for chronic conditions. Zero-knowledge — the server stores only opaque blobs. 16 conditions, 4 languages, free, no email required.
+An encrypted health companion for chronic conditions. Zero-knowledge - the server stores only opaque blobs. 16 conditions, 4 languages, free, no email required.
 
 ### What ciphra is NOT
 - Not a clinical tool (patients are tired of those)
 - Not a wellness app (no gamification, no streaks-as-motivation)
 - Not a startup product (no gradients, no "AI-powered", no confetti)
-- Not a mailing list. **No email field exists on the user model and none should be added speculatively.** If a concrete feature requires it (family invites, security alerts, recovery backup), revisit deliberately — the bar is a real user problem, not a "nice to have." See `memory/project_backlog_decisions.md` for the full rationale and the checklist for how to do it right if the answer ever flips to yes.
+- Not a mailing list. **No email field exists on the user model and none should be added speculatively.** If a concrete feature requires it (family invites, security alerts, recovery backup), revisit deliberately - the bar is a real user problem, not a "nice to have." See `memory/project_backlog_decisions.md` for the full rationale and the checklist for how to do it right if the answer ever flips to yes.
 
 ### The feeling
 Like writing in a good notebook with a reliable pen. Private but shareable. Warm but precise. You open it, record what matters, close it. The doctor gets a clear picture.
 
 ### The asterisk *
 The soul of the brand. Three meanings:
-- **Password masking** — your data is `*******`
-- **Wildcard** — covers every condition, not just one
-- **Footnote** — there's more here than meets the eye
+- **Password masking** - your data is `*******`
+- **Wildcard** - covers every condition, not just one
+- **Footnote** - there's more here than meets the eye
 
 The mark is rotated 8° clockwise. One arm is fractionally longer. The diagonals are slightly unequal. It reads as designed, not typed.
 
@@ -79,11 +79,11 @@ Every color has a *job*. No color appears without a reason.
 
 ### Anti-patterns
 - ❌ Never use brick as a background fill (except tinted cards)
-- ❌ Never use pure black (`#000000`) — always warm near-black
-- ❌ Never use Tailwind's slate-800/900/950 — too cold
-- ❌ Never use blue, cyan, teal, indigo — not in the palette
-- ❌ Never use ochre for buttons — it's for data display only
-- ❌ Never use olive for links — it's for status display only
+- ❌ Never use pure black (`#000000`) - always warm near-black
+- ❌ Never use Tailwind's slate-800/900/950 - too cold
+- ❌ Never use blue, cyan, teal, indigo - not in the palette
+- ❌ Never use ochre for buttons - it's for data display only
+- ❌ Never use olive for links - it's for status display only
 
 ---
 
@@ -145,14 +145,14 @@ Inter, 'DM Sans', system-ui, -apple-system, sans-serif
 The primary container. White on warm background.
 
 **Variants:**
-- `default` — white, warm border, 12px radius
-- `interactive` — adds hover lift (translateY -1px, subtle shadow)
-- `brand` — brick-tinted background for CTAs
-- `ochre` — ochre-tinted for data emphasis
-- `olive` — olive-tinted for status/completion
+- `default` - white, warm border, 12px radius
+- `interactive` - adds hover lift (translateY -1px, subtle shadow)
+- `brand` - brick-tinted background for CTAs
+- `ochre` - ochre-tinted for data emphasis
+- `olive` - olive-tinted for status/completion
 
 **Rules:**
-- Cards never have heavy shadows — ciphra is flat-warm, not Material
+- Cards never have heavy shadows - ciphra is flat-warm, not Material
 - Border radius is always 12px
 - Padding: 16px mobile, 20px desktop
 - Cards stack vertically with 16px gaps
@@ -172,10 +172,10 @@ Small status indicators.
 ### Button
 
 **Variants:**
-- `primary` — brick background, white text. For main actions only.
-- `secondary` — muted background, secondary text. For cancel, back, alternative actions.
-- `ghost` — no background, brand text. For tertiary/inline actions.
-- `danger` — red background, white text. For destructive actions.
+- `primary` - brick background, white text. For main actions only.
+- `secondary` - muted background, secondary text. For cancel, back, alternative actions.
+- `ghost` - no background, brand text. For tertiary/inline actions.
+- `danger` - red background, white text. For destructive actions.
 
 **Rules:**
 - Minimum touch target: 44x44px
@@ -188,15 +188,15 @@ Small status indicators.
 The core daily interaction. Must feel tactile and satisfying.
 
 **States:**
-- `inactive` — muted background, secondary text
-- `active` — olive tinted background, olive text, subtle ring (for symptoms — "I had this today")
-- `active-trigger` — ochre tinted (for triggers — "this caused it")
+- `inactive` - muted background, secondary text
+- `active` - olive tinted background, olive text, subtle ring (for symptoms - "I had this today")
+- `active-trigger` - ochre tinted (for triggers - "this caused it")
 
 **Rules:**
 - Min height 36px, generous horizontal padding (12-16px)
 - Wrap with 8px gap
 - Group label above each group (Label style, uppercase)
-- Toggle on tap — no confirmation needed
+- Toggle on tap - no confirmation needed
 
 ### Counter
 
@@ -245,7 +245,7 @@ When there's no data to show.
 Visual break between sections.
 
 **Structure:**
-- Thin line — asterisk mark — thin line
+- Thin line - asterisk mark - thin line
 - The asterisk is 14px, muted color
 - Lines extend to fill available width
 - Vertical padding: 16px
@@ -325,14 +325,14 @@ The asterisk appears throughout the app with different meanings:
 **Concept:** Card-per-section, vertically scrollable. Each section is a self-contained card. The page feels like flipping through a short questionnaire, not filling a form.
 
 **Sections (each is a card):**
-1. **Date header** — prev/next arrows, "Today" badge (olive)
-2. **Symptoms** — ChipGroup per symptom group. Group label (Label style). Chips toggle olive on tap.
-3. **Episodes** — Counter per episode type. Number is ochre. Episode color dot.
-4. **Triggers** — ChipGroup, single group. Chips toggle ochre on tap.
-5. **Vitals** — Input per vital. Label + unit above. Ochre labels.
-6. **Medications** — ChipGroup. Toggle olive (taken/not taken).
-7. **Notes** — Single textarea.
-8. **Save bar** — Sticky bottom. Primary button. Delete (danger, icon only) if editing.
+1. **Date header** - prev/next arrows, "Today" badge (olive)
+2. **Symptoms** - ChipGroup per symptom group. Group label (Label style). Chips toggle olive on tap.
+3. **Episodes** - Counter per episode type. Number is ochre. Episode color dot.
+4. **Triggers** - ChipGroup, single group. Chips toggle ochre on tap.
+5. **Vitals** - Input per vital. Label + unit above. Ochre labels.
+6. **Medications** - ChipGroup. Toggle olive (taken/not taken).
+7. **Notes** - Single textarea.
+8. **Save bar** - Sticky bottom. Primary button. Delete (danger, icon only) if editing.
 
 **Distinctive elements:**
 - Each section card has a subtle left-border accent:
@@ -347,17 +347,17 @@ The asterisk appears throughout the app with different meanings:
 
 ### Today / Companion (`/`)
 
-**Concept:** Your daily dashboard. Calm, informative, actionable. Not a metrics dashboard — more like opening your notebook to today's page.
+**Concept:** Your daily dashboard. Calm, informative, actionable. Not a metrics dashboard - more like opening your notebook to today's page.
 
 **Sections:**
-1. **Greeting** — "Hello {name}" + date + condition badge (olive)
-2. **Today status** — Either "not logged yet" (brand-tinted CTA card with asterisk) or "logged" (olive-tinted summary with badges)
-3. **Streak** — Number (ochre, large) + label + progress bar (ochre)
-4. **Reports link** — Ochre-tinted interactive card → /reports
-5. **7-day episodes** — Chart card (episode colors)
-6. **Top symptoms** — Chart card (ochre bars)
-7. **Today's entries** — EntryCard list with stagger animation
-8. **Footer** — Asterisk divider + encryption badge
+1. **Greeting** - "Hello {name}" + date + condition badge (olive)
+2. **Today status** - Either "not logged yet" (brand-tinted CTA card with asterisk) or "logged" (olive-tinted summary with badges)
+3. **Streak** - Number (ochre, large) + label + progress bar (ochre)
+4. **Reports link** - Ochre-tinted interactive card → /reports
+5. **7-day episodes** - Chart card (episode colors)
+6. **Top symptoms** - Chart card (ochre bars)
+7. **Today's entries** - EntryCard list with stagger animation
+8. **Footer** - Asterisk divider + encryption badge
 
 ### Journal (`/journal`)
 
@@ -383,24 +383,24 @@ The asterisk appears throughout the app with different meanings:
 
 ### Landing Page (`/`)
 
-**Concept:** Scroll-driven story. Not a feature list — a narrative. "Here's your problem. Here's how ciphra solves it. Here's the proof it's secure. Start for free."
+**Concept:** Scroll-driven story. Not a feature list - a narrative. "Here's your problem. Here's how ciphra solves it. Here's the proof it's secure. Start for free."
 
 **Sections:**
-1. **Hero** — Large ciphra* wordmark + tagline + CTA
-2. **The problem** — "Your doctor needs data. You don't want to keep a spreadsheet."
-3. **How it works** — 3 numbered steps (setup once, log daily, PDF for doctor)
-4. **Conditions** — Grid of 16 conditions linking to /conditions/[id]
-5. **Security** — Key hierarchy, server-sees/can't-see, open source
-6. **CTA** — Final "Start for free" with encryption badges
-7. **Footer** — Links, language selector
+1. **Hero** - Large ciphra* wordmark + tagline + CTA
+2. **The problem** - "Your doctor needs data. You don't want to keep a spreadsheet."
+3. **How it works** - 3 numbered steps (setup once, log daily, PDF for doctor)
+4. **Conditions** - Grid of 16 conditions linking to /conditions/[id]
+5. **Security** - Key hierarchy, server-sees/can't-see, open source
+6. **CTA** - Final "Start for free" with encryption badges
+7. **Footer** - Links, language selector
 
 ### Login (`/login`)
 
-**Concept:** Clean, centered, warm. The asterisk wordmark above the form. Recovery code screen has gravitas — "this is the only key to your data."
+**Concept:** Clean, centered, warm. The asterisk wordmark above the form. Recovery code screen has gravitas - "this is the only key to your data."
 
 ### Setup Wizard (`/setup`)
 
-**Concept:** Step-per-screen. Progress bar (ochre fill). Each step is focused — pick template, customize symptoms, etc. Template cards link to /conditions/[id] for "learn more."
+**Concept:** Step-per-screen. Progress bar (ochre fill). Each step is focused - pick template, customize symptoms, etc. Template cards link to /conditions/[id] for "learn more."
 
 ### Conditions (`/conditions/[id]`)
 
@@ -416,7 +416,7 @@ The asterisk appears throughout the app with different meanings:
 
 ### Admin (`/admin`)
 
-**Concept:** Operator dashboard. Stats cards (ochre numbers), user table (sortable), audit log (color-coded actions). "Metadata only — content is encrypted" reminder.
+**Concept:** Operator dashboard. Stats cards (ochre numbers), user table (sortable), audit log (color-coded actions). "Metadata only - content is encrypted" reminder.
 
 ---
 
@@ -469,41 +469,41 @@ The asterisk appears throughout the app with different meanings:
 ### Component file structure
 ```
 src/lib/components/
-├── Asterisk.svelte        — Brand mark (done)
-├── Card.svelte            — All card variants
-├── Badge.svelte           — Status badges
-├── Button.svelte          — Action buttons
-├── Input.svelte           — Form inputs
-├── ChipGroup.svelte       — Toggle chip groups
-├── Counter.svelte         — +/- counter
-├── SectionDivider.svelte  — Asterisk divider
-├── EmptyState.svelte      — Empty state with asterisk
-├── StatCard.svelte        — Metric display
-├── EntryCard.svelte       — Journal/today entries
-├── BottomSheet.svelte     — Slide-up sheet
-├── Skeleton.svelte        — Loading placeholder
-└── ChartWrapper.svelte    — Chart.js wrapper (exists)
+├── Asterisk.svelte        - Brand mark (done)
+├── Card.svelte            - All card variants
+├── Badge.svelte           - Status badges
+├── Button.svelte          - Action buttons
+├── Input.svelte           - Form inputs
+├── ChipGroup.svelte       - Toggle chip groups
+├── Counter.svelte         - +/- counter
+├── SectionDivider.svelte  - Asterisk divider
+├── EmptyState.svelte      - Empty state with asterisk
+├── StatCard.svelte        - Metric display
+├── EntryCard.svelte       - Journal/today entries
+├── BottomSheet.svelte     - Slide-up sheet
+├── Skeleton.svelte        - Loading placeholder
+└── ChartWrapper.svelte    - Chart.js wrapper (exists)
 ```
 
 ### CSS architecture
 - Design tokens in `app.css` as CSS custom properties
 - Component-level styles use the tokens
 - Tailwind utilities for layout only (flex, grid, spacing, responsive)
-- No raw hex colors in component files — always reference tokens or component classes
+- No raw hex colors in component files - always reference tokens or component classes
 
 ### Implementation order
 1. Component library (this session or next)
-2. Daily Log — sets the interaction pattern
-3. Today (Companion) — daily dashboard
-4. Journal — entry list
-5. Calendar — grid + bottom sheet
-6. Login — first impression
-7. Setup — onboarding
-8. Landing — public face
-9. Conditions — SEO pages
-10. Reports — data display
-11. Settings — utility
-12. Admin — operator dashboard
+2. Daily Log - sets the interaction pattern
+3. Today (Companion) - daily dashboard
+4. Journal - entry list
+5. Calendar - grid + bottom sheet
+6. Login - first impression
+7. Setup - onboarding
+8. Landing - public face
+9. Conditions - SEO pages
+10. Reports - data display
+11. Settings - utility
+12. Admin - operator dashboard
 
 ---
 

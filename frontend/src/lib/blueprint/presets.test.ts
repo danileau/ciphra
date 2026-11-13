@@ -1,5 +1,5 @@
 /**
- * ciphra — Blueprint presets tests.
+ * ciphra - Blueprint presets tests.
  *
  * Validates structural invariants across all presets:
  * required fields, cross-references between grid columns
@@ -42,7 +42,7 @@ import type { Blueprint } from './types';
 //
 // This map used to list six of the twenty-six presets while the suite below
 // was titled "all presets have required fields". The twenty that arrived
-// after those six — ms, ibs, bipolar, pcos, hashimoto and the rest — were
+// after those six - ms, ibs, bipolar, pcos, hashimoto and the rest - were
 // never shape-checked at all. Found 2026-08-21 while removing `streamFilters`:
 // the removal only registered as six lost tests, which is what exposed the gap.
 //

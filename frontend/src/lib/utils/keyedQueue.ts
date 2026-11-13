@@ -4,7 +4,7 @@
  *
  * For read-modify-write edits of one document: without it, rapid edits all
  * read the same stale copy and the last write wins over the others. A task
- * that throws does not stop the ones queued behind it — the returned promise
+ * that throws does not stop the ones queued behind it - the returned promise
  * always resolves.
  */
 export function createKeyedQueue(): (key: string, task: () => Promise<unknown>) => Promise<void> {

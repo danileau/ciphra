@@ -1,5 +1,5 @@
 /**
- * CIPH-883 — Guided custom-preset wizard guard.
+ * CIPH-883 - Guided custom-preset wizard guard.
  *
  * The standard wizard's symptom/trigger/vital toggle screens are empty
  * for users picking the `custom` preset (the preset has no items to
@@ -18,7 +18,7 @@ import { resolve } from 'node:path';
 
 const SRC = readFileSync(resolve(__dirname, '+page.svelte'), 'utf8');
 
-describe('CIPH-883 — guided custom-preset wizard', () => {
+describe('CIPH-883 - guided custom-preset wizard', () => {
 	it('declares isCustomPreset reactive based on conditionId', () => {
 		expect(SRC).toMatch(/isCustomPreset\s*=\s*working\?\.conditionId\s*===\s*['"]custom['"]/);
 	});

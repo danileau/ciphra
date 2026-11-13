@@ -14,7 +14,7 @@
 		<p>
 			<strong>Why English only?</strong> The app itself is translated into German, French,
 			Italian, and English, because those are the languages our users live in. The
-			documentation isn't — it covers architecture, the threat model, and how to develop
+			documentation isn't - it covers architecture, the threat model, and how to develop
 			against ciphra, and its audience is engineers, auditors, and contributors who already
 			work in English across the rest of their toolchain. Keeping one canonical version
 			also avoids the drift problem: four translated copies of an architecture doc rot at

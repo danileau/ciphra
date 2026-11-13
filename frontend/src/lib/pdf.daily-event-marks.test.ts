@@ -1,5 +1,5 @@
 /**
- * Per-event marks belong on daily-resolution surfaces — and only there.
+ * Per-event marks belong on daily-resolution surfaces - and only there.
  *
  * `feedback_chart_event_markers` (2026-05-12), after three rejected on-screen
  * iterations, states the rule in two halves:
@@ -9,7 +9,7 @@
  *   "Daily-axis surfaces: per-event badges are fine; the day IS the unit."
  *
  * The PDF had it exactly backwards. The 12/24-month trajectory drew a dashed
- * line and a 22-char label per event — 255mm of labels on a 174mm axis — while
+ * line and a 22-char label per event - 255mm of labels on a 174mm axis - while
  * the two surfaces where a day is a day drew nothing at all: the monthly chart
  * (5.7–6.3mm per day) and the landscape grid (one row per day).
  *
@@ -54,7 +54,7 @@ describe('the monthly chart marks the day', () => {
 
 	it('a month whose only content is note markers is not called empty', () => {
 		// The empty-state guard tested episodes and symptoms only, so a month
-		// with note markers printed "Keine Einträge diesen Monat" — and the
+		// with note markers printed "Keine Einträge diesen Monat" - and the
 		// early return meant the marks never drew, on precisely the export
 		// where they carry the only information.
 		expect(fn()).toMatch(

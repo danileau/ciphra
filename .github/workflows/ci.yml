@@ -1,27 +1,27 @@
-# CI — every PR and every push to main (2026-06-12).
+# CI - every PR and every push to main (2026-06-12).
 #
 # Three independent gates:
-#   frontend  — svelte-check (fail on warnings: the 0/0 discipline),
+#   frontend  - svelte-check (fail on warnings: the 0/0 discipline),
 #               PRODUCTION build, then vitest. Order matters: the build
 #               runs FIRST so built-css-guard.test.ts inspects the real
-#               artifact — dev-mode checks are blind to build-level CSS
+#               artifact - dev-mode checks are blind to build-level CSS
 #               behavior (the v0.2.0 white-header lesson; lightningcss
 #               dedup only runs in builds). The /docs sources resolve via
 #               the repo root automatically (vite docRoot checks `..`).
-#   api       — builds the Dockerfile's dev target (pytest tooling) and
+#   api       - builds the Dockerfile's dev target (pytest tooling) and
 #               runs the suite against the checkout (conftest mocks
-#               psycopg2 — no database service needed). 48 tests green
+#               psycopg2 - no database service needed). 48 tests green
 #               since the 2026-06-12 repair (stale admin-stats mock +
 #               rate-limiter bleed-through). Then builds the PROD target
 #               and scans that image, because prod is what ghcr publishes
 #               and nothing here used to look at it (2026-08-21: pip's
-#               vendored msgpack shipped through that gap — an `fs` scan
+#               vendored msgpack shipped through that gap - an `fs` scan
 #               of the repo cannot see a package the base image installs).
-#   trivy     — fs scan, HIGH/CRITICAL fail the run (SAST discipline:
+#   trivy     - fs scan, HIGH/CRITICAL fail the run (SAST discipline:
 #               feedback_sast_scanning).
 #
 # Branch protection: the `main-protection` ruleset requires "frontend", "api",
-# "trivy" and "version-guard". The last one was advisory until 2026-09-19 —
+# "trivy" and "version-guard". The last one was advisory until 2026-09-19 -
 # the job existed, went red on a PR without a changelog fragment, and the
 # merge button stayed green anyway, which is the failure #194 was built to
 # prevent. If you add a job that should block a merge, add its context to the
@@ -41,7 +41,7 @@ jobs:
   # Mechanical enforcement of the versioning rules (docs/VERSIONING.md):
   # VERSION is valid SemVer, frontend/package.json agrees, and CHANGELOG.md has
   # a section for it. Required by `main-protection`, so a version bump without
-  # a changelog entry — or a feat/fix PR without a fragment — cannot merge.
+  # a changelog entry - or a feat/fix PR without a fragment - cannot merge.
   # Waivers are the guards' own: `[skip changelog]`, `[changelog edit]`, and a
   # release PR, which is recognised by its VERSION change.
   version-guard:
@@ -84,7 +84,7 @@ jobs:
       - run: npm ci
       # svelte-check needs the generated $app/tsconfig
       # (node_modules/$app/tsconfig.json, SvelteKit 3; .svelte-kit/ before),
-      # which only exists after sync/dev/build — fresh CI checkouts
+      # which only exists after sync/dev/build - fresh CI checkouts
       # have neither (maiden-run failure 2026-06-12).
       - run: npx svelte-kit sync
       - run: npx svelte-check --fail-on-warnings --output summary
@@ -138,17 +138,17 @@ jobs:
       # Regression pin for the 2026-08-21 finding. pip is not a runtime
       # dependency; it is a vendored tree (msgpack + a bom.cdx.json that
       # Trivy reads as installed packages). If someone adds a `pip install`
-      # to the prod stage, both HIGHs come back — fail here, loudly,
+      # to the prod stage, both HIGHs come back - fail here, loudly,
       # instead of on the next daily ghcr scan.
       - name: Prod image ships no pip
         run: |
           if docker run --rm --entrypoint sh ciphra-api:ci-prod \
                -c 'command -v pip >/dev/null || python -c "import pip"' 2>/dev/null; then
-            echo "::error file=api/Dockerfile::pip is back in the prod image — it re-adds pip/_vendor/msgpack and the stale vendored SBOM"
+            echo "::error file=api/Dockerfile::pip is back in the prod image - it re-adds pip/_vendor/msgpack and the stale vendored SBOM"
             exit 1
           fi
 
-      # The app must still start without pip — catches a runtime import
+      # The app must still start without pip - catches a runtime import
       # that only resolves because pip's vendored tree happened to be there.
       - name: Prod image still imports the app
         run: >-
@@ -191,7 +191,7 @@ jobs:
           ignore-unfixed: true
           version: v0.76.1   # same pin as security-scan.yml
           # Vuln DB freshness: the cache key rotates daily, so the DB is
-          # never older than ~24h here — and security-scan.yml re-checks
+          # never older than ~24h here - and security-scan.yml re-checks
           # repo + published images on a daily schedule with an uncached
           # latest DB, which is the actual freshness guarantee.
           cache: 'true'

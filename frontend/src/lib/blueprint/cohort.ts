@@ -1,19 +1,19 @@
 /**
- * CIPH-852 — Condition cohorts.
+ * CIPH-852 - Condition cohorts.
  *
  * ciphra is configurable per-condition at the DATA layer (what you track)
  * but flows should also adapt at the UX layer. Cohorts group conditions
  * by what they need from the home dashboard and primary browse surface:
  *
- * - `discrete`   — epilepsy/ADHD/hypertension/glaucoma/asthma/diabetes/parkinson.
+ * - `discrete`   - epilepsy/ADHD/hypertension/glaucoma/asthma/diabetes/parkinson.
  *                  Episodes are point events. Trend chart is the primary signal.
- * - `cycle`      — endometriosis/menopause/PMOS. Cycle phase is the mental model.
+ * - `cycle`      - endometriosis/menopause/PMOS. Cycle phase is the mental model.
  *                  Calendar with cycle overlay is primary.
- * - `phase`      — bipolar/MS/long-covid/IBD/IBS/chronic_pain/anxiety_depression/
+ * - `phase`      - bipolar/MS/long-covid/IBD/IBS/chronic_pain/anxiety_depression/
  *                  burnout. Multi-day episode bands are clinically central.
  *                  Calendar with phase-bands is primary.
- * - `narrative`  — migraine. Trigger hunt + running notes; journal is primary.
- * - `custom`     — safe defaults, user drives.
+ * - `narrative`  - migraine. Trigger hunt + running notes; journal is primary.
+ * - `custom`     - safe defaults, user drives.
  *
  * Cohort is DERIVED from conditionId (never stored) so that future preset
  * additions stay consistent without client migration.
@@ -31,7 +31,7 @@ const COHORT_MAP: Record<string, Cohort> = {
 	asthma: 'discrete',
 	diabetes: 'discrete',
 	parkinson: 'discrete',
-	// CIPH-pi24-4b — Hashimoto: lab-driven (TSH/T3/T4/TPO) over months.
+	// CIPH-pi24-4b - Hashimoto: lab-driven (TSH/T3/T4/TPO) over months.
 	// Stable patients on Levothyroxine; symptom-days flag dose-adjust
 	// conversations rather than multiDay flare patterns. Trend = primary.
 	hashimoto: 'discrete',
@@ -50,7 +50,7 @@ const COHORT_MAP: Record<string, Cohort> = {
 	chronic_pain: 'phase',
 	anxiety_depression: 'phase',
 	burnout: 'phase',
-	// CIPH-pi24-4c — Rheumatoid / psoriatic arthritis: autoimmune flares
+	// CIPH-pi24-4c - Rheumatoid / psoriatic arthritis: autoimmune flares
 	// are multiDay episode patterns; calendar-first browse for "when did
 	// the flare start, when did it remit" tracking. Doctor handover at
 	// 3-6 month rheumatology visits is the load-bearing artifact.
@@ -58,18 +58,18 @@ const COHORT_MAP: Record<string, Cohort> = {
 
 	// Narrative: trigger hunting, running notes.
 	migraine: 'narrative',
-	// CIPH-pi24-4a — cancer_treatment fits narrative (journal-primary).
+	// CIPH-pi24-4a - cancer_treatment fits narrative (journal-primary).
 	// Episode types are point-events (febrile_neutropenia, ER visit, dose
 	// reduction, hospitalization) rather than multiDay flares; side-effects
 	// + emotional load read as journal entries with narrative context.
 	cancer_treatment: 'narrative',
 	// pi24 dashboard rework (Codex + Claude campfire consensus):
-	// dermatology fits narrative — food / contact triggers + flare-pattern
+	// dermatology fits narrative - food / contact triggers + flare-pattern
 	// tracking is trigger-hunt behavior. Dashboard primary = top recorded
 	// triggers.
 	dermatology: 'narrative',
 
-	// Cardiovascular fits discrete — BP measurements + acute events
+	// Cardiovascular fits discrete - BP measurements + acute events
 	// (arrhythmia, syncope). Dashboard primary = BP vital trend.
 	cardiovascular: 'discrete',
 

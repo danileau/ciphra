@@ -1,5 +1,5 @@
 /**
- * CIPH-834 — interaction primitives heuristic scan.
+ * CIPH-834 - interaction primitives heuristic scan.
  *
  * This test is a soft fence, not a ban. It scans `.svelte` files for
  * duplicated inline patterns that the `Modal` primitive was
@@ -15,7 +15,7 @@
  *   3. Extend the primitive's API to cover the new case, then
  *      swap.
  *
- * False positives are expected — the heuristics are deliberately
+ * False positives are expected - the heuristics are deliberately
  * loose to catch drift, not to tyrannise layout. Tune the allow-
  * list in this file if a genuinely distinct pattern is being mis-
  * flagged repeatedly.
@@ -66,12 +66,12 @@ function usesPrimitive(src: string, primitive: string): boolean {
 	return re.test(src);
 }
 
-describe('CIPH-834 — interaction primitive adoption', () => {
+describe('CIPH-834 - interaction primitive adoption', () => {
 	const files = walkSvelte(SRC_ROOT);
 
 	// --- Modal heuristic ------------------------------------------
 	// A Modal-shaped div has both `fixed inset-0` AND `aria-modal`.
-	// Bottom sheets, toasts, install banners do not — they use
+	// Bottom sheets, toasts, install banners do not - they use
 	// `fixed bottom-…` / `fixed top-…` / no aria-modal. So this is
 	// a tight match for dialog-style overlays.
 	it('every site with a centred aria-modal uses <Modal> (or is exempt)', () => {

@@ -1,5 +1,5 @@
 <!--
-	What a family invitation may read — the two options, in one place.
+	What a family invitation may read - the two options, in one place.
 
 	Used when creating an invitation and when modifying one that already
 	exists. Shared rather than written twice on purpose: these two lists must
@@ -14,7 +14,7 @@
 	import { t } from '#lib/i18n/index.ts';
 	import { SHARE_MASK_SHARED_ONLY, SHARE_MASK_EVERYTHING } from '#lib/utils/shareClass.ts';
 
-	/** Bindable. Defaults closed — a privacy control does not pre-open itself. */
+	/** Bindable. Defaults closed - a privacy control does not pre-open itself. */
 	export let value: number = SHARE_MASK_SHARED_ONLY;
 	/** Distinguishes the radio groups when two are on the page at once. */
 	export let name = 'scope';

@@ -1,10 +1,10 @@
 /**
- * CIPH-852 — Cohort + primaryBrowseSurface coverage.
+ * CIPH-852 - Cohort + primaryBrowseSurface coverage.
  *
  * Every registered preset must:
  *  - map to a known cohort (no accidental falls to 'custom' unless intended)
  *  - declare `primaryBrowseSurface` explicitly (no reliance on runtime fallback
- *    for registered presets — fallback is only for pre-852 saved blueprints)
+ *    for registered presets - fallback is only for pre-852 saved blueprints)
  *  - have `primaryBrowseSurface` match the cohort's default (unless the preset
  *    is 'custom', which users override freely)
  */
@@ -46,7 +46,7 @@ describe('every registered preset', () => {
 
 			it('declared surface matches its cohort default', () => {
 				const cohort = cohortOf(p.blueprint);
-				// Custom is exempt — user-driven.
+				// Custom is exempt - user-driven.
 				if (cohort === 'custom') return;
 				expect(p.blueprint.primaryBrowseSurface).toBe(COHORT_DEFAULT[cohort]);
 			});

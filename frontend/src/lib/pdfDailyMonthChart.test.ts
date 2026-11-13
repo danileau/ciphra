@@ -21,7 +21,7 @@ describe('aggregateDailyMonthSeries', () => {
 	it('returns days-in-month tick count for any month length', () => {
 		// Acceptance criterion from kickoff: tick count = days-in-month for
 		// scope='month', ≠ 24 for scope='year'. The aggregation owns the
-		// length contract — caller wires that to the x-axis tick generator.
+		// length contract - caller wires that to the x-axis tick generator.
 		expect(aggregateDailyMonthSeries([], 2026, 1, 28, []).dailyTotals.length).toBe(28);
 		expect(aggregateDailyMonthSeries([], 2024, 1, 29, []).dailyTotals.length).toBe(29);  // leap
 		expect(aggregateDailyMonthSeries([], 2026, 3, 30, []).dailyTotals.length).toBe(30);

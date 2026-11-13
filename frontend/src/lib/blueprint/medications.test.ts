@@ -47,7 +47,7 @@ describe('bedarfMedsForPicker / hasBedarfMeds', () => {
 	});
 });
 
-describe('bedarfMedsForPicker — dose history', () => {
+describe('bedarfMedsForPicker - dose history', () => {
 	const midazolam = slot({
 		id: 'mid', name: 'Midazolam', dose: '10 mg', asNeeded: true,
 		periods: [
@@ -71,7 +71,7 @@ describe('bedarfMedsForPicker — dose history', () => {
 });
 
 describe('resolveMedDisplay', () => {
-	it('resolves a configured med to its plain name (unit empty — dose carries it)', () => {
+	it('resolves a configured med to its plain name (unit empty - dose carries it)', () => {
 		const b = bp({ medications: [slot({ id: 'ibu', name: 'Ibuprofen' })] });
 		expect(resolveMedDisplay(b, 'ibu', t)).toEqual({ label: 'Ibuprofen', unit: '' });
 	});
@@ -124,7 +124,7 @@ describe('foldRescueMedications (one-time migration)', () => {
 		expect(foldRescueMedications(bp({ medications: [slot()] }), t)).toBeNull();
 		expect(foldRescueMedications(null, t)).toBeNull();
 	});
-	it('NEVER injects into a non-empty medications list — curated/migrated data is left untouched', () => {
+	it('NEVER injects into a non-empty medications list - curated/migrated data is left untouched', () => {
 		// The data-loss report: an epilepc migrant who curated their meds had
 		// preset Midazolam/Diazepam auto-appended on a deploy. Fold must no-op.
 		const b = bp({
@@ -173,7 +173,7 @@ describe('medAdherence (assume-taken model)', () => {
 	});
 });
 
-describe('medAdherence — only days the medication was part of the regimen (dose history)', () => {
+describe('medAdherence - only days the medication was part of the regimen (dose history)', () => {
 	const entry = (date: string, data: Record<string, unknown> = {}) => ({ data: { type: 'entry', date, ...data } });
 
 	it('a scheduled med started mid-month is not "taken" on the days before it existed', () => {
@@ -188,7 +188,7 @@ describe('medAdherence — only days the medication was part of the regimen (dos
 		expect(medAdherence(med, docs)).toEqual({ taken: 1, total: 2, pct: 50 });
 	});
 
-	it('an explicit mention outside the recorded periods still counts — nothing entered is dropped', () => {
+	it('an explicit mention outside the recorded periods still counts - nothing entered is dropped', () => {
 		const med = slot({ id: 'ibu', asNeeded: true, periods: [{ from: '2026-09-10', dose: '400 mg', schedule: '' }] });
 		const docs = [entry('2026-09-01', { medications: { ibu: true } }), entry('2026-09-12')];
 		expect(medAdherence(med, docs)).toEqual({ taken: 1, total: 2, pct: 50 });

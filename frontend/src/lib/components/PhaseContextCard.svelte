@@ -1,11 +1,11 @@
 <!--
-	CIPH-854 — Phase context card.
+	CIPH-854 - Phase context card.
 
 	For the phase-band cohort (bipolar / MS / long-covid / IBD / IBS /
 	chronic_pain / anxiety_depression / burnout). Reads the currently
 	active multi-day episode from recent entries and renders:
 
-		"<phase label> — day N"
+		"<phase label> - day N"
 		"Started <date>"
 
 	Renders nothing when no phase is active today. For the phase cohort
@@ -22,7 +22,7 @@
 		color: string;
 		dayN: number;
 		startedOn: string;
-		/** CIPH-855b — total number of multiDay phases active on anchor day. */
+		/** CIPH-855b - total number of multiDay phases active on anchor day. */
 		activeCount?: number;
 	} | null;
 
@@ -36,7 +36,7 @@
 </script>
 
 {#if phase}
-<!-- CIPH-894 — high-emphasis density: thicker accent left rail + subtle
+<!-- CIPH-894 - high-emphasis density: thicker accent left rail + subtle
 	 cohort-tinted background pulls the card forward as the most important
 	 cohort signal on the dashboard. -->
 <section
@@ -62,7 +62,7 @@
 					{isCustomItem(phase.id) ? phase.label : $t(phase.label)}
 				</span>
 				{#if phase.activeCount && phase.activeCount > 1}
-					<!-- CIPH-855b — neutral count-based pill for overlapping phases
+					<!-- CIPH-855b - neutral count-based pill for overlapping phases
 						 (bipolar mixed states, long-covid PEM overlap, IBD with 2
 						 flare types). Clinically honest without forcing DSM
 						 terminology into the home UI. -->
@@ -80,7 +80,7 @@
 {/if}
 
 <style>
-	/* CIPH-894 — emphasis density: heavier accent rail + cohort-tinted
+	/* CIPH-894 - emphasis density: heavier accent rail + cohort-tinted
 	   background tint. Inherits from .card-anchor (CIPH-202 + CIPH-891
 	   2px accent border + 24px padding). */
 	.phase-context-emphasis {

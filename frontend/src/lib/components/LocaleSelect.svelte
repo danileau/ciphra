@@ -5,7 +5,7 @@
 	<select> can be styled at rest but its options panel is browser chrome the
 	CSS cascade cannot reach. That reasoning was right and outlived the file:
 	the behaviour now lives in Listbox.svelte (2026-09-20), which every
-	dropdown in the app shares — including the language picker in Settings,
+	dropdown in the app shares - including the language picker in Settings,
 	which was a native <select> until then. The same choice looked and behaved
 	like two different controls depending on which screen you were on.
 

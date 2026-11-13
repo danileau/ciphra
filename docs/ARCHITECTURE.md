@@ -1,13 +1,13 @@
 # Architecture
 
-How ciphra is put together. For the security model specifically — threat
-model, key hierarchy, what the browser caches — see
+How ciphra is put together. For the security model specifically - threat
+model, key hierarchy, what the browser caches - see
 [SECURITY_MODEL.md](SECURITY_MODEL.md). For local setup see
 [DEVELOPING.md](DEVELOPING.md).
 
 ## The shape of it
 
-Five containers in production (four locally — redis is prod-only), one
+Five containers in production (four locally - redis is prod-only), one
 bridge network:
 
 ```
@@ -21,26 +21,26 @@ the API is published as `:5050` and postgres as `:5433`). In **production**
 the frontend is built to `build/index.js` (adapter-node 6) and listens on
 `:3000`; nginx (`:443`, Cloudflare-fronted, `nginx/ciphra.conf`) proxies
 there. Images are CI-built +
-cosign-signed and deployed via pull-based CD — see
+cosign-signed and deployed via pull-based CD - see
 [OPERATIONS.md](OPERATIONS.md) and [THREAT_MODEL.md](THREAT_MODEL.md).
 
-- **nginx** — the single entry point. Serves the app and proxies `/api/*` to
+- **nginx** - the single entry point. Serves the app and proxies `/api/*` to
   the API. Forwards `X-Forwarded-For` / `X-Forwarded-Proto`, which the API
   relies on for rate-limiting and HSTS. In production, also rewrites
   `$remote_addr` from the Cloudflare `CF-Connecting-IP` header and trusts the
   docker bridge gateway so the real client IP reaches the rate-limiter.
-- **frontend** — SvelteKit 3 + TypeScript. All cryptography runs here. The
+- **frontend** - SvelteKit 3 + TypeScript. All cryptography runs here. The
   kit config (including the hash-mode CSP) is the `kitConfig` export of
   `frontend/vite.config.ts`; there is no `svelte.config.js`.
-- **api** — Flask (Python 3.11), run under gunicorn in production (the
+- **api** - Flask (Python 3.11), run under gunicorn in production (the
   local-dev compose runs `python server.py` instead). A thin authenticated
   store: it never decrypts anything. Schema is created and migrated at boot by
   `api/entrypoint.sh` (which calls `init_db()` once before exec-ing gunicorn,
   so workers don't race on `CREATE TABLE IF NOT EXISTS`). Migrations are a
-  numbered ledger recorded in `schema_meta` — see
+  numbered ledger recorded in `schema_meta` - see
   [VERSIONING.md](VERSIONING.md#the-database-schema-has-its-own-version).
-- **postgres** — PostgreSQL 15.
-- **redis** — rate-limit counter store for flask-limiter. **Prod only** — it
+- **postgres** - PostgreSQL 15.
+- **redis** - rate-limit counter store for flask-limiter. **Prod only** - it
   is in the production data-plane compose, NOT in the local-dev
   `docker-compose.yml` (which runs postgres/api/frontend/nginx); locally
   `REDIS_URL` defaults to `memory://` (server.py). In-memory only
@@ -56,7 +56,7 @@ The browser derives two keys from the password with **Argon2id**: an
 `auth_key` (for login) and a `vault_key` (which encrypts a random
 `master_key`). The `master_key` encrypts every health document with
 **AES-256-GCM**. The server only ever receives `SHA-256(auth_key)` and opaque
-ciphertext — never the password, the keys, or any plaintext. Decryption
+ciphertext - never the password, the keys, or any plaintext. Decryption
 happens exclusively in the browser. The full hierarchy, the recovery-code
 path, and family sharing are documented in [SECURITY_MODEL.md](SECURITY_MODEL.md).
 
@@ -67,11 +67,11 @@ lives in exactly one of them, as opaque ciphertext.
 
 | Table | Holds | Server can read? |
 |-------|-------|------------------|
-| `users` | username, `SHA-256(auth_key)`, Argon2 params, `encrypted_master`, recovery blob, admin flag, lockout state | Metadata only — never the password or keys |
-| `encrypted_documents` | `user_id`, `encrypted_data` (AES-256-GCM blob), timestamps, `share_class`, `client_key` | **No** — opaque blobs. `share_class` is one bit (shareable / personal), set by the client so the server can enforce a sharing scope. `client_key` is an opaque idempotency key on imported records, so a repeated import cannot duplicate them |
-| `family_grants` | caregiver-sharing grants: a re-wrapped `master_key` + a verifier for the family-code claim proof (`SHA-256(SHA-256(family_key))`) + `share_mask` (what this invitation may read) | No — wrapped key is opaque |
-| `audit_log` | event name (auth, sharing, admin, and every document create/update/delete), user id, timestamp, IP (truncated after 30 days, purged at 90; runs at boot and about daily) | Yes — this is operational metadata, by design |
-| `schema_meta` | one row: how far the schema has been migrated, and the lowest image allowed to read it | Yes — no user data; see [VERSIONING.md](VERSIONING.md#the-database-schema-has-its-own-version) |
+| `users` | username, `SHA-256(auth_key)`, Argon2 params, `encrypted_master`, recovery blob, admin flag, lockout state | Metadata only - never the password or keys |
+| `encrypted_documents` | `user_id`, `encrypted_data` (AES-256-GCM blob), timestamps, `share_class`, `client_key` | **No** - opaque blobs. `share_class` is one bit (shareable / personal), set by the client so the server can enforce a sharing scope. `client_key` is an opaque idempotency key on imported records, so a repeated import cannot duplicate them |
+| `family_grants` | caregiver-sharing grants: a re-wrapped `master_key` + a verifier for the family-code claim proof (`SHA-256(SHA-256(family_key))`) + `share_mask` (what this invitation may read) | No - wrapped key is opaque |
+| `audit_log` | event name (auth, sharing, admin, and every document create/update/delete), user id, timestamp, IP (truncated after 30 days, purged at 90; runs at boot and about daily) | Yes - this is operational metadata, by design |
+| `schema_meta` | one row: how far the schema has been migrated, and the lowest image allowed to read it | Yes - no user data; see [VERSIONING.md](VERSIONING.md#the-database-schema-has-its-own-version) |
 
 ### Documents
 
@@ -80,33 +80,33 @@ a `type` discriminator:
 
 | `data.type` | What it is |
 |-------------|-----------|
-| `entry`     | A day's log — symptoms, episodes, triggers, vitals, medications, notes, date |
+| `entry`     | A day's log - symptoms, episodes, triggers, vitals, medications, notes, date |
 | `event`     | A quick-add: a single episode or a rescue-medication, timestamped |
 | `diary`     | A free-text narrative note |
-| `blueprint` | The user's condition configuration (see below) — one per account |
+| `blueprint` | The user's condition configuration (see below) - one per account |
 | `family_link` | Caregiver-sharing metadata held on the caregiver's side |
 
 Because the type lives *inside* the ciphertext, the server cannot tell a
 seizure log from a diary entry from a blueprint. All filtering, aggregation,
-search, and charting happen in the browser after decryption — cheap at the
+search, and charting happen in the browser after decryption - cheap at the
 scale of personal health data (hundreds of documents, not millions).
 
 The frontend models a document as `CiphraDocument { id, serverCreatedAt, data }`
 (`frontend/src/lib/stores/documents.ts`). The store keeps a decrypted copy in
-IndexedDB for warm loads — see SECURITY_MODEL.md for the cache's wipe semantics.
+IndexedDB for warm loads - see SECURITY_MODEL.md for the cache's wipe semantics.
 
 ## The blueprint + cohort system
 
-ciphra is not hard-coded to one condition. Each account has a **blueprint** — a
+ciphra is not hard-coded to one condition. Each account has a **blueprint** - a
 JSON document defining what that user tracks: symptom groups, episode types,
 triggers, vitals, medications, and which columns appear in the monthly grid.
 The blueprint is just another encrypted document; the server never sees it.
 
-- **Presets** (`frontend/src/lib/blueprint/presets.ts`) — 25 condition
+- **Presets** (`frontend/src/lib/blueprint/presets.ts`) - 25 condition
   blueprints (epilepsy, migraine, diabetes, bipolar, hypertension, PCOS,
   Hashimoto, …) plus a `custom` from-scratch option, all 26 offered in the
   setup picker. Setup copies one; the user can then customize it.
-- **Cohorts** (`frontend/src/lib/blueprint/cohort.ts`) — a *computed* grouping
+- **Cohorts** (`frontend/src/lib/blueprint/cohort.ts`) - a *computed* grouping
   (never stored) of conditions by how their UX should behave. The cohort is
   derived from the `conditionId`, so new presets stay consistent without any
   client migration:
@@ -120,20 +120,20 @@ The blueprint is just another encrypted document; the server never sees it.
   | `custom`    | safe defaults | user-defined |
 
   The cohort drives which dashboard card, calendar mode, and PDF layout a user
-  gets — see `feedback_dashboard_resolver` in the design notes.
+  gets - see `feedback_dashboard_resolver` in the design notes.
 
 ## The doctor PDF
 
 `generateDoctorPdf` in `frontend/src/lib/pdf.ts` builds the artifact a patient
-hands their doctor — a multi-page A4 report rendered entirely in the browser
+hands their doctor - a multi-page A4 report rendered entirely in the browser
 with jsPDF. It carries a KPI glance, cohort-aware trend charts, symptom /
 trigger / medication tables, and a landscape day-by-day protocol grid. Export
 scope (month / year / 2 years) is chosen on `/reports`. `generateTherapyPdf`
-beside it builds the treatment history — every medication's dose periods over
+beside it builds the treatment history - every medication's dose periods over
 the whole recorded span. It is handed the blueprint and nothing else, so no
 symptom or episode data can reach it.
 
-This PDF is the moment health data leaves the device — once saved, the file is
+This PDF is the moment health data leaves the device - once saved, the file is
 plaintext, so the export UI says so explicitly. (History: a single-page
 rewrite was attempted and retired; see `docs/archive/CLINICAL_HANDOFF.md`.)
 
@@ -145,40 +145,40 @@ SvelteKit, file-based routing under `frontend/src/routes/`:
 |-------|---------|
 | `/` | Public landing (logged out) / dashboard (logged in) |
 | `/login` | Login + recovery-code flow |
-| `/setup` | Onboarding — pick and customize a blueprint |
+| `/setup` | Onboarding - pick and customize a blueprint |
 | `/log/[date]` | The daily entry form |
 | `/journal`, `/calendar`, `/reports` | Browse, view, and export logged data |
 | `/conditions/[id]` | Public condition page per condition (`/conditions` 308-redirects to the landing page's `#conditions` section) |
 | `/settings` | Account, language, family sharing |
 | `/migrate`, `/join/[grantId]` | epilepc import; family-sharing claim |
-| `/admin` | Operator dashboard — metadata only |
+| `/admin` | Operator dashboard - metadata only |
 | `/docs`, `/docs/[slug]` | In-app viewer for the repo's documentation and pending changelog |
 | `/privacy`, `/terms` | Public legal pages |
 | `/sitemap.xml` | Generated sitemap (server route) |
-| `/protocol`, `/stream` | Legacy URLs — client-side redirects to `/log/…` / `/reports` and `/journal` |
+| `/protocol`, `/stream` | Legacy URLs - client-side redirects to `/log/…` / `/reports` and `/journal` |
 
 Shared code lives in `frontend/src/lib/` (imported as `#lib/…` via the
-`imports` map in `frontend/package.json` — the `$lib` alias is gone since
+`imports` map in `frontend/package.json` - the `$lib` alias is gone since
 SvelteKit 3): `stores/` (auth, documents),
 `crypto.ts` (all browser-side crypto), `i18n/` (DE/EN/FR/IT), `blueprint/`
 (presets, cohorts, types), `pdf.ts` (the doctor PDF), and `components/` (the
-design-system primitives — see `components/README.md`).
+design-system primitives - see `components/README.md`).
 
 ## API surface
 
 Flask, defined in `api/server.py`. Grouped roughly as:
 
-- **Auth** — `register`, `login/init` + `login`, `recover/init` + `recover`,
+- **Auth** - `register`, `login/init` + `login`, `recover/init` + `recover`,
   `change-password`, `delete-account` (GDPR self-service erasure).
-- **Documents** — `GET/POST/PUT/DELETE /api/documents` — encrypted-blob CRUD,
+- **Documents** - `GET/POST/PUT/DELETE /api/documents` - encrypted-blob CRUD,
   plus `documents/batch` (bulk import, idempotent via `client_key`) and
   `documents/classify` (backfills `share_class` on the caller's own docs).
-- **Family sharing** — `family/grants` create/list/revoke (+ `revoke-all`,
+- **Family sharing** - `family/grants` create/list/revoke (+ `revoke-all`,
   per-grant `scope`), `family/claimed`, `claim/init` + `claim`, and
   `family/documents` for caregiver access.
-- **Admin** — `admin/stats` (+ `stats/timeseries`), `admin/users`
+- **Admin** - `admin/stats` (+ `stats/timeseries`), `admin/users`
   (+ lock/unlock/promote/demote/delete), `admin/audit` (+ `audit/retention`).
-- **`/health`** — liveness probe; also reports `schema` and `app_schema`.
+- **`/health`** - liveness probe; also reports `schema` and `app_schema`.
 
 Auth is a JWT bearer token issued at login; `password_version` on the user row
 invalidates old tokens after a password change or recovery.

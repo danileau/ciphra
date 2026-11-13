@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# verify-migration-origin.sh — INC-001 preflight.
+# verify-migration-origin.sh - INC-001 preflight.
 #
 # The migration link epilepc mints points at $EPILEPC_ORIGIN. If that host
 # redirects instead of serving, every migration dies in the browser before it
 # reaches PHP: a 301 in a `mode: 'cors'` fetch must itself carry
 # Access-Control-Allow-Origin or the browser refuses to follow it. Nothing is
-# logged server-side, and the token is never consumed — which is exactly how
+# logged server-side, and the token is never consumed - which is exactly how
 # INC-001 stayed invisible until a user complained.
 #
 # This probes with OPTIONS on purpose. CiphraMigrationController::export()
@@ -59,17 +59,17 @@ for path in /api/ciphra-export/probe /api/migration-complete/probe; do
 	# 1. Must not redirect. A 3xx here is INC-001.
 	case "$status" in
 		3*)
-			bad "HTTP $status — the host REDIRECTS instead of serving"
+			bad "HTTP $status - the host REDIRECTS instead of serving"
 			[ -n "$location" ] && info "${location}"
 			info "a cross-origin fetch aborts here; PHP is never reached"
 			;;
-		2*) ok "HTTP $status — served directly, no redirect" ;;
-		*)  bad "HTTP $status — unexpected" ;;
+		2*) ok "HTTP $status - served directly, no redirect" ;;
+		*)  bad "HTTP $status - unexpected" ;;
 	esac
 
 	# 2. Must echo the ciphra origin back.
 	if [ -z "$acao" ]; then
-		bad "no Access-Control-Allow-Origin — browser will discard the response"
+		bad "no Access-Control-Allow-Origin - browser will discard the response"
 	elif printf '%s' "$acao" | grep -qi "$CIPHRA_ORIGIN"; then
 		ok "${acao}"
 	else
@@ -78,21 +78,21 @@ for path in /api/ciphra-export/probe /api/migration-complete/probe; do
 	echo
 done
 
-# 3. The apex is a common mis-set value — say so explicitly if it redirects.
+# 3. The apex is a common mis-set value - say so explicitly if it redirects.
 apex="${EPILEPC_ORIGIN#www.}"
 if [ "$apex" != "$EPILEPC_ORIGIN" ]; then
 	printf '\033[1mapex cross-check (%s)\033[0m\n' "$apex"
 	apex_status="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "https://${apex}/api/ciphra-export/probe" 2>/dev/null)"
 	case "$apex_status" in
-		3*) info "apex returns $apex_status — EPILEPC_ORIGIN must NOT be set to '$apex'" ;;
+		3*) info "apex returns $apex_status - EPILEPC_ORIGIN must NOT be set to '$apex'" ;;
 		*)  info "apex returns $apex_status" ;;
 	esac
 	echo
 fi
 
 if [ "$FAIL" -eq 0 ]; then
-	printf '\033[32m\033[1mPASS\033[0m — migration links minted against %s will work.\n' "$EPILEPC_ORIGIN"
+	printf '\033[32m\033[1mPASS\033[0m - migration links minted against %s will work.\n' "$EPILEPC_ORIGIN"
 	exit 0
 fi
-printf '\033[31m\033[1mFAIL\033[0m — migration links minted against %s will die in the browser.\n' "$EPILEPC_ORIGIN"
+printf '\033[31m\033[1mFAIL\033[0m - migration links minted against %s will die in the browser.\n' "$EPILEPC_ORIGIN"
 exit 1

@@ -3,11 +3,11 @@
  *
  * /calendar and /reports each kept their own month state, so browsing
  * March in the calendar and tapping Reports landed on the current
- * month — the month context didn't travel exactly on the
+ * month - the month context didn't travel exactly on the
  * calendar→reports comparison path the surfaces exist for.
  *
  * sessionStorage (not localStorage) on purpose: this is per-tab
- * navigation continuity, not a durable preference — a fresh session
+ * navigation continuity, not a durable preference - a fresh session
  * should open on the current month. The value is a bare `YYYY-MM`
  * string (no health data).
  *
@@ -27,7 +27,7 @@ export function rememberFocusMonth(month: string): void {
 	try {
 		sessionStorage.setItem(KEY, month);
 	} catch {
-		/* SSR / storage blocked — continuity is best-effort */
+		/* SSR / storage blocked - continuity is best-effort */
 	}
 }
 

@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-describe('Swiss German orthography — no ß', () => {
+describe('Swiss German orthography - no ß', () => {
 	it('de.ts contains no ß character (use ss instead)', () => {
 		const DE = readFileSync(join(__dirname, 'de.ts'), 'utf8');
 		const matches = DE.match(/ß/g) || [];

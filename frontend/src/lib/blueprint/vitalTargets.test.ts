@@ -44,7 +44,7 @@ describe('migrateLegacyVitalTargets', () => {
 		expect(migrateLegacyVitalTargets(bp(), 'hans')?.vitalTargets).toEqual({ bp_sys: 130 });
 	});
 
-	it('does nothing when the blueprint already carries targets — the encrypted copy wins', () => {
+	it('does nothing when the blueprint already carries targets - the encrypted copy wins', () => {
 		localStorage.setItem(legacyVitalTargetsKey('hans'), '{"bp_sys":130}');
 		expect(migrateLegacyVitalTargets(bp({ vitalTargets: { bp_sys: 125 } }), 'hans')).toBeNull();
 	});

@@ -1,5 +1,5 @@
 /**
- * AGPL §13 source offer — see `source.ts`.
+ * AGPL §13 source offer - see `source.ts`.
  *
  * Two things are pinned here. The first is ordinary input handling. The
  * second is the one that matters: no surface may hardcode the upstream
@@ -47,7 +47,7 @@ describe('resolveSourceUrl', () => {
 		expect(resolveSourceUrl('/source')).toBe(UPSTREAM_SOURCE_URL);
 	});
 
-	it('rejects non-http(s) schemes — this value becomes an href', () => {
+	it('rejects non-http(s) schemes - this value becomes an href', () => {
 		// The app holds a decryption key in memory on every authed page.
 		// A javascript: href in the footer is not a theoretical concern.
 		expect(resolveSourceUrl('javascript:alert(1)')).toBe(UPSTREAM_SOURCE_URL);
@@ -84,7 +84,7 @@ function sourceFiles(dir: string, acc: string[] = []): string[] {
 	return acc;
 }
 
-describe('AGPL §13 — no surface hardcodes the upstream repository', () => {
+describe('AGPL §13 - no surface hardcodes the upstream repository', () => {
 	const SRC = join(__dirname, '..');
 	// source.ts is where the fallback legitimately lives; this test file
 	// names the URL in its own assertions.
@@ -99,7 +99,7 @@ describe('AGPL §13 — no surface hardcodes the upstream repository', () => {
 		expect(
 			offenders,
 			`These files hardcode the upstream repository. On a fork they would tell users\n` +
-				`to inspect code that is not what the fork is serving — AGPL §13 requires the\n` +
+				`to inspect code that is not what the fork is serving - AGPL §13 requires the\n` +
 				`source of THIS deployment. Import { sourceUrl } from '#lib/source.ts' instead.\n` +
 				`Offending files:\n  ${offenders.join('\n  ')}\n`,
 		).toEqual([]);

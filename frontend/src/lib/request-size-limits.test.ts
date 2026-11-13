@@ -3,7 +3,7 @@
  *
  * nginx allowed 10m on /api/documents/batch while Flask's MAX_CONTENT_LENGTH
  * was 2 MiB, so a 3-10 MB batch passed the edge and was refused by the API
- * with a 413 — a limit the edge advertised and the app never honoured. Nothing
+ * with a 413 - a limit the edge advertised and the app never honoured. Nothing
  * pinned the two together; this does. Lives in the frontend suite because it
  * is the one that already reads files across the repo (see security-doc.test.ts).
  *

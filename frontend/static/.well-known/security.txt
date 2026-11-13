@@ -1,4 +1,4 @@
-# ciphra — security disclosure policy (RFC 9116)
+# ciphra - security disclosure policy (RFC 9116)
 #
 # ciphra is zero-knowledge: health data is encrypted client-side and the
 # server only ever stores ciphertext. Reports about that boundary, the
@@ -6,7 +6,7 @@
 #
 # A private GitHub advisory is the preferred route (it gives us a thread
 # and handles credit). Email is listed second for reporters who would
-# rather not use GitHub — both reach the same person.
+# rather not use GitHub - both reach the same person.
 #
 # Scope, what is already known and accepted, and what response to expect:
 #   https://github.com/danileau/ciphra/blob/main/SECURITY.md

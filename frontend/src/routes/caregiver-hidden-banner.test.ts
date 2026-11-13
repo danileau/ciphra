@@ -3,13 +3,13 @@
  *
  * CIPH-726 added a line under the caregiver banner telling a linked reader how
  * many entries stay private. It counted `type === 'diary' || private === true`
- * in `$documents` — but since per-invite scopes (#176) the SERVER withholds
+ * in `$documents` - but since per-invite scopes (#176) the SERVER withholds
  * those rows, so the count a caregiver saw was always 0 and the line never
  * rendered for the only audience it exists for. The real number is the
  * server's `withheld`, which the store already keeps.
  *
  * `frontend/src/lib/utils/exportable.ts` names this banner as one of the
- * sentences the whole sharing-scope feature exists to make true — so it gets
+ * sentences the whole sharing-scope feature exists to make true - so it gets
  * a guard of its own.
  */
 import { describe, it, expect } from 'vitest';

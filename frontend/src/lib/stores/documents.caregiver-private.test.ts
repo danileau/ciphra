@@ -4,12 +4,12 @@
  * ciphra told caregivers, in the vault banner, that they were seeing a partial
  * record: "Du siehst N geteilte Einträge. M persönliche Einträge bleiben
  * privat." (`family.private_context`). `private.tooltip` and
- * `journal.diary_hint` promise the same thing in the patient's own words —
+ * `journal.diary_hint` promise the same thing in the patient's own words -
  * "nie exportiert oder geteilt".
  *
  * None of it was implemented. The linked-vault load filtered `family_link`
- * documents and nothing else, so a family grant — which re-wraps the patient's
- * master key — handed the caregiver the diary along with everything else. The
+ * documents and nothing else, so a family grant - which re-wraps the patient's
+ * master key - handed the caregiver the diary along with everything else. The
  * banner even counted the hidden entries out of `$documents`, which was only
  * possible because they were sitting in it.
  *
@@ -17,7 +17,7 @@
  * asked, reasonably, what it actually shared.
  *
  * The filter is client-side: the ciphertext still arrives and the key still
- * decrypts it. It makes the app honest, not the boundary real — that is the
+ * decrypts it. It makes the app honest, not the boundary real - that is the
  * per-grant scope work, which moves the decision server-side.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -224,7 +224,7 @@ describe('linked-vault load withholds the patient private documents', () => {
 			'a wide grant shows the diary',
 		).toBe(true);
 
-		// The owner narrows it. Nothing else changes — same session, same key.
+		// The owner narrows it. Nothing else changes - same session, same key.
 		h.state.shareMask = 1;
 		await documents.load();
 		expect(

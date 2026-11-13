@@ -1,5 +1,5 @@
 /**
- * ciphra — Client-side crypto tests.
+ * ciphra - Client-side crypto tests.
  *
  * Uses WebCrypto (available in Node 18+ via globalThis.crypto).
  * Tests base64 helpers and AES-256-GCM encrypt/decrypt roundtrips
@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 // @ts-ignore -- node:crypto available at test time
 import { webcrypto } from 'node:crypto';
 
-// jsdom does not expose crypto.subtle — polyfill from Node's webcrypto
+// jsdom does not expose crypto.subtle - polyfill from Node's webcrypto
 if (!globalThis.crypto?.subtle) {
     // @ts-ignore Node webcrypto is compatible enough for our use
     globalThis.crypto = webcrypto;
@@ -118,7 +118,7 @@ describe('wire format', () => {
         const tag = bytes.slice(12, 28);
         expect(tag.length).toBe(16);
 
-        // Remaining bytes are ciphertext — at least as long as plaintext
+        // Remaining bytes are ciphertext - at least as long as plaintext
         const ciphertext = bytes.slice(28);
         expect(ciphertext.length).toBe(new TextEncoder().encode(plaintext).length);
     });

@@ -1,7 +1,7 @@
 /**
  * Recovery code wordlist (300 words).
  * 12 words with checksum ≈ 99 bits entropy.
- * Single source of truth — server does not need this list anymore
+ * Single source of truth - server does not need this list anymore
  * (codes are generated and validated client-side).
  */
 export const WORDLIST: readonly string[] = [
@@ -69,7 +69,7 @@ export function generateFamilyCode(wordCount = 6): string {
 
 /** The one spelling a word code is derived from: lowercase, single spaces.
  *  Generated codes are already in this form, so normalizing typed input to it
- *  is backward compatible — and necessary, because a phone keyboard
+ *  is backward compatible - and necessary, because a phone keyboard
  *  capitalizes the first word ("Able acid …") and turns a double space into
  *  ". ", and validation (which lowercases) used to accept a code that then
  *  derived the wrong key. */

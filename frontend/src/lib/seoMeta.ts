@@ -10,7 +10,7 @@
  * resolved here is in the HTML a crawler fetches.
  *
  * The server has no user locale (it lives in localStorage), so SSR passes
- * the `de` dictionary — German is the default and the first market. The
+ * the `de` dictionary - German is the default and the first market. The
  * client re-resolves with `$t` once hydrated.
  */
 import { conditionInfoMap } from './conditionInfo';
@@ -25,7 +25,7 @@ export interface PublicMeta {
 	/** Absolute, self-referencing canonical URL. */
 	canonical: string;
 	ogType: 'website' | 'article';
-	/** Large branded card — only the landing has one so far. */
+	/** Large branded card - only the landing has one so far. */
 	ogImage?: string;
 	jsonLd?: Record<string, unknown>;
 }
@@ -56,8 +56,8 @@ export function publicMeta(pathname: string, t: Translate): PublicMeta | null {
 		const title = t(info.titleKey);
 		const subtitle = t(info.subtitleKey);
 		return {
-			title: `${title} — ciphra | ${t('condition.seo_suffix')}`,
-			description: `${subtitle} — ${t('condition.seo_description')}`,
+			title: `${title} - ciphra | ${t('condition.seo_suffix')}`,
+			description: `${subtitle} - ${t('condition.seo_description')}`,
 			canonical,
 			ogType: 'article',
 			jsonLd: {
@@ -73,22 +73,22 @@ export function publicMeta(pathname: string, t: Translate): PublicMeta | null {
 	}
 
 	if (path === '/privacy') {
-		return { title: `${t('privacy.title')} — ciphra`, description: t('privacy.meta'), canonical, ogType: 'article' };
+		return { title: `${t('privacy.title')} - ciphra`, description: t('privacy.meta'), canonical, ogType: 'article' };
 	}
 	if (path === '/terms') {
-		return { title: `${t('terms.title')} — ciphra`, description: t('terms.meta'), canonical, ogType: 'article' };
+		return { title: `${t('terms.title')} - ciphra`, description: t('terms.meta'), canonical, ogType: 'article' };
 	}
 
 	// Docs are English-only by design (see routes/docs/+page.svelte).
 	if (path === '/docs') {
-		return { title: 'Documentation — ciphra', canonical, ogType: 'website' };
+		return { title: 'Documentation - ciphra', canonical, ogType: 'website' };
 	}
 	const docMatch = path.match(/^\/docs\/([^/]+)$/);
 	if (docMatch) {
 		const doc = getDoc(docMatch[1]);
 		if (!doc) return null;
 		return {
-			title: `${doc.meta.title} — ciphra`,
+			title: `${doc.meta.title} - ciphra`,
 			description: doc.meta.blurb || undefined,
 			canonical,
 			ogType: 'article',

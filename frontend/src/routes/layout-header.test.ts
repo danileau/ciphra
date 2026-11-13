@@ -1,5 +1,5 @@
 /**
- * CIPH-pi24-1 — public-shell header contract.
+ * CIPH-pi24-1 - public-shell header contract.
  *
  * Pins three intertwined changes in `+layout.svelte`:
  *  - Sub-item A: header CTA is a Login button (`auth.login` key, href `/login`),
@@ -7,7 +7,7 @@
  *    "Get started" in the header was misdirecting returning users; the
  *    landing body still surfaces the registration CTA 3x (hero, conditions,
  *    final).
- *  - Sub-item B: language `<select>` removed from the header — moved to
+ *  - Sub-item B: language `<select>` removed from the header - moved to
  *    PublicFooter exclusively, where trust-aware Swiss apps put it.
  *  - Sub-item C: `detectLocale()` returns `'en'` (not `'de'`) when the
  *    browser locale isn't in [de, en, fr, it]. Falls back to a language a
@@ -26,7 +26,7 @@ const I18N_INDEX = readFileSync(
 	'utf8',
 );
 
-describe('CIPH-pi24-1A — header CTA is Login, not registration', () => {
+describe('CIPH-pi24-1A - header CTA is Login, not registration', () => {
 	it('header anchor uses the auth.login i18n key', () => {
 		// The auth-flow shell guard (`!== 'auth-flow'`) wraps a single
 		// anchor inside the header. That anchor must reference auth.login.
@@ -46,7 +46,7 @@ describe('CIPH-pi24-1A — header CTA is Login, not registration', () => {
 	it('header anchor does NOT use the old landing.hero_cta key', () => {
 		// Pin against accidental revert to "kostenlos starten" in the header.
 		// Body still uses landing.hero_cta in 3 places (hero, conditions, final
-		// CTA) — that's separate and intentional.
+		// CTA) - that's separate and intentional.
 		// The label became an i18n key in 2026-09 (it was the English word
 		// "Primary", read out to every screen reader in every language).
 		const headerNav = LAYOUT.match(
@@ -57,7 +57,7 @@ describe('CIPH-pi24-1A — header CTA is Login, not registration', () => {
 	});
 });
 
-describe('CIPH-pi24-1B — language picker is footer-only', () => {
+describe('CIPH-pi24-1B - language picker is footer-only', () => {
 	it('header section does NOT contain a <select> for language', () => {
 		// The primary nav block in +layout.svelte must not host a language
 		// dropdown. PublicFooter handles it.
@@ -74,7 +74,7 @@ describe('CIPH-pi24-1B — language picker is footer-only', () => {
 	it('the layout no longer imports the picker\'s list/labels (dead after the move)', () => {
 		// PublicFooter has its own copy of these imports; +layout.svelte
 		// shouldn't pull them now that the dropdown is gone. `locale` itself
-		// came back in 2026-09 for `plural()` in the caregiver banner — a
+		// came back in 2026-09 for `plural()` in the caregiver banner - a
 		// picker needs `locales` + `localeNames`, and those stay out.
 		expect(LAYOUT).not.toMatch(
 			/import\s*\{[^}]*\b(locales|localeNames)\b[^}]*\}\s*from\s*['"]#lib\/i18n\/index\.ts['"]/,
@@ -87,7 +87,7 @@ describe('CIPH-pi24-1B — language picker is footer-only', () => {
 
 	it('PublicFooter still exposes the language picker (regression check)', () => {
 		// The picker has to live somewhere; PublicFooter is the canonical home.
-		// CIPH-pi24-5e — native <select> replaced by <LocaleSelect> (custom
+		// CIPH-pi24-5e - native <select> replaced by <LocaleSelect> (custom
 		// listbox primitive); the picker is still in PublicFooter, just via
 		// the component import.
 		const FOOTER = readFileSync(
@@ -98,9 +98,9 @@ describe('CIPH-pi24-1B — language picker is footer-only', () => {
 	});
 });
 
-describe('CIPH-pi24-1C — detectLocale falls back to EN, not DE', () => {
+describe('CIPH-pi24-1C - detectLocale falls back to EN, not DE', () => {
 	it('the unsupported-locale return value is "en"', () => {
-		// Before: `return 'de';` — Polish/Spanish/Portuguese visitor saw
+		// Before: `return 'de';` - Polish/Spanish/Portuguese visitor saw
 		// German they couldn't read. Now: 'en' as honest international default.
 		expect(I18N_INDEX).toMatch(
 			/function\s+detectLocale[\s\S]+?return\s+'en';\s*\n\s*\}/,

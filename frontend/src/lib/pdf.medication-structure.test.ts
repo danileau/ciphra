@@ -5,7 +5,7 @@
  * Operator decisions this suite pins:
  *   1. A dose change is a step in time. The charts shade the dose periods of
  *      the medication that changed, draw a boundary at the change and label
- *      each period with its dose — the doctor compares by eye.
+ *      each period with its dose - the doctor compares by eye.
  *   2. Structure, never numbers or verdicts: no per-period count, rate,
  *      average, delta or better/worse wording anywhere
  *      (pdf.no-assessment.test.ts holds the vocabulary).
@@ -135,7 +135,7 @@ describe('dose bands on the charts', () => {
 		]);
 		expect(layer?.boundaries.map((b) => b.change.date)).toEqual(['2026-09-10', '2026-09-24']);
 		expect(layer?.labels.map((l) => l.text)).toEqual(['Lamotrigin 50 mg', '75 mg', '100 mg']);
-		// Levetiracetam and Brivaracetam changed too — the chart must say whose.
+		// Levetiracetam and Brivaracetam changed too - the chart must say whose.
 		expect(layer?.othersChanged).toBe(true);
 	});
 

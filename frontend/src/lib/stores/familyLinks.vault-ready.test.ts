@@ -1,5 +1,5 @@
 /**
- * `activeVaultReady` — false exactly while a linked vault is active but its
+ * `activeVaultReady` - false exactly while a linked vault is active but its
  * link (the patient's key) has not loaded. The documents store refuses to load
  * in that window instead of falling back to the own vault, so the dashboard and
  * /reports hold their loading state rather than render an empty account.

@@ -1,6 +1,6 @@
 /**
- * CIPH-878 — Calendar "Heute / Today" jump-to-current-month pill.
- * Source-parse contract — the button must (a) exist, (b) hide when on
+ * CIPH-878 - Calendar "Heute / Today" jump-to-current-month pill.
+ * Source-parse contract - the button must (a) exist, (b) hide when on
  * today's month, (c) call jumpToToday(), (d) use the shared common.today
  * i18n key. Pinning keeps regressions from silently removing the shortcut.
  */

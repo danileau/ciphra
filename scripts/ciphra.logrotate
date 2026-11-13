@@ -1,4 +1,4 @@
-# ciphra VPS log rotation — Track 3 P0 (3.3).
+# ciphra VPS log rotation - Track 3 P0 (3.3).
 #
 # The cron/ops scripts (vps_pulse.sh, nightly digest, metadata snapshot, …)
 # append to /var/log/ciphra-*.log and grow unbounded. This rotates them so
@@ -21,7 +21,7 @@
     delaycompress
     # copytruncate: the ops scripts hold the log open and append (>>). Truncate
     # the original in place after copying so we don't need to signal/restart the
-    # writer — a couple of log lines can be lost at the exact rotation instant,
+    # writer - a couple of log lines can be lost at the exact rotation instant,
     # acceptable for ops/cron logs (not used for the metadata-snapshot CSVs).
     copytruncate
 }

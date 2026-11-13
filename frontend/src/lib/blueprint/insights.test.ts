@@ -1,9 +1,9 @@
 /**
- * CIPH-920 — Dashboard insight engine coverage.
+ * CIPH-920 - Dashboard insight engine coverage.
  *
  * Two jobs:
  *  1. Behavioural unit tests for each compute fn (gating + correctness).
- *  2. A cross-blueprint capability SNAPSHOT — the "analysis for every
+ *  2. A cross-blueprint capability SNAPSHOT - the "analysis for every
  *     blueprint" made durable. The inline snapshot below is the human-
  *     readable table of which insight cards CAN fire per preset; adding a
  *     preset (or changing its episode/vital/trigger shape) forces a
@@ -117,7 +117,7 @@ describe('computeCircadian', () => {
 	});
 
 	it('buckets each occurrence by its OWN time when episodeInstances is present', () => {
-		// One day, three focal episodes at distinct times — two at night, one
+		// One day, three focal episodes at distinct times - two at night, one
 		// in the afternoon. The per-occurrence path must count all three by
 		// their own timestamp, not collapse onto a single day-level time.
 		const docs: InsightDoc[] = [
@@ -315,7 +315,7 @@ describe('cross-blueprint capability matrix', () => {
 					.map(([k]) => k)
 					.sort()
 					.join(',');
-				return `${p.id}: ${on || '—'}`;
+				return `${p.id}: ${on || '-'}`;
 			})
 			.join('\n');
 		expect(table).toMatchInlineSnapshot(`
@@ -341,7 +341,7 @@ describe('cross-blueprint capability matrix', () => {
 			ibd: circadian,top-symptoms,trigger-lift,type-mix
 			hashimoto: top-symptoms,trigger-lift
 			rheumatoid_arthritis: sleep-link,top-symptoms,trigger-lift,type-mix
-			custom: —"
+			custom: -"
 		`);
 	});
 });

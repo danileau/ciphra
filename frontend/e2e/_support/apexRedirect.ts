@@ -1,5 +1,5 @@
 /**
- * INC-001 — Cloudflare apex emulator.
+ * INC-001 - Cloudflare apex emulator.
  *
  * Reproduces the one piece of production behaviour that neither the epilepc
  * container nor the ciphra dev server can produce on its own: the edge
@@ -17,7 +17,7 @@
  * Fetch spec, every response in a redirect chain of a `mode: 'cors'` request
  * must itself pass the CORS check *before* the browser will follow it. It
  * doesn't, so the browser aborts with `TypeError: Failed to fetch` and the
- * request to the redirect target is NEVER ISSUED — which is why epilepc's
+ * request to the redirect target is NEVER ISSUED - which is why epilepc's
  * `prod.log` has no export entry and `migration_token.used_at` stayed NULL.
  *
  * `mode` lets the same server stand in for both the broken edge and each
@@ -63,7 +63,7 @@ export async function startApexEmulator(
 		const origin = req.headers.origin;
 		const isApiPath = API_PREFIXES.some((p) => path.startsWith(p));
 
-		// Fix A — the edge stops redirecting the machine endpoints and proxies
+		// Fix A - the edge stops redirecting the machine endpoints and proxies
 		// them straight through, so no redirect ever enters the CORS chain.
 		if (mode === 'passthrough-api' && isApiPath) {
 			await proxy(targetHost, req, res);
@@ -74,7 +74,7 @@ export async function startApexEmulator(
 			Location: `http://${targetHost}${path}`,
 		};
 
-		// Fix B — keep the redirect but let it survive the CORS preflight check.
+		// Fix B - keep the redirect but let it survive the CORS preflight check.
 		if (mode === 'redirect-with-cors' && origin) {
 			headers['Access-Control-Allow-Origin'] = origin;
 			headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
@@ -82,7 +82,7 @@ export async function startApexEmulator(
 			headers['Vary'] = 'Origin';
 		}
 
-		// `redirect-no-cors` deliberately emits NOTHING else — that is production.
+		// `redirect-no-cors` deliberately emits NOTHING else - that is production.
 		res.writeHead(301, headers);
 		res.end();
 	});

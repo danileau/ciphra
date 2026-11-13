@@ -1,5 +1,5 @@
 /**
- * Regression — documents.load() must report whether the SERVER fetch actually
+ * Regression - documents.load() must report whether the SERVER fetch actually
  * succeeded via its boolean return value.
  *
  * The setup-redirect bug (2026-06-16): on a CACHELESS device (brand-new
@@ -7,7 +7,7 @@
  * left $documents empty. The old load() resolved void regardless, so the
  * layout flipped `docsLoaded = true`, blueprint.loadFromDocuments() found no
  * blueprint, and the setup-redirect guard bounced a fully-set-up returning
- * user onto the wizard — until a manual refresh re-fetched successfully.
+ * user onto the wizard - until a manual refresh re-fetched successfully.
  *
  * The fix makes load() return `true` only when the fetch succeeds, so the
  * layout can gate `docsLoaded` (and the redirect) on a genuine load and

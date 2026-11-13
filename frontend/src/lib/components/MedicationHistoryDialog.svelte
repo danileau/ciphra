@@ -6,10 +6,10 @@
 	behind it, nor the drugs that were tried and given up. This dialog records
 	both:
 
-	- earlier — a dose that applied BEFORE everything already recorded. It never
+	- earlier - a dose that applied BEFORE everything already recorded. It never
 	            touches a recorded day (that is `prependPeriod`, not a dose
 	            change dated in the past, which would drop the later history).
-	- past    — a medication taken and stopped long ago, with why it ended.
+	- past    - a medication taken and stopped long ago, with why it ended.
 
 	Dates are months, not days: nobody remembers that a dose changed on the 14th
 	of March 2023, and a picker that insists gets an invented answer. The start
@@ -126,7 +126,7 @@
 		});
 	})();
 
-	/** What the dialog asks for and has not got yet — a missing dose leaves the
+	/** What the dialog asks for and has not got yet - a missing dose leaves the
 	 *  button disabled quietly, a contradiction says so. */
 	$: problem = (() => {
 		if (result) return null;

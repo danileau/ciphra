@@ -1,5 +1,5 @@
 /**
- * CIPH-pi19-A — In-cell trigger triangle + rescue-med edge bar.
+ * CIPH-pi19-A - In-cell trigger triangle + rescue-med edge bar.
  *
  * Guards the per-day tally Maps, the data-driven render gates, the
  * counter-row triangle (slot 3), and the brand right-edge bar. Plus
@@ -69,7 +69,7 @@ describe('CIPH-pi19-A counter-row triangle (slot 3)', () => {
 
 describe('CIPH-pi19-A rescue-med right-edge bar', () => {
 	it('renders a 4px brand bar absolutely-positioned on the right edge', () => {
-		// CIPH-pi19-A3 — bumped from 3px after persona feedback that the
+		// CIPH-pi19-A3 - bumped from 3px after persona feedback that the
 		// edge bar was easy to miss alongside the bigger triangle.
 		expect(CAL).toMatch(
 			/\{#if hasRescueMed\}[\s\S]{0,400}width:\s*4px[\s\S]{0,80}background:\s*var\(--brand\)/,

@@ -1,7 +1,7 @@
 <!-- Thin auth + URL + CRUD adapter around <EntryComposer>. The primitive
 	 owns the form, auto-save debounce, multi-entry vitals JSON round-trip,
 	 section-jump nav, and the delete-confirm banner. The route is wrapped
-	 in {#key date} so every date change is a fresh primitive instance —
+	 in {#key date} so every date change is a fresh primitive instance -
 	 same effect as the previous imperative form-state reset, expressed
 	 structurally. See CIPH-850. -->
 <script lang="ts">
@@ -44,7 +44,7 @@
 		documents.load();
 	});
 
-	// Unsaved edits in the composer (reported by it — carryover pre-fills
+	// Unsaved edits in the composer (reported by it - carryover pre-fills
 	// do not count). Leaving the day with them used to drop them silently:
 	// the arrow keys, the day arrows, "today", and any link all navigate.
 	let dirty = false;
@@ -52,7 +52,7 @@
 	beforeNavigate((nav) => {
 		if (!dirty) return;
 		// A reload / tab close: cancelling asks the browser to show its own
-		// "leave site?" prompt — a custom confirm is not allowed there.
+		// "leave site?" prompt - a custom confirm is not allowed there.
 		if (nav.willUnload) {
 			nav.cancel();
 			return;
@@ -98,7 +98,7 @@
 		const d = new Date(currentDate + 'T12:00:00');
 		d.setDate(d.getDate() + delta);
 		const newDate = d.toISOString().slice(0, 10);
-		// currentDate is derived from the date route param — the goto drives it.
+		// currentDate is derived from the date route param - the goto drives it.
 		goto(`/log/${newDate}`, { replace: true });
 	}
 
@@ -108,7 +108,7 @@
 </script>
 
 <svelte:head>
-	<title>{$t('protocol.title')} — ciphra</title>
+	<title>{$t('protocol.title')} - ciphra</title>
 </svelte:head>
 
 {#if !bp}

@@ -4,7 +4,7 @@
  * The trajectory drew one dashed line, one triangle and a 22-char label per
  * event at the event's x position, with no collision handling, no right-edge
  * clamp and no de-duplication. Twelve labels from one real export measured
- * 255mm on a 174mm axis — 147% of the axis. The design has no working case
+ * 255mm on a 174mm axis - 147% of the axis. The design has no working case
  * above ~5 events; the shipped worst case is a rescue-med user at ~250.
  *
  * The vital mini-charts got the same lines with `withLabels: false`, i.e. an
@@ -14,7 +14,7 @@
  *
  * `feedback_chart_event_markers` (2026-05-12) already banned this after three
  * on-screen iterations: "Aggregate-axis line charts: never draw per-event
- * marks." The web answer was a tooltip. Paper has no hover — hence a count on
+ * marks." The web answer was a tooltip. Paper has no hover - hence a count on
  * the chart (pitch = axis pitch, so it cannot collide) and the text in a list.
  */
 import { describe, it, expect } from 'vitest';
@@ -54,7 +54,7 @@ describe('the chart carries a count whose pitch is the axis pitch', () => {
 		expect(PDF).toContain('function drawEventCountRow');
 		const fn = PDF.slice(PDF.indexOf('function drawEventCountRow'));
 		const body = fn.slice(0, fn.indexOf('\n\t}'));
-		// Position comes from the bucket index over the bucket count — never
+		// Position comes from the bucket index over the bucket count - never
 		// from a per-event day fraction.
 		expect(body).toMatch(/monthBuckets\.length\s*-\s*1/);
 		expect(body).not.toMatch(/frac/);
@@ -77,7 +77,7 @@ describe('the chart carries a count whose pitch is the axis pitch', () => {
 describe('vital mini-charts carry no annotations at all', () => {
 	it('both mini-chart renderers record why they draw none', () => {
 		// `drawEventLines` no longer exists at all (asserted above), so the
-		// call cannot return by accident — only by someone re-inventing it.
+		// call cannot return by accident - only by someone re-inventing it.
 		// The note at both former call sites is what they would have to
 		// delete first.
 		const notes = PDF.match(/No event markers here/g) ?? [];
@@ -87,7 +87,7 @@ describe('vital mini-charts carry no annotations at all', () => {
 
 describe('the note text lives in a list, in full', () => {
 	it('resolves note text through the shared module, not its own copy', () => {
-		// `noteMarkerText` prefers `title` over `notes` — the epilepc migration
+		// `noteMarkerText` prefers `title` over `notes` - the epilepc migration
 		// puts the short human title in `title` and the long prose in `notes`,
 		// which is why the reported labels were sentences. Behaviour is pinned
 		// in reports/noteMarkers.test.ts; what matters HERE is that the PDF and
@@ -98,7 +98,7 @@ describe('the note text lives in a list, in full', () => {
 		expect(PDF, 'a second, drifting copy').not.toMatch(/\.title\s*\|\|\s*d\.data\.notes/);
 	});
 
-	it('events are ordered oldest first — the arc, not a feed', () => {
+	it('events are ordered oldest first - the arc, not a feed', () => {
 		expect(PDF).toMatch(/sort\(\(a, b\) => a\.dateISO\.localeCompare\(b\.dateISO\)\)/);
 	});
 
@@ -111,7 +111,7 @@ describe('the note text lives in a list, in full', () => {
 	it("the date column honours the user's date format", () => {
 		// SUPERSEDED reasoning, worth keeping. This first asserted a month
 		// NAME ("21. Aug. 2026") because a numeric day/month flips meaning
-		// between locales — a workaround adopted specifically because the PDF
+		// between locales - a workaround adopted specifically because the PDF
 		// ignored `Blueprint.dateFormat` at the time. Now that it honours the
 		// setting, the workaround would override an explicit user choice on
 		// the one artefact that leaves the device.

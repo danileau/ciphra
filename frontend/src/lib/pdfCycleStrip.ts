@@ -1,5 +1,5 @@
 /**
- * CIPH-pi21-Track-B-4 — Cycle phase strip aggregation for the doctor PDF.
+ * CIPH-pi21-Track-B-4 - Cycle phase strip aggregation for the doctor PDF.
  *
  * Cycle cohort (endometriosis / menopause / PMOS) renders a per-day
  * horizontal strip showing the cycle phase (menstrual / follicular /
@@ -11,7 +11,7 @@
  * is inline in pdf.ts (consistent with `drawDayCoverageStrip`,
  * `drawPhaseDistribution`).
  *
- * Gated by `sectionsForCohort(cohort).includes('cycle-strip')` —
+ * Gated by `sectionsForCohort(cohort).includes('cycle-strip')` -
  * phase/discrete/narrative/custom cohorts never call this.
  */
 import type { Blueprint } from '#lib/blueprint/index.ts';
@@ -28,7 +28,7 @@ export interface CycleStripCell {
 }
 
 /**
- * 2026-06-07 clinician review P1-4 — anchor staleness threshold (days).
+ * 2026-06-07 clinician review P1-4 - anchor staleness threshold (days).
  * Beyond this age, the phase strip is rendered without tinting and a
  * footnote names the last recorded period date. Prevents the menopause/
  * irregular-cycle case where the strip otherwise paints a confident

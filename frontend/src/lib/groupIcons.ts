@@ -1,11 +1,11 @@
 /**
- * Symptom-group icons — shared between the setup wizard and the daily entry
+ * Symptom-group icons - shared between the setup wizard and the daily entry
  * screen so a group shows the same icon everywhere it appears (Loránd feedback,
  * 2026-06-08: "the icons are top, show them more often, not only at profile
  * creation"). Previously this map lived only in setup/+page.svelte.
  *
- * Keyed by the group's i18n label key (`symptom_group.*`). Unknown keys —
- * including the synthetic "Custom" group and any future preset group — fall
+ * Keyed by the group's i18n label key (`symptom_group.*`). Unknown keys -
+ * including the synthetic "Custom" group and any future preset group - fall
  * back to the generic category icon via iconPath().
  */
 import { iconPath } from '#lib/conditionIcons.ts';

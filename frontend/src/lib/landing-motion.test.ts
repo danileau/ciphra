@@ -1,5 +1,5 @@
 /**
- * CIPH-895 — Landing motion guard.
+ * CIPH-895 - Landing motion guard.
  *
  * The landing page entrance + section reveals are handled by
  * `lib/actions/inview.ts` + scoped CSS in `routes/+page.svelte`.
@@ -24,7 +24,7 @@ import { resolve } from 'node:path';
 
 const SRC_ROOT = resolve(__dirname, '..');
 
-describe('CIPH-895 — landing motion', () => {
+describe('CIPH-895 - landing motion', () => {
 	it('inview action exists and honours prefers-reduced-motion', () => {
 		const src = readFileSync(
 			resolve(SRC_ROOT, 'lib/actions/inview.ts'),

@@ -1,5 +1,5 @@
 /**
- * Sharing classes — the one bit the server is allowed to learn.
+ * Sharing classes - the one bit the server is allowed to learn.
  *
  * The class is derived from the plaintext on the client, because the server
  * cannot: the document type lives inside the ciphertext. Two things have to
@@ -37,7 +37,7 @@ describe('what counts as personal', () => {
 	});
 
 	it('a diary entry stays personal even with the flag cleared', () => {
-		// The type decides, not the flag — same rule the export applies.
+		// The type decides, not the flag - same rule the export applies.
 		expect(shareClassOf({ ...diary, private: false })).toBe(SHARE_CLASS_PERSONAL);
 	});
 
@@ -76,7 +76,7 @@ describe('document visibility under a grant', () => {
 		expect(isVisibleUnderMask({ data: entry }, SHARE_MASK_SHARED_ONLY)).toBe(true);
 	});
 
-	it('a wide grant shows the diary — the whole point of the feature', () => {
+	it('a wide grant shows the diary - the whole point of the feature', () => {
 		expect(isVisibleUnderMask({ data: diary }, SHARE_MASK_EVERYTHING)).toBe(true);
 		expect(isVisibleUnderMask({ data: lockedEntry }, SHARE_MASK_EVERYTHING)).toBe(true);
 	});

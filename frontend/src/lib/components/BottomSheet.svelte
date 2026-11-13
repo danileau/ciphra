@@ -1,4 +1,4 @@
-<!-- primitive-exempt: Modal — BottomSheet is the *other* modal primitive
+<!-- primitive-exempt: Modal - BottomSheet is the *other* modal primitive
 	 (mobile bottom-anchored sheet, not centred dialog). It keeps its own
 	 fixed-inset-0 backdrop because it is itself the primitive. -->
 <script lang="ts">

@@ -1,5 +1,5 @@
 /**
- * WCAG contrast helper — minimal, dependency-free.
+ * WCAG contrast helper - minimal, dependency-free.
  *
  * Used by `cohortPalette.test.ts` (CIPH-890) to assert each cohort tone
  * achieves at least 3:1 against the app's `--surface` cream so chart

@@ -1,5 +1,5 @@
 <!--
-	SignupFlow — shared zero-knowledge signup flow used by /login and /migrate.
+	SignupFlow - shared zero-knowledge signup flow used by /login and /migrate.
 
 	Handles: createVault → register → loginInit → deriveAuthKey → login → decryptMasterKey.
 	Then presents the recovery code with PDF download, copy-to-clipboard, and an
@@ -45,9 +45,9 @@
 	let technicalError = '';
 
 	// Username rule (mirrors the server): the value goes through
-	// canonicalUsername() — the same cleanup login applies, so an account is
-	// created under exactly the name login will send — and must be 3–64 chars
-	// of [a-z0-9_]. Validated in JS with styled errors — the form is
+	// canonicalUsername() - the same cleanup login applies, so an account is
+	// created under exactly the name login will send - and must be 3–64 chars
+	// of [a-z0-9_]. Validated in JS with styled errors - the form is
 	// `novalidate` so the browser's native bubbles ("Please match the
 	// requested format" from a `pattern` attr, "Please fill out this field"
 	// from `required`) never appear in their own un-styled, browser-locale
@@ -60,7 +60,7 @@
 		return '';
 	}
 
-	// A11y validation reactives — used by aria-invalid + aria-describedby
+	// A11y validation reactives - used by aria-invalid + aria-describedby
 	// linking on the inputs (PI v13 a11y review LB-2).
 	$: userErrKey = touched.user && username.length > 0 ? usernameError(username) : '';
 	$: userInvalid = userErrKey !== '';
@@ -121,7 +121,7 @@
 			const bundle = await createVault(uname, password, true);
 			const reg = await api.register(bundle, source);
 			if (!reg.ok) {
-				// CIPH 3.6 — during a migration, a 409 almost always means the user
+				// CIPH 3.6 - during a migration, a 409 almost always means the user
 				// reloaded after their account was already created on a prior attempt
 				// (Track-2 gotcha #7). Hand the parent (/migrate) the username so it
 				// can offer "log in and continue" instead of a dead-end error. The
@@ -131,7 +131,7 @@
 					return;
 				}
 				// Status-aware copy. Server is enumeration-resistant (409 also covers
-				// bundle-bad), so 409 still maps to "username taken" — that's the
+				// bundle-bad), so 409 still maps to "username taken" - that's the
 				// most useful message for the dominant case. Other statuses must NOT
 				// claim the username is taken.
 				const msg =
@@ -165,7 +165,7 @@
 			busyLabel = $t('auth.phase_unlocking');
 			const masterKey = await decryptMasterKey(password, vault.vault_params, vault.encrypted_master);
 			// Hold the session in component-local state. DO NOT call auth.login
-			// yet — that would flip $isAuthenticated and cause the root layout to
+			// yet - that would flip $isAuthenticated and cause the root layout to
 			// swap shells before the recovery gate renders.
 			pending = {
 				token: lr.data.token as string,
@@ -177,7 +177,7 @@
 			};
 			showRecovery = true;
 		} catch (e) {
-			// Network drop, crypto exception, abort — anything that doesn't reach
+			// Network drop, crypto exception, abort - anything that doesn't reach
 			// `reg.ok`. Don't claim the username is taken; that misled real users.
 			setError($t('auth.error_server'), e instanceof Error ? e.message : String(e));
 		} finally {
@@ -199,7 +199,7 @@
 	function proceed() {
 		if (!acknowledged) return;
 		if (!pending) return;
-		// Commit to the auth store NOW — after the user has acknowledged the
+		// Commit to the auth store NOW - after the user has acknowledged the
 		// recovery code. This is the moment the layout may reactively swap
 		// shells; the parent's `signup-complete` handler then routes as needed.
 		auth.login(
@@ -291,10 +291,10 @@
 			<p class="text-sm font-medium" style="color: var(--olive)">{$t('auth.recovery_save_warning')}</p>
 		</div>
 		<div class="rounded-xl p-4 mb-4" style="background: var(--surface-muted)">
-			<!-- CIPH-763b — SR-only DOM label announces context before the
+			<!-- CIPH-763b - SR-only DOM label announces context before the
 				 raw code characters. Sighted users already see the olive
 				 warning box above; announcer users had no such framing.
-				 2026-06-07 — code now renders as a numbered 2/3/4-col
+				 2026-06-07 - code now renders as a numbered 2/3/4-col
 				 grid mirroring the PDF's 3×4 layout. Easier to cross-
 				 check paper↔screen and lower cognitive load than a
 				 12-word run-on. Selection skips the cell numbers via

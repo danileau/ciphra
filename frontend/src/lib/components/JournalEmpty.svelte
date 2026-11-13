@@ -1,5 +1,5 @@
 <!--
-	CIPH-893 — Journal empty state.
+	CIPH-893 - Journal empty state.
 
 	Stream-card silhouette: a single ghost card with the same vertical
 	rhythm as a real entry. Tells the user "this is the entry stream

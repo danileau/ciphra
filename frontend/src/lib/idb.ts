@@ -1,5 +1,5 @@
 /**
- * ciphra — IndexedDB cache for decrypted documents.
+ * ciphra - IndexedDB cache for decrypted documents.
  *
  * Stores plaintext alongside an etag (the ciphertext, which changes on every
  * re-encrypt due to random GCM nonce). Subsequent loads reuse plaintext when
@@ -32,7 +32,7 @@ function openDB(): Promise<IDBDatabase> {
 			if (db.objectStoreNames.contains(LEGACY_STORE)) {
 				db.deleteObjectStore(LEGACY_STORE);
 			}
-			// v3 — composite [user_id, id] key. Document ids are per-user server
+			// v3 - composite [user_id, id] key. Document ids are per-user server
 			// sequences, so a bare `id` key collided across vaults (a caregiver's
 			// own doc id=5 and a linked patient's doc id=5), letting putDocs for
 			// one vault overwrite the other's cached plaintext. Recreate the store
@@ -123,7 +123,7 @@ export async function clearDocs(userId: string): Promise<void> {
  * Wipe the ENTIRE IndexedDB cache regardless of user/vault partition.
  * Called on logout so plaintext from linked-account vaults a caregiver
  * has visited doesn't survive the session. Closing all callers must
- * happen first — IndexedDB blocks deletion while connections are open.
+ * happen first - IndexedDB blocks deletion while connections are open.
  *
  * Security review LB-3 (PI v13): the previous `clearDocs(currentCacheKey)`
  * only wiped the active partition, leaving plaintext from every linked
@@ -136,7 +136,7 @@ export async function clearAllPartitions(): Promise<void> {
 		req.onsuccess = () => resolve();
 		req.onerror = () => reject(req.error);
 		req.onblocked = () => {
-			// Connection still open somewhere — try to wipe the contents
+			// Connection still open somewhere - try to wipe the contents
 			// of the live store as a fallback so plaintext doesn't sit
 			// at rest even if the file deletion is deferred.
 			openDB()

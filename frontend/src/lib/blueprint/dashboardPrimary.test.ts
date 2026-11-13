@@ -42,7 +42,7 @@ function summary(overrides: Partial<DashboardSummary> = {}): DashboardSummary {
 	};
 }
 
-describe('resolvePrimaryDashboardCard — cohort anchors', () => {
+describe('resolvePrimaryDashboardCard - cohort anchors', () => {
 	it('cycle cohort → cycle-phase regardless of data state', () => {
 		expect(resolvePrimaryDashboardCard(bp('endometriosis'), summary())?.kind).toBe('cycle-phase');
 		expect(resolvePrimaryDashboardCard(bp('menopause'), summary({ hasAnyEntry: true }))?.kind).toBe('cycle-phase');
@@ -63,7 +63,7 @@ describe('resolvePrimaryDashboardCard — cohort anchors', () => {
 	});
 });
 
-describe('resolvePrimaryDashboardCard — trigger-hunt cohorts', () => {
+describe('resolvePrimaryDashboardCard - trigger-hunt cohorts', () => {
 	it('migraine with trigger data → top-triggers', () => {
 		const spec = resolvePrimaryDashboardCard(
 			bp('migraine', { triggers: [{ id: 'stress', label: '' }] }),
@@ -113,7 +113,7 @@ describe('resolvePrimaryDashboardCard — trigger-hunt cohorts', () => {
 	});
 });
 
-describe('resolvePrimaryDashboardCard — vital-primary cohorts', () => {
+describe('resolvePrimaryDashboardCard - vital-primary cohorts', () => {
 	it('hashimoto with TSH data → vital-trend(tsh), secondaries filtered to present', () => {
 		const spec = resolvePrimaryDashboardCard(
 			bp('hashimoto'),
@@ -203,7 +203,7 @@ describe('resolvePrimaryDashboardCard — vital-primary cohorts', () => {
 	});
 });
 
-describe('resolvePrimaryDashboardCard — episode-trend fallback', () => {
+describe('resolvePrimaryDashboardCard - episode-trend fallback', () => {
 	it('epilepsy with episode data → episode-trend', () => {
 		const spec = resolvePrimaryDashboardCard(
 			bp('epilepsy', { episodeTypes: [{ id: 'focal', label: '', color: '' }] }),
@@ -229,7 +229,7 @@ describe('resolvePrimaryDashboardCard — episode-trend fallback', () => {
 	});
 });
 
-describe('resolvePrimaryDashboardCard — symptom-only fallback', () => {
+describe('resolvePrimaryDashboardCard - symptom-only fallback', () => {
 	it('discrete cohort with symptom-only entries (no episodes logged) → episode-trend', () => {
 		const spec = resolvePrimaryDashboardCard(
 			bp('epilepsy', { episodeTypes: [{ id: 'focal', label: '', color: '' }] }),
@@ -241,7 +241,7 @@ describe('resolvePrimaryDashboardCard — symptom-only fallback', () => {
 	});
 });
 
-describe('resolvePrimaryDashboardCard — silent + fallback states', () => {
+describe('resolvePrimaryDashboardCard - silent + fallback states', () => {
 	it('null blueprint → last-entries when any entry, null otherwise', () => {
 		expect(resolvePrimaryDashboardCard(null, summary())).toBeNull();
 		expect(resolvePrimaryDashboardCard(undefined, summary({ hasAnyEntry: true }))?.kind).toBe('last-entries');
@@ -253,7 +253,7 @@ describe('resolvePrimaryDashboardCard — silent + fallback states', () => {
 		expect(resolvePrimaryDashboardCard(bp('custom'), summary())).toBeNull();
 	});
 
-	it('helena specifically — Hashimoto, no labs yet, only symptom entries → last-entries (was the broken void)', () => {
+	it('helena specifically - Hashimoto, no labs yet, only symptom entries → last-entries (was the broken void)', () => {
 		const spec = resolvePrimaryDashboardCard(
 			bp('hashimoto'),
 			summary({

@@ -2,7 +2,7 @@
  * The journal's narrative feed.
  *
  * The contract: a day appears because someone WROTE something. Measured
- * values do not put a day in this list and are not repeated on it — that is
+ * values do not put a day in this list and are not repeated on it - that is
  * /reports. Episodes ride along as context on a written day, and never make
  * an unwritten day appear.
  */
@@ -21,7 +21,7 @@ const doc = (data: Record<string, unknown>) => ({ id: nextId++, serverCreatedAt:
 const entry = (date: string, extra: Record<string, unknown> = {}) =>
 	doc({ type: 'entry', date, ...extra });
 
-describe('textOf — what counts as writing', () => {
+describe('textOf - what counts as writing', () => {
 	it('takes the notes field of an entry', () => {
 		expect(textOf(entry('2025-03-04', { notes: 'Aura zuerst' }))?.kind).toBe('note');
 	});
@@ -70,12 +70,12 @@ describe('textOf — what counts as writing', () => {
 
 	it('prefers a marker title over its prose', () => {
 		// The epilepc migration puts the short human title in `title` and the
-		// long description in `notes` — same preference the PDF applies.
+		// long description in `notes` - same preference the PDF applies.
 		const t = textOf(doc({ type: 'event', date: '2025-03-04', title: 'Dosis erhöht', notes: 'Langer Fliesstext …' }));
 		expect(t?.text).toBe('Dosis erhöht');
 	});
 
-	it('rejects a rescue-medication event — a record, not prose', () => {
+	it('rejects a rescue-medication event - a record, not prose', () => {
 		expect(textOf(doc({ type: 'event', kind: 'medication', date: '2025-03-04', notes: 'x' }))).toBeNull();
 	});
 
@@ -93,7 +93,7 @@ describe('textOf — what counts as writing', () => {
 	});
 });
 
-describe('buildNarrative — only written days appear', () => {
+describe('buildNarrative - only written days appear', () => {
 	const docs = [
 		entry('2025-03-01', { vitals: { mood: 7 } }),                       // silent
 		entry('2025-03-02', { notes: 'Kopfschmerz ab Mittag' }),            // written
@@ -194,7 +194,7 @@ describe('filters', () => {
 	it('withEpisodeOnly narrows, it never widens', () => {
 		const got = buildNarrative(docs, bp, { withEpisodeOnly: true });
 		expect(got.map((d) => d.dayKey)).toEqual(['2025-04-02']);
-		// and still only written days — an episode-only day stays out
+		// and still only written days - an episode-only day stays out
 		const withSilentEpisode = [...docs, entry('2025-05-05', { episodes: { tension: 9 } })];
 		expect(buildNarrative(withSilentEpisode, bp, { withEpisodeOnly: true }).map((d) => d.dayKey))
 			.toEqual(['2025-04-02']);

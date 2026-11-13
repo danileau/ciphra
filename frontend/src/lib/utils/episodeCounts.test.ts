@@ -1,5 +1,5 @@
 /**
- * ciphra — episode-counting helpers tests (CIPH-741).
+ * ciphra - episode-counting helpers tests (CIPH-741).
  *
  * Covers date-window inclusivity, empty-doc edge cases, and back-compat
  * with the legacy `seizures` key alongside the canonical `episodes`.

@@ -1,14 +1,14 @@
 /**
- * ciphra — export-eligibility predicate (CIPH-710 / CIPH-713).
+ * ciphra - export-eligibility predicate (CIPH-710 / CIPH-713).
  *
  * Two reasons a document must NEVER appear in any export surface
  * (PDF, CSV, doctor-share link, reports aggregations, EntryPreview
  * when rendered in an export context):
  *
- *  1. `type === 'diary'` — the private diary primitive. Always private,
+ *  1. `type === 'diary'` - the private diary primitive. Always private,
  *     no user toggle. Belt-and-suspenders: also gets `private: true`
  *     when written, but the type alone is sufficient to exclude.
- *  2. `data.private === true` — per-entry lock toggle on Entry/Event.
+ *  2. `data.private === true` - per-entry lock toggle on Entry/Event.
  *
  * Use this everywhere instead of inlining the check, so future export
  * paths (epilepc bundle export, public share link, …) can't drift.
@@ -35,7 +35,7 @@ export function isExportable(doc: CiphraDocument | { data?: any } | null | undef
  * was false: a family grant re-wraps the master key, so the linked account
  * decrypted and rendered the diary along with everything else.
  *
- * Kept as its own name rather than calling `isExportable` at the load site —
+ * Kept as its own name rather than calling `isExportable` at the load site -
  * the caller is answering "may this person see it", not "does it go in the
  * PDF", and if the two rules ever diverge this is where they part.
  */

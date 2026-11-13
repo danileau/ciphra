@@ -1,5 +1,5 @@
 /**
- * CIPH-831 — typography discipline enforcement test.
+ * CIPH-831 - typography discipline enforcement test.
  *
  * Scans `.svelte` + `app.css` under `frontend/src/`, pulls out
  * class strings / `@apply` bodies, and flags any `text-*` token
@@ -29,7 +29,7 @@ const SIZE_SET = new Set<string>(ALLOWED_TEXT_SIZES);
 const BRACKET_SET = new Set<string>(ALLOWED_TEXT_BRACKETS);
 
 // Anything Tailwind recognises that begins `text-` but isn't a size.
-// These names are not sizes — let them pass without checking the
+// These names are not sizes - let them pass without checking the
 // numeric scale.
 const NON_SIZE_KEYWORDS = new Set<string>([
 	'text-center',
@@ -130,7 +130,7 @@ function isColorToken(tok: string): boolean {
 	return COLOR_NAMES.has(parts[0]);
 }
 
-describe('CIPH-831 — typography token discipline', () => {
+describe('CIPH-831 - typography token discipline', () => {
 	const files = walkSvelteAndCss(SRC_ROOT);
 
 	const offenders: Array<{ file: string; tok: string }> = [];

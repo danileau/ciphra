@@ -5,8 +5,8 @@
  * encrypted blobs, and upload timestamps. **That is the entire list.**" The
  * tech page said the documents table holds "only: user_id, encrypted blob,
  * timestamp. No record type." Both were written before schema 9, which added
- * `share_class` — one bit per document saying whether it may be shared, which
- * is a record classification, however small — and `client_key`, an
+ * `share_class` - one bit per document saying whether it may be shared, which
+ * is a record classification, however small - and `client_key`, an
  * idempotency key on imported records.
  *
  * `docs/SECURITY_MODEL.md` was corrected and lists all of it. The marketing
@@ -14,8 +14,8 @@
  * failure this project already has a name for, copy promising what nothing
  * enforces.
  *
- * This test reads the columns out of `api/server.py` — CREATE TABLE plus the
- * migrations — and fails when a new one appears that the disclosures do not
+ * This test reads the columns out of `api/server.py` - CREATE TABLE plus the
+ * migrations - and fails when a new one appears that the disclosures do not
  * account for. A claim about storage is only as good as the schema it was
  * written against.
  */
@@ -64,7 +64,7 @@ describe('what the app says the server keeps', () => {
 
 	it('has a column here that SECURITY_MODEL.md does not account for', () => {
 		// Each column, and the words the document uses for it. A new column
-		// means a new line here — and a decision about whether users are told.
+		// means a new line here - and a decision about whether users are told.
 		const DISCLOSED: Record<string, RegExp> = {
 			id: /./,
 			user_id: /account|user/i,
@@ -94,7 +94,7 @@ describe('what the app says the server keeps', () => {
 			expect(tech, `${name} tech claim missing`).toBeTruthy();
 
 			// The phrasings that made the old copy wrong the moment a column
-			// was added — a closed list, and "only these three".
+			// was added - a closed list, and "only these three".
 			expect(landing).not.toMatch(/that is the entire list|das ist die ganze liste|voilà toute la liste|questa è tutta la lista/i);
 			expect(tech).not.toMatch(/stores only:|speichert nur:|stocke uniquement\s*:|memorizza solo:/i);
 

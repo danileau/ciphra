@@ -1,11 +1,11 @@
 /**
- * CIPH-882 — Additive blueprint customization.
+ * CIPH-882 - Additive blueprint customization.
  *
  * Three pure helpers that turn `Blueprint.customizations.custom*` arrays
  * into a fully-realized blueprint that every iterator can consume without
  * per-call-site changes:
  *
- *   - `isCustomItem(id)` — discriminator used at every label-rendering
+ *   - `isCustomItem(id)` - discriminator used at every label-rendering
  *     site. Custom items own a literal label string (user-typed); preset
  *     items own an i18n key. The branch:
  *
@@ -15,18 +15,18 @@
  *     `frontend/src/lib/labels-audit.md` enumerating every site and the
  *     paired `customItems-render.test.ts` source-parse guard.
  *
- *   - `generateCustomId(label)` — `custom_<slug>_<random>` so custom ids
+ *   - `generateCustomId(label)` - `custom_<slug>_<random>` so custom ids
  *     can never collide with preset ids (none of which start with
  *     `custom_`) or with another freshly-typed custom item.
  *
- *   - `resolveBlueprint(bp)` — pure function that merges the four custom
+ *   - `resolveBlueprint(bp)` - pure function that merges the four custom
  *     arrays into the blueprint's primary collections. Single seam: every
  *     consumer that today reads `bp.symptomGroups / .triggers / .vitals /
  *     .episodeTypes` must read `resolveBlueprint(bp).symptomGroups` etc.
  *     `applyBlueprintCustomizations` (pdf.ts) chains this internally so
  *     PDF + CSV pipelines pick up custom items for free.
  *
- *   - `validateCustomItem(kind, item)` — returns the first validation
+ *   - `validateCustomItem(kind, item)` - returns the first validation
  *     error i18n key, or `null` if valid. Used by `CustomItemModal` for
  *     inline error rendering.
  */
@@ -62,14 +62,14 @@ export function generateCustomId(label: string): string {
 	return `custom_${slug}_${suffix}`;
 }
 
-/** Human-readable fallback label for an ORPHANED custom id — one logged into
+/** Human-readable fallback label for an ORPHANED custom id - one logged into
  *  an entry but no longer present in the blueprint (e.g. after a condition
  *  switch resets customizations per the one-blueprint model, or the item was
  *  deleted). The id is `custom_<slug>_<5char>`; recover the slug as a readable
  *  label so no surface ever leaks the raw id. Non-custom ids are returned
  *  unchanged so call sites can use it as a blanket `|| prettifyCustomId(id)`
  *  fallback. The umlaut/casing lost at slug time isn't recoverable, so
- *  `custom_wutend_r0ye3` → "Wutend" — still far better than the raw id. */
+ *  `custom_wutend_r0ye3` → "Wutend" - still far better than the raw id. */
 export function prettifyCustomId(id: string): string {
 	if (!isCustomItem(id)) return id;
 	const body = id
@@ -90,7 +90,7 @@ export const CUSTOM_GROUP_LABEL_KEY = 'symptom_group.custom';
 
 /** The name shown for a profile: the user's custom `displayLabel` if set,
  *  otherwise the preset's translated conditionLabel (or the raw conditionId as
- *  a last resort). `t` is the i18n translate fn — conditionLabel is a key.
+ *  a last resort). `t` is the i18n translate fn - conditionLabel is a key.
  *  Use this everywhere the profile name is rendered so a rename shows uniformly. */
 export function conditionDisplayLabel(bp: Blueprint, t: (k: string) => string): string {
 	const custom = bp.customizations?.displayLabel?.trim();
@@ -146,7 +146,7 @@ export function resolveBlueprint(bp: Blueprint): Blueprint {
 
 	// Strip the four custom* arrays from the resolved view so a second
 	// `resolveBlueprint(resolveBlueprint(bp))` call is a no-op. Keep the
-	// `hidden*` arrays — `applyBlueprintCustomizations` still needs them.
+	// `hidden*` arrays - `applyBlueprintCustomizations` still needs them.
 	const { customSymptoms: _cs, customTriggers: _ct, customVitals: _cv, customEpisodes: _ce, ...restCustomizations } = cz;
 	const cleanedCustomizations = restCustomizations;
 

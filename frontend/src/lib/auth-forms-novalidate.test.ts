@@ -1,9 +1,9 @@
 /**
  * Native-validation-bubble guard.
  *
- * The auth forms have repeatedly leaked the browser's NATIVE validation UI —
+ * The auth forms have repeatedly leaked the browser's NATIVE validation UI -
  * un-styled, browser-locale (usually English) popups like "Please match the
- * requested format" (`pattern`) or "Please fill out this field" (`required`) —
+ * requested format" (`pattern`) or "Please fill out this field" (`required`) -
  * which contradicts the app's own styled, i18n'd error messages.
  *
  * Root cause each time: a `<form>` without `novalidate`, so the browser runs
@@ -34,7 +34,7 @@ describe('auth forms suppress native validation bubbles', () => {
 			expect(formTags.length).toBeGreaterThan(0);
 		});
 
-		it(`${rel} — every <form> is novalidate`, () => {
+		it(`${rel} - every <form> is novalidate`, () => {
 			for (const tag of formTags) {
 				expect(
 					/\bnovalidate\b/.test(tag),

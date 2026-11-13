@@ -1,8 +1,8 @@
 /**
- * CIPH-875 — FAB quick-add must merge into today's existing `type:'entry'`
+ * CIPH-875 - FAB quick-add must merge into today's existing `type:'entry'`
  * instead of creating a parallel row.
  *
- * This is a source-parse test — it pins the three behaviors that caused the
+ * This is a source-parse test - it pins the three behaviors that caused the
  * original bug: we searched `$documents` for today's entry, we called
  * `updateDoc` on the merge path, and we incremented (not overwrote) the
  * episode count. The runtime logic lives in `+layout.svelte` and is
@@ -21,7 +21,7 @@ describe('FAB quick-add merge (CIPH-875)', () => {
 
 	it('calls updateDoc when an existing entry is found', () => {
 		// Non-greedy across the branch body (which now also rebuilds the
-		// per-occurrence episodeInstances array) — there is exactly one
+		// per-occurrence episodeInstances array) - there is exactly one
 		// updateDoc, so this still pins it to the existing path.
 		expect(LAYOUT).toMatch(/if \(existing\)[\s\S]*?documents\.updateDoc\(existing\.id/);
 	});
@@ -43,7 +43,7 @@ describe('FAB quick-add merge (CIPH-875)', () => {
 		expect(LAYOUT).toMatch(/cur\.episodeTimes\?\.\[quickAddSelectedEpisode\] \|\| nowTime/);
 	});
 
-	it('appends — does not replace — per-episode notes on merge', () => {
+	it('appends - does not replace - per-episode notes on merge', () => {
 		expect(LAYOUT).toMatch(/prevNote \? `\$\{prevNote\}\\n/);
 	});
 

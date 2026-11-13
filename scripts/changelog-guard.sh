@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# changelog-guard — a pull request that earns a changelog entry carries one,
+# changelog-guard - a pull request that earns a changelog entry carries one,
 # as a fragment in changelog.d/.
 #
 #   scripts/changelog-guard.sh <base> <head>
 #
 # Fails (exit 1) when either holds:
 #   1. A commit in base..head is a `feat`/`fix` (optionally scoped, optionally
-#      `!`) — or PR_TITLE is — and the PR adds or edits no changelog.d/*.md
+#      `!`) - or PR_TITLE is - and the PR adds or edits no changelog.d/*.md
 #      fragment. Waived by `[skip changelog]` in that commit's message, in
 #      PR_TITLE or in PR_BODY, and by a release PR (one that changes VERSION).
 #   2. CHANGELOG.md itself is edited by a PR that is not a release. Direct
@@ -69,7 +69,7 @@ if [ ${#needs[@]} -gt 0 ] && [ -z "$fragments" ] && [ -z "$is_release" ] && [ -z
 	status=1
 	echo "❌ changelog-guard: this PR has feat/fix changes but no changelog fragment." >&2
 	printf '   %s\n' "${needs[@]}" >&2
-	echo "   Add changelog.d/<name>.md — format in changelog.d/README.md." >&2
+	echo "   Add changelog.d/<name>.md - format in changelog.d/README.md." >&2
 	echo "   Nothing a user would notice? Put [skip changelog] in the commit message or PR description." >&2
 fi
 
@@ -80,7 +80,7 @@ if [ -n "$(changed ACMR CHANGELOG.md)" ] && [ -z "$is_release" ]; then
 	if [ -z "$edit_ok" ]; then
 		status=1
 		echo "❌ changelog-guard: CHANGELOG.md is edited, but this is not a release PR (VERSION unchanged)." >&2
-		echo "   Pending entries go in changelog.d/ — every PR editing CHANGELOG.md conflicts with every other." >&2
+		echo "   Pending entries go in changelog.d/ - every PR editing CHANGELOG.md conflicts with every other." >&2
 		echo "   Correcting notes that already shipped? Put [changelog edit] in a commit message or the PR description." >&2
 	fi
 fi
@@ -93,7 +93,7 @@ if [ "$status" -eq 0 ]; then
 	elif [ ${#needs[@]} -gt 0 ]; then
 		echo "✅ changelog-guard: feat/fix changes waived by [skip changelog]."
 	else
-		echo "✅ changelog-guard: no feat/fix changes — no fragment needed."
+		echo "✅ changelog-guard: no feat/fix changes - no fragment needed."
 	fi
 fi
 exit "$status"

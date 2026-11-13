@@ -1,20 +1,20 @@
 /**
- * Empty monthly grids are omitted — and the omission is declared on page 1.
+ * Empty monthly grids are omitted - and the omission is declared on page 1.
  *
  * A year export used to append one landscape page per month unconditionally.
  * For a user with a single logged day that meant **13 pages, 11 of them
  * blank**: 28 empty rows under a green totals bar reading `0 · 0 · 0` and a
  * `% of days: 0%` row.
  *
- * That is a coverage judgement — precisely what components/README.md forbids
- * the no-gaslight dashboard card from showing — printed once per empty month
+ * That is a coverage judgement - precisely what components/README.md forbids
+ * the no-gaslight dashboard card from showing - printed once per empty month
  * and handed to a doctor. "0 days logged" eleven times is not documentation,
  * it is a verdict on the person.
  *
  * But omitting silently is its own defect, and the more dangerous one: a
  * reader who finds February and April but no March concludes a page was lost
  * in the fax. Silence converts a deliberate omission into apparent missing
- * data. So the two halves are inseparable — skipping is only permitted
+ * data. So the two halves are inseparable - skipping is only permitted
  * BECAUSE page 1 declares it, and the guard treats them as one contract.
  */
 import { describe, it, expect } from 'vitest';
@@ -59,7 +59,7 @@ describe('the omission is declared on page 1', () => {
 		);
 	});
 
-	it('it states both halves — how many have data, and out of how many', () => {
+	it('it states both halves - how many have data, and out of how many', () => {
 		// "1 of 12" lets the reader check what they hold against what exists.
 		// A bare count of omitted months would not.
 		const idx = PDF.indexOf("t('pdf.grid_coverage_note'");
@@ -81,7 +81,7 @@ describe('the omission is declared on page 1', () => {
 			const v = dict['pdf.grid_coverage_note'];
 			expect(v, `${name}: string missing`).toBeTruthy();
 			// Substitution is single-pass, first-occurrence-only (i18n/index.ts)
-			// — a repeated placeholder would print literally.
+			// - a repeated placeholder would print literally.
 			expect(v.match(/\{withData\}/g), `${name}: {withData}`).toHaveLength(1);
 			expect(v.match(/\{total\}/g), `${name}: {total}`).toHaveLength(1);
 		});

@@ -1,5 +1,5 @@
 /**
- * CIPH-880 — Calendar day-click sheet redesign guards.
+ * CIPH-880 - Calendar day-click sheet redesign guards.
  *
  * The pre-PI v12 calendar sheet rendered entries through inline summary
  * strings (e.g. "Schmerzlevel: 3 1-10 · Zyklustag: 31 Tag …") that were
@@ -19,9 +19,9 @@ import { resolve } from 'node:path';
 const ROUTE = resolve(__dirname, '+page.svelte');
 const SRC = readFileSync(ROUTE, 'utf8');
 
-describe('CIPH-880 calendar day-click sheet — typed-rendering guard', () => {
-	it('renders the day through <DayDetail> (CIPH-910 — was <EntryPreview>)', () => {
-		// CIPH-910 — the per-doc EntryPreview stack was replaced by
+describe('CIPH-880 calendar day-click sheet - typed-rendering guard', () => {
+	it('renders the day through <DayDetail> (CIPH-910 - was <EntryPreview>)', () => {
+		// CIPH-910 - the per-doc EntryPreview stack was replaced by
 		// the sectioned <DayDetail> view. Either component is a
 		// typed-primitive consumer; what matters is that the sheet
 		// never falls back to raw string concatenation.
@@ -30,7 +30,7 @@ describe('CIPH-880 calendar day-click sheet — typed-rendering guard', () => {
 
 	it('does not concatenate vital strings with the · separator', () => {
 		// EntryPreview legitimately uses `.join(' · ')` for paired-vital
-		// formatting. That helper lives inside the primitive — never inline
+		// formatting. That helper lives inside the primitive - never inline
 		// in the calendar sheet.
 		expect(SRC).not.toMatch(/\.join\(['"`] · ['"`]\)/);
 	});
@@ -38,13 +38,13 @@ describe('CIPH-880 calendar day-click sheet — typed-rendering guard', () => {
 	it('does not interpolate raw `data.vitals[…]` in the template', () => {
 		// Mustache-style interpolation reading vitals directly would mean
 		// someone built a plaintext summary. Helpers may still read them
-		// programmatically — the guard targets template binding sites only.
+		// programmatically - the guard targets template binding sites only.
 		// `{$documents…}` references are fine; this matches `{…data.vitals[…]}`.
 		expect(SRC).not.toMatch(/\{[^}]*\.data\.vitals\s*\[/);
 	});
 });
 
-describe('CIPH-880 calendar day-click sheet — cohort-aware framing', () => {
+describe('CIPH-880 calendar day-click sheet - cohort-aware framing', () => {
 	it('exports a selectedDayPhase reactive for the cycle cohort chip', () => {
 		expect(SRC).toMatch(/selectedDayPhase\s*=/);
 		expect(SRC).toContain('cycle.phase_');
@@ -60,7 +60,7 @@ describe('CIPH-880 calendar day-click sheet — cohort-aware framing', () => {
 	});
 });
 
-describe('CIPH-880 calendar day-click sheet — adjacent-day nav', () => {
+describe('CIPH-880 calendar day-click sheet - adjacent-day nav', () => {
 	it('declares an adjustSelectedDate handler', () => {
 		expect(SRC).toMatch(/function adjustSelectedDate\s*\(/);
 	});

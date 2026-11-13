@@ -1,5 +1,5 @@
 """
-INC-001 — the bulk-import ON CONFLICT clause must match its partial index.
+INC-001 - the bulk-import ON CONFLICT clause must match its partial index.
 
 `uq_docs_user_clientkey` is a PARTIAL unique index (`WHERE client_key IS NOT
 NULL`). PostgreSQL will only infer a partial index for `ON CONFLICT` when the
@@ -14,7 +14,7 @@ needed four attempts and showed three errors before the data was in.
 
 Why the existing batch tests missed it: `test_batch_creates_each_doc` and
 `test_batch_skips_on_conflict` both run against `mock_db`. The bug lived
-precisely in the layer that was mocked away — the SQL never reached a
+precisely in the layer that was mocked away - the SQL never reached a
 PostgreSQL planner, so an unsatisfiable ON CONFLICT looked fine.
 
 Two guards here:
@@ -45,7 +45,7 @@ def test_on_conflict_repeats_the_partial_index_predicate():
     # The predicate ends where its string literal ends. Match any quote rather
     # than `"""` specifically: the statement moved from a triple-quoted heredoc
     # in init_db() into the numbered MIGRATIONS ledger, where it is written as
-    # adjacent single-quoted fragments. The invariant below is unchanged — only
+    # adjacent single-quoted fragments. The invariant below is unchanged - only
     # where the SQL lives is.
     index = re.search(
         r'CREATE UNIQUE INDEX[^;]*?ON\s+encrypted_documents\s*\(([^)]*)\)\s*WHERE\s+([^\s"\']+[^"\']*?)\s*["\']',
@@ -60,7 +60,7 @@ def test_on_conflict_repeats_the_partial_index_predicate():
         src,
         re.IGNORECASE | re.DOTALL,
     )
-    assert conflicts, 'no ON CONFLICT ... DO NOTHING found — did the batch endpoint move?'
+    assert conflicts, 'no ON CONFLICT ... DO NOTHING found - did the batch endpoint move?'
 
     for columns, tail in conflicts:
         if 'client_key' not in columns:

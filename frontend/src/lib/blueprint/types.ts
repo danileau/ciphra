@@ -1,12 +1,12 @@
 /**
- * ciphra Blueprint — the customization layer.
+ * ciphra Blueprint - the customization layer.
  *
  * A Blueprint defines what a user tracks: symptoms, episodes, triggers,
  * vitals, medications, and how they're grouped. It's stored as an
  * encrypted document (type: "blueprint") so the server never knows
  * what condition the user has.
  *
- * The UI renders entirely from the active Blueprint — no hardcoded
+ * The UI renders entirely from the active Blueprint - no hardcoded
  * epilepsy/ADHD/diabetes fields anywhere.
  */
 
@@ -17,7 +17,7 @@ export interface BlueprintItem {
 	icon?: string;       // optional icon name
 }
 
-/** CIPH-882 — A user-added custom symptom. Optional `groupId` lets the
+/** CIPH-882 - A user-added custom symptom. Optional `groupId` lets the
  *  user attach a custom symptom under an existing preset group; otherwise
  *  it lands in a synthetic "Custom" group at render time. */
 export interface CustomSymptomItem extends BlueprintItem {
@@ -60,7 +60,7 @@ export interface VitalField {
 	min?: number;
 	max?: number;
 	/** Skip this vital from the auto-generated trend charts.
-	 *  Use for values that don't make sense as a monthly mean —
+	 *  Use for values that don't make sense as a monthly mean -
 	 *  e.g. cycle_day (sawtooths), cycle_length (step function). */
 	excludeFromTrends?: boolean;
 	/** Clinical reference / target line drawn horizontally on the trend chart.
@@ -72,10 +72,10 @@ export interface VitalField {
 	splitByTimeOfDay?: boolean;
 }
 
-/** Why a medication was stopped — a fixed list, so it can be shown to a
+/** Why a medication was stopped - a fixed list, so it can be shown to a
  *  doctor without printing free text (2026-09-19). The person's own wording
  *  stays in `endNote`, which is never PRINTED: no PDF, no CSV. It is not a
- *  secret from a linked family member, though — the medication list is part
+ *  secret from a linked family member, though - the medication list is part
  *  of what a family invitation reads (`family.scope_shared_only_hint` names
  *  it), and the blueprint is one document, so a caregiver's /reports and day
  *  view render these reasons like the owner's do. */
@@ -93,7 +93,7 @@ export type MedicationStopReason =
  *  first period of a medication whose start ciphra never learned (every med
  *  created before dose history existed, and meds added without a start date):
  *  "since before the record begins". `to` is absent while the period is still
- *  open. Writers keep periods sorted and non-overlapping — read them through
+ *  open. Writers keep periods sorted and non-overlapping - read them through
  *  `medPeriods()` in `medicationHistory.ts`, never directly. */
 export interface MedicationPeriod {
 	from?: string;
@@ -110,7 +110,7 @@ export interface MedicationPeriod {
 	switchedFrom?: string;
 	/** Remembered, not tracked (2026-09-19): the person entered this period
 	 *  afterwards, for time before ciphra recorded anything. It carries the
-	 *  dose that applied, so reports and the PDF can show the development —
+	 *  dose that applied, so reports and the PDF can show the development -
 	 *  but no day inside it was ever logged, so it must never count towards
 	 *  adherence or produce a missed dose (`isTrackedOn`). */
 	reported?: true;
@@ -137,23 +137,23 @@ export interface MedicationSlot {
 	schedule: string;    // e.g. "morgens, abends" or "as needed"
 	asNeeded: boolean;
 	/** Dose history (2026-09-16). Absent on medications saved before it
-	 *  existed — `medPeriods()` treats those as one open-ended period. */
+	 *  existed - `medPeriods()` treats those as one open-ended period. */
 	periods?: MedicationPeriod[];
 	/** Ids of medications that were combined into this one (duplicates
-	 *  created before dose history existed — one entry per dose). Logged days
+	 *  created before dose history existed - one entry per dose). Logged days
 	 *  still carry those ids; readers resolve them here via `medIds()` /
 	 *  `canonicalMedId()`, so combining rewrites no document. */
 	mergedIds?: string[];
 }
 
-/** CIPH-881 — Rescue medication preset for the FAB quick-add "med" mode.
+/** CIPH-881 - Rescue medication preset for the FAB quick-add "med" mode.
  *  Distinct from MedicationSlot: rescue meds are taken episodically (during
  *  a flare / crisis / breakthrough event), not on a schedule. Selecting one
  *  in the FAB writes a `type:'event'` + `kind:'medication'` doc with the
  *  current time; render coverage in CIPH-881b spans journal / reports /
  *  PDF / CSV / dashboard. */
 export interface RescueMedication {
-	/** Stable identifier — used as the medicationId on event docs. */
+	/** Stable identifier - used as the medicationId on event docs. */
 	id: string;
 	/** i18n key for the user-facing label, e.g. `rescue_med.midazolam`. */
 	label: string;
@@ -175,10 +175,10 @@ export interface Blueprint {
 	/** Display theme color */
 	accentColor: string;
 
-	/** CIPH-723 — i18n key for the condition-specific episode noun used
+	/** CIPH-723 - i18n key for the condition-specific episode noun used
 	 *  in dashboard headlines / chart legends / SR captions. E.g.
 	 *  `episode_noun.seizure` for epilepsy, `episode_noun.tremor` for
-	 *  parkinson. Optional — defaults to "Episoden" / "Episodes". */
+	 *  parkinson. Optional - defaults to "Episoden" / "Episodes". */
 	episodeNoun?: string;
 
 	/** Symptom/sign groups (rendered as toggle chips) */
@@ -196,14 +196,14 @@ export interface Blueprint {
 	/** Default medications (user can add more) */
 	medications: MedicationSlot[];
 
-	/** CIPH-881 — Rescue / breakthrough medications surfaced as a third
+	/** CIPH-881 - Rescue / breakthrough medications surfaced as a third
 	 *  FAB quick-add mode. Optional + backwards compatible: when absent or
 	 *  empty, the FAB does not render the "med" mode chip. */
 	rescueMedications?: RescueMedication[];
 
 	/** Personal target per vital id (e.g. a blood-pressure goal), overriding
 	 *  that vital's `referenceLine.value` in the doctor PDF. Set in the setup
-	 *  wizard. Lives here — encrypted — rather than in localStorage; see
+	 *  wizard. Lives here - encrypted - rather than in localStorage; see
 	 *  `vitalTargets.ts`. Optional; absent = the condition defaults. */
 	vitalTargets?: Record<string, number>;
 
@@ -216,37 +216,37 @@ export interface Blueprint {
 	/** Preferred report type */
 	reportPreference: 'analytics' | 'grid' | 'both';
 
-	/** CIPH-852 — the browse-surface the user most benefits from for this
+	/** CIPH-852 - the browse-surface the user most benefits from for this
 	 *  condition. Home dashboard + navigation emphasize this surface.
-	 *  - 'journal' — chronological entry stream is primary (narrative conditions)
-	 *  - 'calendar' — spatial month view is primary (cycle / phase-band conditions)
-	 *  - 'trend' — trend chart is primary (discrete-event conditions)
+	 *  - 'journal' - chronological entry stream is primary (narrative conditions)
+	 *  - 'calendar' - spatial month view is primary (cycle / phase-band conditions)
+	 *  - 'trend' - trend chart is primary (discrete-event conditions)
 	 *  Optional for backwards-compat; read through `getPrimaryBrowseSurface()`
 	 *  which falls back to the cohort default. User can override in Settings. */
 	primaryBrowseSurface?: 'journal' | 'calendar' | 'trend';
 
-	/** CIPH-pi18-3 — Display format for the custom DatePicker popover and
+	/** CIPH-pi18-3 - Display format for the custom DatePicker popover and
 	 *  trigger. Read by call sites of `<DatePicker>`. Default `dd.mm.yyyy`
 	 *  (Swiss/EU) when unset, matching the existing PI v17 behavior. */
 	dateFormat?: 'dd.mm.yyyy' | 'dd/mm/yyyy' | 'iso' | 'us';
 	/** Welcome-card variants the user has dismissed (2026-06-12).
 	 *  Account-level (rides the encrypted blueprint doc) so a dismissal
-	 *  survives browsers/devices — localStorage-only dismissal kept
+	 *  survives browsers/devices - localStorage-only dismissal kept
 	 *  resurfacing the migrate card on every fresh profile. Optional
 	 *  for backwards-compat; read through WelcomeCard's combined check. */
 	dismissedWelcome?: Array<'web' | 'migrate'>;
 
-	/** CIPH-pi24-5c — Marker event for the dashboard gap-trend sparkline
+	/** CIPH-pi24-5c - Marker event for the dashboard gap-trend sparkline
 	 *  ("Tage ohne {Anfall|Attacke|Episode|Schub|...}"). Only declared for
 	 *  presets where a clean episodic marker exists; absence hides the card.
 	 *  Klara's prior objection to "days since last episode" framing is met
 	 *  by showing a gap *trend* (treatment-efficacy signal) rather than a
-	 *  bare counter — see Companion.svelte:124. `episodeIds` are matched
+	 *  bare counter - see Companion.svelte:124. `episodeIds` are matched
 	 *  against entry.data.episodes; `nounKey` is the i18n singular noun
 	 *  rendered through `companion.streak_no_type`. */
 	markerEvent?: { episodeIds: string[]; nounKey: string };
 
-	/** CIPH-301b / CIPH-882 — User customizations from the setup wizard
+	/** CIPH-301b / CIPH-882 - User customizations from the setup wizard
 	 *  or settings. Two layers:
 	 *
 	 *  - **Hide layer (CIPH-301b):** ids listed in `hidden*` are removed
@@ -259,16 +259,16 @@ export interface Blueprint {
 	 *    branch via `isCustomItem(id) ? item.label : $t(item.label)`. Ids
 	 *    are auto-generated `custom_<slug>_<suffix>` so they cannot
 	 *    collide with preset ids. Hide-not-delete applies to custom items
-	 *    too — toggling a custom off keeps history; explicit Delete is
+	 *    too - toggling a custom off keeps history; explicit Delete is
 	 *    needed to remove the item from `custom*`.
 	 *
-	 *  Both layers are optional + backwards-compatible — a missing field
+	 *  Both layers are optional + backwards-compatible - a missing field
 	 *  means "no customizations".
 	 */
 	customizations?: {
 		/** User-chosen display name for the profile, overriding the preset's
 		 *  translated conditionLabel wherever the profile name is shown. The
-		 *  conditionId (the "tag"/badge) stays fixed — it's an encryption + cohort
+		 *  conditionId (the "tag"/badge) stays fixed - it's an encryption + cohort
 		 *  key, not a display string. Empty/absent = use the preset label. */
 		displayLabel?: string;
 		hiddenSymptoms?: string[];   // BlueprintItem.id from any symptomGroup or customSymptoms
@@ -307,7 +307,7 @@ export interface EntryDoc {
 	private?: boolean;
 	/** Scheduled (non-asNeeded) medication IDs the user marked as MISSED on
 	 *  this day. Scheduled meds are assumed taken (part of the regimen), so we
-	 *  record only the exceptions — no daily "taken" tap. Absent/empty = all
+	 *  record only the exceptions - no daily "taken" tap. Absent/empty = all
 	 *  scheduled doses assumed taken. As-needed meds use `medications` instead
 	 *  (an explicit "taken today" toggle / FAB event). */
 	missedMedications?: string[];

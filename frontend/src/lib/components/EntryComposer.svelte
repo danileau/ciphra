@@ -1,4 +1,4 @@
-<!-- CIPH-850 — full-form entry surface used by /log/[date]. The route is a
+<!-- CIPH-850 - full-form entry surface used by /log/[date]. The route is a
 	 thin auth + URL + CRUD adapter that wraps this primitive in {#key date}
 	 so every date change is a fresh instance (auto-cancels in-flight save
 	 timers, resets form state). Reserved density="quick" for PI v13 FAB
@@ -7,7 +7,7 @@
 	import type { Phase as CyclePhase } from '#lib/cycleState.ts';
 
 	// One logged occurrence of a counted episode type. Each of the N episodes
-	// a user records in a day gets its OWN time/duration/note — the old model
+	// a user records in a day gets its OWN time/duration/note - the old model
 	// carried a single time/duration/note per type, so "3 seizures today" all
 	// collapsed onto one timestamp. `episodes[id]` (the count) is kept in sync
 	// with `episodeInstances[id].length` and the legacy single-value maps are
@@ -30,13 +30,13 @@
 		triggers: Record<string, boolean>;
 		vitals: Record<string, string>;
 		medications: Record<string, boolean>;
-		// CIPH — scheduled (non-asNeeded) meds the user marked MISSED this day.
+		// CIPH - scheduled (non-asNeeded) meds the user marked MISSED this day.
 		// Assume-taken model: daily meds need no per-day "taken" tap; we record
 		// only the exceptions. As-needed meds stay in `medications`.
 		missedMedications?: string[];
 		notes: string;
 		private?: true;
-		// CIPH-886 — per-day phase override for the cycle cohort. When present,
+		// CIPH-886 - per-day phase override for the cycle cohort. When present,
 		// calendar.dayPhase() prefers it over the derived phase. Undefined =
 		// "Automatisch" (use derivation).
 		phaseOverride?: CyclePhase;
@@ -67,17 +67,17 @@
 	export let isToday: boolean;
 	// Resolve `false` when the write did not happen: the form keeps the input
 	// and says so instead of flashing "saved". (A write queued offline is a
-	// success — the shell's "saved offline" notice covers it.) `void` is the
+	// success - the shell's "saved offline" notice covers it.) `void` is the
 	// old contract and still means success.
 	export let onSave: (data: EntryData) => Promise<boolean | void>;
 	export let onDelete: () => Promise<boolean | void>;
 	// Told whenever the form gains or loses edits the user made and has not
 	// saved, so the route can guard navigation. Carryover pre-fills are not
-	// edits — see `userEdited`.
+	// edits - see `userEdited`.
 	export let onDirtyChange: ((dirty: boolean) => void) | undefined = undefined;
 	// False in a linked (someone else's) vault. The server files a
 	// caregiver's writes as shareable whatever the entry says, and the
-	// caregiver's own view drops locked entries — a day locked there vanished
+	// caregiver's own view drops locked entries - a day locked there vanished
 	// for the caregiver on reload while other caregivers could still read it.
 	export let allowPrivate = true;
 	export let onDateChange: (delta: number) => void;
@@ -91,7 +91,7 @@
 
 	// Inline "add a new symptom / trigger" from the entry screen (the common
 	// need: you're logging and the item you want isn't in your set yet). Adds it
-	// to the blueprint's customizations (APPEND — never a destructive replace),
+	// to the blueprint's customizations (APPEND - never a destructive replace),
 	// persists, and pre-selects it for the entry you're composing. The new item
 	// renders via the reactive `bp` ($resolvedBlueprint) prop.
 	let customModalOpen = false;
@@ -146,8 +146,8 @@
 		medAddOpen = false;
 	}
 
-	// CIPH-420b — Section-jump nav (mobile).
-	// CIPH-904 — `medications` and `phaseOverride` were missing from the
+	// CIPH-420b - Section-jump nav (mobile).
+	// CIPH-904 - `medications` and `phaseOverride` were missing from the
 	// chip bar; medications had been added without updating this constant
 	// since CIPH-411b, and phaseOverride since CIPH-886. Cycle-cohort users
 	// who needed to override phase had to scroll past 4 cards to find it.
@@ -212,7 +212,7 @@
 	let deleteFailed = false;
 	let confirmDelete = false;
 	let deleting = false;
-	// CIPH-905 — autosave removed. The 3 s debounced background save
+	// CIPH-905 - autosave removed. The 3 s debounced background save
 	// hid the "saved vs not saved" state from users who couldn't tell
 	// when they were "done." The Save button is now the explicit
 	// contract; `hasChanges` drives its enabled/disabled state.
@@ -222,7 +222,7 @@
 	// that page must not ask "discard your changes?".
 	let userEdited = false;
 	$: onDirtyChange?.(hasChanges && userEdited);
-	// CIPH-904 — Persistent save timestamp. The 2.5 s saved-flash gave
+	// CIPH-904 - Persistent save timestamp. The 2.5 s saved-flash gave
 	// users no signal that the form was still saved after the asterisk
 	// pulse faded. Now we keep the time visible until the user starts
 	// editing again (or until we get a fresher save). Initialised from
@@ -245,7 +245,7 @@
 	function addEpisodeInstance(epId: string) {
 		const ep = bp.episodeTypes.find((e) => e.id === epId);
 		const list = episodeInstances[epId] ? [...episodeInstances[epId]] : [];
-		// Default the time to "now" when logging on today — the common case is
+		// Default the time to "now" when logging on today - the common case is
 		// recording something that just happened. Past days start blank.
 		const defaultTime = ep?.trackTimeOfDay && isToday ? nowHHMM() : '';
 		list.push({ time: defaultTime, duration: '', note: '' });
@@ -300,10 +300,10 @@
 	// = nothing missed = all scheduled doses assumed taken.
 	let missedMeds: Record<string, boolean> = {};
 	let notes = '';
-	// CIPH-713 — per-entry private flag. When true, this entry is hard-
+	// CIPH-713 - per-entry private flag. When true, this entry is hard-
 	// excluded from every export (PDF/CSV/reports/share) via isExportable().
 	let isPrivate = false;
-	// CIPH-886 — phase override (cycle cohort). Empty string means "Automatisch"
+	// CIPH-886 - phase override (cycle cohort). Empty string means "Automatisch"
 	// (use derivation). Stored on the doc as `phaseOverride: Phase | undefined`.
 	let phaseOverride: Phase | '' = '';
 	const PHASES_FOR_OVERRIDE: Phase[] = ['menstrual', 'follicular', 'ovulation', 'luteal'];
@@ -351,7 +351,7 @@
 	];
 
 	function markChanged() {
-		// CIPH-905 — autosave removed. This now only flips the dirty
+		// CIPH-905 - autosave removed. This now only flips the dirty
 		// flag; users save explicitly via the save bar. The persistent
 		// "Gespeichert · 14:32" stamp + the Save button's enabled state
 		// are the affordances that replace the silent debounce.
@@ -359,7 +359,7 @@
 		userEdited = true;
 	}
 
-	/** As-needed "taken" toggles keyed by the medication's current id —
+	/** As-needed "taken" toggles keyed by the medication's current id -
 	 *  a toggle logged against a duplicate later combined into it counts. */
 	function canonicalMedToggles(raw: Record<string, boolean>): Record<string, boolean> {
 		const out: Record<string, boolean> = {};
@@ -380,9 +380,9 @@
 		markChanged();
 	}
 
-	// CIPH-906 — Phase carryover. Multi-day episodes (flares, manic/
+	// CIPH-906 - Phase carryover. Multi-day episodes (flares, manic/
 	// depressive states, MS relapses, IBD flares, endo flares...) by
-	// definition span days — but the form starts every new day at zero,
+	// definition span days - but the form starts every new day at zero,
 	// forcing the user to manually re-toggle "ongoing today" or the
 	// calendar shows yesterday-active / today-quiet, which is wrong.
 	//
@@ -399,7 +399,7 @@
 		let started = prevDate;
 		let cursor = new Date(prevDate + 'T12:00:00');
 		// Walk backwards through recentDocs for as long as the streak
-		// holds. Cap at 60 days — if the user has had a flare for >60d
+		// holds. Cap at 60 days - if the user has had a flare for >60d
 		// they're not surprised by a "since 60 days ago" hint.
 		for (let i = 0; i < 60; i++) {
 			const earlier = new Date(cursor);
@@ -421,12 +421,12 @@
 	}
 
 	function applyPhaseCarryover() {
-		if (existingDoc) return; // Editing an existing day — never override the doc.
+		if (existingDoc) return; // Editing an existing day - never override the doc.
 		if (!previousDoc) return;
 		const prevEps = (previousDoc.data.episodes ||
 			previousDoc.data.seizures ||
 			{}) as Record<string, number>;
-		// IMPORTANT — Svelte 4 needs reassignment, not mutation, to trigger
+		// IMPORTANT - Svelte 4 needs reassignment, not mutation, to trigger
 		// reactivity. Build new objects locally then assign at the end so
 		// every reactive consumer (chip rendering, hasChanges flag, the
 		// saved-stamp time) sees the change. Earlier mutation-based code
@@ -517,7 +517,7 @@
 		}
 	}
 
-	// CIPH-906 — apply phase carryover for new-day entries (no existingDoc)
+	// CIPH-906 - apply phase carryover for new-day entries (no existingDoc)
 	// once both `bp` and `previousDoc` have resolved. Same guard pattern
 	// as the existingDoc hydration so it runs once per date change.
 	let _phaseCarryKey = '';
@@ -531,7 +531,7 @@
 
 	function loadExistingEntry() {
 		if (!existingDoc) return;
-		// CIPH-904 — initialise the persistent save stamp from the doc's
+		// CIPH-904 - initialise the persistent save stamp from the doc's
 		// server-created time. Best signal we have absent an `updatedAt`
 		// field; further saves overwrite this in `saveEntry`.
 		try { lastSavedAt = new Date(existingDoc.serverCreatedAt); } catch { /* keep null */ }
@@ -557,7 +557,7 @@
 		episodeInstances = synthesizeEpisodeInstances(d);
 		if (d.notes) notes = d.notes;
 		isPrivate = d.private === true;
-		// CIPH-886 — hydrate phase override if present (cycle cohort only).
+		// CIPH-886 - hydrate phase override if present (cycle cohort only).
 		if (d.phaseOverride && PHASES_FOR_OVERRIDE.includes(d.phaseOverride as Phase)) {
 			phaseOverride = d.phaseOverride as Phase;
 		} else {
@@ -636,7 +636,7 @@
 		setTimeout(() => { saved = false; }, 2500);
 	}
 
-	// CIPH-904 — formatted persistent save stamp for the save bar.
+	// CIPH-904 - formatted persistent save stamp for the save bar.
 	$: savedStamp = lastSavedAt
 		? lastSavedAt.toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit' })
 		: '';
@@ -757,7 +757,7 @@
 
 <div class="log-page">
 
-	<!-- ─── Sticky section-jump chip bar (mobile only) — CIPH-420b ─── -->
+	<!-- ─── Sticky section-jump chip bar (mobile only) - CIPH-420b ─── -->
 	<nav class="log-section-nav md:hidden" aria-label={$t('protocol.symptoms')}>
 		<div class="log-section-nav-scroll">
 			{#each sectionIds as sid}
@@ -782,7 +782,7 @@
 				{#if isToday}
 					<span class="log-today-badge">{$t('common.today')}</span>
 				{/if}
-				<!-- CIPH-713 — per-entry private toggle. Locked entries are
+				<!-- CIPH-713 - per-entry private toggle. Locked entries are
 					 hard-excluded from every export (PDF/CSV/reports/share).
 					 Not offered in someone else's vault: see `allowPrivate`. -->
 				{#if allowPrivate}
@@ -902,7 +902,7 @@
 			<!-- ─── Medications card ─── -->
 			{#if bp.medications.length > 0}
 				<!-- Dose history: a day shows the medications that were part of the
-					 regimen ON THAT DAY, at the dose that applied then — opening an
+					 regimen ON THAT DAY, at the dose that applied then - opening an
 					 entry from before a dose change shows the old dose. A medication
 					 this day already mentions stays visible either way, so nothing
 					 recorded can become uneditable. History filled in afterwards
@@ -980,7 +980,7 @@
 			{/if}
 			<!-- The empty-state medication card was dropping the user into a
 				 dead end (linked to /settings, where medication management does
-				 not exist yet). Hidden until the medication editor ships —
+				 not exist yet). Hidden until the medication editor ships -
 				 see CIPH-411 in the design backlog. -->
 		</div>
 
@@ -1006,7 +1006,7 @@
 								{@const carriedFrom = phaseCarryover[ep.id]}
 								<div class="log-multiday-cell">
 									{#if carriedFrom}
-										<!-- CIPH-906 — phase carryover: yesterday's entry had
+										<!-- CIPH-906 - phase carryover: yesterday's entry had
 											 this multiDay episode active, so today's entry
 											 pre-fills as continuing. The hint surfaces the
 											 streak start; the button reframes to "Beenden"
@@ -1044,7 +1044,7 @@
 							{:else}
 								<!-- Counted episodes: "+ Add" appends one occurrence
 									 row (default time = now on today). The count is the
-									 number of rows below — see addEpisodeInstance. -->
+									 number of rows below - see addEpisodeInstance. -->
 								<button
 									type="button"
 									class="log-episode-add"
@@ -1092,7 +1092,7 @@
 							</div>
 						{/if}
 						{#if ep.multiDay && episodes[ep.id] > 0}
-							<!-- CIPH-904 — episode-notes input gets a real <label>
+							<!-- CIPH-904 - episode-notes input gets a real <label>
 								 instead of placeholder-only. -->
 							<div class="log-episode-detail" style="margin-top: 4px">
 								<div class="log-episode-detail-field" style="flex: 1">
@@ -1216,7 +1216,7 @@
 					{/each}
 				</div>
 
-				<!-- Multi-entry vitals — paired vitals (same pairLabel) render side-by-side -->
+				<!-- Multi-entry vitals - paired vitals (same pairLabel) render side-by-side -->
 				{#each pairedMultiEntryGroups as group}
 					{#if group.length === 2}
 						<div class="log-paired-vitals">
@@ -1264,7 +1264,7 @@
 					{/if}
 				{/each}
 
-				<!-- Multi-entry vitals — unpaired -->
+				<!-- Multi-entry vitals - unpaired -->
 				{#each unpairedMultiEntryVitals as vital}
 					<div class="log-multi-entry">
 						<p class="log-vital-label" style="margin-bottom: 8px">
@@ -1378,7 +1378,7 @@
 		</div>
 	</div>
 
-	<!-- CIPH-302 — Incomplete-entry CTA (today only, after ≥3 days history) -->
+	<!-- CIPH-302 - Incomplete-entry CTA (today only, after ≥3 days history) -->
 	{#if incompleteFields.length > 0}
 		<section class="log-incomplete-cta" aria-label={$t('log.incomplete_cta_title')}>
 			<p class="log-incomplete-title">{$t('log.incomplete_cta_title')}</p>
@@ -1427,7 +1427,7 @@
 				>
 					<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</button>
-				<!-- CIPH-904 — persistent save stamp + transient asterisk flash.
+				<!-- CIPH-904 - persistent save stamp + transient asterisk flash.
 					 The flash plays for 2.5s after each save; once it fades, the
 					 stamp keeps showing "Gespeichert · 14:32" so the user always
 					 knows their data is saved without watching for a pulse. -->
@@ -1516,7 +1516,7 @@
 </Modal>
 
 <style>
-	/* Dose history — a change that takes effect on the day being logged. */
+	/* Dose history - a change that takes effect on the day being logged. */
 	.log-med-changes {
 		margin: 0 0 12px;
 		padding: 8px 12px;
@@ -1527,7 +1527,7 @@
 		font-size: 13px;
 		line-height: 1.4;
 	}
-	/* ─── Section-jump nav (mobile) — CIPH-420b ─── */
+	/* ─── Section-jump nav (mobile) - CIPH-420b ─── */
 	.log-section-nav {
 		position: sticky;
 		top: 56px;
@@ -1561,7 +1561,7 @@
 		transition: color 0.15s, background 0.15s, border-color 0.15s;
 	}
 	.log-section-chip--active {
-		/* CIPH-891 — cohort-aware active section chip. */
+		/* CIPH-891 - cohort-aware active section chip. */
 		color: var(--accent, #b23c2c);
 		font-weight: 700;
 		background: var(--surface, #faf8f6);
@@ -1751,7 +1751,7 @@
 	.log-chip:active {
 		transform: scale(0.97);
 	}
-	/* Inline "add new" chip — dashed outline to read as an affordance, not a
+	/* Inline "add new" chip - dashed outline to read as an affordance, not a
 	   selectable value. Theme-token colors (dark-mode safe). */
 	.log-chip--add {
 		background: transparent;
@@ -1833,7 +1833,7 @@
 	}
 
 	/* Assume-taken hint above the scheduled-med chips. Overrides the
-	   uppercase group-label treatment — it's a sentence, not a label. */
+	   uppercase group-label treatment - it's a sentence, not a label. */
 	.log-meds-hint {
 		text-transform: none;
 		letter-spacing: 0;
@@ -2010,7 +2010,7 @@
 	}
 	/* CIPH-pi24-5d painted a brand chevron onto <select.log-detail-input> to
 	   disguise the native control. The duration field is a Listbox now
-	   (2026-09-20), which brings its own chevron — and, unlike the native
+	   (2026-09-20), which brings its own chevron - and, unlike the native
 	   one, a panel that obeys this stylesheet. */
 
 	/* ─── Vitals ─── */
@@ -2036,7 +2036,7 @@
 		display: block;
 		line-height: 1.25;
 	}
-	/* PI v17 — reserve 2 lines so labels that wrap (e.g. DE
+	/* PI v17 - reserve 2 lines so labels that wrap (e.g. DE
 	   "Stimmungspolarität" in the bipolar blueprint) don't push their
 	   <input> down and break grid-row alignment with sibling cells.
 	   Short labels show 1 line + spacer; long labels show 2 lines.
@@ -2058,12 +2058,12 @@
 		font-size: 16px;
 	}
 
-	/* ─── Save bar — CIPH-784 ─── */
+	/* ─── Save bar - CIPH-784 ─── */
 	.log-save-bar {
 		position: fixed;
 		/* Mobile: clear the BottomNav (md:hidden, ~70px tall). Desktop:
 		   nav is hidden, so the save bar should sit flush at the
-		   viewport bottom — otherwise there's empty space below it. */
+		   viewport bottom - otherwise there's empty space below it. */
 		bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 		left: 0;
 		right: 0;
@@ -2229,7 +2229,7 @@
 		white-space: nowrap;
 		transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, background 0.12s ease-out;
 	}
-	/* CIPH-906 hover affordance — explains "this button does something"
+	/* CIPH-906 hover affordance - explains "this button does something"
 	   on pointer-over with a subtle lift + shadow. The native title=…
 	   tooltip carries the verbal explanation for AT users. Reduced-
 	   motion users still get the title; the lift is dropped via the
@@ -2250,7 +2250,7 @@
 		background: var(--danger);
 		filter: brightness(0.92);
 	}
-	/* CIPH-906 — when the phase carried over and is still active, the
+	/* CIPH-906 - when the phase carried over and is still active, the
 	   action button means "end the phase," not "toggle." Visually muted
 	   (outline + danger text) so it doesn't feel like the destructive
 	   delete in the save bar but still reads as a deliberate action. */
@@ -2403,7 +2403,7 @@
 		50% { transform: scale(1.02); }
 		100% { transform: scale(1); opacity: 1; }
 	}
-	/* CIPH-904 — save-status slot. Holds the persistent stamp OR the
+	/* CIPH-904 - save-status slot. Holds the persistent stamp OR the
 	   transient asterisk-flash. Same width either way so the save button
 	   on the right doesn't jump when the flash appears/disappears. */
 	.log-save-status {

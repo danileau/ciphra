@@ -1,17 +1,17 @@
 <!--
-	CIPH-902 — Journal redesign.
+	CIPH-902 - Journal redesign.
 
 	Threema-style chronological timeline. Day-grouped cards under floating
 	month headers. Each card's left-rail color signals doc type (olive
 	entry / ochre event / brand diary); no badge, no per-type icon. The
 	whole card is the affordance: entries link to /log/{date}, events and
 	diaries open a moment-view modal with the edit form. Per-card edit /
-	delete icons are gone — delete is hidden inside the moment-view (or,
+	delete icons are gone - delete is hidden inside the moment-view (or,
 	for entries, behind the EntryComposer save bar) so it can't be
 	triggered in panic or by mistake.
 
 	Diary text uses the same sans body treatment as the rest of the app
-	(the earlier serif treatment was reverted — it read as inconsistent).
+	(the earlier serif treatment was reverted - it read as inconsistent).
 	Per-chip color stripes and the +N truncation on chips were dropped
 	(see EntryPreview); the journal now lets card height carry "loud day
 	vs quiet day" as visual rhythm.
@@ -32,7 +32,7 @@
 	import Modal from '#lib/components/Modal.svelte';
 
 	// ── Filters ──────────────────────────────────────────────────────────
-	// The old bar was three tabs — All / Entries / Note markers — two of
+	// The old bar was three tabs - All / Entries / Note markers - two of
 	// which selected nearly the same thing, plus a search icon that expanded
 	// into a field. Search is the reason to be on this page, so it is the
 	// page now, and the narrowing controls sit beside it.
@@ -64,7 +64,7 @@
 	let searchOpen = false;
 	let searchInputEl: HTMLInputElement | null = null;
 
-	// CIPH-711 / CIPH-725 — soft clarification banner for the Tagebuch tab.
+	// CIPH-711 / CIPH-725 - soft clarification banner for the Tagebuch tab.
 	let diaryViews = 0;
 	$: diaryDocCount = $documents.filter((d) => d.data?.type === 'diary').length;
 	$: showDiaryHint = filter === 'diary' && diaryDocCount === 0 && diaryViews < 3;
@@ -84,7 +84,7 @@
 		if (!searchQuery) searchOpen = false;
 	}
 
-	// CIPH-902 — Moment-view modal state. Events and diaries open here for
+	// CIPH-902 - Moment-view modal state. Events and diaries open here for
 	// editing; entries route to /log/{date} where EntryComposer handles
 	// edit + delete via its existing save bar.
 	let momentDoc: CiphraDocument | null = null;
@@ -96,7 +96,7 @@
 
 	// A note lives on its entry, so it routes into the form where the rest of
 	// that day is editable. Diaries and markers are standalone and open the
-	// moment view. The card is the only affordance — the old layout had a
+	// moment view. The card is the only affordance - the old layout had a
 	// "Show details" link inside a card that was itself a link, on some cards
 	// but not others.
 	function openText(txt: JournalText) {
@@ -133,7 +133,7 @@
 		if (momentDoc.data.type === 'diary') {
 			updated.text = momentText;
 		}
-		// CIPH-713 — preserve absence of `private` rather than writing `false`.
+		// CIPH-713 - preserve absence of `private` rather than writing `false`.
 		// A diary entry is private by its type and carries the flag for
 		// explicitness (types.ts DiaryDoc); it is re-asserted here so a doc
 		// whose flag was cleared while the toggle was still offered gets
@@ -159,7 +159,7 @@
 		} catch {}
 	});
 
-	// CIPH-725 — view-counter increment for the diary-hint timeout.
+	// CIPH-725 - view-counter increment for the diary-hint timeout.
 	let lastCountedFilter = '';
 	$: if (filter === 'diary' && lastCountedFilter !== 'diary') {
 		lastCountedFilter = 'diary';
@@ -173,8 +173,8 @@
 
 	// ── The narrative feed ──────────────────────────────────────────────
 	// Days that hold WRITING, newest first. The metric cards this replaced
-	// rendered one ~110px block per logged day — 631 of them for a two-year
-	// persona, 69,000px of page — each holding one grey line of numbers, so
+	// rendered one ~110px block per logged day - 631 of them for a two-year
+	// persona, 69,000px of page - each holding one grey line of numbers, so
 	// the day with an attack looked exactly like the day with 7h of sleep.
 	// Measured values live in /reports; the calendar answers "what happened
 	// on day X". What no other surface holds is what the person wrote.
@@ -191,7 +191,7 @@
 	// costs the same first paint as a five-day one.
 	const PAGE = 40;
 	let windowSize = PAGE;
-	// Any filter change resets the window — otherwise a narrowing filter
+	// Any filter change resets the window - otherwise a narrowing filter
 	// leaves the user scrolled past the end of the new result set.
 	$: {
 		void searchQuery; void filter; void withEpisodeOnly; void rangeFromISO;
@@ -231,8 +231,8 @@
 		const dayMs = 86400000;
 		const diff = (today.getTime() - target.getTime()) / dayMs;
 
-		// ONE shape for every row. It used to swap at day 7 — "Wednesday ·
-		// Aug 19" above, "August 8 · Sat" below — so primary and secondary
+		// ONE shape for every row. It used to swap at day 7 - "Wednesday ·
+		// Aug 19" above, "August 8 · Sat" below - so primary and secondary
 		// traded places in the middle of the same list. Both branches also
 		// wrote the date into a field called `weekday`, which is how the swap
 		// slipped in unnoticed.
@@ -259,13 +259,13 @@
 </script>
 
 <svelte:head>
-	<title>{$t('nav.journal')} — ciphra</title>
+	<title>{$t('nav.journal')} - ciphra</title>
 </svelte:head>
 
 <div class="layout-data pt-4">
 	<div class="flex items-center justify-between gap-3 mb-4">
 		<h1 class="text-2xl font-bold" style="color: var(--text-primary)">{$t('stream.title')}</h1>
-		<!-- CIPH-pi24-5d — Desktop add affordance. Replaces the dropped
+		<!-- CIPH-pi24-5d - Desktop add affordance. Replaces the dropped
 			 global FAB for the one surface where it was uniquely useful
 			 (calendar has day-click; dashboard has the S5+S1 CTA). Hidden
 			 on mobile because BottomNav center-+ already covers the role. -->
@@ -396,7 +396,7 @@
 	{/if}
 </div>
 
-<!-- CIPH-902 — Moment-view modal for events / diaries. Edit + delete
+<!-- CIPH-902 - Moment-view modal for events / diaries. Edit + delete
 	 live here; the journal card itself is now read-only. Delete moves
 	 behind a confirm step inside the modal so it can't fire by mistake. -->
 {#if momentDoc}
@@ -441,7 +441,7 @@
 			{#if momentDoc.data.type === 'diary'}
 				<!-- No toggle here. `isExportable` drops every `type: 'diary'`
 					 document unconditionally, so the switch changed nothing while
-					 its default state read "Erscheint im Export für die Ärztin" —
+					 its default state read "Erscheint im Export für die Ärztin" -
 					 an affirmative false statement about where the text goes, on
 					 the one surface built for the things people don't want read. -->
 				<p class="flex items-center gap-2 text-xs" style="color: var(--text-muted)">
@@ -468,7 +468,7 @@
 				{/if}
 				{momentPrivate ? $t('private.state_private') : $t('private.state_public')}
 				<!-- Same bug as the quick-add sheet: the hint must follow the state. -->
-				<span style="color: var(--text-muted)">— {momentPrivate ? $t('private.tooltip') : $t('private.state_public_hint')}</span>
+				<span style="color: var(--text-muted)">- {momentPrivate ? $t('private.tooltip') : $t('private.state_public_hint')}</span>
 			</label>
 			{/if}
 
@@ -516,7 +516,7 @@
 	/* ── Journal v2 ────────────────────────────────────────────────────────
 	   The old card was chrome around nothing: a 1100px-wide bordered box with
 	   a rail and padding, holding one short grey line. Here the WRITING is
-	   the object — it sets the type size and the vertical rhythm — and the
+	   the object - it sets the type size and the vertical rhythm - and the
 	   frame is a rule, not a box. */
 
 	.jr-controls { margin-bottom: 1.25rem; }
@@ -571,7 +571,7 @@
 		margin-top: 0.6rem;
 	}
 	.jr-chip {
-		/* 44px WCAG 2.5.5 floor — the /journal touch-target contract
+		/* 44px WCAG 2.5.5 floor - the /journal touch-target contract
 		   (CIPH-pi22-JC-1). These have no equivalent path elsewhere, so the
 		   grid-cell exception does not apply. */
 		min-height: 44px;
@@ -619,14 +619,14 @@
 	   It was `position: sticky; top: 0`, which failed twice over. The app
 	   header is itself `sticky top-0 z-40` and 57px tall, so this pinned
 	   underneath it and vanished rather than docking below. And a sticky
-	   header needs an opaque background to mask the rows sliding under it —
+	   header needs an opaque background to mask the rows sliding under it -
 	   that background was `var(--surface-page, …)`, a token that does not
 	   exist, so the fallback painted `--surface-muted` (#f3f0ed) across a
 	   `--surface` (#faf8f6) page. The visible grey band was that fallback.
 	   Both measured, not guessed.
 	   Stickiness also earns nothing at this density: the narrative feed holds
 	   written days only, so a month is a handful of rows and the label would
-	   barely engage. It is a divider now — no background to get wrong, no
+	   barely engage. It is a divider now - no background to get wrong, no
 	   stacking context to lose. */
 	.jr-month-header {
 		display: flex;
@@ -648,7 +648,7 @@
 		background: var(--border);
 	}
 
-	/* The first day of a month sits under the month rule already — its own
+	/* The first day of a month sits under the month rule already - its own
 	   top border would double it. */
 	.jr-month-header + .jr-day { border-top: none; }
 
@@ -673,7 +673,7 @@
 		color: var(--text-muted);
 	}
 
-	/* Episodes are CONTEXT for the writing beside them — a note about aura
+	/* Episodes are CONTEXT for the writing beside them - a note about aura
 	   means something different next to "1× Migraine with aura". They never
 	   put a day in this list; see lib/journal/narrative.ts. */
 	.jr-eps { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; }
@@ -703,7 +703,7 @@
 		outline: 2px solid var(--accent, var(--brand));
 		outline-offset: 2px;
 	}
-	/* The rail is the only type signal — no badge, no icon, matching the
+	/* The rail is the only type signal - no badge, no icon, matching the
 	   convention the previous design established. */
 	.jr-text--diary { border-left-color: var(--brand); }
 	.jr-text--marker { border-left-color: var(--ochre, #9f630b); }
@@ -724,7 +724,7 @@
 	}
 	.jr-text--diary .jr-body { font-style: italic; }
 
-	/* On a phone the eight chips wrap to three rows — ~156px of controls
+	/* On a phone the eight chips wrap to three rows - ~156px of controls
 	   before any content on an 844px screen. One scrollable row instead:
 	   every option stays reachable (nothing is hidden behind a disclosure,
 	   which is the mistake the old search icon made), and the separators

@@ -53,11 +53,11 @@
 	let quickAddSelectedEpisode: string | null = null;
 	let quickAddSaving = false;
 	let quickAddSaved = false;
-	// CIPH-710 — third quick-add mode: a private diary entry. Default 'log'
+	// CIPH-710 - third quick-add mode: a private diary entry. Default 'log'
 	// preserves the existing flow (episode chip + note → entry/event); 'diary'
 	// switches to a date+time+text form that writes a `type: 'diary'` doc,
 	// hard-excluded from every export.
-	// CIPH-881 — fourth mode 'med' for rescue / breakthrough meds, surfaced
+	// CIPH-881 - fourth mode 'med' for rescue / breakthrough meds, surfaced
 	// only when the active blueprint declares `rescueMedications`. Writes a
 	// `type:'event'` + `kind:'medication'` doc with the current time.
 	let quickAddMode: 'log' | 'diary' | 'med' = 'log';
@@ -66,11 +66,11 @@
 	let diaryText = '';
 	let quickAddSelectedMedId: string | null = null;
 	let quickAddDose = '';
-	// CIPH-713 — private toggle on quick-add log/event flow.
+	// CIPH-713 - private toggle on quick-add log/event flow.
 	let quickAddPrivate = false;
 	// In a linked vault the caregiver writes into someone else's account. The
 	// server files those writes as shareable whatever they say, while the
-	// caregiver's own view drops private plaintext — so a diary note or a
+	// caregiver's own view drops private plaintext - so a diary note or a
 	// locked entry written there vanished for its author on reload, and every
 	// other caregiver of that account could read it. Neither is offered there.
 	$: quickAddLinked = $activeVault !== null;
@@ -79,7 +79,7 @@
 
 	// Quick-add sheet as a modal dialog: focus moves in when it opens, Tab
 	// stays inside, Escape closes, and focus returns to what opened it (the
-	// FAB). It had none of this — keyboard and screen-reader users tabbed
+	// FAB). It had none of this - keyboard and screen-reader users tabbed
 	// into the page behind it. BottomSheet.svelte has the same behaviour but
 	// not the stacking: its backdrop shares z-50 with BottomNav, which comes
 	// later in the DOM and would stay live above it.
@@ -160,11 +160,11 @@
 		}
 	}
 
-	// CIPH-767c — FAB long-press (≥500ms) skips the mode picker and opens
+	// CIPH-767c - FAB long-press (≥500ms) skips the mode picker and opens
 	// directly into the user's most-recently-used quick-add mode, persisted
 	// in localStorage. Normal tap behavior is unchanged (picker shown).
 	const QUICKADD_LAST_MODE_KEY = 'ciphra_quickadd_last_mode';
-	// CIPH-884 — remember the most-recently-selected FAB episode type so
+	// CIPH-884 - remember the most-recently-selected FAB episode type so
 	// subsequent quick-adds float it to the front of the picker. Persists
 	// across sessions. One value per user (per-device).
 	const QUICKADD_LAST_EP_KEY = 'ciphra_quickadd_last_episode';
@@ -185,7 +185,7 @@
 				if (v === 'diary' || v === 'log' || v === 'med') last = v;
 			} catch {}
 		}
-		// CIPH-881 — if user previously used 'med' but has no as-needed meds
+		// CIPH-881 - if user previously used 'med' but has no as-needed meds
 		// configured, the third mode chip won't render. Fall back.
 		if (last === 'med' && !hasBedarfMeds(bp)) {
 			last = 'log';
@@ -219,7 +219,7 @@
 		try { localStorage.setItem(QUICKADD_LAST_MODE_KEY, quickAddMode); } catch {}
 	}
 
-	// CIPH-767e — sync indicator (Astrid) + PWA install prompt.
+	// CIPH-767e - sync indicator (Astrid) + PWA install prompt.
 	let syncToastShow = false;
 	let syncToastKey = 0;
 	let queuedToastShow = false;
@@ -228,7 +228,7 @@
 	let revokedToastKey = 0;
 	let quotaToastShow = false;
 	let quotaToastKey = 0;
-	// Generic confirmation toast — any screen can fire a `ciphra:toast` window
+	// Generic confirmation toast - any screen can fire a `ciphra:toast` window
 	// event with `detail.message` to confirm an action (e.g. saving a custom
 	// episode type in Settings, which previously closed with no feedback).
 	let genericToastShow = false;
@@ -239,7 +239,7 @@
 	let pwaInstallVisible = false;
 	const PWA_DISMISS_KEY = 'ciphra_pwa_install_dismissed_at';
 
-	// CIPH-103 — after the user's first daily_log save, show a one-time
+	// CIPH-103 - after the user's first daily_log save, show a one-time
 	// tooltip explaining event lines. Triggered from /log/[date] by
 	// dispatching a `ciphra:first-daily-log` CustomEvent on window.
 	let showEventLineTooltip = false;
@@ -277,7 +277,7 @@
 		};
 		window.addEventListener('ciphra:first-daily-log', onFirstDailyLog);
 
-		// CIPH-767e — "Synced" toast on save round-trips (dispatched from
+		// CIPH-767e - "Synced" toast on save round-trips (dispatched from
 		// documents.save). Re-keying the Toast via syncToastKey forces a
 		// fresh mount so its onMount duration timer restarts cleanly when a
 		// user saves several entries in quick succession.
@@ -311,8 +311,8 @@
 		window.addEventListener('storage', onStorage);
 
 		// A linked patient revoked the caregiver's grant mid-view (403 on the
-		// family vault). Reconcile links — the reactive below snaps activeVault
-		// back to the caregiver's own vault — and surface a brief notice.
+		// family vault). Reconcile links - the reactive below snaps activeVault
+		// back to the caregiver's own vault - and surface a brief notice.
 		const onFamilyRevoked = () => {
 			familyLinks.load();
 			revokedToastKey += 1;
@@ -333,7 +333,7 @@
 		window.addEventListener('ciphra:toast', onToast as EventListener);
 
 		// The outbox set a vault's queued writes aside because its owner is
-		// at the document cap (documents.ts drainOutbox). They stay queued —
+		// at the document cap (documents.ts drainOutbox). They stay queued -
 		// say why the pending pill is not going away.
 		const onSyncBlocked = () => {
 			quotaToastKey += 1;
@@ -349,7 +349,7 @@
 		};
 		document.addEventListener('visibilitychange', onVisible);
 
-		// CIPH-767e — PWA install prompt (Astrid / Samsung). Capture the
+		// CIPH-767e - PWA install prompt (Astrid / Samsung). Capture the
 		// beforeinstallprompt event so we can offer install from our own UI.
 		// Suppressed for 7 days after dismissal, forever after successful install.
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -406,7 +406,7 @@
 	}
 
 	$: bp = $resolvedBlueprint;
-	// FAB "Bedarfsmedikation" picker source — the user's configured as-needed
+	// FAB "Bedarfsmedikation" picker source - the user's configured as-needed
 	// meds (single source of truth, edited in Settings). Replaces the old
 	// preset-only `rescueMedications` list.
 	$: bedarfMeds = bedarfMedsForPicker(bp);
@@ -418,7 +418,7 @@
 			try { localStorage.setItem(QUICKADD_LAST_EP_KEY, id); } catch {}
 		}
 	}
-	// Reorder so the last-used episode is the first chip. Non-destructive —
+	// Reorder so the last-used episode is the first chip. Non-destructive -
 	// the full list is preserved, we just sort the last-used to index 0.
 	$: episodeTypesOrdered = bp
 		? (lastEpisodeId && bp.episodeTypes.some((e) => e.id === lastEpisodeId)
@@ -465,11 +465,11 @@
 
 	async function quickAddSave() {
 		// Enter in the note field reached here without the Save button's
-		// disabled gate — a double press minted two entries for the day.
+		// disabled gate - a double press minted two entries for the day.
 		if (quickAddSaving) return;
 		const now = new Date();
 		// LOCAL date, like the time next to it. The UTC date put everything
-		// logged between midnight and ~02:00 Swiss time on yesterday — and
+		// logged between midnight and ~02:00 Swiss time on yesterday - and
 		// merged it into yesterday's entry.
 		const todayStr = toLocalISODate(now);
 		// In someone else's vault the server files every write as shareable,
@@ -477,7 +477,7 @@
 		// wrote it (see quickAddLinked).
 		const privateFlag = !quickAddLinked && quickAddPrivate ? true : undefined;
 
-		// CIPH-881 — rescue medication writes a `type:'event' kind:'medication'`
+		// CIPH-881 - rescue medication writes a `type:'event' kind:'medication'`
 		// doc, distinct from the freeform note-marker event used by the log mode.
 		if (quickAddMode === 'med') {
 			if (!quickAddSelectedMedId) return;
@@ -503,7 +503,7 @@
 			return;
 		}
 
-		// CIPH-710 — diary mode writes a `type: 'diary'` doc that is hard-
+		// CIPH-710 - diary mode writes a `type: 'diary'` doc that is hard-
 		// excluded from every export surface (PDF/CSV/reports/share).
 		if (quickAddMode === 'diary') {
 			if (!diaryText.trim() || quickAddLinked) return;
@@ -531,7 +531,7 @@
 		let ok = false;
 
 		if (quickAddSelectedEpisode) {
-			// Merge into today's existing `type:'entry'` if one exists — otherwise
+			// Merge into today's existing `type:'entry'` if one exists - otherwise
 			// `/log/[date]` and FAB quick-add each mint separate rows for the same
 			// date, doubling journal and confusing reports/PDF.
 			const nowTime = now.toTimeString().slice(0, 5);
@@ -629,7 +629,7 @@
 	// failure on a CACHELESS device (a brand-new browser/phone, where there's
 	// no IndexedDB copy to fall back on) left `$documents` empty, made
 	// `loadFromDocuments()` find no blueprint, and the setup-redirect guard
-	// below bounced a fully-set-up returning user onto the wizard — until they
+	// below bounced a fully-set-up returning user onto the wizard - until they
 	// manually refreshed and the second fetch happened to work. We now do that
 	// refresh automatically instead of stranding them.
 	//
@@ -656,7 +656,7 @@
 			[docsOk, linksOk] = await Promise.all([documents.load(), familyLinks.load()]);
 			if (linksOk) linksLoaded = true;
 		}
-		// Superseded by a newer (re)load — a Retry, or a scheduled attempt.
+		// Superseded by a newer (re)load - a Retry, or a scheduled attempt.
 		if (seq !== vaultLoadSeq) return;
 		// The vault changed while that was on the wire (the switcher, a
 		// revoke snap-back): those documents are for a vault nobody is
@@ -681,7 +681,7 @@
 			// loads find nothing to fold.
 			let migrated = foldRescueMedications(get(blueprint), $t);
 			// One-time: vital targets move from plaintext localStorage into the
-			// encrypted blueprint. Own vault only — a device's legacy targets
+			// encrypted blueprint. Own vault only - a device's legacy targets
 			// belong to the logged-in user, never to a linked patient. The key
 			// is removed only once the blueprint carrying them is saved.
 			const legacyTargetsFor = get(activeVault) === null ? get(auth).username : null;
@@ -729,8 +729,8 @@
 
 	/**
 	 * Load the active vault's documents + blueprint. Every call supersedes
-	 * the previous one, so however fast the switcher is clicked — A→B→C, or
-	 * a 403 snap-back mid-load — the vault that ends up loaded is the one
+	 * the previous one, so however fast the switcher is clicked - A→B→C, or
+	 * a 403 snap-back mid-load - the vault that ends up loaded is the one
 	 * that is active. `keepShown` (Retry) leaves the current view in place
 	 * while the reload runs.
 	 */
@@ -750,7 +750,7 @@
 		const ok = await documents.load();
 		if (seq !== vaultLoadSeq) return;
 		blueprint.loadFromDocuments();
-		// Only commit docsLoaded on a genuine fetch success — a failed
+		// Only commit docsLoaded on a genuine fetch success - a failed
 		// switch (offline / transient / revoked 403) must not flip to an
 		// authoritative empty state for the linked vault. The
 		// $documentsError banner + retry button stay visible instead.
@@ -772,7 +772,7 @@
 	// Redirect to setup when authenticated but no blueprint, only for
 	// routes that require a blueprint per the registry. Caregivers who
 	// have already linked to someone else's vault don't need to set up
-	// their own condition — they can skip the wizard and still use the
+	// their own condition - they can skip the wizard and still use the
 	// app. Only redirect AFTER documents have fully loaded and blueprint
 	// has been checked. The per-route allow-list (login/setup/settings/
 	// admin/migrate) that used to live here is now encoded in the
@@ -786,7 +786,7 @@
 	// Reactive on currentPath so the value refreshes on every navigation
 	// (incl. post-login goto('/')). Earlier version had no reactive
 	// dependency so the IIFE ran exactly once at mount and a flag set
-	// later in the same session was never picked up — and a stale flag
+	// later in the same session was never picked up - and a stale flag
 	// from a previous session locked out the auto-redirect-to-/setup.
 	// auth.login()/logout() also clear the flag now, so this read mostly
 	// returns false; the explicit dependency is the belt for the braces.
@@ -801,7 +801,7 @@
 	}
 
 	async function handleLogout() {
-		// PI v16 — wait for the on-disk wipe before goto so the SW + IndexedDB
+		// PI v16 - wait for the on-disk wipe before goto so the SW + IndexedDB
 		// purge has finished before any subsequent navigation could repopulate
 		// caches. UI already flipped (logout sets empty state synchronously).
 		await auth.logout();
@@ -815,7 +815,7 @@
 
 	// Session-expiry catch. `api.ts` fires `ciphra:unauthorized` when an
 	// authenticated request gets a 401 (token expired/revoked). Without this the
-	// app still LOOKS logged in — the doc fetch 401s and the dashboard renders
+	// app still LOOKS logged in - the doc fetch 401s and the dashboard renders
 	// the misleading "Du hast noch keine eigene Erfassung eingerichtet" caregiver
 	// view. Wipe local auth/state and bounce straight to login with a notice.
 	let handlingUnauthorized = false;
@@ -837,7 +837,7 @@
 	// skip the initial render that fires while the store hydrates.
 	//
 	// This used to act only when `docsLoaded` was true, while always
-	// recording `lastVault` — so a switch that arrived during a load was
+	// recording `lastVault` - so a switch that arrived during a load was
 	// dropped: A→B→C showed B's data under C's banner, and a 403 snap-back
 	// mid-load left the revoked vault's view in place. Every change now
 	// reloads; reloadVault makes the newest one win.
@@ -865,26 +865,26 @@
 
 	$: liveLinks = $familyLinks.filter(l => !l.revoked);
 
-	// CIPH-pi24-1B — `setLocale` removed from the layout. The language
+	// CIPH-pi24-1B - `setLocale` removed from the layout. The language
 	// picker now lives only in PublicFooter, which has its own local
 	// copy of the handler.
 
 	const urlPathname = pageStore((p) => p.url.pathname);
 	$: currentPath = $urlPathname as string;
-	// CIPH-833 — route-shell registry. One lookup per route drives
+	// CIPH-833 - route-shell registry. One lookup per route drives
 	// both the chrome selection and the auth/blueprint guards below,
 	// replacing the old multi-branch `currentPath !== '/X' && …`
 	// chains that each new route had to be patched into.
 	$: currentShell = shellFor(currentPath);
 	// Public-page head (title / description / canonical / OG). Lives here,
-	// outside the $authReady gate, so it is in the SSR HTML crawlers read —
+	// outside the $authReady gate, so it is in the SSR HTML crawlers read -
 	// see lib/seoMeta.ts. No user locale on the server, so SSR speaks `de`.
 	$: seo = publicMeta(currentPath, browser ? $t : (k) => (de as Record<string, string>)[k] ?? k);
-	// CIPH-890 — `data-route` and `data-cohort` on <main> drive the
+	// CIPH-890 - `data-route` and `data-cohort` on <main> drive the
 	// CIPH-892 rhythm tokens and the cohort accent overrides in app.css.
 	$: currentRoute = pathToRoute(currentPath);
 	$: currentCohort = cohortOf($resolvedBlueprint);
-	// CIPH-921c — repoint the primary accent (--accent/-hover/-rgb) from the
+	// CIPH-921c - repoint the primary accent (--accent/-hover/-rgb) from the
 	// CONDITION color so the whole authed surface (buttons, rings, links, FAB)
 	// matches /conditions + the dashboard badge, not the per-cohort accent.
 	// Only when a blueprint is resolved; public routes keep the brand accent.
@@ -897,7 +897,7 @@
 			})()
 		: '';
 
-	// Dark mode (design review 2026-06-11) — mirror the resolved theme
+	// Dark mode (design review 2026-06-11) - mirror the resolved theme
 	// onto <html> so the app.css [data-theme='dark'] block applies.
 	// app.html sets the same attribute pre-hydration to avoid a white
 	// flash; this keeps it live for in-session changes. The theme-color
@@ -929,7 +929,7 @@
 	// Gated on `requiresAuth`: public routes (/, /migrate, /join/*, /privacy,
 	// etc.) have their own signup/auth-handling and must not be hijacked.
 	// Previously this fired on /migrate when a user with a stale JWT hit
-	// the inbound migration link — bounced them to /login instead of letting
+	// the inbound migration link - bounced them to /login instead of letting
 	// them sign up a fresh ciphra account via the inline SignupFlow.
 	// Also covers the landing `/`: a token-present / key-absent user renders the
 	// authed dashboard shell there (isAuthenticated is true), but every vault
@@ -938,7 +938,7 @@
 	$: if (browser && $needsUnlock && currentPath !== '/login'
 		&& (currentShell.requiresAuth || currentPath === '/')) {
 		// auth.logout() is async (PI v16); fire-and-forget here is fine
-		// because the master key is already gone — no plaintext to leak.
+		// because the master key is already gone - no plaintext to leak.
 		// The wipe still runs in background.
 		void auth.logout();
 		goto('/login');
@@ -981,10 +981,10 @@
 		</div>
 	</div>
 {:else if !$authReady}
-	<!-- Stable background while auth hydrates — no content to prevent flashing -->
+	<!-- Stable background while auth hydrates - no content to prevent flashing -->
 	<div class="min-h-screen bg-surface"></div>
 {:else if !$isAuthenticated && (currentShell.shell === 'landing' || currentShell.shell === 'auth-flow' || currentShell.shell === 'public-doc' || currentShell.shell === 'family-claim')}
-	<!-- PI v16 LB-15 — skip-to-content for the public shell. Was only on
+	<!-- PI v16 LB-15 - skip-to-content for the public shell. Was only on
 		 the landing page; now every public-doc + auth-flow + family-claim
 		 page inherits it so /privacy /terms /protocol /conditions/[id] no
 		 longer force keyboard / SR users through 4-6 nav stops on entry. -->
@@ -998,11 +998,11 @@
 	     pages (e.g. /docs index). Without it the footer floated mid-
 	     viewport on any page that didn't fill the screen. -->
 	<div class="min-h-screen flex flex-col">
-	<!-- Single unified public nav — covers landing, /login, /migrate,
+	<!-- Single unified public nav - covers landing, /login, /migrate,
 		 /conditions, /privacy, /terms, /join/*. One identity for every
 		 unauthenticated visitor; anchor links resolve back to the
 		 landing page so they keep working from any sub-page. The
-		 separate "Anmelden" text link was dropped — it was redundant
+		 separate "Anmelden" text link was dropped - it was redundant
 		 with the primary CTA and visually competed with it. Returning
 		 users find the Login tab inside /login itself. -->
 	<nav class="sticky top-0 z-40 backdrop-blur-sm" style="border-bottom: 1px solid var(--border); background: rgba(var(--surface-rgb), 0.85);">
@@ -1016,14 +1016,14 @@
 					<a href="/#how" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_how')}</a>
 					<a href="/#security" class="text-sm font-medium min-h-[44px] flex items-center px-3 transition-colors" style="color: var(--text-secondary);">{$t('landing.nav_security')}</a>
 				</div>
-				<!-- CIPH-pi24-1B — Language picker lives in PublicFooter only.
+				<!-- CIPH-pi24-1B - Language picker lives in PublicFooter only.
 					 Header was the wrong slot: chrome density at 4 nav links +
 					 dropdown + CTA crowded the bar; trust-aware Swiss apps
 					 (Threema, Proton) put language in the footer where users
 					 actually look for it. -->
-				<!-- CIPH-pi24-1A — Header CTA returns returning users to /login.
+				<!-- CIPH-pi24-1A - Header CTA returns returning users to /login.
 					 The "kostenlos starten" CTA appears 3x in landing body
-					 (hero, conditions section, final CTA) — a 4th in the header
+					 (hero, conditions section, final CTA) - a 4th in the header
 					 wasn't helping new users and was misdirecting returning
 					 ones who needed to log in. Hidden on auth-flow shell
 					 (/login, /migrate, /stream) for the same loop-prevention
@@ -1040,15 +1040,15 @@
 	<div class="flex-1 flex flex-col">
 		<slot />
 	</div>
-	<!-- CIPH-916 — public footer for landing + public-doc shells
+	<!-- CIPH-916 - public footer for landing + public-doc shells
 		 (/conditions, /privacy, /terms, /protocol). Auth-flow + family-
-		 claim shells skip it intentionally — those are focus surfaces. -->
+		 claim shells skip it intentionally - those are focus surfaces. -->
 	{#if currentShell.shell === 'landing' || currentShell.shell === 'public-doc'}
 		<PublicFooter />
 	{/if}
 	</div>
 {:else if $isAuthenticated && currentPath !== '/login'}
-	<!-- CIPH-904 — Skip-to-content link for keyboard / AT users. Public
+	<!-- CIPH-904 - Skip-to-content link for keyboard / AT users. Public
 		 landing already had this; the authed shell didn't, leaving 8-9
 		 nav stops in the header before reaching content on every page. -->
 	<a
@@ -1058,7 +1058,7 @@
 	>{$t('landing.skip_to_content')}</a>
 	<!-- Sticky-footer shell (matches the unauth branch). Pushes the
 	     authed footer to the bottom of short pages instead of letting
-	     it float in mid-viewport. CIPH-921c — the condition-accent override
+	     it float in mid-viewport. CIPH-921c - the condition-accent override
 	     lives here (not on <main>) so the header nav + active state inherit
 	     it too; the <main> below keeps data-cohort for the rhythm tokens. -->
 	<div class="min-h-screen flex flex-col" style={accentOverride}>
@@ -1069,11 +1069,11 @@
 				<Wordmark size={28} />
 			</a>
 
-			<!-- Desktop primary nav (CIPH-201 follow-up) — bottom-nav handles
+			<!-- Desktop primary nav (CIPH-201 follow-up) - bottom-nav handles
 			     mobile, but on >=md the only navigation in the header was logo
 			     + settings + logout, leaving users stranded. Mirror the 4 main
 			     routes here. Active route gets brand color + brand bottom border.
-			     2026-06-07 — gated on $hasBlueprint so the setup-wizard user
+			     2026-06-07 - gated on $hasBlueprint so the setup-wizard user
 			     (who explicitly does not yet have a blueprint) doesn't see 4
 			     nav links that would each trigger the redirect-back-to-/setup
 			     loop. Primary-nav reappears the instant the wizard finishes. -->
@@ -1103,7 +1103,7 @@
 				<!-- Vault switcher: visible label + eye icon so it reads as
 					 "you're viewing X" rather than a bare dropdown. The native
 					 <select> it replaced could not style its own options panel
-					 — see VaultSwitcher.svelte. -->
+					 - see VaultSwitcher.svelte. -->
 				<VaultSwitcher links={liveLinks} />
 			{/if}
 			<div class="flex items-center gap-1 ml-auto">
@@ -1161,7 +1161,7 @@
 			<div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
 				<p class="text-sm" style="color: var(--ochre)">
 					<strong>{$t('family.banner_viewing', { user: activeLink?.sourceUsername ?? '' })}</strong>
-					<span style="color: var(--text-secondary)">— {$t('family.banner_desc')}</span>
+					<span style="color: var(--text-secondary)">- {$t('family.banner_desc')}</span>
 				</p>
 				<button
 					type="button"
@@ -1173,7 +1173,7 @@
 				</button>
 			</div>
 			{#if hiddenCount > 0}
-				<!-- CIPH-726 — caregivers need to know they are not seeing the
+				<!-- CIPH-726 - caregivers need to know they are not seeing the
 					 private/diary entries. Muted, lock-iconed, non-alarmist. -->
 				<div class="max-w-6xl mx-auto mt-1 flex items-center gap-1.5 text-xs" style="color: var(--text-muted)">
 					<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke-width="2"/><path d="M8 11V8a4 4 0 018 0v3" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1202,7 +1202,7 @@
 				{#if $documentsError === 'load'}{$t('sync.error_load')}{:else if $documentsError === 'update'}{$t('sync.error_update')}{:else}{$t('sync.error_save')}{/if}
 			</p>
 			<!-- Reloads documents AND the blueprint (and the links, if the first
-				 load never got through) — a documents-only reload left a vault
+				 load never got through) - a documents-only reload left a vault
 				 switch that had failed without its blueprint. -->
 			<button on:click={() => { documentsError.set(null); void reloadVault({ keepShown: true }); }} class="ml-auto text-xs font-medium min-h-[44px] px-2" style="color: var(--danger)">{$t('common.retry')}</button>
 		</div>
@@ -1218,7 +1218,7 @@
 		<slot />
 	</main>
 
-	<!-- CIPH-903 — minimal authed footer. Watermark + Privacy/Terms/Security
+	<!-- CIPH-903 - minimal authed footer. Watermark + Privacy/Terms/Security
 		 links + encryption.badge trust signal that used to live in Companion's
 		 bottom block. Self-hides on /log/[date], /setup, /login, /migrate so
 		 focus surfaces stay clean. The footer's own margin-bottom clears the
@@ -1226,9 +1226,9 @@
 	<AuthedFooter />
 	</div>
 
-	<!-- CIPH-pi24-5d — Desktop FAB + its 2 onboarding tooltips removed.
+	<!-- CIPH-pi24-5d - Desktop FAB + its 2 onboarding tooltips removed.
 		 Dogfood read it as "off-grid (too far right) and breaks the style
-		 of the page" — the floating accent circle pinned at `right: 1rem`
+		 of the page" - the floating accent circle pinned at `right: 1rem`
 		 (viewport edge, not content grid) felt orphaned against the
 		 max-w-6xl content. Mobile BottomNav center-+ stays (it's grid-
 		 native). Per-page add affordances replace the desktop FAB:
@@ -1236,7 +1236,7 @@
 		 already has day-cell click → /log/{date} as its add path. -->
 	{#if bp && $hasBlueprint && currentPath !== '/login' && currentPath !== '/setup'}
 		{#if showQuickAdd}
-			<!-- primitive-exempt: Modal — the quick-add bottom sheet carries its
+			<!-- primitive-exempt: Modal - the quick-add bottom sheet carries its
 				 own dialog semantics, focus trap and Escape (onQuickAddKeydown);
 				 neither Modal (centred) nor BottomSheet (z-50, under BottomNav)
 				 fits its stacking. -->
@@ -1276,13 +1276,13 @@
 						<p class="text-sm mb-4" style="color: var(--text-muted)">{$t('quickadd.what_happened')}</p>
 
 						{#if quickAddError}
-							<!-- Not saved — not even queued offline. Everything entered is
+							<!-- Not saved - not even queued offline. Everything entered is
 								 still below; Save tries again. -->
 							<p class="text-sm mb-4" style="color: var(--danger)" role="alert" data-testid="quickadd-error">{$t('quickadd.save_failed')}</p>
 						{/if}
 
-						<!-- CIPH-710 — top-level mode switch: log entry vs private diary.
-							 CIPH-881 — third "med" chip surfaced only when the active
+						<!-- CIPH-710 - top-level mode switch: log entry vs private diary.
+							 CIPH-881 - third "med" chip surfaced only when the active
 							 blueprint declares rescueMedications. -->
 						<div class="flex gap-2 mb-4 p-1 rounded-lg" style="background: var(--surface-muted)">
 							<button
@@ -1350,7 +1350,7 @@
 								<div class="mb-3">
 									<label class="text-xs" style="color: var(--text-secondary)" for="qa-dose">
 										{$t('quickadd.dose')}
-										<span style="color: var(--text-muted)">— {$t('quickadd.dose_optional')}</span>
+										<span style="color: var(--text-muted)">- {$t('quickadd.dose_optional')}</span>
 									</label>
 									<input
 										id="qa-dose"
@@ -1407,9 +1407,9 @@
 							>{quickAddSaving ? $t('common.loading') : $t('quickadd.save')}</button>
 						{:else}
 
-						<!-- Mode heading — two entry kinds coexist here:
-							 1) Episode (tap a chip) — recurring clinical event, counted.
-							 2) Note marker (leave chips alone, fill the note) — singular
+						<!-- Mode heading - two entry kinds coexist here:
+							 1) Episode (tap a chip) - recurring clinical event, counted.
+							 2) Note marker (leave chips alone, fill the note) - singular
 							    narrative marker that renders as a vertical line on the
 							    trend chart. Users couldn't discover (2) without a label. -->
 						<p class="text-xs font-medium uppercase tracking-wider mb-3" style="color: var(--text-muted)">{$t('quickadd.mode_heading')}</p>
@@ -1437,7 +1437,7 @@
 							</div>
 						{/if}
 
-						<!-- Note (optional) — doubles as the text for a stand-alone
+						<!-- Note (optional) - doubles as the text for a stand-alone
 							 "note marker" event when no episode chip is selected. -->
 						<div class="mb-5">
 							<p class="text-xs font-medium uppercase tracking-wider mb-1" style="color: var(--text-muted)">2. {$t('quickadd.mode_event')} / {$t('quickadd.note')}</p>
@@ -1453,7 +1453,7 @@
 							/>
 						</div>
 
-						<!-- CIPH-713 / CIPH-783 — private toggle with semantic lock state.
+						<!-- CIPH-713 / CIPH-783 - private toggle with semantic lock state.
 							 Not in someone else's vault: see quickAddLinked. -->
 						{#if quickAddLinked}
 							<p class="text-[11px] mb-3" style="color: var(--text-muted)" data-testid="quickadd-linked-hint">
@@ -1477,11 +1477,11 @@
 							{quickAddPrivate ? $t('private.state_private') : $t('private.state_public')}
 							<!-- The hint must follow the STATE. `private.tooltip` says
 							     "never exported or shared"; rendering it unconditionally
-							     meant the default (exportable) row read "Standard —
-							     Privater Eintrag — wird nie exportiert oder geteilt",
+							     meant the default (exportable) row read "Standard -
+							     Privater Eintrag - wird nie exportiert oder geteilt",
 							     directly under the note field, while the note was in
 							     fact printed verbatim on the doctor PDF. -->
-							<span style="color: var(--text-muted)">— {quickAddPrivate ? $t('private.tooltip') : $t('private.state_public_hint')}</span>
+							<span style="color: var(--text-muted)">- {quickAddPrivate ? $t('private.tooltip') : $t('private.state_public_hint')}</span>
 						</label>
 						{/if}
 
@@ -1512,7 +1512,7 @@
 		{/if}
 	{/if}
 
-	<!-- CIPH-767e — Sync toast (brief, top-centered). Re-keyed so each new
+	<!-- CIPH-767e - Sync toast (brief, top-centered). Re-keyed so each new
 		 save restarts the fade-out timer cleanly. -->
 	{#key syncToastKey}
 		<Toast message={syncToastShow ? $t('sync.synced') : ''} duration={1800} show={syncToastShow} />
@@ -1524,7 +1524,7 @@
 		<Toast message={queuedToastShow ? $t('sync.queued') : ''} duration={2400} show={queuedToastShow} />
 	{/key}
 
-	<!-- A linked vault was revoked while viewing it — snapped back to own vault. -->
+	<!-- A linked vault was revoked while viewing it - snapped back to own vault. -->
 	{#key revokedToastKey}
 		<Toast message={revokedToastShow ? $t('family.access_removed') : ''} duration={3000} show={revokedToastShow} />
 	{/key}
@@ -1554,7 +1554,7 @@
 		</div>
 	{/if}
 
-	<!-- CIPH-767e — PWA install banner (Astrid / Samsung). Shown only when
+	<!-- CIPH-767e - PWA install banner (Astrid / Samsung). Shown only when
 		 beforeinstallprompt fires and the user hasn't dismissed in the last
 		 7 days. `appinstalled` also suppresses it permanently for this profile. -->
 	{#if pwaInstallVisible}
@@ -1575,7 +1575,7 @@
 		</div>
 	{/if}
 
-	<!-- Mobile bottom-tab navigation (CIPH-201). md:hidden — desktop uses
+	<!-- Mobile bottom-tab navigation (CIPH-201). md:hidden - desktop uses
 		 the existing FAB + header. -->
 	<BottomNav />
 {:else}
@@ -1584,4 +1584,4 @@
 
 <!-- Mount BottomNav on public chrome too, but it self-hides on those routes
 	 via its own pathname check. Keeping the mount point inside the auth
-	 branch above is fine — public routes don't need it. -->
+	 branch above is fine - public routes don't need it. -->

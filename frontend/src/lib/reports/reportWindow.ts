@@ -1,5 +1,5 @@
 /**
- * ciphra — the exported report's time window, as one object.
+ * ciphra - the exported report's time window, as one object.
  *
  * WHY THIS EXISTS
  *
@@ -11,7 +11,7 @@
  * The /reports period picker decoupled them: it anchors calendar periods at
  * December, so a report can cover Jan–Dec 2023 and be generated in 2026.
  * The relative phrase then sits next to "Exportiert: 21. Aug. 2026" and a
- * reader decodes Aug 2025 – Aug 2026 — a document that contradicts its own
+ * reader decodes Aug 2025 – Aug 2026 - a document that contradicts its own
  * x-axis two centimetres below.
  *
  * It is worse than context-dependent. A patient exporting their 2023 report
@@ -22,18 +22,18 @@
  *
  * THE RULE WAS ALREADY WRITTEN DOWN
  *
- *   docs/archive/PDF_DESIGN_SPEC.md §15 — "The date range must appear on
+ *   docs/archive/PDF_DESIGN_SPEC.md §15 - "The date range must appear on
  *     page 1." (§9 source and date range visible; §16 the footer carries
  *     the range or enough continuation context)
- *   docs/archive/PDF_TEMPLATE.md §6 — page 1 carries the "report window"
- *   docs/archive/CLINICAL_HANDOFF.md:73 — "Export period: {range}"
+ *   docs/archive/PDF_TEMPLATE.md §6 - page 1 carries the "report window"
+ *   docs/archive/CLINICAL_HANDOFF.md:73 - "Export period: {range}"
  *
  * And a stated-period-vs-actual-content mismatch is the documented reason
  * the previous renderer was deleted (CLINICAL_HANDOFF.md:6-8: the export
  * showed "last 90 days (count: 1)" when the user had selected 2 years).
  *
  * `scopeFileTag` already implemented the calendar-vs-trailing distinction
- * correctly — but only for the filename. This module generalises that one
+ * correctly - but only for the filename. This module generalises that one
  * rule so the header, the footer, the section titles and the filename
  * finally describe the same window.
  */
@@ -51,7 +51,7 @@ export const SCOPE_MONTHS: Record<ReportScope, number> = {
 /**
  * What shape the window happens to be.
  *
- * `calendar-*` requires a December anchor — a trailing-12 window ending
+ * `calendar-*` requires a December anchor - a trailing-12 window ending
  * August 2025 is NOT a calendar year and must never be named as one. That
  * sentence is already the written rule in pdfScopeFileTag.test.ts.
  */
@@ -85,7 +85,7 @@ function kindOf(scope: ReportScope, anchorMonth: number): WindowKind {
  *
  * Noon anchor on the Date constructions: `.toISOString()` is UTC, so a
  * local-midnight date in any positive-offset timezone (CET/CEST) slips to
- * the previous day — which would shift the whole window back a day and drop
+ * the previous day - which would shift the whole window back a day and drop
  * the last day of the month. Same reasoning as the original inline code.
  */
 export function reportWindow(
@@ -123,7 +123,7 @@ export function reportWindow(
  * leaves a dated start. This document is expected to be printed, filed,
  * faxed and re-read long after the moment it was generated.
  *
- * Month names rather than numerics on purpose — "Jan 2023" cannot be
+ * Month names rather than numerics on purpose - "Jan 2023" cannot be
  * misread day-first in any locale, and a numeric range would inherit an
  * obligation to honour `Blueprint.dateFormat` (four options incl. `us`),
  * which the PDF does not do today.
@@ -143,7 +143,7 @@ export function formatWindowRange(w: ReportWindow, locale: string): string {
  * Filename tag for a window.
  *
  * Moved here from pdf.ts so the naming rule and the labelling rule cannot
- * drift apart — they are the same rule. A December anchor is named as the
+ * drift apart - they are the same rule. A December anchor is named as the
  * calendar period it is; any other anchor keeps the end-month form, which
  * is what it actually means.
  */

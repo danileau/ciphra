@@ -1,14 +1,14 @@
-# Prod nginx image — bakes the ciphra config into the stock alpine image.
+# Prod nginx image - bakes the ciphra config into the stock alpine image.
 # Built + signed by CI as ghcr.io/danileau/ciphra-nginx:<sha> since
 # 2026-06-12 (moved in-repo from golive/nginx so ALL prod images are
 # pipeline-created; config changes now flow through PR + CI, which
-# structurally kills the rsync-drift incident class — see
+# structurally kills the rsync-drift incident class - see
 # feedback_golive_rsync_drift). TLS material is NOT in the image:
 # certs stay bind-mounted on the VPS; this config only references
 # their runtime paths.
 
 # Pinned to an exact stable release (bumped by Dependabot's docker updater).
-# 1.27-alpine sat frozen on Alpine 3.21 — EOL ~Nov 2026 — while `apk upgrade`
+# 1.27-alpine sat frozen on Alpine 3.21 - EOL ~Nov 2026 - while `apk upgrade`
 # papered over it one package at a time.
 FROM nginx:1.30.6-alpine
 
@@ -17,14 +17,14 @@ FROM nginx:1.30.6-alpine
 # security repo, so Trivy flags fixed-upstream CVEs; `apk upgrade` pulls the
 # current patched builds at image-build time. Most are unreachable in this
 # reverse-proxy role (no dynamic modules loaded, so no PNG/XML/expat parsing;
-# zlib untgz unused; the 32-bit X.509 overflow needs a 32-bit host) — but
+# zlib untgz unused; the 32-bit X.509 overflow needs a 32-bit host) - but
 # openssl (TLS) / musl / nghttp2 are in the request path, so we patch the whole
 # base regardless.
 #
 # The upgrade happens at BUILD time only: a live image keeps the packages it was
 # built with. When the daily scan flags a fixed-upstream Alpine CVE in the live
 # nginx image (e.g. libexpat CVE-2026-117610/-118370, 2026-11-03), the fix is a
-# release — any merge to main rebuilds — not a Dockerfile change.
+# release - any merge to main rebuilds - not a Dockerfile change.
 #
 # CACHEBUST (commit SHA, set by release-images.yml) forces this layer to re-run
 # every release so `apk upgrade` hits the current Alpine security repo. Without

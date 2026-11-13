@@ -3,7 +3,7 @@
  *
  * Each FamilyLink holds a decrypted copy of the patient's master_key,
  * persisted as a special `family_link` document inside the caregiver's own
- * encrypted vault. That way the link survives a logout/login — the
+ * encrypted vault. That way the link survives a logout/login - the
  * caregiver's password is still enough to decrypt everything, including
  * their access tokens for patient vaults.
  *
@@ -27,7 +27,7 @@ export interface FamilyLink {
 	linkedAt: string;              // ISO
 	// Set by the reconciliation step: true when the patient has revoked this
 	// grant server-side. The local doc is still decrypt-capable for historical
-	// data but any server call will 403 — UI should offer "remove" only.
+	// data but any server call will 403 - UI should offer "remove" only.
 	revoked?: boolean;
 }
 
@@ -40,7 +40,7 @@ function createStore() {
 		const state = get(auth);
 		if (!state.masterKey) return false;
 		const res = await getDocuments();
-		// Report failure so callers don't treat an empty list as authoritative —
+		// Report failure so callers don't treat an empty list as authoritative -
 		// a swallowed failure here made the layout bounce a caregiver-only user
 		// (no own blueprint, but linked) to /setup.
 		if (!res.ok) return false;
@@ -60,13 +60,13 @@ function createStore() {
 					});
 				}
 			} catch {
-				// non-link documents (daily logs, etc.) — ignore
+				// non-link documents (daily logs, etc.) - ignore
 			}
 		}
 
 		// Reconcile with server: any local link whose grant was revoked by the
 		// patient (or the patient deleted their account) gets flagged. We don't
-		// delete the local doc automatically — that's the user's decision.
+		// delete the local doc automatically - that's the user's decision.
 		try {
 			const active = await familyClaimedList();
 			if (active.ok) {
@@ -79,7 +79,7 @@ function createStore() {
 				}
 			}
 		} catch {
-			// Offline / server unreachable — leave revoked flag untouched
+			// Offline / server unreachable - leave revoked flag untouched
 		}
 
 		set(links);
@@ -154,7 +154,7 @@ export const activeVault = createActive();
 /**
  * Whether the active vault can be read yet: always for the own vault, and for
  * a linked one once its link (which holds the patient's key) is loaded. After
- * a reload inside a linked vault this is false until the links arrive — the
+ * a reload inside a linked vault this is false until the links arrive - the
  * documents store refuses to load then rather than fall back to the own
  * vault, so screens show their loading state instead of an empty account.
  */

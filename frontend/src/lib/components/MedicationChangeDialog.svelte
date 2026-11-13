@@ -1,20 +1,20 @@
 <!--
 	The one place a medication changes (dose history, 2026-09-16).
 
-	"Edit" used to be a form that overwrote the dose — which silently rewrote
-	every day already logged — and "delete" dropped the medication from every
+	"Edit" used to be a form that overwrote the dose - which silently rewrote
+	every day already logged - and "delete" dropped the medication from every
 	report. This dialog makes the difference between those things explicit:
 
-	- change  — asks WHAT is changing (dose/schedule, stopping, or switching to
+	- change  - asks WHAT is changing (dose/schedule, stopping, or switching to
 	            another drug) and FROM WHEN, then shows exactly how it will be
 	            recorded before anything is saved. Days before the date keep what
 	            they had.
-	- correct — a typo fix. Labelled as retroactive, because it is: it rewrites
+	- correct - a typo fix. Labelled as retroactive, because it is: it rewrites
 	            the latest period in place.
-	- delete  — when days are already logged against the medication, stopping is
+	- delete  - when days are already logged against the medication, stopping is
 	            offered first; deleting anyway takes a second, explicit step that
 	            says how many days lose the name.
-	- resume  — a stopped medication taken again, from a date.
+	- resume  - a stopped medication taken again, from a date.
 
 	The dialog computes the new medication(s) with the pure writers in
 	`medicationHistory.ts` and hands them to the caller; it never saves.
@@ -52,7 +52,7 @@
 	export let dateFormat: DateFormatChoice | undefined = undefined;
 	/** Injectable for tests; the local day the dialog treats as today. */
 	export let today: string = todayISO();
-	/** Other entries that look like the same drug (`duplicateGroups`) — the
+	/** Other entries that look like the same drug (`duplicateGroups`) - the
 	 *  pre-dose-history workaround. Delete then offers combining first. */
 	export let duplicates: MedicationSlot[] = [];
 
@@ -124,7 +124,7 @@
 	$: plan = med ? plannedChange(med, today) : null;
 	$: dateError = !from ? 'required' : earliest && from < earliest ? 'before_start' : null;
 
-	// The result of the pending action — computed live, so the preview is the
+	// The result of the pending action - computed live, so the preview is the
 	// exact thing that will be saved, not a description of it.
 	$: result = (() => {
 		if (!med || dateError) return null;

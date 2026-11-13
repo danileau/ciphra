@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-release-state — prove scripts/release-state.sh says the right thing.
+# test-release-state - prove scripts/release-state.sh says the right thing.
 #
 # Throwaway repos per case, like test-changelog.sh and test-version-next.sh, so
 # nothing depends on ciphra's own history. The two states it has to recognise
@@ -46,7 +46,7 @@ fixture() {
 	printf '%s' "$dir/work"
 }
 
-run() { # run <dir> <ref> — sets `out` and `RC`
+run() { # run <dir> <ref> - sets `out` and `RC`
 	RC=0
 	out="$( cd "$1" && bash "$REPO/scripts/release-state.sh" "$2" origin 2>&1 )" || RC=$?
 }

@@ -1,12 +1,12 @@
 /**
- * CIPH-854 — Cohort-driven Companion ordering.
+ * CIPH-854 - Cohort-driven Companion ordering.
  *
  * Static parse of CompanionMain.svelte to assert:
  *   - PhaseContextCard is imported AND rendered above every chart/card.
  *   - The render gate is `cohort === 'phase' && activePhase`.
  *   - Cycle card still comes second (stable for cycle cohort).
  *
- * Snapshot-style structural guarantees — component render would require
+ * Snapshot-style structural guarantees - component render would require
  * a full reactive context (stores, i18n), and the ordering claim is
  * about source order, which static parse captures reliably.
  */
@@ -47,7 +47,7 @@ describe('CIPH-854 Companion cohort ordering', () => {
 
 	it('cycle card renders above the primary card slot', () => {
 		const cycleIdx = SOURCE.indexOf('CYCLE PHASE');
-		// pi24 dashboard rework — the trend chart no longer has a fixed
+		// pi24 dashboard rework - the trend chart no longer has a fixed
 		// "WIE GEHT'S DIR?" comment anchor; it's one branch of a primary-
 		// slot switch driven by `resolvePrimaryDashboardCard`. The anchor
 		// for the slot itself is the `PRIMARY CARD SLOT` comment block.
@@ -56,7 +56,7 @@ describe('CIPH-854 Companion cohort ordering', () => {
 		expect(cycleIdx).toBeLessThan(primaryIdx);
 	});
 
-	// CIPH-900 — Episode bar-chart and Top-symptoms bar-chart removed
+	// CIPH-900 - Episode bar-chart and Top-symptoms bar-chart removed
 	// from the dashboard. /reports owns the deep view. Their ordering
 	// assertion no longer applies.
 });

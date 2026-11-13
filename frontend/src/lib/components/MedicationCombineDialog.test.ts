@@ -1,7 +1,7 @@
 /**
  * Combining the one-entry-per-dose workaround into one history (2026-09-16).
  *
- * The reported case: "Fycompa" twice — the original at 10 mg (later changed to
+ * The reported case: "Fycompa" twice - the original at 10 mg (later changed to
  * 8 mg), a duplicate at 8 mg (later stopped). Deleting either lost history.
  *
  * @vitest-environment jsdom

@@ -5,7 +5,7 @@
 	each dose period is a segment across the window's date axis, labelled with
 	its dose where there is room, with a visible step where the dose changed
 	and a gap where it was not taken. Below it, the same changes as a dated
-	list — the readable, screen-reader-accessible form of the picture, and the
+	list - the readable, screen-reader-accessible form of the picture, and the
 	only form that still works on a narrow phone.
 
 	Why a strip of its own instead of marks on the trend chart: the trend chart
@@ -14,7 +14,7 @@
 	with the chart above keeps them comparable without drawing on it; the
 	chart's tooltip names the change for the bin that holds it.
 
-	Descriptive only. It shows what was taken when — never a before/after
+	Descriptive only. It shows what was taken when - never a before/after
 	comparison of symptoms around a change (see pdf.no-assessment.test.ts).
 
 	Render-only: the caller passes the medications and the window.
@@ -56,7 +56,7 @@
 		const out: Lane[] = [];
 		for (const med of meds) {
 			// A solid bar says "part of the daily regimen". That is true of a
-			// scheduled medication, not of an as-needed one — an unchanged
+			// scheduled medication, not of an as-needed one - an unchanged
 			// rescue medication drawn across the whole month read as taken
 			// every day. As-needed lanes appear only when their dose changed.
 			if (med.asNeeded && !changedIds.has(med.id)) continue;
@@ -75,7 +75,7 @@
 					alt: i % 2 === 1,
 					// A step, not a gap: the previous period ended the day before.
 					stepIn: !!(prev?.to && p.from && p.from >= from && addDaysISO(prev.to, 1) === p.from),
-					// The dose was already running when the window opened — a
+					// The dose was already running when the window opened - a
 					// flush left edge would read as "started here" (2026-09-19).
 					continues: !p.from || p.from < from,
 				});
@@ -143,7 +143,7 @@
 				{#each changes as c}
 					<li>
 						<span class="medtl-date">{fmt(c.date)}</span>
-						<span><strong>{c.name}</strong> · {describe(c)}{c.note ? ` — ${c.note}` : ''}</span>
+						<span><strong>{c.name}</strong> · {describe(c)}{c.note ? ` - ${c.note}` : ''}</span>
 					</li>
 				{/each}
 			</ol>

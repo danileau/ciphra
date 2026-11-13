@@ -1,5 +1,5 @@
 /**
- * CIPH-pi23-A1 — touch-target floor for /calendar interactive controls.
+ * CIPH-pi23-A1 - touch-target floor for /calendar interactive controls.
  *
  * Anchor surface for the phase cohort. WCAG 2.5.5 says interactive targets
  * should be ≥44×44 CSS pixels. Audit caught 3 chrome violations: today
@@ -27,7 +27,7 @@ describe('CIPH-pi23-A1 /calendar touch-target floor (44pt WCAG 2.5.5)', () => {
 	});
 
 	it('event chip in selected-day card carries min-h-[44px]', () => {
-		// Anchored on the unique handler — `selectedDate = ev.date`.
+		// Anchored on the unique handler - `selectedDate = ev.date`.
 		expect(CALENDAR).toMatch(
 			/selectedDate\s*=\s*ev\.date[\s\S]{0,400}min-h-\[44px\]/,
 		);
@@ -51,7 +51,7 @@ describe('CIPH-pi23-A1 /calendar touch-target floor (44pt WCAG 2.5.5)', () => {
 	});
 
 	it('day-cell button keeps its existing min-h-[44px]', () => {
-		// The grid day-cell — calendar's primary tap target. PI v19
+		// The grid day-cell - calendar's primary tap target. PI v19
 		// shipped this; confirm preserved.
 		expect(CALENDAR).toMatch(
 			/aspect-square[^"]*md:h-12[^"]*lg:h-14[^"]*min-h-\[44px\]/,

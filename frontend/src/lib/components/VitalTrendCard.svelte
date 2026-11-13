@@ -1,5 +1,5 @@
 <!--
-	pi24 dashboard — VitalTrendCard.
+	pi24 dashboard - VitalTrendCard.
 
 	Renders when resolvePrimaryDashboardCard returns kind='vital-trend'.
 	Used by hashimoto (TSH), hypertension (bp_systolic), cardiovascular
@@ -9,7 +9,7 @@
 	Mirrors the HowAreYou sparkline-hero shape so the dashboard's primary
 	slot reads consistently across cohorts: title + last-value headline +
 	12-month line + "Verlauf ansehen →" link to /reports. Pinned default
-	vital — NO chip selector here per campfire consensus; the dashboard
+	vital - NO chip selector here per campfire consensus; the dashboard
 	has an opinion. Multi-vital cohorts get a small secondary-vitals
 	footer link nudging them to /reports for the deep view.
 
@@ -74,7 +74,7 @@
 			const vitals = (doc.data.vitals || {}) as Record<string, unknown>;
 			const raw = vitals[primaryVitalId];
 			if (raw === '' || raw === null || raw === undefined) continue;
-			// Multi-entry vitals store the time-keyed series as an object —
+			// Multi-entry vitals store the time-keyed series as an object -
 			// accept both number and object-with-values shape.
 			const values: number[] = [];
 			if (typeof raw === 'number') values.push(raw);
@@ -158,7 +158,7 @@
 								// Chart.js doesn't draw reference lines without the
 								// annotation plugin; we render them as an extra grid
 								// tick via afterFit hint isn't worth wiring here. Skip
-								// for now — the value is on the headline.
+								// for now - the value is on the headline.
 							}
 						: {}),
 				},

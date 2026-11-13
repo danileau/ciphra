@@ -1,5 +1,5 @@
 /**
- * CIPH-882 — Resolve-seam migration guard.
+ * CIPH-882 - Resolve-seam migration guard.
  *
  * Every component or route that iterates `bp.symptomGroups / .triggers /
  * .vitals / .episodeTypes` reactively must read its blueprint reference
@@ -46,9 +46,9 @@ const ALLOWLIST: ReadonlyArray<{ path: string; reason: string }> = [
 	},
 	{
 		path: 'routes/migrate/+page.svelte',
-		reason: 'Only calls `blueprint.loadFromDocuments()` / `save()` — never iterates fields.',
+		reason: 'Only calls `blueprint.loadFromDocuments()` / `save()` - never iterates fields.',
 	},
-	// CIPH-917 — `routes/conditions/+page.svelte` removed (merged into
+	// CIPH-917 - `routes/conditions/+page.svelte` removed (merged into
 	// the landing #conditions section). Only the per-condition detail
 	// page remains.
 	{
@@ -59,7 +59,7 @@ const ALLOWLIST: ReadonlyArray<{ path: string; reason: string }> = [
 		path: 'lib/components/WelcomeCard.svelte',
 		reason:
 			'Reads raw `$blueprint` ONLY as the SAVE base for the dismissal ' +
-			'flag — `$resolvedBlueprint` is stripped of `customizations.custom*`, ' +
+			'flag - `$resolvedBlueprint` is stripped of `customizations.custom*`, ' +
 			'so saving it would wipe every custom item (the data-loss bug this ' +
 			'allowlist entry guards against). Rendering uses `$resolvedBlueprint`.',
 	},
@@ -97,7 +97,7 @@ describe('CIPH-882 resolve-seam migration', () => {
 			// subscription (preceded by whitespace or `=` in a reactive
 			// statement). The raw word `blueprint` (the store handle for
 			// `.save()` etc.) is always allowed.
-			// Match `$blueprint` ONLY in expression position — as the
+			// Match `$blueprint` ONLY in expression position - as the
 			// right-hand side of an assignment, in an `if`/`return` /
 			// destructure / function-arg context. Excludes mentions in
 			// comments (which never carry an `=`/`(`/`[`/return/etc. on

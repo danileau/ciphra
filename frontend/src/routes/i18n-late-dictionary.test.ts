@@ -8,7 +8,7 @@
  *
  *  - `/calendar` built each cell's aria-label in a function called straight
  *    from the template. The template named neither `$t` nor the documents, so
- *    after a reload every cell read "17 settembre 2026, kein Eintrag" — the
+ *    after a reload every cell read "17 settembre 2026, kein Eintrag" - the
  *    wrong language AND the wrong fact, since the entries had loaded since.
  *  - `/join/[grantId]` resolved its error message inside `onMount`. An invite
  *    link is always a cold load, so a French or Italian caregiver with a

@@ -1,5 +1,5 @@
 /**
- * CIPH-pi24-5c — markerEvent preset discipline.
+ * CIPH-pi24-5c - markerEvent preset discipline.
  *
  * Pins two invariants so future preset additions can't silently break the
  * dashboard gap-trend sparkline:
@@ -9,7 +9,7 @@
  *      (epilepsy, migraine, bipolar, MS, long-COVID, asthma, RA, IBD, IBS,
  *      diabetes). Adding a marker to a chronic-flare preset (chronic_pain,
  *      burnout, anxiety_depression, hashimoto, hypertension, etc.) requires
- *      removing it here too — the marker conflicts with Klara's prior
+ *      removing it here too - the marker conflicts with Klara's prior
  *      objection at Companion.svelte:124 for those cohorts.
  */
 import { describe, it, expect } from 'vitest';
@@ -28,7 +28,7 @@ const EXPECTED_MARKER_presets = [
 	'diabetes',
 ] as const;
 
-describe('CIPH-pi24-5c — markerEvent preset discipline', () => {
+describe('CIPH-pi24-5c - markerEvent preset discipline', () => {
 	it('every declared markerEvent references real episodeTypes ids', () => {
 		for (const info of presets) {
 			const bp = info.blueprint;

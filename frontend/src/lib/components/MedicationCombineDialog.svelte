@@ -8,7 +8,7 @@
 
 	- If the two entries never claim the same day, their histories simply line
 	  up and nothing needs asking.
-	- If they do (the usual case: both "always" active), one question settles it —
+	- If they do (the usual case: both "always" active), one question settles it -
 	  which dose came first, and from which day the other one applied.
 
 	The preview is rendered from the computed result (`combineMedications`), so
@@ -66,7 +66,7 @@
 	}
 
 	/** Best guess for the switch: the later entry's recorded start, else the
-	 *  first day anything was logged against it. Empty when there is no clue —
+	 *  first day anything was logged against it. Empty when there is no clue -
 	 *  the person has to say. */
 	function defaultSwitchDate(later: MedicationSlot): string {
 		const start = medStartDate(later);

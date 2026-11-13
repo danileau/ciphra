@@ -1,7 +1,7 @@
 /**
  * Groupings for the /conditions overview.
  *
- * A condition may only belong to one group — groups are mutually exclusive so
+ * A condition may only belong to one group - groups are mutually exclusive so
  * the overview doesn't duplicate cards. If a condition straddles domains
  * (e.g. endometriosis is pain + women's health), pick the primary audience.
  */

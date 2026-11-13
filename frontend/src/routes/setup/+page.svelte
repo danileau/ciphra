@@ -1,14 +1,14 @@
 <script lang="ts">
 	/**
-	 * CIPH-301 — Setup wizard expansion (3 screens with skip).
+	 * CIPH-301 - Setup wizard expansion (3 screens with skip).
 	 *
 	 * Design decision (spec): the blueprint is kept STOCK for now. Screen 2 + 3
 	 * collect informational overrides (`setupOverrides`) that are NOT persisted
-	 * to the blueprint — they're session-only hints for onboarding. Vital
+	 * to the blueprint - they're session-only hints for onboarding. Vital
 	 * targets are persisted on the blueprint (`vitalTargets`), which
 	 * `generateDoctorPdf` reads as an override for `referenceLine.value`.
 	 * Full blueprint customisation remains reachable via /settings (old 7-step
-	 * wizard — not replaced here).
+	 * wizard - not replaced here).
 	 */
 	import { t, translateUnit } from '#lib/i18n/index.ts';
 	import { browser } from '$app/env';
@@ -31,7 +31,7 @@
 	import { get } from 'svelte/store';
 	import { slide } from 'svelte/transition';
 	import { iconPath } from '#lib/conditionIcons.ts';
-	// CIPH-740 — symptom-group icons now live in a shared module so the daily
+	// CIPH-740 - symptom-group icons now live in a shared module so the daily
 	// entry screen renders the same icons (see groupIcons.ts).
 	import { GROUP_ICON } from '#lib/groupIcons.ts';
 
@@ -46,18 +46,18 @@
 	// instead of cloning a bare preset over it. Defensive: existing users are
 	// normally ejected before the picker, but this guards any future entry path.
 	let existingBlueprint: Blueprint | null = null;
-	// CIPH-882 — Resolved view for step-2/3 iteration so user-added
+	// CIPH-882 - Resolved view for step-2/3 iteration so user-added
 	// custom items render alongside preset ones. `working` stays the
 	// source of truth that gets persisted at finishAndSave.
 	$: workingResolved = working ? resolveBlueprint(working) : null;
 	let saving = false;
 
-	// Session-only overrides — not persisted to the blueprint. Document keys
+	// Session-only overrides - not persisted to the blueprint. Document keys
 	// are group ids / trigger ids / vital ids. `true` = keep asking, `false`
 	// = hide from prompts. (Actual blueprint stays untouched; these are a UI
 	// hint layer we can surface in future stories without schema migration.)
 	//
-	// CIPH-740 — symptoms are now toggled per ITEM (not per group). We keep
+	// CIPH-740 - symptoms are now toggled per ITEM (not per group). We keep
 	// `symptomGroupOn` only to seed initial item state on re-entry; the
 	// source of truth for persistence is `symptomItemOn[item.id]`.
 	let symptomGroupOn: Record<string, boolean> = {};
@@ -67,7 +67,7 @@
 	let vitalOn: Record<string, boolean> = {};
 	let vitalTargets: Record<string, string> = {};
 
-	// CIPH-411c — step 4 medication entry
+	// CIPH-411c - step 4 medication entry
 	let medName = '';
 	let medDose = '';
 	let medSchedule = '';
@@ -101,7 +101,7 @@
 		working.medications = working.medications.filter(m => m.id !== id);
 	}
 
-	// CIPH-882 — custom-item modal in the wizard. Mutates `working`
+	// CIPH-882 - custom-item modal in the wizard. Mutates `working`
 	// directly so step-2/3 previews show just-added items. Iteration in
 	// the templates uses `workingResolved.symptomGroups` etc. so custom
 	// items appear without changing the toggle handlers.
@@ -114,7 +114,7 @@
 		| EpisodeType
 		| null = null;
 
-	// CIPH-883 — Guided custom-preset wizard.
+	// CIPH-883 - Guided custom-preset wizard.
 	// When the user picks the `custom` preset, the standard toggle
 	// screens are empty (the preset has no symptoms / triggers / vitals
 	// to opt out of). Instead, route them through a narrative flow that
@@ -176,7 +176,7 @@
 		} else {
 			cz.customEpisodes = [...(cz.customEpisodes || []), item];
 		}
-		// Force the reactive cascade — assignments to nested fields don't
+		// Force the reactive cascade - assignments to nested fields don't
 		// re-trigger Svelte's `$:` blocks otherwise.
 		working = working;
 		closeCustomModal();
@@ -194,7 +194,7 @@
 
 	// Reactive (not just onMount): if the layout ever lands a set-up user here
 	// during a transient empty-docs load, they auto-recover the moment the real
-	// blueprint resolves — instead of getting stranded on the wizard until a
+	// blueprint resolves - instead of getting stranded on the wizard until a
 	// manual refresh (the post-login onboarding bug, defense-in-depth).
 	$: if (browser && $isAuthenticated && $hasBlueprint && !arrivedViaCustomize) {
 		goto('/');
@@ -211,15 +211,15 @@
 		}
 		// Re-entry with an existing blueprint: pre-seed `working` so the
 		// toggle screens reflect what the user already has. They can Skip
-		// out at any point — no destructive resave happens unless they
+		// out at any point - no destructive resave happens unless they
 		// reach screen 3 and hit "Complete".
 		if (existing) {
 			working = JSON.parse(JSON.stringify(existing));
 			// Pre-seed targets from the blueprint (or a not-yet-migrated legacy
-			// key) so re-entering the wizard shows — and keeps — what is set.
+			// key) so re-entering the wizard shows - and keeps - what is set.
 			const targets = effectiveVitalTargets(working!, $auth.username || '');
 			if (targets) vitalTargets = Object.fromEntries(Object.entries(targets).map(([k, v]) => [k, String(v)]));
-			// CIPH-301b — pre-seed toggle state from any prior customizations.
+			// CIPH-301b - pre-seed toggle state from any prior customizations.
 			// A symptom group is "on" iff none of its items are hidden.
 			const cz = working!.customizations || {};
 			const hSym = new Set(cz.hiddenSymptoms || []);
@@ -232,7 +232,7 @@
 			for (const tr of working!.triggers) triggerOn[tr.id] = !hTrg.has(tr.id);
 			for (const v of working!.vitals) vitalOn[v.id] = !hVit.has(v.id);
 
-			// CIPH-874 — Deep-link from Settings/Tracking "Profil anpassen"
+			// CIPH-874 - Deep-link from Settings/Tracking "Profil anpassen"
 			// lands here. When an existing blueprint is loaded and the
 			// caller passed `?customize=1`, skip the preset-picker (step 1)
 			// and go straight to the symptom/trigger/vital finetuning.
@@ -241,14 +241,14 @@
 			const u = new URL(window.location.href);
 			if (u.searchParams.get('customize') === '1') {
 				step = 2;
-				// CIPH-908 — remember we entered via settings so we can
+				// CIPH-908 - remember we entered via settings so we can
 				// render a back-to-settings link.
 				isCustomizeMode = true;
 			}
 		}
 	});
 
-	// CIPH-908 — true when the user reached /setup via "Profil anpassen"
+	// CIPH-908 - true when the user reached /setup via "Profil anpassen"
 	// from /settings (not the initial post-signup setup). Drives the
 	// "← Zurück zu Einstellungen" link in the wizard header.
 	let isCustomizeMode = false;
@@ -258,7 +258,7 @@
 	function selectPreset(preset: PresetInfo) {
 		// Re-picking the SAME condition you already have keeps your whole
 		// blueprint incl. customizations (no destructive reset). Picking a
-		// DIFFERENT condition adopts that preset cleanly (plain) — each
+		// DIFFERENT condition adopts that preset cleanly (plain) - each
 		// condition's blueprint is independent.
 		const sameCondition = !!(existingBlueprint && existingBlueprint.conditionId === preset.blueprint.conditionId);
 		working = JSON.parse(JSON.stringify(sameCondition ? existingBlueprint : preset.blueprint));
@@ -284,12 +284,12 @@
 		if (!working) { goto('/'); return; }
 		saving = true;
 
-		// CIPH-301b — Persist the wizard toggle state into
+		// CIPH-301b - Persist the wizard toggle state into
 		// `blueprint.customizations.hidden*`.
-		// CIPH-740 — symptoms are now toggled per item in the drill-in UI.
+		// CIPH-740 - symptoms are now toggled per item in the drill-in UI.
 		// `symptomItemOn[item.id] === false` → hide that item. Triggers +
 		// vitals remain per-item already.
-		// CIPH-882 — iterate the resolved view so custom items the user
+		// CIPH-882 - iterate the resolved view so custom items the user
 		// added in the wizard are included in the toggle-state walk.
 		const merged = resolveBlueprint(working);
 		const hiddenSymptoms: string[] = [];
@@ -312,7 +312,7 @@
 		// neither hid anything nor added customs. When the user previously
 		// had hides + clears them all in a re-entry, the existing block
 		// still gets overwritten because `working.customizations` carried
-		// in from the loaded blueprint — see `onMount` re-seed.
+		// in from the loaded blueprint - see `onMount` re-seed.
 		const cz = working.customizations;
 		const hasCustoms = !!(
 			cz?.customSymptoms?.length ||
@@ -335,7 +335,7 @@
 		}
 
 		// Personal vital targets (CIPH-301 screen 3) ride the encrypted
-		// blueprint — see lib/blueprint/vitalTargets.ts for why they left
+		// blueprint - see lib/blueprint/vitalTargets.ts for why they left
 		// localStorage.
 		const parsedTargets: Record<string, number> = {};
 		for (const [vid, raw] of Object.entries(vitalTargets)) {
@@ -349,7 +349,7 @@
 		// The legacy key was folded into the targets above; drop it once the
 		// encrypted copy is saved.
 		if (saved) clearLegacyVitalTargets($auth.username);
-		// Blueprint saved — clear the skip flag so the dashboard redirect
+		// Blueprint saved - clear the skip flag so the dashboard redirect
 		// behaves normally going forward.
 		clearSetupSkipped();
 		saving = false;
@@ -388,7 +388,7 @@
 	}
 
 	async function skipFromLater() {
-		// Screens 2/3 — we already have a working blueprint from step 1.
+		// Screens 2/3 - we already have a working blueprint from step 1.
 		await finishAndSave();
 	}
 
@@ -419,21 +419,21 @@
 			// anpassen") must NOT fall back into the preset picker (step 1):
 			// re-picking runs selectPreset, which resets toggles and risks
 			// dropping customizations. "Zurück" here is a pure exit back to
-			// Settings — nothing is saved on this path.
+			// Settings - nothing is saved on this path.
 			if (isCustomizeMode) { goto('/settings?tab=tracking'); return; }
 			step = 1;
 		}
 	}
 
 	// Vitals worth a "target" input = vitals that already carry a
-	// clinical `referenceLine`. No override for vitals without one —
+	// clinical `referenceLine`. No override for vitals without one -
 	// the default placeholder value is fine and we'd need the clinical
 	// label which we don't have here.
 	$: targetableVitals = working
 		? working.vitals.filter((v) => v.referenceLine)
 		: [];
 
-	// Focus management — step changes should move focus to the new heading
+	// Focus management - step changes should move focus to the new heading
 	// for screen-reader users (CIPH-402 landmarks work to come).
 	let headingEl: HTMLElement | null = null;
 	$: if (step) { tick().then(() => headingEl?.focus()); }
@@ -443,18 +443,18 @@
 	<title>{$t('setup.title')}</title>
 </svelte:head>
 
-<!-- 2026-06-07 — was <main class="min-h-screen ..."> which nested a
+<!-- 2026-06-07 - was <main class="min-h-screen ..."> which nested a
 	<main> inside the layout's own <main class="flex-1"> AND forced an
 	inner 100vh that broke the layout's sticky-footer flex. Result: even
 	on the lightest step the AuthedFooter was pushed beyond the viewport
 	and required a scroll to see. Now a plain <div> that flows
-	naturally — the layout's outer min-h-screen + flex + main(flex-1)
+	naturally - the layout's outer min-h-screen + flex + main(flex-1)
 	already handles sticky-footer math correctly. -->
 <div class="pb-12" style="background: var(--surface)">
 	<!-- Header with step progress + skip -->
 	<div style="background: var(--surface-card); border-bottom: 1px solid var(--border)">
 		{#if isCustomizeMode}
-			<!-- CIPH-908 — "Back to settings" only when reached via the
+			<!-- CIPH-908 - "Back to settings" only when reached via the
 				 ?customize=1 deep-link (not the initial post-signup setup,
 				 where there's no settings yet to go back to). -->
 			<div class="layout-reading pt-4">
@@ -477,11 +477,11 @@
 					<p class="text-xs mt-0.5" style="color: var(--text-muted)">{$t('setup.step_label', { n: step })}</p>
 				{/if}
 			</div>
-			<!-- 2026-06-07 — Step 0 lost its skip ("Später entscheiden"): the
+			<!-- 2026-06-07 - Step 0 lost its skip ("Später entscheiden"): the
 				 layout's redirect-to-/setup guard reads `ciphra_setup_skipped`
 				 from localStorage non-reactively, so the user was bounced right
 				 back to /setup on the next paint, making the affordance read
-				 like a broken way-out. Step 0 now has no skip — chooseCaregiver
+				 like a broken way-out. Step 0 now has no skip - chooseCaregiver
 				 is still the legitimate "I'm here for someone else" exit. Step
 				 1+ keep the Skip; their handlers either save (skipFromLater) or
 				 hit the same flag-loop, but at least there the user has already
@@ -600,7 +600,7 @@
 		{:else if step === 2 && working && workingResolved}
 			<section aria-labelledby="wizard-step2-heading" class="space-y-5">
 				<div>
-					<!-- CIPH-883 — narrative copy for the custom preset -->
+					<!-- CIPH-883 - narrative copy for the custom preset -->
 					{#if isCustomPreset}
 						<h2 id="wizard-step2-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.guided_symptoms_title')}</h2>
 						<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.guided_symptoms_caption')}</p>
@@ -693,7 +693,7 @@
 					{/each}
 				</div>
 
-				<!-- CIPH-882 — Add your own symptom or episode-type. -->
+				<!-- CIPH-882 - Add your own symptom or episode-type. -->
 				<div class="flex flex-wrap gap-2 pt-2">
 					<button
 						type="button"
@@ -720,7 +720,7 @@
 		{:else if step === 3 && working && workingResolved}
 			<section aria-labelledby="wizard-step3-heading" class="space-y-6">
 				<div>
-					<!-- CIPH-883 — narrative copy for the custom preset -->
+					<!-- CIPH-883 - narrative copy for the custom preset -->
 					{#if isCustomPreset}
 						<h2 id="wizard-step3-heading" bind:this={headingEl} tabindex="-1" class="text-lg font-semibold" style="color: var(--text-primary)">{$t('setup.guided_triggers_title')}</h2>
 						<p class="text-sm mt-1" style="color: var(--text-secondary)">{$t('setup.guided_triggers_caption')}</p>
@@ -784,11 +784,11 @@
 						</div>
 					{/each}
 					{#if targetableVitals.length === 0 && workingResolved.vitals.length === 0}
-						<p class="text-sm text-center py-4" style="color: var(--text-muted)">—</p>
+						<p class="text-sm text-center py-4" style="color: var(--text-muted)">-</p>
 					{/if}
 				</div>
 
-				<!-- CIPH-882 — Add your own trigger or measurement. -->
+				<!-- CIPH-882 - Add your own trigger or measurement. -->
 				<div class="flex flex-wrap gap-2 pt-2">
 					<button
 						type="button"
@@ -833,7 +833,7 @@
 										{regimen.dose}{regimen.schedule ? ' · ' + regimen.schedule : ''}{med.asNeeded ? ' · ' + $t('settings.medication_as_needed') : ''}
 									</p>
 								</div>
-								<!-- Dose history — a medication that is already saved may have
+								<!-- Dose history - a medication that is already saved may have
 									 days logged against it. Removing it here would bypass the
 									 stop-instead-of-delete guard in Settings, so only medications
 									 added in this wizard session can be removed here. -->
@@ -906,7 +906,7 @@
 	</div>
 </div>
 
-<!-- CIPH-882 — Add-your-own-item modal. Mounts at the end of the page
+<!-- CIPH-882 - Add-your-own-item modal. Mounts at the end of the page
 	so it's outside any conditional `{#if step === N}` block. The wizard
 	mutates `working.customizations.custom*` directly and the resolved
 	view (workingResolved) shows the new items immediately. -->

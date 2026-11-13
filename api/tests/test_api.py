@@ -2,7 +2,7 @@
 ciphra API test suite.
 
 Tests critical flows: auth, documents CRUD, admin, recovery.
-All database access is mocked — no PostgreSQL required.
+All database access is mocked - no PostgreSQL required.
 """
 
 import sys
@@ -17,7 +17,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 
-# Valid base64 of exactly 32 raw bytes — server.py:542 requires
+# Valid base64 of exactly 32 raw bytes - server.py:542 requires
 # valid_b64(auth_key, 32, 32) before the login flow proceeds.
 VALID_AUTH_KEY = base64.b64encode(b'\x00' * 32).decode('ascii')
 
@@ -41,7 +41,7 @@ class TestHealth:
 
 def _register_bundle(**overrides):
     """Vault bundle the browser uploads to /api/register. Server never sees
-    the password or recovery code — both stay on device. Recovery is optional
+    the password or recovery code - both stay on device. Recovery is optional
     but all-or-nothing (server.py:462-465)."""
     bundle = {
         'username': 'alice',
@@ -64,7 +64,7 @@ class TestRegister:
         data = resp.get_json()
         assert data['success'] is True
         assert data['username'] == 'alice'
-        # Server does not return a recovery_code anymore — client generated it
+        # Server does not return a recovery_code anymore - client generated it
         # locally from the recovery_vault during pre-registration setup.
         assert data['user_id'] == 1
 
@@ -77,7 +77,7 @@ class TestRegister:
 
     @pytest.mark.skip(reason=(
         'Password length validation moved client-side. Server never receives '
-        'the password — only the client-derived auth_hash + re-wrapped '
+        'the password - only the client-derived auth_hash + re-wrapped '
         'encrypted_master. No server-side surface to test.'
     ))
     def test_register_short_password(self):
@@ -168,7 +168,7 @@ class TestLogin:
     @patch('server.verify_auth')
     def test_login_already_locked_wrong_password(self, mock_verify, client, mock_db):
         # An attacker (wrong password) hitting a locked account is still
-        # rejected as locked — brute-force protection intact.
+        # rejected as locked - brute-force protection intact.
         mock_verify.return_value = False
         future = datetime.now(timezone.utc) + timedelta(minutes=10)
         mock_db.queue(_user_row(login_attempts=5, locked_until=future))
@@ -197,7 +197,7 @@ class TestLogin:
         assert resp.get_json()['success'] is True
 
     def test_login_nonexistent_user(self, client, mock_db):
-        # SELECT returns None — user not found path (server.py:556-557)
+        # SELECT returns None - user not found path (server.py:556-557)
         mock_db.queue(None)
 
         resp = client.post('/api/login', json={
@@ -432,7 +432,7 @@ class TestDocumentsAuth:
 # ═══════════════════════════════════════════════════════════════════
 
 class TestSecurityHardening:
-    # F1 — /api/family/grants/claim/init must require auth so an anonymous
+    # F1 - /api/family/grants/claim/init must require auth so an anonymous
     # party can't harvest wrapped_master / grant_params for any username.
     def test_claim_init_requires_token(self, client, mock_db):
         resp = client.post('/api/family/grants/claim/init',
@@ -451,7 +451,7 @@ class TestSecurityHardening:
         assert resp.status_code == 200
         assert 'grants' in resp.get_json()
 
-    # F5 — raised HTTP errors must stay JSON, not Flask's HTML error page.
+    # F5 - raised HTTP errors must stay JSON, not Flask's HTML error page.
     def test_malformed_json_returns_json_400(self, client, mock_db):
         resp = client.post('/api/login',
             data='{not valid json',
@@ -498,7 +498,7 @@ class TestAdmin:
     def test_admin_stats_success(self, client, mock_db, admin_token):
         # admin_required auth lookup + admin_stats's 18 count queries
         # (Track-2 admin metrics added the 24h/deletion/migration/dormant
-        # rows — the stale 8-row queue starved the mock into a 500).
+        # rows - the stale 8-row queue starved the mock into a 500).
         mock_db.queue(
             ADMIN_AUTH_ROW,
             {'total': 10},     # total users
@@ -712,7 +712,7 @@ class TestRecovery:
         assert 'Invalid recovery code' in resp.get_json()['error']
 
     def test_recovery_not_enabled(self, client, mock_db):
-        # User exists but recovery_verifier is None — server.py:820 returns 401 with
+        # User exists but recovery_verifier is None - server.py:820 returns 401 with
         # 'Invalid recovery code' (anti-enumeration: hides 'no-recovery-set' from
         # 'wrong-code'). Test verifies the no-recovery branch reaches the same
         # collapsed response.
@@ -746,7 +746,7 @@ class TestRecovery:
 
     @pytest.mark.skip(reason=(
         'New-password length validation moved client-side. Server never receives '
-        'the new password — only the client-derived auth_hash + re-wrapped '
+        'the new password - only the client-derived auth_hash + re-wrapped '
         'encrypted_master. No server-side surface to test.'
     ))
     def test_recovery_short_password(self):
@@ -754,7 +754,7 @@ class TestRecovery:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Validate recovery code — endpoint removed
+# Validate recovery code - endpoint removed
 # ═══════════════════════════════════════════════════════════════════
 
 @pytest.mark.skip(reason=(
@@ -775,7 +775,7 @@ class TestValidateRecovery:
 # Non-object JSON bodies must be 400, not 500
 #
 # Every route read `data = request.get_json() or {}`. A body that is valid
-# JSON but not an object — a top-level array or scalar — is truthy, survives
+# JSON but not an object - a top-level array or scalar - is truthy, survives
 # the `or {}`, and crashes the first `data.get(...)` with AttributeError. That
 # fires above the route's try/except, so it fell through as an unhandled 500
 # (Flask's raw HTML page) on endpoints reachable BEFORE auth. `_json_object`
@@ -785,7 +785,7 @@ class TestValidateRecovery:
 # ═══════════════════════════════════════════════════════════════════
 
 class TestNonObjectJsonBody:
-    # Pre-auth endpoints — the ones an unauthenticated attacker can reach.
+    # Pre-auth endpoints - the ones an unauthenticated attacker can reach.
     @pytest.mark.parametrize('path', [
         '/api/register',
         '/api/login',
@@ -843,11 +843,11 @@ class TestInternalErrorShape:
 # exists. That only holds if the server-generated fake blob is formatted
 # exactly like a real one.
 #
-# It was not. A real blob is the client's `btoa(JSON.stringify(params))` —
+# It was not. A real blob is the client's `btoa(JSON.stringify(params))` -
 # COMPACT. The server built its fake with `json.dumps(params)`, whose default
 # separators add a space after every ',' and ':'. Result: real ≈156 base64
 # chars, fake =192. One unauthenticated request per username read the
-# difference — a reliable account-existence oracle that defeated the whole
+# difference - a reliable account-existence oracle that defeated the whole
 # control. Found by a dynamic (black-box) scan against the running server,
 # 2026-08-21.
 # ═══════════════════════════════════════════════════════════════════
@@ -874,8 +874,8 @@ class TestFakeParamsAntiEnumeration:
         import server
         decoded = base64.b64decode(server._fake_auth_params('ghost_user')).decode()
         # A real client blob has neither of these; json.dumps' defaults add both.
-        assert ', ' not in decoded, "fake auth_params must not contain ', ' — it is an enumeration tell"
-        assert ': ' not in decoded, "fake auth_params must not contain ': ' — it is an enumeration tell"
+        assert ', ' not in decoded, "fake auth_params must not contain ', ' - it is an enumeration tell"
+        assert ': ' not in decoded, "fake auth_params must not contain ': ' - it is an enumeration tell"
 
     def test_fake_recovery_params_is_compact_json(self):
         import server
@@ -920,7 +920,7 @@ class TestFakeParamsAntiEnumeration:
 # Rate-limiter enablement must not be coupled to the mock-data flag
 #
 # `enabled=` used to read CIPHRA_DEV_MOCKS, so the mock toggle silently
-# disabled the entire limiter — a footgun if that flag ever reached a
+# disabled the entire limiter - a footgun if that flag ever reached a
 # prod-like deploy. Enablement now has its own switch (RATELIMIT_ENABLED,
 # default on). This guards against the coupling coming back.
 # ═══════════════════════════════════════════════════════════════════

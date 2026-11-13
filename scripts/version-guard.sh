@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# version-guard — mechanical enforcement of ciphra's versioning rules.
+# version-guard - mechanical enforcement of ciphra's versioning rules.
 #
 # Fails (exit 1) unless ALL hold:
 #   1. VERSION exists and is valid SemVer (X.Y.Z, digits only).
@@ -9,7 +9,7 @@
 #   4. That section carries a release date.
 #
 # What it deliberately does NOT check: whether the number is the one the
-# commits "earn". That was enforced briefly and removed on 2026-08-30 — the
+# commits "earn". That was enforced briefly and removed on 2026-08-30 - the
 # operator decides what a version means to a user, and a CI job is the wrong
 # place to overrule that. `scripts/version-next.sh` still computes a
 # suggestion; it is advisory and nothing fails on disagreeing with it.
@@ -24,7 +24,7 @@ cd "$(dirname "$0")/.."
 fail() { echo "❌ version-guard: $*" >&2; exit 1; }
 SEMVER='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 
-# 1 — VERSION is valid SemVer
+# 1 - VERSION is valid SemVer
 [ -f VERSION ] || fail "VERSION file is missing at the repo root."
 VERSION="$(tr -d '[:space:]' < VERSION)"
 [ -n "$VERSION" ] || fail "VERSION is empty."
@@ -32,7 +32,7 @@ if ! printf '%s' "$VERSION" | grep -Eq "$SEMVER"; then
 	fail "VERSION '$VERSION' is not valid SemVer (expected X.Y.Z, digits only)."
 fi
 
-# 2 — package.json agrees
+# 2 - package.json agrees
 PKG_VERSION="$(
 	node -e "process.stdout.write(require('./frontend/package.json').version)" 2>/dev/null \
 	|| grep -m1 '"version"' frontend/package.json | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/'
@@ -40,17 +40,17 @@ PKG_VERSION="$(
 [ "$PKG_VERSION" = "$VERSION" ] || \
 	fail "frontend/package.json version '$PKG_VERSION' != VERSION '$VERSION'. Set them to the same value."
 
-# 3 — CHANGELOG has a released section for this version
+# 3 - CHANGELOG has a released section for this version
 [ -f CHANGELOG.md ] || fail "CHANGELOG.md is missing."
 # Match `## [X.Y.Z]` at line start; brackets are literal.
 if ! grep -Eq "^##[[:space:]]+\[${VERSION//./\\.}\]" CHANGELOG.md; then
 	fail "CHANGELOG.md has no section for [$VERSION]. Move the [Unreleased] notes into a '## [$VERSION] - YYYY-MM-DD' section."
 fi
 
-# 4 — that section is dated. The release workflow reads the section as the
+# 4 - that section is dated. The release workflow reads the section as the
 # GitHub release body, and an undated heading is the tell for "promoted the
 # [Unreleased] block and forgot to finish it".
-if ! grep -Eq "^##[[:space:]]+\[${VERSION//./\\.}\][[:space:]]*[—-][[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}" CHANGELOG.md; then
+if ! grep -Eq "^##[[:space:]]+\[${VERSION//./\\.}\][[:space:]]*-[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}" CHANGELOG.md; then
 	fail "CHANGELOG.md's [$VERSION] section has no release date. Write '## [$VERSION] - YYYY-MM-DD'."
 fi
 

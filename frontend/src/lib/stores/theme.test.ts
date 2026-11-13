@@ -1,6 +1,6 @@
 /**
- * Theme preference — contract tests. Pins: default is 'system'
- * (follow the OS — flipped 2026-06-12, see theme.ts), persistence
+ * Theme preference - contract tests. Pins: default is 'system'
+ * (follow the OS - flipped 2026-06-12, see theme.ts), persistence
  * roundtrip, garbage rejection, and the choice→resolved mapping.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -15,7 +15,7 @@ beforeEach(() => {
 describe('theme preference', () => {
 	it('defaults to system, resolving to a binary theme', () => {
 		// beforeEach pins an explicit choice; the default lives in
-		// initialChoice() — assert via a fresh read of the same logic:
+		// initialChoice() - assert via a fresh read of the same logic:
 		// nothing stored → 'system' must never leak out of resolvedTheme.
 		localStorage.removeItem('ciphra_theme');
 		setThemeChoice('system');

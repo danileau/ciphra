@@ -1,12 +1,12 @@
 /**
- * CIPH-741 / CIPH-751 — quick-add: entry + event + diary each land where the
+ * CIPH-741 / CIPH-751 - quick-add: entry + event + diary each land where the
  * product files them.
  *
  * The quick-add UI has two top-level mode buttons:
- *   - `log`   (combined "entry / event") — tapping an episode chip creates
+ *   - `log`   (combined "entry / event") - tapping an episode chip creates
  *              an `entry` doc; leaving chips alone + filling the note creates
  *              an `event` doc (a note marker).
- *   - `diary` — private diary entry.
+ *   - `diary` - private diary entry.
  *
  * Where each one shows up changed after this spec was written:
  *  - #142 (04827db) rebuilt /journal around what the person WROTE. The old

@@ -1,5 +1,5 @@
 /**
- * CIPH-pi21-Track-B-3 — typed cohort × section gate for the doctor PDF.
+ * CIPH-pi21-Track-B-3 - typed cohort × section gate for the doctor PDF.
  *
  * Single source of truth for which sections render per cohort. Replaces
  * scattered `if (cohort === 'foo')` branches in pdf.ts. New cohort-conditional
@@ -9,10 +9,10 @@
  * Decisions encoded per PDF_REWRITE.md §2-3 (architecture B: cohort-conditional
  * with mandatory spine):
  * - cycle cohort gets `cycle-strip`; phase cohort gets `phase-distribution`;
- *   narrative cohort gets `trigger-frequency`. Mutually exclusive — bipolar
+ *   narrative cohort gets `trigger-frequency`. Mutually exclusive - bipolar
  *   never sees a cycle strip, endometriosis never sees a phase distribution.
  * - data-conditional sections (rescue-med timeline, medication adherence)
- *   are NOT gated here — they live inline in pdf.ts because their gate is
+ *   are NOT gated here - they live inline in pdf.ts because their gate is
  *   `blueprint.rescueMedications?.length`, not cohort.
  */
 import type { Cohort } from '#lib/blueprint/cohort.ts';
@@ -31,7 +31,7 @@ export type PdfSectionKey =
 	| 'footer';
 
 /**
- * Mandatory spine (PDF_REWRITE.md §3) — every cohort renders these in this
+ * Mandatory spine (PDF_REWRITE.md §3) - every cohort renders these in this
  * exact order. The doctor reading two patient PDFs sees identical page-1
  * chrome regardless of cohort; only what falls between `trend` and
  * `day-coverage-strip` differs.
@@ -43,7 +43,7 @@ export const SPINE: readonly PdfSectionKey[] = Object.freeze([
 	'trend',
 ] as const);
 
-/** Universal tail — appears after the cohort-gated middle for every cohort. */
+/** Universal tail - appears after the cohort-gated middle for every cohort. */
 const TAIL: readonly PdfSectionKey[] = Object.freeze([
 	'day-coverage-strip',
 	'condition-aware-bullets',

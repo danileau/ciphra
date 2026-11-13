@@ -5,13 +5,13 @@
  * zero-knowledge proof-of-concept build (client-side CryptoJS vault, bare
  * `masterKey` / `username` keys). Those entries are harmless today (no
  * current code reads them), but `masterKey` in particular reads as a
- * security smell at first glance — anyone opening devtools wonders why
+ * security smell at first glance - anyone opening devtools wonders why
  * an end-to-end-encrypted app is parking a 32-byte hex string in plain
  * localStorage. The current key actually lives in **sessionStorage** under
  * `ciphra_master_key`; this sweep removes the legacy squatter.
  *
  * Sentinel `ciphra_legacy_swept_v1` means we only sweep once per browser.
- * Bump the version suffix if a future build needs a second sweep — the
+ * Bump the version suffix if a future build needs a second sweep - the
  * `_v1` key stays so older browsers don't re-run this sweep.
  */
 const SENTINEL = 'ciphra_legacy_swept_v1';
@@ -45,7 +45,7 @@ export function sweepLegacyLocalStorage(): { removed: string[]; alreadySwept: bo
 		localStorage.setItem(SENTINEL, '1');
 		return { removed, alreadySwept: false };
 	} catch {
-		// Private mode / quota / disabled — silent no-op.
+		// Private mode / quota / disabled - silent no-op.
 		return { removed: [], alreadySwept: false };
 	}
 }

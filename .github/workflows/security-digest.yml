@@ -3,7 +3,7 @@
 # The daily jobs (security-scan = Trivy CVEs, security-monitor = edge drift)
 # alert on RED on their own. This aggregates their latest status plus open
 # Dependabot PRs into ONE weekly message, and sends a green HEARTBEAT when all
-# is clear — so silence can't mean both "fine" and "the monitor died".
+# is clear - so silence can't mean both "fine" and "the monitor died".
 #
 # It does not re-scan; it reads the other workflows' latest conclusions via the
 # API. See scripts/security-digest.sh.
@@ -11,7 +11,7 @@ name: Security digest
 
 on:
   schedule:
-    - cron: '0 6 * * 1'    # Mondays 06:00 UTC — after the weekend's daily runs
+    - cron: '0 6 * * 1'    # Mondays 06:00 UTC - after the weekend's daily runs
   workflow_dispatch:
 
 permissions:

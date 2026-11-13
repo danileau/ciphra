@@ -99,7 +99,7 @@ def client(mock_db):
         # Import server *after* patching psycopg2 so module-level calls are safe
         import server
         server.app.config['TESTING'] = True
-        # Rate limits are infra behavior, not endpoint behavior — with the
+        # Rate limits are infra behavior, not endpoint behavior - with the
         # in-memory fallback storage the register tests bleed into each
         # other's budgets and later tests 429 (CI repair 2026-06-12).
         server.app.config['RATELIMIT_ENABLED'] = False

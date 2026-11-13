@@ -1,5 +1,5 @@
 <!--
-	ciphra — pre-export review for note markers.
+	ciphra - pre-export review for note markers.
 
 	Freeform note markers are the only export content authored as prose, and
 	people write prose: a real export carried lines naming a third party, a
@@ -11,7 +11,7 @@
 	user who wants "Dosis erhöht" on the doctor's report ticks it; a user who
 	wrote something for themselves does nothing and it stays theirs.
 
-	Recorded data is NOT negotiable here — entries, episodes, vitals and
+	Recorded data is NOT negotiable here - entries, episodes, vitals and
 	medication administrations are the report. This dialog governs prose only.
 
 	The dialog is skipped entirely when the window holds no note markers, so
@@ -143,7 +143,7 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		/* 44px touch floor — the /reports contract. */
+		/* 44px touch floor - the /reports contract. */
 		min-height: 44px;
 		padding: 0 0.25rem;
 	}
