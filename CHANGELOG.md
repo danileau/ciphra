@@ -13,6 +13,14 @@ app at **/docs → Changelog** and here on the public repo.
 
 <!-- Nothing yet. Pending entries live in changelog.d/ - see changelog.d/README.md. -->
 
+## [1.5.5] - 2026-11-21
+
+### Security
+- Updated the web server that sits in front of ciphra to nginx 1.30.7,
+  closing several serious flaws in how it handles encrypted (TLS) and HTTP/2
+  connections that could crash it or worse. Rebuilding it also picked up a
+  fixed XML library, which ciphra's web server never uses.
+
 ## [1.5.4] - 2026-11-12
 
 ### Fixed
@@ -435,7 +443,8 @@ above.
   and the admin surface. (Established feature set - see
   [`docs/FEATURES.md`](docs/FEATURES.md).)
 
-[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.4...HEAD
+[Unreleased]: https://github.com/danileau/ciphra/compare/v1.5.5...HEAD
+[1.5.5]: https://github.com/danileau/ciphra/releases/tag/v1.5.5
 [1.5.4]: https://github.com/danileau/ciphra/releases/tag/v1.5.4
 [1.5.3]: https://github.com/danileau/ciphra/releases/tag/v1.5.3
 [1.5.2]: https://github.com/danileau/ciphra/releases/tag/v1.5.2
