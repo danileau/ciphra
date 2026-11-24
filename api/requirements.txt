@@ -6,4 +6,4 @@ psycopg2-binary>=2.9.13
 argon2-cffi>=25.1.0
 cryptography>=50.0.2
 pyjwt>=2.15.1
-gunicorn>=26.2.0
+gunicorn>=27.0.1
